@@ -4,6 +4,10 @@
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
+## Project: FitLog
+
+A full-featured mobile fitness tracking PWA built with Expo React Native. Features workout logging (8 activity types), meal tracking with macros, progress analytics, body measurements, and a beautiful dark-mode UI.
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
@@ -12,6 +16,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
+- **Mobile**: Expo React Native (web/iOS/Android)
+- **State**: Zustand + React Query
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
@@ -20,77 +26,90 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ```text
 artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+├── artifacts/
+│   ├── api-server/         # Express API server (port 8080)
+│   └── fitlog/             # Expo React Native mobile app
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
 │   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+├── scripts/                # Utility scripts
+└── pnpm-workspace.yaml
 ```
+
+## FitLog App (`artifacts/fitlog`)
+
+### Screens
+- **Login / Register** — `app/auth/login.tsx`, `app/auth/register.tsx`
+- **Home** — `app/(tabs)/index.tsx` — today stats, weekly bar chart, FAB for quick logging
+- **Workouts** — `app/(tabs)/workouts.tsx` — workout list with delete
+- **Log Workout** — `app/workouts/log.tsx` — 8 activity types with activity-specific fields, gym exercise tracker with autocomplete
+- **Meals** — `app/(tabs)/meals.tsx` — date navigation, calorie summary with progress ring, per-category view
+- **Add Meal** — `app/meals/add.tsx` — multi-item food logging with macros
+- **Progress** — `app/(tabs)/progress.tsx` — streaks, activity breakdown, weight chart, nutrition stats, PRs
+- **Profile** — `app/(tabs)/profile.tsx` — personal info, fitness goals, daily targets, settings
+- **Add Measurement** — `app/measurements/add.tsx`
+- **Add Equipment** — `app/equipment/add.tsx`
+
+### Key Files
+- `constants/colors.ts` — dark/light theme colors
+- `hooks/useTheme.ts` — theme hook
+- `store/authStore.ts` — Zustand auth state
+- `store/settingsStore.ts` — Zustand settings
+- `lib/api.ts` — API client
+- `components/ui/` — Card, Button, Input, Toast
+- `components/StatCard.tsx` — stat display
+- `components/WeeklyBarChart.tsx` — SVG bar chart
+- `components/ActivityItem.tsx` — recent activity list item
+
+### Design System
+- Background: `#0f0f1a`, Cards: `#1a1a2e`
+- Primary green: `#00e676`, Secondary blue: `#448aff`
+- Font: Inter (400/500/600/700)
+- Dark mode first, light mode supported
+
+### Auth
+- Custom SHA-256 password hashing + session tokens
+- Stored in Zustand + AsyncStorage (persisted)
+
+## API Server (`artifacts/api-server`)
+
+### Routes
+- `POST /api/auth/register` — register user
+- `POST /api/auth/login` — login
+- `POST /api/auth/logout` — logout
+- `GET /api/auth/me` — current user
+- `GET/PUT /api/profile` — user profile
+- `GET/POST /api/workouts` — workout CRUD
+- `GET /api/workouts/stats/today` — today's stats
+- `GET /api/workouts/stats/weekly` — 7-day activity chart data
+- `GET /api/workouts/stats/summary` — workout summary for progress
+- `GET /api/workouts/recent` — recent activity feed
+- `GET/POST /api/meals` — meal CRUD with food items
+- `GET /api/meals/stats/nutrition` — nutrition statistics
+- `GET/POST /api/equipment` — equipment CRUD
+- `GET/POST /api/measurements` — body measurements CRUD
+- `GET /api/progress/streaks` — workout/meal streaks
+- `GET /api/progress/records` — personal records
+- `GET/PUT /api/settings` — user settings
+
+### Auth
+- `requireAuth` middleware checks `Authorization: Bearer <token>` header
+- Sessions stored in `sessions` table with 30-day expiry
+
+## Database Schema
+
+Tables: `users`, `sessions`, `profiles`, `workouts`, `workout_exercises`, `workout_sets`, `meals`, `meal_food_items`, `equipment`, `body_measurements`, `settings`
 
 ## TypeScript & Composite Projects
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+Every package extends `tsconfig.base.json` with `composite: true`. Always typecheck from root with `pnpm run typecheck`.
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+## Key Decisions
 
-## Root Scripts
-
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
-
-## Packages
-
-### `artifacts/api-server` (`@workspace/api-server`)
-
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+- No JWT library — custom SHA-256 + random session tokens
+- No `uuid` package — use `expo-crypto` or `crypto.randomBytes`
+- No `victory-native` (requires Skia) — custom SVG/View-based charts
+- Web platform: top inset 67px, bottom 34px
+- `EXPO_PUBLIC_DOMAIN` env var used for API base URL

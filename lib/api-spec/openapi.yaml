@@ -1,22 +1,36 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: FitLog API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: profile
+    description: User profile operations
+  - name: workouts
+    description: Workout logging operations
+  - name: meals
+    description: Meal tracking operations
+  - name: equipment
+    description: Equipment management
+  - name: measurements
+    description: Body measurement tracking
+  - name: progress
+    description: Progress and analytics
+  - name: settings
+    description: App settings
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +38,633 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # PROFILE
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /profile/photo:
+    post:
+      operationId: uploadProfilePhoto
+      tags: [profile]
+      summary: Upload profile photo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Photo uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhotoUploadResponse"
+
+  /profile/delete:
+    delete:
+      operationId: deleteAccount
+      tags: [profile]
+      summary: Delete user account
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # WORKOUTS
+  /workouts:
+    get:
+      operationId: getWorkouts
+      tags: [workouts]
+      summary: Get user workouts
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: number
+        - name: offset
+          in: query
+          schema:
+            type: number
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of workouts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutListResponse"
+    post:
+      operationId: createWorkout
+      tags: [workouts]
+      summary: Create a new workout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkoutRequest"
+      responses:
+        "201":
+          description: Workout created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workout"
+
+  /workouts/{id}:
+    get:
+      operationId: getWorkout
+      tags: [workouts]
+      summary: Get a specific workout
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Workout details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workout"
+    put:
+      operationId: updateWorkout
+      tags: [workouts]
+      summary: Update a workout
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkoutRequest"
+      responses:
+        "200":
+          description: Workout updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workout"
+    delete:
+      operationId: deleteWorkout
+      tags: [workouts]
+      summary: Delete a workout
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Workout deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /workouts/stats/today:
+    get:
+      operationId: getTodayStats
+      tags: [workouts]
+      summary: Get today's workout stats
+      responses:
+        "200":
+          description: Today's stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayStats"
+
+  /workouts/stats/weekly:
+    get:
+      operationId: getWeeklyStats
+      tags: [workouts]
+      summary: Get weekly activity chart data
+      responses:
+        "200":
+          description: Weekly stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyStats"
+
+  /workouts/stats/summary:
+    get:
+      operationId: getWorkoutSummary
+      tags: [workouts]
+      summary: Get workout summary stats for progress page
+      responses:
+        "200":
+          description: Workout summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutSummary"
+
+  /workouts/recent:
+    get:
+      operationId: getRecentActivity
+      tags: [workouts]
+      summary: Get recent activity feed
+      responses:
+        "200":
+          description: Recent activities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecentActivityResponse"
+
+  # MEALS
+  /meals:
+    get:
+      operationId: getMeals
+      tags: [meals]
+      summary: Get meals for a date
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+          description: Date in YYYY-MM-DD format
+      responses:
+        "200":
+          description: Meals for the date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MealDayResponse"
+    post:
+      operationId: createMeal
+      tags: [meals]
+      summary: Create a meal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMealRequest"
+      responses:
+        "201":
+          description: Meal created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meal"
+
+  /meals/{id}:
+    get:
+      operationId: getMeal
+      tags: [meals]
+      summary: Get a specific meal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Meal details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meal"
+    put:
+      operationId: updateMeal
+      tags: [meals]
+      summary: Update a meal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMealRequest"
+      responses:
+        "200":
+          description: Meal updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meal"
+    delete:
+      operationId: deleteMeal
+      tags: [meals]
+      summary: Delete a meal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Meal deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /meals/stats/nutrition:
+    get:
+      operationId: getNutritionStats
+      tags: [meals]
+      summary: Get nutrition stats for progress page
+      responses:
+        "200":
+          description: Nutrition stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NutritionStats"
+
+  # EQUIPMENT
+  /equipment:
+    get:
+      operationId: getEquipment
+      tags: [equipment]
+      summary: Get user equipment
+      responses:
+        "200":
+          description: List of equipment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquipmentListResponse"
+    post:
+      operationId: createEquipment
+      tags: [equipment]
+      summary: Add equipment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEquipmentRequest"
+      responses:
+        "201":
+          description: Equipment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Equipment"
+
+  /equipment/{id}:
+    put:
+      operationId: updateEquipment
+      tags: [equipment]
+      summary: Update equipment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEquipmentRequest"
+      responses:
+        "200":
+          description: Equipment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Equipment"
+    delete:
+      operationId: deleteEquipment
+      tags: [equipment]
+      summary: Delete equipment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Equipment deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # MEASUREMENTS
+  /measurements:
+    get:
+      operationId: getMeasurements
+      tags: [measurements]
+      summary: Get body measurements
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: number
+          description: Number of days to look back (30, 90, 365)
+      responses:
+        "200":
+          description: Body measurements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeasurementListResponse"
+    post:
+      operationId: createMeasurement
+      tags: [measurements]
+      summary: Log body measurement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMeasurementRequest"
+      responses:
+        "201":
+          description: Measurement logged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BodyMeasurement"
+
+  /measurements/{id}:
+    delete:
+      operationId: deleteMeasurement
+      tags: [measurements]
+      summary: Delete a measurement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Measurement deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # PROGRESS
+  /progress/streaks:
+    get:
+      operationId: getStreaks
+      tags: [progress]
+      summary: Get workout and meal streaks
+      responses:
+        "200":
+          description: Streak data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreakResponse"
+
+  /progress/records:
+    get:
+      operationId: getPersonalRecords
+      tags: [progress]
+      summary: Get personal records
+      responses:
+        "200":
+          description: Personal records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalRecordsResponse"
+
+  # SETTINGS
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get user settings
+      responses:
+        "200":
+          description: User settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update user settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsRequest"
+      responses:
+        "200":
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+  /settings/export:
+    get:
+      operationId: exportData
+      tags: [settings]
+      summary: Export user data as JSON
+      responses:
+        "200":
+          description: Exported data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportDataResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +672,782 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required: [error]
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    PhotoUploadResponse:
+      type: object
+      properties:
+        url:
+          type: string
+      required: [url]
+
+    # AUTH SCHEMAS
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        firstName:
+          type: string
+        lastName:
+          type: string
+      required: [email, password, firstName, lastName]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required: [user, token]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: number
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, firstName, lastName, createdAt]
+
+    # PROFILE SCHEMAS
+    Profile:
+      type: object
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        firstName:
+          type: string
+        lastName:
+          type: string
+        photoUrl:
+          type: string
+          nullable: true
+        age:
+          type: number
+          nullable: true
+        gender:
+          type: string
+          nullable: true
+        heightCm:
+          type: number
+          nullable: true
+        weightKg:
+          type: number
+          nullable: true
+        fitnessGoals:
+          type: array
+          items:
+            type: string
+        activityLevel:
+          type: string
+          nullable: true
+        dailyCalorieGoal:
+          type: number
+          nullable: true
+        dailyProteinGoal:
+          type: number
+          nullable: true
+        dailyCarbsGoal:
+          type: number
+          nullable: true
+        dailyFatGoal:
+          type: number
+          nullable: true
+      required: [id, userId, firstName, lastName, fitnessGoals]
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        age:
+          type: number
+          nullable: true
+        gender:
+          type: string
+          nullable: true
+        heightCm:
+          type: number
+          nullable: true
+        weightKg:
+          type: number
+          nullable: true
+        fitnessGoals:
+          type: array
+          items:
+            type: string
+        activityLevel:
+          type: string
+          nullable: true
+        dailyCalorieGoal:
+          type: number
+          nullable: true
+        dailyProteinGoal:
+          type: number
+          nullable: true
+        dailyCarbsGoal:
+          type: number
+          nullable: true
+        dailyFatGoal:
+          type: number
+          nullable: true
+      required: [firstName, lastName]
+
+    # WORKOUT SCHEMAS
+    WorkoutExercise:
+      type: object
+      properties:
+        id:
+          type: number
+        workoutId:
+          type: number
+        name:
+          type: string
+        order:
+          type: number
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkoutSet"
+      required: [id, workoutId, name, order, sets]
+
+    WorkoutSet:
+      type: object
+      properties:
+        id:
+          type: number
+        exerciseId:
+          type: number
+        reps:
+          type: number
+          nullable: true
+        weightKg:
+          type: number
+          nullable: true
+        order:
+          type: number
+      required: [id, exerciseId, order]
+
+    Workout:
+      type: object
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        activityType:
+          type: string
+        name:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: number
+          nullable: true
+        distanceKm:
+          type: number
+          nullable: true
+        caloriesBurned:
+          type: number
+          nullable: true
+        mood:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkoutExercise"
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, activityType, date, exercises, createdAt]
+
+    CreateWorkoutRequest:
+      type: object
+      properties:
+        activityType:
+          type: string
+        name:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: number
+          nullable: true
+        distanceKm:
+          type: number
+          nullable: true
+        caloriesBurned:
+          type: number
+          nullable: true
+        mood:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateExerciseRequest"
+      required: [activityType, date]
+
+    CreateExerciseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        order:
+          type: number
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateSetRequest"
+      required: [name, order, sets]
+
+    CreateSetRequest:
+      type: object
+      properties:
+        reps:
+          type: number
+          nullable: true
+        weightKg:
+          type: number
+          nullable: true
+        order:
+          type: number
+      required: [order]
+
+    WorkoutListResponse:
+      type: object
+      properties:
+        workouts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Workout"
+        total:
+          type: number
+      required: [workouts, total]
+
+    TodayStats:
+      type: object
+      properties:
+        caloriesBurned:
+          type: number
+        activeMinutes:
+          type: number
+        workoutsCompleted:
+          type: number
+        mealsLogged:
+          type: number
+      required: [caloriesBurned, activeMinutes, workoutsCompleted, mealsLogged]
+
+    WeeklyStats:
+      type: object
+      properties:
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/DayStat"
+      required: [days]
+
+    DayStat:
+      type: object
+      properties:
+        date:
+          type: string
+        dayLabel:
+          type: string
+        activeMinutes:
+          type: number
+        isToday:
+          type: boolean
+      required: [date, dayLabel, activeMinutes, isToday]
+
+    WorkoutSummary:
+      type: object
+      properties:
+        totalThisWeek:
+          type: number
+        totalThisMonth:
+          type: number
+        weeklyFrequency:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeekFrequency"
+        activityBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityBreakdown"
+      required: [totalThisWeek, totalThisMonth, weeklyFrequency, activityBreakdown]
+
+    WeekFrequency:
+      type: object
+      properties:
+        weekLabel:
+          type: string
+        count:
+          type: number
+      required: [weekLabel, count]
+
+    ActivityBreakdown:
+      type: object
+      properties:
+        activityType:
+          type: string
+        count:
+          type: number
+        percentage:
+          type: number
+      required: [activityType, count, percentage]
+
+    RecentActivityItem:
+      type: object
+      properties:
+        id:
+          type: number
+        type:
+          type: string
+        name:
+          type: string
+        date:
+          type: string
+          format: date-time
+        keyStat:
+          type: string
+          nullable: true
+        activityType:
+          type: string
+          nullable: true
+      required: [id, type, name, date]
+
+    RecentActivityResponse:
+      type: object
+      properties:
+        activities:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentActivityItem"
+      required: [activities]
+
+    # MEAL SCHEMAS
+    MealFoodItem:
+      type: object
+      properties:
+        id:
+          type: number
+        mealId:
+          type: number
+        name:
+          type: string
+        portionSize:
+          type: number
+        unit:
+          type: string
+        calories:
+          type: number
+        proteinG:
+          type: number
+        carbsG:
+          type: number
+        fatG:
+          type: number
+      required: [id, mealId, name, portionSize, unit, calories, proteinG, carbsG, fatG]
+
+    Meal:
+      type: object
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        name:
+          type: string
+        category:
+          type: string
+        date:
+          type: string
+          format: date-time
+        photoUrl:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        foodItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/MealFoodItem"
+        totalCalories:
+          type: number
+        totalProteinG:
+          type: number
+        totalCarbsG:
+          type: number
+        totalFatG:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, name, category, date, foodItems, totalCalories, totalProteinG, totalCarbsG, totalFatG, createdAt]
+
+    CreateMealRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        date:
+          type: string
+          format: date-time
+        photoUrl:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        foodItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateFoodItemRequest"
+      required: [name, category, date, foodItems]
+
+    CreateFoodItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        portionSize:
+          type: number
+        unit:
+          type: string
+        calories:
+          type: number
+        proteinG:
+          type: number
+        carbsG:
+          type: number
+        fatG:
+          type: number
+      required: [name, portionSize, unit, calories, proteinG, carbsG, fatG]
+
+    MealDayResponse:
+      type: object
+      properties:
+        date:
+          type: string
+        meals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Meal"
+        dailyTotals:
+          $ref: "#/components/schemas/DailyNutritionTotals"
+        calorieGoal:
+          type: number
+          nullable: true
+      required: [date, meals, dailyTotals]
+
+    DailyNutritionTotals:
+      type: object
+      properties:
+        calories:
+          type: number
+        proteinG:
+          type: number
+        carbsG:
+          type: number
+        fatG:
+          type: number
+      required: [calories, proteinG, carbsG, fatG]
+
+    NutritionStats:
+      type: object
+      properties:
+        avg7DayCalories:
+          type: number
+        avg30DayCalories:
+          type: number
+        macroSplit:
+          $ref: "#/components/schemas/MacroSplit"
+        dailyCalories:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyCalories"
+      required: [avg7DayCalories, avg30DayCalories, macroSplit, dailyCalories]
+
+    MacroSplit:
+      type: object
+      properties:
+        proteinPercentage:
+          type: number
+        carbsPercentage:
+          type: number
+        fatPercentage:
+          type: number
+      required: [proteinPercentage, carbsPercentage, fatPercentage]
+
+    DailyCalories:
+      type: object
+      properties:
+        date:
+          type: string
+        calories:
+          type: number
+        goal:
+          type: number
+          nullable: true
+      required: [date, calories]
+
+    # EQUIPMENT SCHEMAS
+    Equipment:
+      type: object
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        name:
+          type: string
+        category:
+          type: string
+        photoUrl:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, name, category, createdAt]
+
+    CreateEquipmentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        photoUrl:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required: [name, category]
+
+    EquipmentListResponse:
+      type: object
+      properties:
+        equipment:
+          type: array
+          items:
+            $ref: "#/components/schemas/Equipment"
+      required: [equipment]
+
+    # MEASUREMENT SCHEMAS
+    BodyMeasurement:
+      type: object
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        date:
+          type: string
+          format: date-time
+        weightKg:
+          type: number
+          nullable: true
+        bodyFatPercent:
+          type: number
+          nullable: true
+        chestCm:
+          type: number
+          nullable: true
+        waistCm:
+          type: number
+          nullable: true
+        hipsCm:
+          type: number
+          nullable: true
+        armsCm:
+          type: number
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, date, createdAt]
+
+    CreateMeasurementRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        weightKg:
+          type: number
+          nullable: true
+        bodyFatPercent:
+          type: number
+          nullable: true
+        chestCm:
+          type: number
+          nullable: true
+        waistCm:
+          type: number
+          nullable: true
+        hipsCm:
+          type: number
+          nullable: true
+        armsCm:
+          type: number
+          nullable: true
+      required: [date]
+
+    MeasurementListResponse:
+      type: object
+      properties:
+        measurements:
+          type: array
+          items:
+            $ref: "#/components/schemas/BodyMeasurement"
+      required: [measurements]
+
+    # PROGRESS SCHEMAS
+    StreakResponse:
+      type: object
+      properties:
+        currentWorkoutStreak:
+          type: number
+        longestWorkoutStreak:
+          type: number
+        currentMealStreak:
+          type: number
+      required: [currentWorkoutStreak, longestWorkoutStreak, currentMealStreak]
+
+    PersonalRecord:
+      type: object
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+        date:
+          type: string
+          nullable: true
+        activityType:
+          type: string
+          nullable: true
+      required: [label, value]
+
+    PersonalRecordsResponse:
+      type: object
+      properties:
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/PersonalRecord"
+      required: [records]
+
+    # SETTINGS SCHEMAS
+    Settings:
+      type: object
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        darkMode:
+          type: boolean
+        unitSystem:
+          type: string
+        notificationsEnabled:
+          type: boolean
+      required: [id, userId, darkMode, unitSystem, notificationsEnabled]
+
+    UpdateSettingsRequest:
+      type: object
+      properties:
+        darkMode:
+          type: boolean
+        unitSystem:
+          type: string
+        notificationsEnabled:
+          type: boolean
+
+    ExportDataResponse:
+      type: object
+      properties:
+        workouts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Workout"
+        meals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Meal"
+        measurements:
+          type: array
+          items:
+            $ref: "#/components/schemas/BodyMeasurement"
+      required: [workouts, meals, measurements]

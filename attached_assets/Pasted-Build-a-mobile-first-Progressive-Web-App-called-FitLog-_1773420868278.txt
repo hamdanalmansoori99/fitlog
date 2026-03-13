@@ -1,0 +1,512 @@
+Build a mobile-first Progressive Web App called "FitLog".
+
+Goal:
+Create a fitness tracking app that is installable on phones, supports authentication, and stores each user’s private data securely in a database. Every user must only see their own data.
+
+Tech requirements:
+- Use a modern full-stack web stack suitable for Replit
+- Recommended: Next.js + TypeScript + Tailwind CSS + Prisma + PostgreSQL
+- Use authentication for signup/login/logout
+- Use a real database for persistent storage
+- Make the app a true PWA:
+  - installable on mobile
+  - responsive
+  - app icon
+  - manifest
+  - service worker / offline-friendly basics
+- Build clean reusable components
+- Use strong typing and clean folder structure
+- Seed sample data for testing
+- Add comments where helpful
+
+Design system:
+- Dark mode by default
+- Support light mode toggle in settings
+- Color palette:
+  - background: #0f0f1a
+  - card backgrounds: #1a1a2e
+  - primary accent: #00e676
+  - secondary accent: #448aff
+  - text: #f5f5f5
+  - muted text: #9e9e9e
+  - danger/delete: #ff5252
+- Typography:
+  - clean sans-serif font like Inter or system stack
+  - bold headings, regular body text
+- Cards:
+  - rounded corners 16px
+  - subtle shadows
+  - slight transparency
+- Icons:
+  - use Lucide or similar consistently
+- UI:
+  - bottom navigation bar with 5 tabs:
+    1. Home
+    2. Workouts
+    3. Meals
+    4. Progress
+    5. Profile
+- Add smooth page transitions and subtle micro-animations
+- Buttons must have hover and active states
+- Primary buttons use green accent
+- Empty states should be friendly and helpful, for example:
+  - "No workouts yet — tap + to get started!"
+
+Core database models:
+Create proper schemas/models for at least:
+- User
+- Profile
+- Workout
+- WorkoutExercise
+- WorkoutSet
+- Meal
+- MealFoodItem
+- Equipment
+- BodyMeasurement
+- Settings
+- ActivityStat cache or computed summary if useful
+
+Authentication and privacy:
+- Every user has private data
+- Enforce user-level access control on all routes and queries
+- Do not expose another user’s data
+- Protect all create/read/update/delete actions
+- Include delete account functionality
+
+App structure:
+Build the following main pages/screens.
+
+1) Dashboard / Home
+Top section:
+- Greeting based on time of day:
+  - Good morning / Good afternoon / Good evening, [first name]
+- Show today’s date below greeting
+
+Quick stats row:
+- Horizontal scroll of 4 cards:
+  - Calories burned today
+  - Active minutes today
+  - Workouts completed today
+  - Meals logged today
+- Use relevant icons:
+  - fire
+  - clock
+  - checkmark
+  - utensils
+
+Weekly activity chart:
+- Bar chart for active minutes over the past 7 days
+- Label days Mon to Sun
+- Highlight today in green
+- Other days in muted blue
+
+Recent activity feed:
+- Show last 5 activities (workouts or meals)
+- Each item shows:
+  - activity type icon
+  - activity name
+  - time ago
+  - key stat
+- Example:
+  - "45 min cycling — 12.3 km"
+
+Floating action button:
+- Green FAB in bottom-right corner
+- Opens quick-add menu:
+  - Log Workout
+  - Log Meal
+
+2) Workouts page
+This page should support choosing an activity type and logging it.
+
+Step 1: Choose activity type
+Show activity cards in a grid for:
+- Cycling
+- Tennis
+- Walking
+- Gym/Weights
+- Running
+- Swimming
+- Yoga
+- Other/Custom
+
+Step 2: Show activity-specific form depending on selected type
+
+Cycling fields:
+- Duration (hours and minutes)
+- Distance in km
+- Average speed auto-calculated
+- Route type dropdown:
+  - Road
+  - Mountain
+  - Stationary bike
+  - Trail
+- Intensity chips:
+  - Easy
+  - Moderate
+  - Hard
+- Optional notes
+
+Tennis fields:
+- Duration
+- Match type:
+  - Singles
+  - Doubles
+- Sets played (1 to 5)
+- Result:
+  - Won
+  - Lost
+  - Practice
+- Intensity:
+  - Easy
+  - Moderate
+  - Hard
+- Optional notes
+
+Walking fields:
+- Duration
+- Distance in km
+- Steps optional
+- Terrain:
+  - Flat
+  - Hilly
+  - Treadmill
+- Intensity:
+  - Light
+  - Moderate
+  - Brisk
+- Optional notes
+
+Gym/Weights fields:
+- Workout name
+- Dynamic exercise list
+- User can add multiple exercises
+- Each exercise includes:
+  - Exercise name
+  - autocomplete suggestions from a built-in list of 100+ common exercises
+  - multiple sets
+- Each set includes:
+  - reps
+  - weight in kg
+- Buttons:
+  - Add Set
+  - Add Exercise
+- Show a small badge/tag if user owns relevant equipment from their equipment list
+- Total workout duration
+- Optional notes
+
+Running fields:
+- Duration
+- Distance in km
+- Pace auto-calculated as min/km
+- Terrain:
+  - Road
+  - Trail
+  - Treadmill
+  - Track
+- Intensity:
+  - Easy
+  - Moderate
+  - Hard
+  - Intervals
+- Optional notes
+
+Swimming fields:
+- Duration
+- Distance in meters
+- Laps
+- Stroke type:
+  - Freestyle
+  - Backstroke
+  - Breaststroke
+  - Butterfly
+  - Mixed
+- Optional notes
+
+Yoga fields:
+- Duration
+- Type:
+  - Vinyasa
+  - Hatha
+  - Yin
+  - Power
+  - Stretching
+  - Other
+- Optional notes
+
+Other/Custom fields:
+- Activity name
+- Duration
+- Calories burned manual input
+- Optional notes
+
+All workouts also include:
+- Date and time (default now, allow backdate)
+- Mood selector:
+  - Exhausted
+  - Tough
+  - Good
+  - Great
+  - Crushing it
+
+After save:
+- Show success feedback
+- Return to dashboard or workouts list
+
+Exercise database:
+- Include a built-in exercise list with 100+ common exercises
+- Include categories and equipment tags where useful
+- Example exercises:
+  - Bench Press
+  - Squat
+  - Deadlift
+  - Bicep Curl
+  - Lat Pulldown
+  - Shoulder Press
+  - Leg Press
+  - Dumbbell Row
+  - Lunges
+  - Tricep Pushdown
+  - etc.
+
+3) Meals page
+Create a daily meals view grouped by:
+- Breakfast
+- Lunch
+- Dinner
+- Snacks
+
+At top:
+- Daily total calories vs calorie goal
+- Show as a progress ring
+
+Each meal section:
+- Shows total calories
+- Shows macro totals:
+  - protein
+  - carbs
+  - fat
+
+Add meal flow:
+- Button inside each section: Add Meal
+- Fields:
+  - meal name
+  - meal category
+  - multiple food items
+- Each food item includes:
+  - food name
+  - portion size
+  - unit dropdown:
+    - grams
+    - oz
+    - cups
+    - pieces
+    - servings
+  - calories
+  - protein grams
+  - carbs grams
+  - fat grams
+- Button to add food item
+- Support photo upload for the meal
+- Show uploaded photo thumbnail on meal card
+- Date/time defaults to now, allow backdate
+- Optional notes
+
+Meal history:
+- Horizontal date picker at top
+- Swipe or tap between days
+
+4) Equipment page
+Create a page for user equipment.
+
+Show:
+- Grid or list of equipment cards
+- Each card includes:
+  - photo thumbnail or placeholder
+  - name
+  - category
+  - date added
+
+Add equipment form:
+- Name
+- Category dropdown:
+  - Dumbbells
+  - Barbell
+  - Kettlebell
+  - Resistance Bands
+  - Pull-up Bar
+  - Bench
+  - Treadmill
+  - Stationary Bike
+  - Yoga Mat
+  - Tennis Racket
+  - Jump Rope
+  - Foam Roller
+  - Other
+- Optional photo upload
+- Optional notes
+
+Integration:
+- When logging a gym workout, show a green badge/checkmark next to exercises if the user owns relevant equipment
+- Example:
+  - if user owns dumbbells, show badge for dumbbell bench press
+
+5) Progress page
+Create a progress analytics page.
+
+Body measurements section:
+- Allow user to log:
+  - weight (kg)
+  - body fat %
+  - chest
+  - waist
+  - hips
+  - arms
+- Each measurement must include date
+- Store as time series
+- Show line chart of weight over time
+- Toggle ranges:
+  - 30 days
+  - 90 days
+  - 365 days
+
+Workout stats section:
+- Total workouts this week
+- Total workouts this month
+- Workout frequency bar chart:
+  - workouts per week over last 8 weeks
+- Activity type breakdown pie chart:
+  - cycling
+  - gym
+  - walking
+  - running
+  - etc.
+- Personal records auto-calculated:
+  - best lifts
+  - longest run
+  - fastest pace
+  - longest ride
+  - other notable PRs
+
+Nutrition stats section:
+- Average daily calories over past 7 days
+- Average daily calories over past 30 days
+- Macro split pie chart based on averages
+- Calories consumed vs goal line chart for past 30 days
+
+Streaks:
+- Current workout streak
+- Longest workout streak
+- Current meal logging streak
+
+6) Profile and Settings page
+Profile info fields:
+- Profile photo upload
+- First name
+- Last name
+- Age
+- Gender
+- Height in cm
+- Current weight in kg
+- Fitness goals, multi-select:
+  - Lose Weight
+  - Build Muscle
+  - Stay Active
+  - Improve Endurance
+  - Improve Flexibility
+- Activity level:
+  - Sedentary
+  - Lightly Active
+  - Moderately Active
+  - Very Active
+- Daily calorie goal:
+  - manual input
+  - or auto-calculate using Mifflin-St Jeor formula
+- Daily protein target in grams
+- Daily carbs target in grams
+- Daily fat target in grams
+
+Settings:
+- Dark mode / Light mode toggle
+- Unit preference:
+  - Metric
+  - Imperial
+- Notifications toggle
+- Export data as CSV
+- Delete account option
+- App version info
+
+Calculations and logic:
+- Dashboard stats should calculate from real stored data
+- Calories burned should be estimated for workouts where relevant
+- Auto-calculate:
+  - cycling average speed
+  - running pace
+  - calorie goal if chosen
+- Progress charts should use real user data
+- Personal records should auto-update based on workout history
+- Streaks must be computed from dates
+
+UX details:
+- Mobile-first layout
+- Clean onboarding
+- Friendly empty states
+- Smooth transitions
+- Floating action button
+- Useful validation and error messages
+- Confirm destructive actions like delete account
+- Use toasts/snackbars for success and errors
+
+Charts:
+Use a chart library suitable for React/Next.js.
+Need:
+- bar charts
+- line charts
+- pie charts
+- progress ring
+
+File uploads:
+Support image upload for:
+- profile photo
+- equipment photo
+- meal photo
+Store file references properly and display thumbnails
+
+Navigation:
+Bottom navigation tabs should be:
+- Home
+- Workouts
+- Meals
+- Progress
+- Profile
+
+Important implementation notes:
+- Build the app in a clean production-style structure
+- Use reusable components
+- Use responsive cards and forms
+- Make all CRUD operations work
+- Include validation
+- Include seeded demo exercises
+- Include setup instructions in README
+- Include sample demo user or seed data for testing
+
+Final deliverables:
+- Full working PWA
+- Authentication
+- Database schema
+- All pages above
+- Charts
+- Reusable components
+- Responsive mobile-first UI
+- Dark/light theme support
+- README with setup instructions
+
+Start by:
+1. creating the full project structure
+2. defining the database schema
+3. implementing authentication
+4. building the bottom navigation and theme system
+5. then building each page in order:
+   Home, Workouts, Meals, Equipment, Progress, Profile
+6. then add charts, uploads, and CSV export
+7. then polish animations and empty states
