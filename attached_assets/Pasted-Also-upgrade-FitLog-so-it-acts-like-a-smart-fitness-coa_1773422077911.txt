@@ -1,0 +1,379 @@
+Also upgrade FitLog so it acts like a smart fitness coach, not just a tracker.
+
+SMART COACH SYSTEM
+
+Add a smart workout coach and recommendation engine.
+
+Main idea:
+When the user goes to the Workouts section, the app should not only let them log workouts. It should also help them decide what workouts make sense based on:
+- their available equipment
+- where they train
+- their goals
+- their experience level
+- how many days per week they want to train
+- how much time they have
+- what they already trained recently
+
+FIRST-TIME WORKOUT ONBOARDING
+
+When a user enters the Workouts section for the first time, show a setup flow.
+
+Ask:
+1. What equipment do you have access to?
+Multi-select options:
+- None / Bodyweight only
+- Dumbbells
+- Barbell
+- Bench
+- Pull-up bar
+- Resistance bands
+- Kettlebells
+- Cable machine
+- Smith machine
+- Leg press
+- Treadmill
+- Stationary bike
+- Rowing machine
+- Yoga mat
+- Jump rope
+- Tennis racket
+- Swimming pool
+- Other
+
+2. Where do you usually work out?
+Options:
+- Home
+- Gym
+- Outdoors
+- Mixed
+
+3. What is your main goal?
+Options:
+- Lose weight
+- Build muscle
+- Get stronger
+- Stay active
+- Improve endurance
+- Improve flexibility
+
+4. How many days per week do you want to train?
+Options:
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+
+5. How long do you want your workouts to be?
+Options:
+- 15 minutes
+- 30 minutes
+- 45 minutes
+- 60+ minutes
+
+6. What is your experience level?
+Options:
+- Beginner
+- Intermediate
+- Advanced
+
+7. What types of training do you enjoy?
+Multi-select:
+- Strength training
+- Cardio
+- Running
+- Walking
+- Cycling
+- Tennis
+- Swimming
+- Yoga
+- Stretching / mobility
+- Calisthenics
+
+Save all of this to the user profile and allow them to edit it later from Profile or Workouts settings.
+
+SMART RECOMMENDATIONS
+
+Add a section on the Workouts page called:
+"Recommended for you"
+
+The app should generate workout recommendations based on:
+- available equipment
+- workout location
+- goals
+- preferred duration
+- experience level
+- recent workout history
+- user preferences
+
+Recommendation rules:
+- If the user has no equipment, prioritize:
+  - bodyweight workouts
+  - calisthenics
+  - walking
+  - running
+  - yoga
+  - mobility
+  - jump rope if available
+- If the user has dumbbells, recommend dumbbell-based workouts
+- If the user has barbell and bench, recommend barbell strength workouts
+- If the user has gym access, recommend more complete gym workouts
+- If the user has cardio equipment, include cardio options
+- If the user has tennis racket or swimming pool, include tennis and swimming as options
+
+Each recommendation card should show:
+- workout name
+- estimated duration
+- difficulty
+- equipment needed
+- primary goal
+- short explanation of why this workout is good for the user
+
+Example card:
+Dumbbell Upper Body Strength
+- Duration: 45 min
+- Difficulty: Intermediate
+- Equipment: Dumbbells, Bench
+- Goal: Build muscle
+- Why this is good for you: Great for upper-body strength and hypertrophy using the equipment you already own.
+
+If the user has no equipment, example:
+Beginner Bodyweight Full Body
+- Duration: 20 min
+- Difficulty: Beginner
+- Equipment: None
+- Goal: Stay active / build foundational strength
+- Why this is good for you: Uses bodyweight movements to improve strength, coordination, and fitness without requiring any equipment.
+
+BENEFITS EXPLANATION
+
+For recommended workouts and activities, include a short “Benefits” section.
+
+Examples:
+
+Walking benefits:
+- improves cardiovascular health
+- helps fat loss
+- low impact on joints
+- good for recovery and daily activity
+
+Running benefits:
+- improves endurance
+- burns more calories in less time
+- strengthens the cardiovascular system
+
+Gym / weights benefits:
+- builds strength
+- supports muscle growth
+- improves bone density
+- boosts metabolism
+
+Calisthenics benefits:
+- improves body control
+- builds functional strength
+- works without equipment
+- scalable for different fitness levels
+
+Yoga benefits:
+- improves flexibility
+- supports recovery
+- reduces stress
+- improves mobility and balance
+
+Cycling benefits:
+- effective cardio
+- lower impact than running
+- improves leg endurance
+
+Swimming benefits:
+- full-body conditioning
+- low impact
+- great for endurance and recovery
+
+Tennis benefits:
+- improves agility
+- boosts cardio
+- improves coordination and reaction speed
+
+WEEKLY PLAN GENERATOR
+
+Add a feature that can automatically generate a weekly workout plan based on:
+- equipment
+- goals
+- experience level
+- workout days per week
+- preferred workout duration
+- training preferences
+
+Examples:
+- if user wants 3 days per week and has dumbbells:
+  - Day 1: Dumbbell Full Body A
+  - Day 2: Walking + Core
+  - Day 3: Dumbbell Full Body B
+- if user has no equipment and wants fat loss:
+  - Day 1: Brisk walking
+  - Day 2: Beginner bodyweight circuit
+  - Day 3: Recovery mobility
+  - Day 4: Jog/walk intervals
+
+Allow the user to:
+- preview the weekly plan
+- save it
+- edit it
+- mark workouts complete
+
+TODAY’S SMART SUGGESTION
+
+Add a dashboard section called:
+"Today's recommended workout"
+
+This should use:
+- user goals
+- user equipment
+- available workout duration
+- recent training history
+
+Example logic:
+- if user trained legs yesterday, do not recommend another hard leg workout today
+- if user has not trained for several days, recommend an easy restart session
+- if user is consistent, recommend progression
+- if user prefers short workouts, recommend a short workout first
+
+EXERCISE MATCHING TO EQUIPMENT
+
+When suggesting gym or strength workouts, only suggest exercises that match the user’s equipment.
+
+Examples:
+- If user has dumbbells, include:
+  - dumbbell press
+  - dumbbell row
+  - goblet squat
+  - curls
+  - lunges
+- If user has no barbell, do not recommend:
+  - barbell squat
+  - barbell deadlift
+- If user has pull-up bar, include:
+  - pull-ups
+  - chin-ups
+  - hanging leg raises
+- If user has resistance bands, include:
+  - band rows
+  - band presses
+  - band pull-aparts
+
+SMART EXERCISE SUBSTITUTIONS
+
+If required equipment is unavailable, automatically suggest alternatives.
+
+Examples:
+- Barbell squat -> goblet squat or bodyweight squat
+- Bench press -> push-ups or dumbbell floor press
+- Lat pulldown -> pull-ups or band pulldown
+- Leg press -> split squat or step-ups
+
+Show a label:
+"Alternative for your setup"
+
+STARTER WORKOUT LIBRARY
+
+Add starter templates based on equipment and goals.
+
+Templates for no equipment:
+- Beginner full-body bodyweight
+- Calisthenics fundamentals
+- Walking fat-loss plan
+- Core + mobility
+- Beginner jog/walk intervals
+- Yoga recovery session
+
+Templates for dumbbells:
+- Dumbbell full body beginner
+- Dumbbell upper body
+- Dumbbell lower body
+- Dumbbell hypertrophy split
+
+Templates for barbell + bench:
+- Beginner strength full body
+- Upper/lower split
+- Push/pull/legs
+- Strength-focused 3-day plan
+
+Templates for mixed/gym users:
+- Muscle-building split
+- Fat-loss hybrid plan
+- Endurance + strength plan
+- Athletic conditioning week
+
+RECOMMENDED WORKOUT DETAILS
+
+When user taps a recommendation, show:
+- full workout preview
+- exercises
+- sets and reps
+- duration
+- required equipment
+- alternatives if equipment missing
+- benefits
+- why it fits their goal
+
+Allow user to:
+- save workout
+- edit workout
+- start workout
+- log as completed
+
+PROFILE AND DATABASE INTEGRATION
+
+Store these new fields in the database:
+- available equipment
+- workout location
+- training preferences
+- experience level
+- preferred workout duration
+- preferred weekly workout days
+
+Allow editing from:
+- onboarding
+- profile page
+- workout settings page
+
+LOGGING + COACH COMBINED
+
+Do not remove normal workout logging.
+The user must still be able to:
+- manually log a workout
+- create a custom workout
+- log walking, running, cycling, gym, tennis, swimming, yoga, etc.
+
+But also add smart coaching behavior so the app helps the user know what to do next.
+
+ADAPTIVE RECOMMENDATION LOGIC
+
+Add basic smart adaptation:
+- if user trained same muscle group yesterday, reduce chance of repeating it
+- if user misses several days, suggest a lighter restart
+- if user frequently logs a certain activity, incorporate it into future recommendations
+- if user goal is weight loss, prioritize calorie-burning + sustainable sessions
+- if user goal is muscle building, prioritize resistance training
+- if user goal is flexibility, prioritize yoga and mobility
+- if user goal is endurance, prioritize running, cycling, swimming, cardio progression
+
+UI / UX REQUIREMENT
+
+This feature should feel like a coach inside the app.
+
+The Workouts section should include:
+- Recommended for you
+- Today’s recommended workout
+- Your saved workout plans
+- Quick log workout
+- Browse workout templates
+
+Tone should feel supportive, intelligent, and practical.
+
+Final requirement:
+Do not make FitLog feel like only a tracker.
+Make it feel like a personalized fitness coach that uses the user’s equipment, goals, preferences, and history to recommend useful workouts and explain why they are good for the user.

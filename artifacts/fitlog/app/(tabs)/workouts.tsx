@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   RefreshControl, Platform,
@@ -12,6 +12,8 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
+import { getRecommendations, getTodaySuggestion } from "@/lib/coachEngine";
+import { WORKOUT_TEMPLATES, WorkoutTemplate } from "@/lib/workoutTemplates";
 
 function formatDuration(mins?: number | null) {
   if (!mins) return "";
@@ -19,94 +21,182 @@ function formatDuration(mins?: number | null) {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
-function getActivityIcon(type: string): keyof typeof Feather.glyphMap {
-  switch (type) {
-    case "cycling": return "wind";
-    case "running": return "activity";
-    case "walking": return "navigation";
-    case "swimming": return "droplet";
-    case "gym": return "zap";
-    case "yoga": return "heart";
-    case "tennis": return "circle";
-    default: return "activity";
-  }
-}
-
 function getActivityColor(type: string, theme: any) {
-  switch (type) {
-    case "cycling": return theme.secondary;
-    case "running": return theme.primary;
-    case "walking": return theme.cyan;
-    case "swimming": return theme.secondary;
-    case "gym": return theme.purple;
-    case "yoga": return theme.pink;
-    default: return theme.primary;
-  }
+  const map: Record<string, string> = {
+    cycling: theme.secondary, running: theme.primary, walking: theme.cyan,
+    gym: theme.purple, swimming: "#4fc3f7", tennis: theme.warning,
+    yoga: theme.pink, other: theme.textMuted,
+  };
+  return map[type] || theme.primary;
 }
 
-function WorkoutCard({ workout, onDelete }: { workout: any; onDelete: () => void }) {
+function getActivityIcon(type: string): keyof typeof Feather.glyphMap {
+  const map: Record<string, keyof typeof Feather.glyphMap> = {
+    cycling: "wind", running: "activity", walking: "navigation",
+    gym: "zap", swimming: "droplet", tennis: "circle", yoga: "heart",
+  };
+  return map[type] || "activity";
+}
+
+function DifficultyDot({ difficulty }: { difficulty: string }) {
+  const { theme } = useTheme();
+  const color = { Beginner: theme.primary, Intermediate: theme.secondary, Advanced: theme.danger }[difficulty] || theme.primary;
+  return <View style={[styles.diffDot, { backgroundColor: color }]} />;
+}
+
+function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void }) {
+  const { theme } = useTheme();
+  const { template, whyGoodForYou } = rec;
+  const color = getActivityColor(template.activityType, theme);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.recCard,
+        { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
+      ]}
+    >
+      <View style={styles.recHeader}>
+        <View style={[styles.recIcon, { backgroundColor: color + "20" }]}>
+          <Feather name={getActivityIcon(template.activityType)} size={20} color={color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.recName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+            {template.name}
+          </Text>
+          <View style={styles.recMeta}>
+            <DifficultyDot difficulty={template.difficulty} />
+            <Text style={[styles.recMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {template.difficulty}
+            </Text>
+            <Text style={[{ color: theme.border }]}> · </Text>
+            <Feather name="clock" size={10} color={theme.textMuted} />
+            <Text style={[styles.recMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {template.durationMinutes} min
+            </Text>
+          </View>
+        </View>
+        <Feather name="chevron-right" size={18} color={theme.textMuted} />
+      </View>
+
+      <Text style={[styles.recWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
+        {whyGoodForYou}
+      </Text>
+
+      <View style={styles.recFooter}>
+        <View style={[styles.goalTag, { backgroundColor: theme.primaryDim }]}>
+          <Text style={[styles.goalTagText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
+            {template.goals[0]}
+          </Text>
+        </View>
+        {template.requiredEquipment.length === 0 && (
+          <View style={[styles.goalTag, { backgroundColor: theme.secondaryDim }]}>
+            <Text style={[styles.goalTagText, { color: theme.secondary, fontFamily: "Inter_500Medium" }]}>
+              No equipment
+            </Text>
+          </View>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+function TodaySuggestionCard({ suggestion, onPress }: { suggestion: any; onPress: () => void }) {
+  const { theme } = useTheme();
+  const { template, whyGoodForYou } = suggestion;
+  const color = getActivityColor(template.activityType, theme);
+
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.todayCard, { opacity: pressed ? 0.9 : 1 }]}>
+      <View style={[styles.todayInner, { backgroundColor: theme.card, borderColor: theme.primary }]}>
+        <View style={styles.todayTop}>
+          <View style={[styles.todayIcon, { backgroundColor: color + "20" }]}>
+            <Feather name={getActivityIcon(template.activityType)} size={24} color={color} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.todayLabel, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>Today's Suggestion</Text>
+            <Text style={[styles.todayName, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{template.name}</Text>
+          </View>
+          <View style={[styles.startBtn, { backgroundColor: theme.primary }]}>
+            <Feather name="play" size={14} color="#0f0f1a" />
+            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>Start</Text>
+          </View>
+        </View>
+        <Text style={[styles.todayWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
+          {whyGoodForYou}
+        </Text>
+        <View style={styles.todayStats}>
+          <View style={styles.todayStat}>
+            <Feather name="clock" size={12} color={theme.textMuted} />
+            <Text style={[styles.todayStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {template.durationMinutes} min
+            </Text>
+          </View>
+          <View style={[styles.diffDot, { backgroundColor: { Beginner: theme.primary, Intermediate: theme.secondary, Advanced: theme.danger }[template.difficulty] || theme.primary }]} />
+          <Text style={[styles.todayStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {template.difficulty}
+          </Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () => void }) {
   const { theme } = useTheme();
   const color = getActivityColor(workout.activityType, theme);
   const icon = getActivityIcon(workout.activityType);
-  
+
   return (
-    <Card style={styles.workoutCard}>
-      <View style={styles.workoutHeader}>
-        <View style={[styles.workoutIcon, { backgroundColor: color + "20" }]}>
-          <Feather name={icon} size={20} color={color} />
+    <Card style={styles.historyCard}>
+      <View style={styles.historyHeader}>
+        <View style={[styles.historyIcon, { backgroundColor: color + "20" }]}>
+          <Feather name={icon} size={16} color={color} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.workoutName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+          <Text style={[styles.historyName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
             {workout.name || workout.activityType}
           </Text>
-          <Text style={[styles.workoutDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          <Text style={[styles.historyDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
             {new Date(workout.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </Text>
         </View>
         <Pressable onPress={onDelete} style={styles.deleteBtn}>
-          <Feather name="trash-2" size={16} color={theme.danger} />
+          <Feather name="trash-2" size={15} color={theme.danger} />
         </Pressable>
       </View>
-      
-      <View style={styles.workoutStats}>
+      <View style={styles.historyStats}>
         {workout.durationMinutes && (
-          <View style={styles.statPill}>
-            <Feather name="clock" size={12} color={theme.textMuted} />
-            <Text style={[styles.statText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          <View style={styles.histStat}>
+            <Feather name="clock" size={11} color={theme.textMuted} />
+            <Text style={[styles.histStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               {formatDuration(workout.durationMinutes)}
             </Text>
           </View>
         )}
         {workout.distanceKm && (
-          <View style={styles.statPill}>
-            <Feather name="map-pin" size={12} color={theme.textMuted} />
-            <Text style={[styles.statText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          <View style={styles.histStat}>
+            <Feather name="map-pin" size={11} color={theme.textMuted} />
+            <Text style={[styles.histStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               {workout.distanceKm.toFixed(1)} km
             </Text>
           </View>
         )}
         {workout.caloriesBurned && (
-          <View style={styles.statPill}>
-            <Feather name="zap" size={12} color={theme.textMuted} />
-            <Text style={[styles.statText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          <View style={styles.histStat}>
+            <Feather name="zap" size={11} color={theme.textMuted} />
+            <Text style={[styles.histStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               {workout.caloriesBurned} kcal
             </Text>
           </View>
         )}
         {workout.mood && (
-          <View style={[styles.moodPill, { backgroundColor: theme.primaryDim }]}>
-            <Text style={[styles.moodText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
-              {workout.mood}
-            </Text>
+          <View style={[styles.moodChip, { backgroundColor: theme.primaryDim }]}>
+            <Text style={[styles.moodText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>{workout.mood}</Text>
           </View>
         )}
       </View>
-      
-      {workout.exercises && workout.exercises.length > 0 && (
-        <Text style={[styles.exerciseSummary, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          {workout.exercises.length} exercise{workout.exercises.length > 1 ? "s" : ""}
-        </Text>
-      )}
     </Card>
   );
 }
@@ -117,12 +207,12 @@ export default function WorkoutsScreen() {
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
-  
-  const { data, refetch, isLoading } = useQuery({
-    queryKey: ["workouts"],
-    queryFn: api.getWorkouts,
-  });
-  
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { data: profileData, refetch: refetchProfile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
+  const { data: workoutsData, refetch: refetchWorkouts } = useQuery({ queryKey: ["workouts"], queryFn: api.getWorkouts });
+
   const deleteMutation = useMutation({
     mutationFn: api.deleteWorkout,
     onSuccess: () => {
@@ -130,56 +220,231 @@ export default function WorkoutsScreen() {
       queryClient.invalidateQueries({ queryKey: ["todayStats"] });
     },
   });
-  
-  const [refreshing, setRefreshing] = useState(false);
-  const onRefresh = async () => {
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetch();
+    await Promise.all([refetchProfile(), refetchWorkouts()]);
     setRefreshing(false);
+  }, []);
+
+  const profile = profileData;
+  const workouts = workoutsData?.workouts || [];
+  const hasCompletedOnboarding = profile?.coachOnboardingComplete;
+
+  // Build coach profile for recommendations
+  const coachProfile = {
+    availableEquipment: profile?.availableEquipment || [],
+    workoutLocation: profile?.workoutLocation || "Home",
+    trainingPreferences: profile?.trainingPreferences || [],
+    experienceLevel: profile?.experienceLevel || "Beginner",
+    preferredWorkoutDuration: profile?.preferredWorkoutDuration || "45 minutes",
+    weeklyWorkoutDays: profile?.weeklyWorkoutDays || 3,
+    fitnessGoals: profile?.fitnessGoals || [],
   };
-  
-  const workouts = data?.workouts || [];
-  
+
+  const recentWorkouts = workouts.slice(0, 14).map((w: any) => ({
+    activityType: w.activityType,
+    date: w.date,
+    durationMinutes: w.durationMinutes,
+  }));
+
+  const recommendations = hasCompletedOnboarding
+    ? getRecommendations(coachProfile, recentWorkouts, 5)
+    : [];
+  const todaySuggestion = hasCompletedOnboarding
+    ? getTodaySuggestion(coachProfile, recentWorkouts)
+    : null;
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
-        <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Workouts</Text>
-        <Pressable
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/workouts/log"); }}
-          style={[styles.addBtn, { backgroundColor: theme.primary }]}
-        >
-          <Feather name="plus" size={22} color="#0f0f1a" />
-        </Pressable>
+        <View>
+          <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Workouts</Text>
+          {hasCompletedOnboarding && (
+            <Text style={[styles.subtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Your personalised coach
+            </Text>
+          )}
+        </View>
+        <View style={styles.headerActions}>
+          {hasCompletedOnboarding && (
+            <Pressable onPress={() => router.push("/workouts/plan" as any)} style={[styles.planBtn, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <Feather name="calendar" size={16} color={theme.primary} />
+              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Week</Text>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/workouts/log"); }}
+            style={[styles.addBtn, { backgroundColor: theme.primary }]}
+          >
+            <Feather name="plus" size={22} color="#0f0f1a" />
+          </Pressable>
+        </View>
       </View>
-      
+
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 12 }}
+        contentContainerStyle={{ paddingBottom: 100 + bottomPad, gap: 0 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
-        {workouts.length === 0 ? (
-          <View style={styles.empty}>
-            <Feather name="activity" size={48} color={theme.textMuted} />
-            <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              No workouts yet
-            </Text>
-            <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Tap + to log your first workout!
-            </Text>
-          </View>
-        ) : (
-          workouts.map((w: any, i: number) => (
-            <Animated.View key={w.id} entering={FadeInDown.delay(i * 50).duration(300)}>
-              <WorkoutCard
-                workout={w}
-                onDelete={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  deleteMutation.mutate(w.id);
-                }}
-              />
-            </Animated.View>
-          ))
+        {/* ── COACH ONBOARDING PROMPT ── */}
+        {!hasCompletedOnboarding && (
+          <Animated.View entering={FadeInDown.duration(400)} style={styles.section}>
+            <Pressable
+              onPress={() => router.push("/workouts/onboarding" as any)}
+              style={[styles.onboardingCard, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}
+            >
+              <View style={styles.onboardingIcon}>
+                <Feather name="zap" size={28} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.onboardingTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                  Set up your fitness coach
+                </Text>
+                <Text style={[styles.onboardingSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Tell us your goals, equipment and preferences — we'll build a personalised plan for you.
+                </Text>
+              </View>
+              <Feather name="arrow-right" size={20} color={theme.primary} />
+            </Pressable>
+          </Animated.View>
         )}
+
+        {/* ── TODAY'S SUGGESTION ── */}
+        {todaySuggestion && (
+          <Animated.View entering={FadeInDown.delay(50).duration(400)} style={styles.section}>
+            <TodaySuggestionCard
+              suggestion={todaySuggestion}
+              onPress={() => router.push({
+                pathname: "/workouts/template" as any,
+                params: { id: todaySuggestion.template.id, whyGoodForYou: todaySuggestion.whyGoodForYou },
+              })}
+            />
+          </Animated.View>
+        )}
+
+        {/* ── RECOMMENDED FOR YOU ── */}
+        {recommendations.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                Recommended for you
+              </Text>
+              <Pressable onPress={() => router.push("/workouts/onboarding" as any)}>
+                <Text style={[styles.editPrefs, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>Edit prefs</Text>
+              </Pressable>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recScroll}>
+              <View style={styles.recRow}>
+                {recommendations.map((rec, i) => (
+                  <View key={rec.template.id} style={styles.recCardWrap}>
+                    <RecommendationCard
+                      rec={rec}
+                      onPress={() => router.push({
+                        pathname: "/workouts/template" as any,
+                        params: { id: rec.template.id, whyGoodForYou: rec.whyGoodForYou },
+                      })}
+                    />
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </Animated.View>
+        )}
+
+        {/* ── QUICK ACTIONS ── */}
+        <Animated.View entering={FadeInDown.delay(150).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Quick log</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.quickRow}>
+              {[
+                { label: "Run", icon: "activity" as const, type: "running", color: theme.primary },
+                { label: "Gym", icon: "zap" as const, type: "gym", color: theme.purple },
+                { label: "Walk", icon: "navigation" as const, type: "walking", color: theme.cyan },
+                { label: "Cycle", icon: "wind" as const, type: "cycling", color: theme.secondary },
+                { label: "Swim", icon: "droplet" as const, type: "swimming", color: "#4fc3f7" },
+                { label: "Yoga", icon: "heart" as const, type: "yoga", color: theme.pink },
+                { label: "Tennis", icon: "circle" as const, type: "tennis", color: theme.warning },
+                { label: "Other", icon: "more-horizontal" as const, type: "other", color: theme.textMuted },
+              ].map((act) => (
+                <Pressable
+                  key={act.type}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push({ pathname: "/workouts/log" as any, params: { prefillType: act.type } });
+                  }}
+                  style={[styles.quickChip, { backgroundColor: theme.card, borderColor: theme.border }]}
+                >
+                  <View style={[styles.quickIcon, { backgroundColor: act.color + "20" }]}>
+                    <Feather name={act.icon} size={18} color={act.color} />
+                  </View>
+                  <Text style={[styles.quickLabel, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{act.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
+        </Animated.View>
+
+        {/* ── BROWSE TEMPLATES ── */}
+        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Browse templates</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.templateRow}>
+              {WORKOUT_TEMPLATES.slice(0, 8).map((tmpl) => (
+                <Pressable
+                  key={tmpl.id}
+                  onPress={() => router.push({ pathname: "/workouts/template" as any, params: { id: tmpl.id } })}
+                  style={[styles.templateCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+                >
+                  <View style={[styles.templateIcon, { backgroundColor: getActivityColor(tmpl.activityType, theme) + "20" }]}>
+                    <Feather name={getActivityIcon(tmpl.activityType)} size={20} color={getActivityColor(tmpl.activityType, theme)} />
+                  </View>
+                  <Text style={[styles.templateName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
+                    {tmpl.name}
+                  </Text>
+                  <View style={styles.templateMeta}>
+                    <Text style={[styles.templateMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {tmpl.durationMinutes}min · {tmpl.difficulty}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
+        </Animated.View>
+
+        {/* ── WORKOUT HISTORY ── */}
+        <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>History</Text>
+
+          {workouts.length === 0 ? (
+            <Card>
+              <View style={styles.empty}>
+                <Feather name="activity" size={40} color={theme.textMuted} />
+                <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>No workouts yet</Text>
+                <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Tap + or choose a template above to get started
+                </Text>
+              </View>
+            </Card>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {workouts.map((w: any) => (
+                <WorkoutHistoryCard
+                  key={w.id}
+                  workout={w}
+                  onDelete={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    deleteMutation.mutate(w.id);
+                  }}
+                />
+              ))}
+            </View>
+          )}
+        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -188,30 +453,87 @@ export default function WorkoutsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 20, paddingBottom: 16,
+    flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start",
+    paddingHorizontal: 20, paddingBottom: 8,
   },
   title: { fontSize: 28 },
-  addBtn: {
-    width: 44, height: 44, borderRadius: 14,
-    alignItems: "center", justifyContent: "center",
+  subtitle: { fontSize: 13, marginTop: 2 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
+  planBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1,
   },
-  workoutCard: { gap: 10 },
-  workoutHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
-  workoutIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  workoutName: { fontSize: 15 },
-  workoutDate: { fontSize: 12, marginTop: 1 },
+  addBtn: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  section: { paddingHorizontal: 20, marginBottom: 20 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  sectionTitle: { fontSize: 17 },
+  editPrefs: { fontSize: 13 },
+  // Onboarding
+  onboardingCard: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 16, borderRadius: 16, borderWidth: 1.5,
+  },
+  onboardingIcon: { width: 50, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  onboardingTitle: { fontSize: 15, marginBottom: 4 },
+  onboardingSub: { fontSize: 13, lineHeight: 18 },
+  // Today
+  todayCard: {},
+  todayInner: { borderRadius: 16, borderWidth: 1.5, padding: 16, gap: 10 },
+  todayTop: { flexDirection: "row", alignItems: "center", gap: 12 },
+  todayIcon: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  todayLabel: { fontSize: 11, marginBottom: 2 },
+  todayName: { fontSize: 17 },
+  startBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+  },
+  todayWhy: { fontSize: 13, lineHeight: 18 },
+  todayStats: { flexDirection: "row", alignItems: "center", gap: 8 },
+  todayStat: { flexDirection: "row", alignItems: "center", gap: 4 },
+  todayStatText: { fontSize: 12 },
+  // Recommendations
+  recScroll: { marginHorizontal: -20 },
+  recRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 },
+  recCardWrap: { width: 260 },
+  recCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
+  recHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  recIcon: { width: 40, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  recName: { fontSize: 14 },
+  recMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  recMetaText: { fontSize: 11 },
+  recWhy: { fontSize: 12, lineHeight: 17 },
+  recFooter: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  goalTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  goalTagText: { fontSize: 11 },
+  diffDot: { width: 6, height: 6, borderRadius: 3 },
+  // Quick actions
+  quickRow: { flexDirection: "row", gap: 10, paddingRight: 8 },
+  quickChip: {
+    alignItems: "center", gap: 6, padding: 12, borderRadius: 12, borderWidth: 1, minWidth: 72,
+  },
+  quickIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  quickLabel: { fontSize: 12 },
+  // Templates
+  templateRow: { flexDirection: "row", gap: 10, paddingRight: 8 },
+  templateCard: { width: 150, borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
+  templateIcon: { width: 40, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  templateName: { fontSize: 13, lineHeight: 18 },
+  templateMeta: { marginTop: 2 },
+  templateMetaText: { fontSize: 11 },
+  // History
+  historyCard: { gap: 8, paddingVertical: 12 },
+  historyHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  historyIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  historyName: { fontSize: 14 },
+  historyDate: { fontSize: 11, marginTop: 1 },
   deleteBtn: { padding: 8 },
-  workoutStats: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  statPill: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: "transparent",
-  },
-  statText: { fontSize: 12 },
-  moodPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  moodText: { fontSize: 12 },
-  exerciseSummary: { fontSize: 12 },
-  empty: { alignItems: "center", gap: 12, paddingTop: 60 },
-  emptyTitle: { fontSize: 18 },
-  emptyText: { fontSize: 14, textAlign: "center" },
+  historyStats: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  histStat: { flexDirection: "row", alignItems: "center", gap: 4 },
+  histStatText: { fontSize: 12 },
+  moodChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  moodText: { fontSize: 11 },
+  // Empty
+  empty: { alignItems: "center", gap: 10, paddingVertical: 28 },
+  emptyTitle: { fontSize: 16 },
+  emptyText: { fontSize: 13, textAlign: "center" },
 });

@@ -33,12 +33,17 @@ router.put("/", requireAuth, async (req, res) => {
       firstName, lastName, age, gender, heightCm, weightKg,
       fitnessGoals, activityLevel, dailyCalorieGoal, dailyProteinGoal,
       dailyCarbsGoal, dailyFatGoal,
+      availableEquipment, workoutLocation, trainingPreferences,
+      experienceLevel, preferredWorkoutDuration, weeklyWorkoutDays,
+      coachOnboardingComplete, savedWeeklyPlan,
     } = req.body;
 
     // Update user name
-    await db.update(usersTable)
-      .set({ firstName, lastName, updatedAt: new Date() })
-      .where(eq(usersTable.id, user.id));
+    if (firstName !== undefined || lastName !== undefined) {
+      await db.update(usersTable)
+        .set({ firstName, lastName, updatedAt: new Date() })
+        .where(eq(usersTable.id, user.id));
+    }
 
     // Update profile
     const [profile] = await db.update(profilesTable)
@@ -47,6 +52,14 @@ router.put("/", requireAuth, async (req, res) => {
         fitnessGoals: fitnessGoals || [],
         activityLevel, dailyCalorieGoal, dailyProteinGoal,
         dailyCarbsGoal, dailyFatGoal,
+        availableEquipment: availableEquipment ?? undefined,
+        workoutLocation: workoutLocation ?? undefined,
+        trainingPreferences: trainingPreferences ?? undefined,
+        experienceLevel: experienceLevel ?? undefined,
+        preferredWorkoutDuration: preferredWorkoutDuration ?? undefined,
+        weeklyWorkoutDays: weeklyWorkoutDays ?? undefined,
+        coachOnboardingComplete: coachOnboardingComplete ?? undefined,
+        savedWeeklyPlan: savedWeeklyPlan ?? undefined,
         updatedAt: new Date(),
       })
       .where(eq(profilesTable.userId, user.id))

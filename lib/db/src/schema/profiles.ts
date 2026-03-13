@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, real, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, real, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -17,6 +17,15 @@ export const profilesTable = pgTable("profiles", {
   dailyProteinGoal: integer("daily_protein_goal"),
   dailyCarbsGoal: integer("daily_carbs_goal"),
   dailyFatGoal: integer("daily_fat_goal"),
+  // Coach / smart workout fields
+  availableEquipment: jsonb("available_equipment").$type<string[]>().notNull().default([]),
+  workoutLocation: text("workout_location"),
+  trainingPreferences: jsonb("training_preferences").$type<string[]>().notNull().default([]),
+  experienceLevel: text("experience_level"),
+  preferredWorkoutDuration: text("preferred_workout_duration"),
+  weeklyWorkoutDays: integer("weekly_workout_days"),
+  coachOnboardingComplete: boolean("coach_onboarding_complete").notNull().default(false),
+  savedWeeklyPlan: jsonb("saved_weekly_plan").$type<any>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

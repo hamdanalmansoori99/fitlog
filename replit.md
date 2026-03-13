@@ -6,7 +6,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Project: FitLog
 
-A full-featured mobile fitness tracking PWA built with Expo React Native. Features workout logging (8 activity types), meal tracking with macros, progress analytics, body measurements, and a beautiful dark-mode UI.
+A full-featured mobile fitness tracking PWA built with Expo React Native. Features workout logging (8 activity types), meal tracking with macros, progress analytics, body measurements, a beautiful dark-mode UI, and a smart fitness coach system with personalised workout recommendations, weekly plan generation, and a 25+ template library.
 
 ## Stack
 
@@ -43,7 +43,10 @@ artifacts-monorepo/
 ### Screens
 - **Login / Register** — `app/auth/login.tsx`, `app/auth/register.tsx`
 - **Home** — `app/(tabs)/index.tsx` — today stats, weekly bar chart, FAB for quick logging
-- **Workouts** — `app/(tabs)/workouts.tsx` — workout list with delete
+- **Workouts (Coach Hub)** — `app/(tabs)/workouts.tsx` — today's suggestion, recommendations carousel, quick-log row, template browser, workout history
+- **Coach Onboarding** — `app/workouts/onboarding.tsx` — 7-step animated setup (equipment, location, goals, days, duration, experience, preferences)
+- **Workout Template** — `app/workouts/template.tsx` — full workout preview, exercises with sets/reps, equipment substitutions, benefits, log CTA
+- **Weekly Plan** — `app/workouts/plan.tsx` — AI-generated 7-day plan with mark-done and save
 - **Log Workout** — `app/workouts/log.tsx` — 8 activity types with activity-specific fields, gym exercise tracker with autocomplete
 - **Meals** — `app/(tabs)/meals.tsx` — date navigation, calorie summary with progress ring, per-category view
 - **Add Meal** — `app/meals/add.tsx` — multi-item food logging with macros
@@ -51,6 +54,10 @@ artifacts-monorepo/
 - **Profile** — `app/(tabs)/profile.tsx` — personal info, fitness goals, daily targets, settings
 - **Add Measurement** — `app/measurements/add.tsx`
 - **Add Equipment** — `app/equipment/add.tsx`
+
+### Smart Coach System
+- `lib/workoutTemplates.ts` — 25+ workout templates (bodyweight, dumbbells, barbell, bands, kettlebells, sport-specific)
+- `lib/coachEngine.ts` — recommendation scoring algorithm (equipment match, goal alignment, difficulty, duration, recency), weekly plan generator, substitution suggestions, benefit descriptions
 
 ### Key Files
 - `constants/colors.ts` — dark/light theme colors
