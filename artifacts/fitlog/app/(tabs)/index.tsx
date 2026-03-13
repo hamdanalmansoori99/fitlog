@@ -28,6 +28,8 @@ import { SmartReminderBanner } from "@/components/SmartReminderBanner";
 import { WaterTracker } from "@/components/WaterTracker";
 import { RecoveryCheckIn } from "@/components/RecoveryCheckIn";
 import { RecoveryContext } from "@/lib/coachEngine";
+import { GoalInsightsPanel } from "@/components/GoalInsightsPanel";
+import { computeGoalInsights, GoalInsight } from "@/lib/goalInsights";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -367,13 +369,26 @@ export default function HomeScreen() {
     staleTime: 60000,
   });
 
+  const { data: nutritionStatsData, refetch: refetchNutrition } = useQuery({
+    queryKey: ["nutritionStats"],
+    queryFn: api.getNutritionStats,
+    staleTime: 120000,
+  });
+
+  const { data: workoutSummaryData, refetch: refetchSummary } = useQuery({
+    queryKey: ["workoutSummary"],
+    queryFn: api.getWorkoutSummary,
+    staleTime: 120000,
+  });
+
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
       refetchStats(), refetchWeekly(), refetchRecent(),
-      refetchProfile(), refetchWorkouts(), refetchStreaks(), refetchMeals(), refetchRecovery(),
+      refetchProfile(), refetchWorkouts(), refetchStreaks(),
+      refetchMeals(), refetchRecovery(), refetchNutrition(), refetchSummary(),
     ]);
     setRefreshing(false);
   }, []);
@@ -472,6 +487,36 @@ export default function HomeScreen() {
 
     return getNutritionInsights(ctx);
   }, [todayMealsData, workoutsData, profile]);
+
+  const goalInsights = useMemo<GoalInsight[]>(() => {
+    if (!profile) return [];
+    const workoutList: any[] = workoutsData?.workouts || [];
+    const recoveryLog = recoveryTodayData?.log ?? undefined;
+    return computeGoalInsights({
+      goals: profile.fitnessGoals || [],
+      profile: {
+        calorieGoal: profile.dailyCalorieGoal ?? null,
+        proteinGoalG: profile.dailyProteinGoal ?? null,
+        weeklyWorkoutDays: profile.weeklyWorkoutDays ?? 3,
+      },
+      workouts: workoutList.map((w: any) => ({
+        activityType: w.activityType,
+        durationMinutes: w.durationMinutes,
+        date: w.date,
+        name: w.name,
+      })),
+      nutritionStats: nutritionStatsData ?? undefined,
+      streaks: streaksData ?? undefined,
+      recovery: recoveryLog
+        ? {
+            sleepQuality: recoveryLog.sleepQuality ?? undefined,
+            energyLevel: recoveryLog.energyLevel ?? undefined,
+            soreness: recoveryLog.soreness ?? {},
+          }
+        : undefined,
+      workoutSummary: workoutSummaryData ?? undefined,
+    });
+  }, [profile, workoutsData, nutritionStatsData, streaksData, recoveryTodayData, workoutSummaryData]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -575,6 +620,21 @@ export default function HomeScreen() {
         {nutritionInsights.length > 0 && (
           <Animated.View entering={FadeInDown.delay(240).duration(400)} style={styles.section}>
             <NutritionInsightsCard insights={nutritionInsights} theme={theme} />
+          </Animated.View>
+        )}
+
+        {/* Goal Insights */}
+        {profile && (
+          <Animated.View entering={FadeInDown.delay(244).duration(400)} style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 12 }]}>
+              Goal Progress
+            </Text>
+            <GoalInsightsPanel
+              insights={goalInsights}
+              goals={profile.fitnessGoals || []}
+              theme={theme}
+              compact
+            />
           </Animated.View>
         )}
 

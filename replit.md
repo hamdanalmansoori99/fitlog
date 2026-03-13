@@ -117,6 +117,17 @@ Tables: `users`, `sessions`, `profiles`, `workouts`, `workout_exercises`, `worko
 
 Every package extends `tsconfig.base.json` with `composite: true`. Always typecheck from root with `pnpm run typecheck`.
 
+## Goal-Based Insights
+
+`lib/goalInsights.ts` — pure client-side engine that takes already-fetched data and produces `GoalInsight[]` cards per fitness goal:
+- **Lose Weight**: calorie trend, weekly deficit estimate, workout consistency, cardio mix
+- **Build Muscle**: protein intake, gym frequency, weight progression (from PRs), recovery quality
+- **Improve Endurance**: weekly cardio minutes (vs 150 min WHO target), active days, activity variety, monthly volume
+- **Improve Flexibility**: mobility session frequency, stretching consistency, monthly total, soreness/recovery synergy
+- **Stay Active**: active days, week-over-week, activity variety, monthly total
+
+`components/GoalInsightsPanel.tsx` — renders goal sections with collapsible headers, 2-column insight cards (icon, value, progress bar, trend arrow, detail text). `compact` prop shows top 2 per goal (dashboard). Full mode (progress page) shows all 4.
+
 ## Key Decisions
 
 - No JWT library — custom SHA-256 + random session tokens

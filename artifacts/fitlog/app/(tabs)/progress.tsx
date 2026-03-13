@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
 } from "react-native";
@@ -12,6 +12,8 @@ import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { WeeklyBarChart } from "@/components/WeeklyBarChart";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
+import { GoalInsightsPanel } from "@/components/GoalInsightsPanel";
+import { computeGoalInsights } from "@/lib/goalInsights";
 
 function MiniLineChart({ data, color }: { data: number[]; color: string }) {
   const { theme } = useTheme();
@@ -71,6 +73,9 @@ export default function ProgressScreen() {
   const { data: streaks, isLoading: streaksLoading } = useQuery({ queryKey: ["streaks"], queryFn: api.getStreaks });
   const { data: records } = useQuery({ queryKey: ["records"], queryFn: api.getPersonalRecords });
   const { data: measurements } = useQuery({ queryKey: ["measurements", measureDays], queryFn: () => api.getMeasurements(measureDays) });
+  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
+  const { data: workoutsData } = useQuery({ queryKey: ["workouts", 0], queryFn: () => api.getWorkouts({ limit: 60 }), staleTime: 120000 });
+  const { data: recoveryTodayData } = useQuery({ queryKey: ["recoveryToday"], queryFn: api.getRecoveryToday, staleTime: 60000 });
   
   const weightData = (measurements?.measurements || [])
     .filter((m: any) => m.weightKg)
@@ -91,7 +96,38 @@ export default function ProgressScreen() {
     yoga: theme.pink,
     other: theme.textMuted,
   };
-  
+
+  const goalInsights = useMemo(() => {
+    if (!profile) return [];
+    const workoutList: any[] = workoutsData?.workouts || [];
+    const recoveryLog = recoveryTodayData?.log ?? undefined;
+    return computeGoalInsights({
+      goals: profile.fitnessGoals || [],
+      profile: {
+        calorieGoal: profile.dailyCalorieGoal ?? null,
+        proteinGoalG: profile.dailyProteinGoal ?? null,
+        weeklyWorkoutDays: profile.weeklyWorkoutDays ?? 3,
+      },
+      workouts: workoutList.map((w: any) => ({
+        activityType: w.activityType,
+        durationMinutes: w.durationMinutes,
+        date: w.date,
+        name: w.name,
+      })),
+      nutritionStats: nutritionStats ?? undefined,
+      streaks: streaks ?? undefined,
+      records: records?.records ?? undefined,
+      recovery: recoveryLog
+        ? {
+            sleepQuality: recoveryLog.sleepQuality ?? undefined,
+            energyLevel: recoveryLog.energyLevel ?? undefined,
+            soreness: recoveryLog.soreness ?? {},
+          }
+        : undefined,
+      workoutSummary: workoutSummary ?? undefined,
+    });
+  }, [profile, workoutsData, nutritionStats, streaks, records, recoveryTodayData, workoutSummary]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
@@ -109,8 +145,18 @@ export default function ProgressScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 16 }}
       >
-        {/* Streaks */}
+        {/* Goal-based insights */}
         <Animated.View entering={FadeInDown.duration(350)}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Goal Insights</Text>
+          <GoalInsightsPanel
+            insights={goalInsights}
+            goals={profile?.fitnessGoals || []}
+            theme={theme}
+          />
+        </Animated.View>
+
+        {/* Streaks */}
+        <Animated.View entering={FadeInDown.delay(40).duration(350)}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Streaks</Text>
           {streaksLoading ? (
             <View style={styles.streaksRow}>
