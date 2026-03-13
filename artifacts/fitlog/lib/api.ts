@@ -1,6 +1,10 @@
+import { Platform } from "react-native";
 import { useAuthStore } from "@/store/authStore";
 
-const BASE_URL = `${process.env.EXPO_PUBLIC_DOMAIN || ""}/api`;
+const DOMAIN = process.env.EXPO_PUBLIC_DOMAIN || "";
+const BASE_URL = Platform.OS === "web"
+  ? "/api"
+  : `https://${DOMAIN}/api`;
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = useAuthStore.getState().token;

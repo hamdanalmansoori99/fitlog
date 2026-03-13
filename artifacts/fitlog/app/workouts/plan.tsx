@@ -1,17 +1,155 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
+  Modal, FlatList, ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
-import { generateWeeklyPlan } from "@/lib/coachEngine";
+import {
+  generateWeeklyPlan,
+  getRecommendations,
+  UserCoachProfile,
+  CoachRecommendation,
+} from "@/lib/coachEngine";
+import { getTemplateById, WorkoutTemplate } from "@/lib/workoutTemplates";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface PlanDay {
+  day: string;
+  template: WorkoutTemplate | null;
+  rest: boolean;
+  note: string;
+  completed?: boolean;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function diffColor(d: string | undefined, theme: any) {
+  if (d === "Beginner") return theme.primary;
+  if (d === "Intermediate") return theme.secondary;
+  if (d === "Advanced") return theme.danger;
+  return theme.primary;
+}
+
+function restorePlan(saved: any[], templates: WorkoutTemplate[]): PlanDay[] {
+  return saved.map((s: any) => {
+    const t = s.templateId ? getTemplateById(s.templateId) ?? null : null;
+    return { day: s.day, template: t, rest: s.rest, note: s.note, completed: s.completed ?? false };
+  });
+}
+
+// ─── Swap Workout Modal ───────────────────────────────────────────────────────
+
+function SwapModal({
+  visible,
+  dayLabel,
+  profile,
+  recentWorkouts,
+  currentTemplateId,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  dayLabel: string;
+  profile: UserCoachProfile;
+  recentWorkouts: any[];
+  currentTemplateId?: string;
+  onSelect: (rec: CoachRecommendation) => void;
+  onClose: () => void;
+}) {
+  const { theme } = useTheme();
+  const recs = getRecommendations(profile, recentWorkouts, 12).filter(
+    (r) => r.template.id !== currentTemplateId
+  );
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={[swap.container, { backgroundColor: theme.background }]}>
+        <View style={[swap.header, { borderBottomColor: theme.border }]}>
+          <Text style={[swap.title, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            Choose workout for {dayLabel}
+          </Text>
+          <Pressable onPress={onClose} style={swap.closeBtn} hitSlop={12}>
+            <Feather name="x" size={22} color={theme.textMuted} />
+          </Pressable>
+        </View>
+
+        {/* Rest option */}
+        <Pressable
+          onPress={() => onSelect({ template: null as any, score: 0, whyGoodForYou: "", equipmentMatch: "full", missingEquipment: [], substitutionsAvailable: false })}
+          style={[swap.restRow, { borderBottomColor: theme.border }]}
+        >
+          <View style={[swap.restIcon, { backgroundColor: theme.card }]}>
+            <Feather name="moon" size={18} color={theme.textMuted} />
+          </View>
+          <Text style={[swap.restLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Set as rest day
+          </Text>
+        </Pressable>
+
+        <FlatList
+          data={recs}
+          keyExtractor={(r) => r.template.id}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10, paddingTop: 12 }}
+          renderItem={({ item: rec }) => (
+            <Pressable
+              onPress={() => onSelect(rec)}
+              style={({ pressed }) => [
+                swap.recCard,
+                { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <View style={swap.recRow}>
+                <View style={[swap.equipDot, {
+                  backgroundColor: rec.equipmentMatch === "full" ? theme.primary + "25" : theme.warning + "25",
+                }]}>
+                  <Feather
+                    name={rec.equipmentMatch === "full" ? "check-circle" : "refresh-cw"}
+                    size={14}
+                    color={rec.equipmentMatch === "full" ? theme.primary : theme.warning}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[swap.recName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    {rec.template.name}
+                  </Text>
+                  <View style={swap.recMeta}>
+                    <Feather name="clock" size={10} color={theme.textMuted} />
+                    <Text style={[swap.recMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {rec.template.durationMinutes} min
+                    </Text>
+                    <Text style={{ color: diffColor(rec.template.difficulty, theme), fontFamily: "Inter_500Medium", fontSize: 10 }}>
+                      · {rec.template.difficulty}
+                    </Text>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={16} color={theme.textMuted} />
+              </View>
+              <Text style={[swap.recWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                {rec.whyGoodForYou}
+              </Text>
+            </Pressable>
+          )}
+          ListEmptyComponent={
+            <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 40, fontSize: 14 }]}>
+              No alternatives found for your equipment profile.
+            </Text>
+          }
+        />
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function WeeklyPlanScreen() {
   const { theme } = useTheme();
@@ -19,7 +157,7 @@ export default function WeeklyPlanScreen() {
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
+  const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
   const { data: workoutsData } = useQuery({ queryKey: ["workouts"], queryFn: api.getWorkouts });
 
   const recentWorkouts = (workoutsData?.workouts || []).slice(0, 14).map((w: any) => ({
@@ -28,7 +166,7 @@ export default function WeeklyPlanScreen() {
     durationMinutes: w.durationMinutes,
   }));
 
-  const userProfile = {
+  const userProfile: UserCoachProfile = {
     availableEquipment: profile?.availableEquipment || [],
     workoutLocation: profile?.workoutLocation || "Home",
     trainingPreferences: profile?.trainingPreferences || [],
@@ -38,34 +176,123 @@ export default function WeeklyPlanScreen() {
     fitnessGoals: profile?.fitnessGoals || [],
   };
 
-  const [plan, setPlan] = useState(() => generateWeeklyPlan(userProfile, recentWorkouts));
-  const [completedDays, setCompletedDays] = useState<Set<number>>(new Set());
+  const [plan, setPlan] = useState<PlanDay[] | null>(null);
   const [saved, setSaved] = useState(false);
+  const [editingDayIdx, setEditingDayIdx] = useState<number | null>(null);
+
+  // Load or generate plan once profile data arrives
+  useEffect(() => {
+    if (!profile || plan !== null) return;
+    const savedPlan = profile.savedWeeklyPlan;
+    if (savedPlan && Array.isArray(savedPlan) && savedPlan.length === 7) {
+      setPlan(restorePlan(savedPlan, []));
+      setSaved(true);
+    } else {
+      setPlan(generateWeeklyPlan(userProfile, recentWorkouts));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
+
+  const planToSave = useCallback(() => {
+    if (!plan) return [];
+    return plan.map((p) => ({
+      day: p.day,
+      templateId: p.template?.id ?? null,
+      rest: p.rest,
+      note: p.note,
+      completed: p.completed ?? false,
+    }));
+  }, [plan]);
 
   const saveMutation = useMutation({
-    mutationFn: () => api.updateProfile({ savedWeeklyPlan: plan.map(p => ({ day: p.day, templateId: p.template?.id, rest: p.rest, note: p.note })) }),
+    mutationFn: () => api.updateProfile({ savedWeeklyPlan: planToSave() }),
     onSuccess: () => {
       setSaved(true);
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
 
+  const logMutation = useMutation({
+    mutationFn: (w: { name: string; activityType: string; durationMinutes: number }) =>
+      api.createWorkout({ ...w, date: new Date().toISOString() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      queryClient.invalidateQueries({ queryKey: ["todayStats"] });
+      queryClient.invalidateQueries({ queryKey: ["recentActivity"] });
+    },
+  });
+
   const regenerate = () => {
     setPlan(generateWeeklyPlan(userProfile, recentWorkouts));
     setSaved(false);
-    setCompletedDays(new Set());
+  };
+
+  const toggleComplete = (idx: number) => {
+    setPlan((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      const day = { ...next[idx] };
+      const nowDone = !day.completed;
+      day.completed = nowDone;
+      next[idx] = day;
+      // Auto-log workout when marked complete
+      if (nowDone && day.template) {
+        logMutation.mutate({
+          name: day.template.name,
+          activityType: day.template.activityType,
+          durationMinutes: day.template.durationMinutes,
+        });
+      }
+      return next;
+    });
+    setSaved(false);
+  };
+
+  const swapDay = (idx: number, rec: CoachRecommendation) => {
+    setPlan((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      if (rec.template === null) {
+        // Set as rest day
+        next[idx] = { day: prev[idx].day, template: null, rest: true, note: "Rest day", completed: false };
+      } else {
+        next[idx] = { day: prev[idx].day, template: rec.template, rest: false, note: rec.whyGoodForYou, completed: false };
+      }
+      return next;
+    });
+    setEditingDayIdx(null);
+    setSaved(false);
   };
 
   const today = new Date().toLocaleString("en-US", { weekday: "long" });
 
+  if (profileLoading || plan === null) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background, justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator color={theme.primary} size="large" />
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 12 }}>
+          Building your plan…
+        </Text>
+      </View>
+    );
+  }
+
+  const workoutDays = plan.filter((p) => !p.rest);
+  const completedCount = plan.filter((p) => p.completed).length;
+  const totalMinutes = workoutDays.reduce((s, d) => s + (d.template?.durationMinutes || 0), 0);
+  const progressPct = workoutDays.length > 0 ? completedCount / workoutDays.length : 0;
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.navBar, { paddingTop: topPad + 8 }]}>
+      {/* Nav */}
+      <View style={[styles.navBar, { paddingTop: topPad + 8, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
-        <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Weekly Plan</Text>
-        <Pressable onPress={regenerate} style={styles.refreshBtn}>
+        <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+          Weekly Plan
+        </Text>
+        <Pressable onPress={regenerate} style={styles.refreshBtn} hitSlop={8}>
           <Feather name="refresh-cw" size={18} color={theme.primary} />
         </Pressable>
       </View>
@@ -74,97 +301,149 @@ export default function WeeklyPlanScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
       >
-        {/* Plan summary */}
+        {/* Summary card */}
         <Card style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
+          <View style={styles.summaryTop}>
             <View style={[styles.summaryIcon, { backgroundColor: theme.primaryDim }]}>
               <Feather name="calendar" size={20} color={theme.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.summaryTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {plan.filter(p => !p.rest).length} workouts this week
+                {workoutDays.length} workouts · {totalMinutes} min total
               </Text>
               <Text style={[styles.summarySub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {userProfile.experienceLevel} level · {userProfile.preferredWorkoutDuration}
+                {userProfile.experienceLevel} · {userProfile.preferredWorkoutDuration}
               </Text>
             </View>
-            {saved ? (
-              <View style={[styles.savedBadge, { backgroundColor: theme.primaryDim }]}>
+            {saved && (
+              <Animated.View entering={FadeIn} style={[styles.savedPill, { backgroundColor: theme.primaryDim }]}>
                 <Feather name="check" size={12} color={theme.primary} />
                 <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Saved</Text>
-              </View>
-            ) : null}
+              </Animated.View>
+            )}
           </View>
+
+          {/* Progress bar */}
+          {workoutDays.length > 0 && (
+            <View style={styles.progressBlock}>
+              <View style={styles.progressLabelRow}>
+                <Text style={[styles.progressLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Progress this week
+                </Text>
+                <Text style={[styles.progressLabel, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
+                  {completedCount}/{workoutDays.length}
+                </Text>
+              </View>
+              <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
+                <Animated.View
+                  style={[styles.progressFill, { width: `${progressPct * 100}%` as any, backgroundColor: theme.primary }]}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* Goal tags */}
+          {userProfile.fitnessGoals.length > 0 && (
+            <View style={styles.goalRow}>
+              {userProfile.fitnessGoals.slice(0, 3).map((g) => (
+                <View key={g} style={[styles.goalPill, { backgroundColor: theme.secondaryDim }]}>
+                  <Text style={{ color: theme.secondary, fontFamily: "Inter_400Regular", fontSize: 11 }}>{g}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </Card>
 
         {/* Day cards */}
         {plan.map((day, idx) => {
           const isToday = day.day === today;
-          const isDone = completedDays.has(idx);
+          const isDone = !!day.completed;
 
           return (
-            <Animated.View key={day.day} entering={FadeInDown.delay(idx * 60).duration(300)}>
-              <Pressable
-                onPress={() => {
-                  if (day.template) {
-                    router.push({
-                      pathname: "/workouts/template" as any,
-                      params: { id: day.template.id, whyGoodForYou: day.note },
-                    });
-                  }
-                }}
-                style={[
-                  styles.dayCard,
-                  {
-                    backgroundColor: isToday ? theme.primaryDim : theme.card,
-                    borderColor: isToday ? theme.primary : isDone ? theme.border : theme.border,
-                    opacity: isDone ? 0.6 : 1,
-                  },
-                ]}
-              >
-                {/* Day label */}
+            <Animated.View key={day.day} entering={FadeInDown.delay(idx * 55).duration(280)}>
+              <View style={[
+                styles.dayCard,
+                {
+                  backgroundColor: isToday && !isDone ? theme.primaryDim : theme.card,
+                  borderColor: isToday && !isDone ? theme.primary : isDone ? theme.primary + "50" : theme.border,
+                },
+              ]}>
+                {/* ── Top row: day label + edit/check actions ── */}
                 <View style={styles.dayHeader}>
-                  <View style={styles.dayLeft}>
-                    <Text style={[styles.dayName, { color: isToday ? theme.primary : theme.textMuted, fontFamily: isToday ? "Inter_700Bold" : "Inter_500Medium" }]}>
-                      {day.day}
-                      {isToday ? " — Today" : ""}
-                    </Text>
+                  <Text style={[
+                    styles.dayName,
+                    { fontFamily: isToday ? "Inter_700Bold" : "Inter_500Medium", color: isToday && !isDone ? theme.primary : theme.textMuted },
+                  ]}>
+                    {day.day}{isToday ? " — Today" : ""}
+                  </Text>
+                  <View style={styles.dayActions}>
+                    {/* Edit/swap button */}
+                    <Pressable
+                      onPress={(e) => { e.stopPropagation?.(); setEditingDayIdx(idx); }}
+                      style={[styles.editBtn, { borderColor: theme.border }]}
+                      hitSlop={12}
+                    >
+                      <Feather name="edit-2" size={12} color={theme.textMuted} />
+                    </Pressable>
+                    {/* Mark complete checkbox */}
+                    {!day.rest && (
+                      <Pressable
+                        onPress={(e) => { e.stopPropagation?.(); toggleComplete(idx); }}
+                        style={[styles.checkBtn, {
+                          backgroundColor: isDone ? theme.primary : "transparent",
+                          borderColor: isDone ? theme.primary : theme.border,
+                        }]}
+                        hitSlop={12}
+                        accessibilityLabel={isDone ? "Mark incomplete" : "Mark complete"}
+                        accessibilityRole="checkbox"
+                      >
+                        <Feather name="check" size={14} color={isDone ? "#0f0f1a" : theme.border} />
+                      </Pressable>
+                    )}
                   </View>
-                  {isDone && (
-                    <View style={[styles.doneBadge, { backgroundColor: theme.primary + "20" }]}>
-                      <Feather name="check" size={12} color={theme.primary} />
-                      <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 11 }}>Done</Text>
-                    </View>
-                  )}
                 </View>
 
+                {/* ── Content area ── */}
                 {day.rest ? (
                   <View style={styles.restContent}>
-                    <Feather name="moon" size={16} color={theme.textMuted} />
-                    <Text style={[styles.restText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{day.note}</Text>
+                    <Feather name="moon" size={15} color={theme.textMuted} />
+                    <Text style={[styles.restText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {day.note}
+                    </Text>
                   </View>
                 ) : (
-                  <View style={styles.workoutContent}>
-                    <View style={styles.workoutInfo}>
-                      <Text style={[styles.workoutName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                        {day.template?.name}
-                      </Text>
+                  /* Tapping the workout info area navigates to the template */
+                  <Pressable
+                    onPress={() => {
+                      if (day.template) {
+                        router.push({ pathname: "/workouts/template" as any, params: { id: day.template.id, whyGoodForYou: day.note } });
+                      }
+                    }}
+                    style={styles.workoutContent}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.workoutNameRow}>
+                        <Text style={[styles.workoutName, {
+                          color: isDone ? theme.textMuted : theme.text,
+                          fontFamily: "Inter_600SemiBold",
+                          textDecorationLine: isDone ? "line-through" : "none",
+                        }]} numberOfLines={1}>
+                          {day.template?.name}
+                        </Text>
+                        {isDone && (
+                          <View style={[styles.donePill, { backgroundColor: theme.primary + "25" }]}>
+                            <Feather name="check-circle" size={11} color={theme.primary} />
+                            <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 10 }}>Done</Text>
+                          </View>
+                        )}
+                      </View>
                       <View style={styles.workoutMeta}>
-                        <View style={styles.metaItem}>
-                          <Feather name="clock" size={11} color={theme.textMuted} />
-                          <Text style={[styles.metaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                            {day.template?.durationMinutes} min
-                          </Text>
-                        </View>
-                        <View style={[styles.diffBadge, {
-                          backgroundColor: day.template?.difficulty === "Beginner" ? theme.primary + "20" :
-                            day.template?.difficulty === "Intermediate" ? theme.secondary + "20" : theme.danger + "20",
-                        }]}>
-                          <Text style={{
-                            color: day.template?.difficulty === "Beginner" ? theme.primary :
-                              day.template?.difficulty === "Intermediate" ? theme.secondary : theme.danger,
-                            fontFamily: "Inter_400Regular", fontSize: 10,
-                          }}>
+                        <Feather name="clock" size={10} color={theme.textMuted} />
+                        <Text style={[styles.metaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                          {day.template?.durationMinutes} min
+                        </Text>
+                        <View style={[styles.diffBadge, { backgroundColor: diffColor(day.template?.difficulty, theme) + "20" }]}>
+                          <Text style={{ color: diffColor(day.template?.difficulty, theme), fontFamily: "Inter_400Regular", fontSize: 10 }}>
                             {day.template?.difficulty}
                           </Text>
                         </View>
@@ -173,70 +452,100 @@ export default function WeeklyPlanScreen() {
                         {day.note}
                       </Text>
                     </View>
-                    <View style={styles.dayActions}>
-                      <Pressable
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          setCompletedDays(s => {
-                            const next = new Set(s);
-                            if (next.has(idx)) next.delete(idx);
-                            else next.add(idx);
-                            return next;
-                          });
-                        }}
-                        style={[styles.checkBtn, {
-                          backgroundColor: isDone ? theme.primary : "transparent",
-                          borderColor: isDone ? theme.primary : theme.border,
-                        }]}
-                      >
-                        <Feather name="check" size={14} color={isDone ? "#0f0f1a" : theme.border} />
-                      </Pressable>
-                    </View>
-                  </View>
+                    <Feather name="chevron-right" size={16} color={theme.textMuted} />
+                  </Pressable>
                 )}
-              </Pressable>
+              </View>
             </Animated.View>
           );
         })}
       </ScrollView>
 
-      {/* Footer */}
+      {/* Save footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: theme.border, backgroundColor: theme.background }]}>
-        <Button title={saved ? "Plan Saved" : "Save This Plan"} onPress={() => saveMutation.mutate()} loading={saveMutation.isPending} disabled={saved} />
+        <Button
+          title={saved ? "Plan Saved" : "Save This Plan"}
+          onPress={() => saveMutation.mutate()}
+          loading={saveMutation.isPending}
+          disabled={saved}
+        />
+        <Button
+          title="Regenerate Plan"
+          onPress={regenerate}
+          variant="outline"
+        />
       </View>
+
+      {/* Swap modal */}
+      {editingDayIdx !== null && (
+        <SwapModal
+          visible={editingDayIdx !== null}
+          dayLabel={plan[editingDayIdx]?.day ?? ""}
+          profile={userProfile}
+          recentWorkouts={recentWorkouts}
+          currentTemplateId={plan[editingDayIdx]?.template?.id}
+          onSelect={(rec) => swapDay(editingDayIdx, rec)}
+          onClose={() => setEditingDayIdx(null)}
+        />
+      )}
     </View>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  navBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 8 },
+  navBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth },
   backBtn: { width: 44, height: 44, justifyContent: "center" },
   navTitle: { fontSize: 17 },
   refreshBtn: { width: 44, height: 44, justifyContent: "center", alignItems: "flex-end" },
-  content: { paddingHorizontal: 16, gap: 10, paddingTop: 4 },
-  summaryCard: { marginBottom: 4 },
-  summaryRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  content: { paddingHorizontal: 16, gap: 10, paddingTop: 14 },
+  summaryCard: { marginBottom: 2 },
+  summaryTop: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
   summaryIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   summaryTitle: { fontSize: 15 },
   summarySub: { fontSize: 12, marginTop: 2 },
-  savedBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  dayCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
-  dayHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  dayLeft: {},
+  savedPill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  progressBlock: { gap: 6, marginBottom: 10 },
+  progressLabelRow: { flexDirection: "row", justifyContent: "space-between" },
+  progressLabel: { fontSize: 12 },
+  progressTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
+  progressFill: { height: 6, borderRadius: 3 },
+  goalRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  goalPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  dayCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
+  dayHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   dayName: { fontSize: 13 },
-  doneBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  dayActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  editBtn: { width: 28, height: 28, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  checkBtn: { width: 30, height: 30, borderRadius: 15, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   restContent: { flexDirection: "row", alignItems: "center", gap: 8 },
   restText: { fontSize: 13, flex: 1 },
-  workoutContent: { flexDirection: "row", alignItems: "center", gap: 12 },
-  workoutInfo: { flex: 1, gap: 4 },
+  workoutContent: { flexDirection: "row", alignItems: "center", gap: 10 },
+  workoutNameRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   workoutName: { fontSize: 15 },
-  workoutMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
-  metaItem: { flexDirection: "row", alignItems: "center", gap: 3 },
+  donePill: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  workoutMeta: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 },
   metaText: { fontSize: 11 },
   diffBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  dayNote: { fontSize: 12, lineHeight: 16, marginTop: 2 },
-  dayActions: { alignItems: "center" },
-  checkBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  footer: { position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1 },
+  dayNote: { fontSize: 12, lineHeight: 16, marginTop: 4 },
+  footer: { position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 12, gap: 8, borderTopWidth: StyleSheet.hairlineWidth },
+});
+
+const swap = StyleSheet.create({
+  container: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth },
+  title: { fontSize: 16 },
+  closeBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  restRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
+  restIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  restLabel: { fontSize: 15 },
+  recCard: { borderRadius: 12, borderWidth: 1, padding: 12, gap: 6 },
+  recRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  equipDot: { width: 32, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center" },
+  recName: { fontSize: 14 },
+  recMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  recMetaText: { fontSize: 11 },
+  recWhy: { fontSize: 12, lineHeight: 16, paddingLeft: 42 },
 });

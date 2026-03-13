@@ -391,6 +391,32 @@ export default function WorkoutsScreen() {
           </Animated.View>
         )}
 
+        {/* ── WEEKLY PLAN BANNER ── */}
+        {hasCompletedOnboarding && (
+          <Animated.View entering={FadeInDown.delay(130).duration(400)} style={styles.section}>
+            <Pressable
+              onPress={() => router.push("/workouts/plan" as any)}
+              style={({ pressed }) => [
+                styles.planBanner,
+                { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.9 : 1 },
+              ]}
+            >
+              <View style={[styles.planBannerIcon, { backgroundColor: theme.secondaryDim }]}>
+                <Feather name="calendar" size={20} color={theme.secondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.planBannerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  Weekly Training Plan
+                </Text>
+                <Text style={[styles.planBannerSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  View, edit and track your 7-day schedule
+                </Text>
+              </View>
+              <Feather name="arrow-right" size={18} color={theme.secondary} />
+            </Pressable>
+          </Animated.View>
+        )}
+
         {/* ── QUICK ACTIONS ── */}
         <Animated.View entering={FadeInDown.delay(150).duration(400)} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Quick log</Text>
@@ -502,6 +528,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1,
   },
   addBtn: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  planBanner: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
+  planBannerIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  planBannerTitle: { fontSize: 14 },
+  planBannerSub: { fontSize: 12, marginTop: 2 },
   section: { paddingHorizontal: 20, marginBottom: 20 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   sectionTitle: { fontSize: 17 },
