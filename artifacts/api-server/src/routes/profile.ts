@@ -58,6 +58,7 @@ router.put("/", requireAuth, async (req, res) => {
         experienceLevel: experienceLevel ?? undefined,
         preferredWorkoutDuration: preferredWorkoutDuration ?? undefined,
         weeklyWorkoutDays: weeklyWorkoutDays ?? undefined,
+        onboardingComplete: (req.body as any).onboardingComplete ?? undefined,
         coachOnboardingComplete: coachOnboardingComplete ?? undefined,
         savedWeeklyPlan: savedWeeklyPlan ?? undefined,
         updatedAt: new Date(),

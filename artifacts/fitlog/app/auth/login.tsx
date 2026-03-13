@@ -31,7 +31,17 @@ export default function LoginScreen() {
     try {
       const res = await api.login({ email: email.trim(), password });
       setAuth(res.token, res.user);
-      router.replace("/(tabs)");
+      // Check if onboarding has been completed
+      try {
+        const profile = await api.getProfile();
+        if (!profile.onboardingComplete) {
+          router.replace("/onboarding");
+        } else {
+          router.replace("/(tabs)");
+        }
+      } catch {
+        router.replace("/(tabs)");
+      }
     } catch (err: any) {
       setError(err.message || "Login failed");
     } finally {

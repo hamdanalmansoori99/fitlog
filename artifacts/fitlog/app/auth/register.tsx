@@ -37,7 +37,7 @@ export default function RegisterScreen() {
     try {
       const res = await api.register({ firstName, lastName, email: email.trim(), password });
       setAuth(res.token, res.user);
-      router.replace("/(tabs)");
+      router.replace("/onboarding");
     } catch (err: any) {
       setError(err.message || "Registration failed");
     } finally {
