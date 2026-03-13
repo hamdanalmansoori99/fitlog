@@ -93,4 +93,11 @@ export const api = {
   // Coach
   getCoachConversation: () => request<any>("/coach/conversation"),
   clearCoachConversation: () => request<any>("/coach/conversation", { method: "DELETE" }),
+
+  // Progression
+  getExerciseHistory: (names: string[], limit = 5) =>
+    request<any>(`/progress/exercise-history?names=${encodeURIComponent(names.join(","))}&limit=${limit}`),
+  getCardioHistory: (type: string, limit = 10) =>
+    request<any>(`/progress/cardio-history?type=${encodeURIComponent(type)}&limit=${limit}`),
+  getConsistency: () => request<any>("/progress/consistency"),
 };

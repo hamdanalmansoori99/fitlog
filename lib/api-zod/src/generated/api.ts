@@ -717,6 +717,70 @@ export const GetPersonalRecordsResponse = zod.object({
 });
 
 /**
+ * @summary Get history for one or more exercises by name
+ */
+export const getExerciseHistoryQueryLimitDefault = 5;
+
+export const GetExerciseHistoryQueryParams = zod.object({
+  names: zod.coerce.string().describe("Comma-separated exercise names"),
+  limit: zod.coerce.number().default(getExerciseHistoryQueryLimitDefault),
+});
+
+export const GetExerciseHistoryResponse = zod.object({
+  exercises: zod.array(
+    zod.object({
+      name: zod.string(),
+      sessions: zod.array(
+        zod.object({
+          date: zod.string(),
+          sets: zod.array(
+            zod.object({
+              reps: zod.number().optional(),
+              weightKg: zod.number().optional(),
+              rpe: zod.number().optional(),
+              completed: zod.boolean().optional(),
+            }),
+          ),
+        }),
+      ),
+    }),
+  ),
+});
+
+/**
+ * @summary Get cardio session history for a given activity type
+ */
+export const getCardioHistoryQueryLimitDefault = 10;
+
+export const GetCardioHistoryQueryParams = zod.object({
+  type: zod.coerce.string(),
+  limit: zod.coerce.number().default(getCardioHistoryQueryLimitDefault),
+});
+
+export const GetCardioHistoryResponse = zod.object({
+  sessions: zod.array(
+    zod.object({
+      date: zod.string(),
+      distanceKm: zod.number().optional(),
+      durationMinutes: zod.number().optional(),
+      paceMinPerKm: zod.number().optional(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get weekly consistency assessment
+ */
+export const GetConsistencyResponse = zod.object({
+  workoutsThisWeek: zod.number(),
+  workoutsLastWeek: zod.number(),
+  weeklyGoal: zod.number(),
+  level: zod.string(),
+  recommendation: zod.string(),
+  shouldDeload: zod.boolean(),
+});
+
+/**
  * @summary Get user settings
  */
 export const GetSettingsResponse = zod.object({

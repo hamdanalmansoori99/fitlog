@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable } from "@workspace/db";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable, profilesTable } from "@workspace/db";
+import { eq, and, gte, lte, desc, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
 const router = Router();
@@ -154,6 +154,166 @@ router.get("/records", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Records error:", err);
     res.status(500).json({ error: "Failed to get personal records" });
+  }
+});
+
+router.get("/exercise-history", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const namesParam = (req.query["names"] as string) || "";
+    const limit = Math.min(parseInt((req.query["limit"] as string) || "5"), 20);
+
+    if (!namesParam.trim()) {
+      res.json({ exercises: [] });
+      return;
+    }
+
+    const names = namesParam.split(",").map((n) => n.trim()).filter(Boolean);
+
+    const result: any[] = [];
+
+    for (const name of names) {
+      const exerciseRows = await db
+        .select({
+          exercise: workoutExercisesTable,
+          workoutDate: workoutsTable.date,
+          workoutId: workoutsTable.id,
+        })
+        .from(workoutExercisesTable)
+        .innerJoin(workoutsTable, eq(workoutExercisesTable.workoutId, workoutsTable.id))
+        .where(and(eq(workoutsTable.userId, user.id), eq(workoutExercisesTable.name, name)))
+        .orderBy(desc(workoutsTable.date))
+        .limit(limit);
+
+      const sessions = await Promise.all(
+        exerciseRows.map(async (row) => {
+          const sets = await db
+            .select()
+            .from(workoutSetsTable)
+            .where(eq(workoutSetsTable.exerciseId, row.exercise.id))
+            .orderBy(workoutSetsTable.order);
+          return {
+            date: row.workoutDate.toISOString(),
+            sets: sets.map((s) => ({
+              reps: s.reps,
+              weightKg: s.weightKg,
+              rpe: s.rpe,
+              completed: s.completed,
+            })),
+          };
+        })
+      );
+
+      result.push({ name, sessions });
+    }
+
+    res.json({ exercises: result });
+  } catch (err) {
+    console.error("exercise-history error:", err);
+    res.status(500).json({ error: "Failed to get exercise history" });
+  }
+});
+
+router.get("/cardio-history", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const type = (req.query["type"] as string) || "";
+    const limit = Math.min(parseInt((req.query["limit"] as string) || "10"), 30);
+
+    if (!type.trim()) {
+      res.json({ sessions: [] });
+      return;
+    }
+
+    const workouts = await db
+      .select({
+        date: workoutsTable.date,
+        distanceKm: workoutsTable.distanceKm,
+        durationMinutes: workoutsTable.durationMinutes,
+        paceMinPerKm: workoutsTable.paceMinPerKm,
+      })
+      .from(workoutsTable)
+      .where(and(eq(workoutsTable.userId, user.id), eq(workoutsTable.activityType, type)))
+      .orderBy(desc(workoutsTable.date))
+      .limit(limit);
+
+    const sessions = workouts.map((w) => {
+      let pace = w.paceMinPerKm;
+      if (!pace && w.distanceKm && w.durationMinutes && w.distanceKm > 0) {
+        pace = w.durationMinutes / w.distanceKm;
+      }
+      return {
+        date: w.date.toISOString(),
+        distanceKm: w.distanceKm ?? undefined,
+        durationMinutes: w.durationMinutes ?? undefined,
+        paceMinPerKm: pace ?? undefined,
+      };
+    });
+
+    res.json({ sessions });
+  } catch (err) {
+    console.error("cardio-history error:", err);
+    res.status(500).json({ error: "Failed to get cardio history" });
+  }
+});
+
+router.get("/consistency", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+    const recentWorkouts = await db
+      .select({ date: workoutsTable.date })
+      .from(workoutsTable)
+      .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, twoWeeksAgo)));
+
+    const [profile] = await db
+      .select({ weeklyWorkoutDays: profilesTable.weeklyWorkoutDays })
+      .from(profilesTable)
+      .where(eq(profilesTable.userId, user.id))
+      .limit(1);
+
+    const weeklyGoal = profile?.weeklyWorkoutDays ?? 3;
+
+    const now = Date.now();
+    const weekMs = 7 * 86400000;
+    const thisWeek = recentWorkouts.filter((w) => now - new Date(w.date).getTime() < weekMs).length;
+    const lastWeek = recentWorkouts.filter((w) => {
+      const age = now - new Date(w.date).getTime();
+      return age >= weekMs && age < 2 * weekMs;
+    }).length;
+
+    const ratio = weeklyGoal > 0 ? thisWeek / weeklyGoal : 0;
+    let level: string;
+    let recommendation: string;
+    let shouldDeload: boolean;
+
+    if (ratio >= 1) {
+      level = "high";
+      recommendation =
+        thisWeek > weeklyGoal
+          ? "Outstanding week — you exceeded your goal. Consider adding more challenge or a deload day."
+          : "You hit your weekly goal. Keep building this habit — consistency compounds.";
+      shouldDeload = thisWeek >= weeklyGoal + 2;
+    } else if (ratio >= 0.5) {
+      level = "medium";
+      recommendation = `You're at ${thisWeek}/${weeklyGoal} sessions this week. ${weeklyGoal - thisWeek} more to hit your goal.`;
+      shouldDeload = false;
+    } else {
+      level = "low";
+      recommendation =
+        lastWeek >= weeklyGoal
+          ? "Great last week, lighter this week. A short session now builds momentum."
+          : "Even a 15-minute session counts. Start small, show up consistently.";
+      shouldDeload = false;
+    }
+
+    res.json({ workoutsThisWeek: thisWeek, workoutsLastWeek: lastWeek, weeklyGoal, level, recommendation, shouldDeload });
+  } catch (err) {
+    console.error("consistency error:", err);
+    res.status(500).json({ error: "Failed to get consistency data" });
   }
 });
 

@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform,
   Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { SuccessView } from "@/components/SuccessView";
+import { calculateStrengthTarget } from "@/lib/progressionEngine";
 
 const ACTIVITY_TYPES = [
   { id: "cycling", label: "Cycling", icon: "wind" as const, color: "secondary" },
@@ -38,9 +39,14 @@ const GYM_EXERCISES = [
   "Preacher Curl", "Hammer Curl", "Skull Crusher", "Dips", "Chest Fly",
 ];
 
+const RPE_LABELS = ["Very Easy", "Easy", "Moderate", "Hard", "Max Effort"];
+const RPE_VALUES = [2, 4, 6, 8, 10];
+const RPE_EMOJIS = ["🟢", "🟡", "🟠", "🔴", "🔥"];
+
 interface GymExercise {
   name: string;
   sets: { reps: string; weight: string }[];
+  rpe?: number;
 }
 
 export default function LogWorkoutScreen() {
@@ -77,6 +83,28 @@ export default function LogWorkoutScreen() {
   const [exercises, setExercises] = useState<GymExercise[]>([
     { name: "", sets: [{ reps: "", weight: "" }] },
   ]);
+
+  const exerciseNames = useMemo(
+    () => exercises.map((e) => e.name).filter((n) => n.length > 2),
+    [exercises]
+  );
+
+  const { data: exerciseHistoryData } = useQuery({
+    queryKey: ["exerciseHistory", exerciseNames],
+    queryFn: () => api.getExerciseHistory(exerciseNames),
+    enabled: activityType === "gym" && exerciseNames.length > 0,
+    staleTime: 30000,
+  });
+
+  const exerciseHistoryMap = useMemo<Record<string, any[]>>(() => {
+    const map: Record<string, any[]> = {};
+    if (exerciseHistoryData?.exercises) {
+      for (const entry of exerciseHistoryData.exercises) {
+        map[entry.name] = entry.sessions ?? [];
+      }
+    }
+    return map;
+  }, [exerciseHistoryData]);
   const [exerciseSearch, setExerciseSearch] = useState<string[]>([""]); 
   
   const [success, setSuccess] = useState(false);
@@ -131,9 +159,12 @@ export default function LogWorkoutScreen() {
       ? exercises.filter(e => e.name).map((e, i) => ({
           name: e.name,
           order: i,
+          rpe: e.rpe,
           sets: e.sets.map((s, j) => ({
             reps: parseInt(s.reps) || undefined,
             weightKg: parseFloat(s.weight) || undefined,
+            rpe: e.rpe,
+            completed: true,
             order: j,
           })),
         }))
@@ -155,12 +186,47 @@ export default function LogWorkoutScreen() {
   
   if (success) {
     const activityLabel = ACTIVITY_TYPES.find(a => a.id === activityType)?.label || "workout";
+    const completedExercises = exercises.filter(e => e.name && e.sets.some(s => s.reps || s.weight));
     return (
       <View style={[styles.successScreen, { backgroundColor: theme.background }]}>
         <SuccessView
           title="Workout Logged!"
           subtitle={`${activityLabel} recorded. Keep up the great work!`}
         />
+        {activityType === "gym" && completedExercises.length > 0 && (
+          <View style={{ width: "100%", paddingHorizontal: 20, gap: 8 }}>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center", marginBottom: 4 }}>
+              Next Session Targets
+            </Text>
+            {completedExercises.map((ex) => {
+              const sessions = exerciseHistoryMap[ex.name] ?? [];
+              const target = calculateStrengthTarget(sessions);
+              if (target.trend === "first") return null;
+              const trendColors: Record<string, string> = { progress: theme.primary, maintain: theme.secondary, deload: theme.warning };
+              const trendColor = trendColors[target.trend] ?? theme.textMuted;
+              const trendLabels: Record<string, string> = { progress: "Level up", maintain: "Hold steady", deload: "Recovery" };
+              return (
+                <View
+                  key={ex.name}
+                  style={[styles.successProgressRow, { backgroundColor: theme.card, borderColor: trendColor + "40" }]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{ex.name}</Text>
+                    <Text style={{ color: trendColor, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+                      {target.suggestedSets != null && target.suggestedReps != null
+                        ? `Target: ${target.suggestedSets}×${target.suggestedReps}${target.suggestedWeightKg ? ` @ ${target.suggestedWeightKg}kg` : ""}`
+                        : "Same as before"}
+                    </Text>
+                  </View>
+                  <View style={[styles.trendBadge, { backgroundColor: trendColor + "20" }]}>
+                    <Text style={{ color: trendColor, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>{trendLabels[target.trend] ?? target.trend}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+        <Button title="Go to Dashboard" onPress={() => router.replace("/(tabs)")} style={{ marginHorizontal: 20 }} />
       </View>
     );
   }
@@ -356,6 +422,32 @@ export default function LogWorkoutScreen() {
                         ))}
                       </ScrollView>
                     )}
+
+                    {/* Previous performance + progression target */}
+                    {ex.name.length > 2 && exerciseHistoryMap[ex.name] != null && (() => {
+                      const sessions = exerciseHistoryMap[ex.name] ?? [];
+                      const target = calculateStrengthTarget(sessions);
+                      if (target.trend === "first") return null;
+                      const trendColors: Record<string, string> = { progress: theme.primary, maintain: theme.secondary, deload: theme.warning };
+                      const trendColor = trendColors[target.trend] ?? theme.textMuted;
+                      return (
+                        <View style={[styles.progressionBadge, { backgroundColor: trendColor + "15", borderColor: trendColor + "40" }]}>
+                          <Feather name="trending-up" size={12} color={trendColor} />
+                          <View style={{ flex: 1 }}>
+                            {target.previousDisplay && (
+                              <Text style={[styles.progressionBadgeText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                                Last: {target.previousDisplay}
+                              </Text>
+                            )}
+                            <Text style={[styles.progressionBadgeTarget, { color: trendColor, fontFamily: "Inter_600SemiBold" }]}>
+                              Target: {target.suggestedSets != null && target.suggestedReps != null
+                                ? `${target.suggestedSets}×${target.suggestedReps}${target.suggestedWeightKg ? ` @ ${target.suggestedWeightKg}kg` : ""}`
+                                : target.suggestedReps != null ? `${target.suggestedReps} reps` : "Same as before"}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })()}
                     
                     {/* Sets */}
                     <View style={styles.setsHeader}>
@@ -415,6 +507,41 @@ export default function LogWorkoutScreen() {
                       <Feather name="plus" size={14} color={theme.primary} />
                       <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>Add Set</Text>
                     </Pressable>
+
+                    {/* RPE Selector */}
+                    <View style={{ marginTop: 12 }}>
+                      <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 6 }]}>
+                        Effort Level (RPE)
+                      </Text>
+                      <View style={{ flexDirection: "row", gap: 6 }}>
+                        {RPE_VALUES.map((rpeVal, rpeIdx) => {
+                          const selected = ex.rpe === rpeVal;
+                          return (
+                            <Pressable
+                              key={rpeVal}
+                              onPress={() => {
+                                const newEx = [...exercises];
+                                newEx[exIdx].rpe = selected ? undefined : rpeVal;
+                                setExercises(newEx);
+                              }}
+                              style={[
+                                styles.rpeChip,
+                                {
+                                  backgroundColor: selected ? theme.primary + "20" : theme.card,
+                                  borderColor: selected ? theme.primary : theme.border,
+                                  flex: 1,
+                                },
+                              ]}
+                            >
+                              <Text style={{ fontSize: 14 }}>{RPE_EMOJIS[rpeIdx]}</Text>
+                              <Text style={{ color: selected ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 9, textAlign: "center" }}>
+                                {RPE_LABELS[rpeIdx]}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
                   </Card>
                 ))}
                 
@@ -570,7 +697,39 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
     padding: 14, borderRadius: 12, borderWidth: 1,
   },
-  successScreen: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
+  successScreen: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, paddingBottom: 32 },
+  successProgressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  trendBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  progressionBadge: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 6,
+  },
+  progressionBadgeText: { fontSize: 11 },
+  progressionBadgeTarget: { fontSize: 12 },
+  rpeChip: {
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 3,
+  },
   successCircle: { width: 100, height: 100, borderRadius: 50, alignItems: "center", justifyContent: "center" },
   successTitle: { fontSize: 26 },
   successSub: { fontSize: 15 },

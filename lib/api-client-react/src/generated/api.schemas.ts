@@ -361,6 +361,47 @@ export interface ExportDataResponse {
   measurements: BodyMeasurement[];
 }
 
+export interface ExerciseSetRecord {
+  reps?: number;
+  weightKg?: number;
+  rpe?: number;
+  completed?: boolean;
+}
+
+export interface ExerciseSession {
+  date: string;
+  sets: ExerciseSetRecord[];
+}
+
+export interface ExerciseHistoryEntry {
+  name: string;
+  sessions: ExerciseSession[];
+}
+
+export interface ExerciseHistoryResponse {
+  exercises: ExerciseHistoryEntry[];
+}
+
+export interface CardioSessionEntry {
+  date: string;
+  distanceKm?: number;
+  durationMinutes?: number;
+  paceMinPerKm?: number;
+}
+
+export interface CardioHistoryResponse {
+  sessions: CardioSessionEntry[];
+}
+
+export interface ConsistencyResponse {
+  workoutsThisWeek: number;
+  workoutsLastWeek: number;
+  weeklyGoal: number;
+  level: string;
+  recommendation: string;
+  shouldDeload: boolean;
+}
+
 export interface CoachMessage {
   id: number;
   conversationId: number;
@@ -402,4 +443,17 @@ export type GetMeasurementsParams = {
    * Number of days to look back (30, 90, 365)
    */
   days?: number;
+};
+
+export type GetExerciseHistoryParams = {
+  /**
+   * Comma-separated exercise names
+   */
+  names: string;
+  limit?: number;
+};
+
+export type GetCardioHistoryParams = {
+  type: string;
+  limit?: number;
 };

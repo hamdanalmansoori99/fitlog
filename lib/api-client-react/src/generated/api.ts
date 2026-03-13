@@ -19,7 +19,9 @@ import type {
 import type {
   AuthResponse,
   BodyMeasurement,
+  CardioHistoryResponse,
   CoachConversation,
+  ConsistencyResponse,
   CreateEquipmentRequest,
   CreateMealRequest,
   CreateMeasurementRequest,
@@ -27,7 +29,10 @@ import type {
   Equipment,
   EquipmentListResponse,
   ErrorResponse,
+  ExerciseHistoryResponse,
   ExportDataResponse,
+  GetCardioHistoryParams,
+  GetExerciseHistoryParams,
   GetMealsParams,
   GetMeasurementsParams,
   GetWorkoutsParams,
@@ -2766,6 +2771,281 @@ export function useGetPersonalRecords<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetPersonalRecordsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get history for one or more exercises by name
+ */
+export const getGetExerciseHistoryUrl = (params: GetExerciseHistoryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/progress/exercise-history?${stringifiedParams}`
+    : `/api/progress/exercise-history`;
+};
+
+export const getExerciseHistory = async (
+  params: GetExerciseHistoryParams,
+  options?: RequestInit,
+): Promise<ExerciseHistoryResponse> => {
+  return customFetch<ExerciseHistoryResponse>(
+    getGetExerciseHistoryUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetExerciseHistoryQueryKey = (
+  params?: GetExerciseHistoryParams,
+) => {
+  return [
+    `/api/progress/exercise-history`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetExerciseHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getExerciseHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetExerciseHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getExerciseHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetExerciseHistoryQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getExerciseHistory>>
+  > = ({ signal }) => getExerciseHistory(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getExerciseHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetExerciseHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getExerciseHistory>>
+>;
+export type GetExerciseHistoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get history for one or more exercises by name
+ */
+
+export function useGetExerciseHistory<
+  TData = Awaited<ReturnType<typeof getExerciseHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetExerciseHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getExerciseHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetExerciseHistoryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get cardio session history for a given activity type
+ */
+export const getGetCardioHistoryUrl = (params: GetCardioHistoryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/progress/cardio-history?${stringifiedParams}`
+    : `/api/progress/cardio-history`;
+};
+
+export const getCardioHistory = async (
+  params: GetCardioHistoryParams,
+  options?: RequestInit,
+): Promise<CardioHistoryResponse> => {
+  return customFetch<CardioHistoryResponse>(getGetCardioHistoryUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCardioHistoryQueryKey = (
+  params?: GetCardioHistoryParams,
+) => {
+  return [`/api/progress/cardio-history`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCardioHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCardioHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetCardioHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCardioHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCardioHistoryQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCardioHistory>>
+  > = ({ signal }) => getCardioHistory(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCardioHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCardioHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCardioHistory>>
+>;
+export type GetCardioHistoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get cardio session history for a given activity type
+ */
+
+export function useGetCardioHistory<
+  TData = Awaited<ReturnType<typeof getCardioHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetCardioHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCardioHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCardioHistoryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get weekly consistency assessment
+ */
+export const getGetConsistencyUrl = () => {
+  return `/api/progress/consistency`;
+};
+
+export const getConsistency = async (
+  options?: RequestInit,
+): Promise<ConsistencyResponse> => {
+  return customFetch<ConsistencyResponse>(getGetConsistencyUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetConsistencyQueryKey = () => {
+  return [`/api/progress/consistency`] as const;
+};
+
+export const getGetConsistencyQueryOptions = <
+  TData = Awaited<ReturnType<typeof getConsistency>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getConsistency>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetConsistencyQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsistency>>> = ({
+    signal,
+  }) => getConsistency({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getConsistency>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetConsistencyQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getConsistency>>
+>;
+export type GetConsistencyQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get weekly consistency assessment
+ */
+
+export function useGetConsistency<
+  TData = Awaited<ReturnType<typeof getConsistency>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getConsistency>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetConsistencyQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

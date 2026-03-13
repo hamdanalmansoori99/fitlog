@@ -623,6 +623,68 @@ paths:
               schema:
                 $ref: "#/components/schemas/PersonalRecordsResponse"
 
+  /progress/exercise-history:
+    get:
+      operationId: getExerciseHistory
+      tags: [progress]
+      summary: Get history for one or more exercises by name
+      parameters:
+        - name: names
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated exercise names
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        "200":
+          description: Exercise history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExerciseHistoryResponse"
+
+  /progress/cardio-history:
+    get:
+      operationId: getCardioHistory
+      tags: [progress]
+      summary: Get cardio session history for a given activity type
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Cardio history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardioHistoryResponse"
+
+  /progress/consistency:
+    get:
+      operationId: getConsistency
+      tags: [progress]
+      summary: Get weekly consistency assessment
+      responses:
+        "200":
+          description: Consistency data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsistencyResponse"
+
   # SETTINGS
   /settings:
     get:
@@ -1493,6 +1555,89 @@ components:
           items:
             $ref: "#/components/schemas/BodyMeasurement"
       required: [workouts, meals, measurements]
+
+    # PROGRESSION SCHEMAS
+    ExerciseSetRecord:
+      type: object
+      properties:
+        reps:
+          type: integer
+        weightKg:
+          type: number
+        rpe:
+          type: integer
+        completed:
+          type: boolean
+
+    ExerciseSession:
+      type: object
+      properties:
+        date:
+          type: string
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExerciseSetRecord"
+      required: [date, sets]
+
+    ExerciseHistoryEntry:
+      type: object
+      properties:
+        name:
+          type: string
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExerciseSession"
+      required: [name, sessions]
+
+    ExerciseHistoryResponse:
+      type: object
+      properties:
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExerciseHistoryEntry"
+      required: [exercises]
+
+    CardioSessionEntry:
+      type: object
+      properties:
+        date:
+          type: string
+        distanceKm:
+          type: number
+        durationMinutes:
+          type: integer
+        paceMinPerKm:
+          type: number
+      required: [date]
+
+    CardioHistoryResponse:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CardioSessionEntry"
+      required: [sessions]
+
+    ConsistencyResponse:
+      type: object
+      properties:
+        workoutsThisWeek:
+          type: integer
+        workoutsLastWeek:
+          type: integer
+        weeklyGoal:
+          type: integer
+        level:
+          type: string
+        recommendation:
+          type: string
+        shouldDeload:
+          type: boolean
+      required: [workoutsThisWeek, workoutsLastWeek, weeklyGoal, level, recommendation, shouldDeload]
 
     # COACH SCHEMAS
     CoachMessage:

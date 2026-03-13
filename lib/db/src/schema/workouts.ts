@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, real, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, real, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -11,6 +11,7 @@ export const workoutsTable = pgTable("workouts", {
   date: timestamp("date").notNull(),
   durationMinutes: integer("duration_minutes"),
   distanceKm: real("distance_km"),
+  paceMinPerKm: real("pace_min_per_km"),
   caloriesBurned: integer("calories_burned"),
   mood: text("mood"),
   notes: text("notes"),
@@ -31,6 +32,8 @@ export const workoutSetsTable = pgTable("workout_sets", {
   exerciseId: integer("exercise_id").references(() => workoutExercisesTable.id, { onDelete: "cascade" }).notNull(),
   reps: integer("reps"),
   weightKg: real("weight_kg"),
+  rpe: integer("rpe"),
+  completed: boolean("completed").default(true),
   order: integer("order").notNull().default(0),
 });
 

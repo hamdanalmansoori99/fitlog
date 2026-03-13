@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
 } from "react-native";
@@ -14,6 +14,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SuccessView } from "@/components/SuccessView";
+import { calculateStrengthTarget } from "@/lib/progressionEngine";
 
 function DifficultyBadge({ difficulty }: { difficulty: string }) {
   const { theme } = useTheme();
@@ -131,6 +132,27 @@ export default function WorkoutTemplateScreen() {
   const { level: equipMatch, missing: missingEquip } = template
     ? getEquipmentMatchLevel(template, userEquipment)
     : { level: "full" as const, missing: [] as string[] };
+
+  const isGymTemplate = template?.activityType === "gym";
+  const gymExerciseNames = useMemo(
+    () => isGymTemplate ? filteredExercises.map((e) => e.name).filter(Boolean) : [],
+    [isGymTemplate, filteredExercises]
+  );
+  const { data: exerciseHistoryData } = useQuery({
+    queryKey: ["templateExerciseHistory", gymExerciseNames],
+    queryFn: () => api.getExerciseHistory(gymExerciseNames),
+    enabled: isGymTemplate && gymExerciseNames.length > 0,
+    staleTime: 60000,
+  });
+  const exerciseHistoryMap = useMemo<Record<string, any[]>>(() => {
+    const map: Record<string, any[]> = {};
+    if (exerciseHistoryData?.exercises) {
+      for (const entry of exerciseHistoryData.exercises) {
+        map[entry.name] = entry.sessions ?? [];
+      }
+    }
+    return map;
+  }, [exerciseHistoryData]);
 
   // Personal context: when did the user last do this activity type or this template?
   const lastDoneContext = React.useMemo(() => {
@@ -376,6 +398,29 @@ export default function WorkoutTemplateScreen() {
                       Alt: {ex.alternatives[0]}
                     </Text>
                   )}
+                  {isGymTemplate && exerciseHistoryMap[ex.name] != null && (() => {
+                    const sessions = exerciseHistoryMap[ex.name] ?? [];
+                    const target = calculateStrengthTarget(sessions);
+                    if (target.trend === "first") return null;
+                    const trendColors: Record<string, string> = { progress: theme.primary, maintain: theme.secondary, deload: theme.warning };
+                    const trendColor = trendColors[target.trend] ?? theme.textMuted;
+                    const trendLabels: Record<string, string> = { progress: "↑ Level up", maintain: "→ Hold steady", deload: "↓ Recovery" };
+                    return (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
+                        {target.previousDisplay ? (
+                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                            Last: {target.previousDisplay}
+                          </Text>
+                        ) : null}
+                        <View style={{ backgroundColor: trendColor + "18", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <Text style={{ color: trendColor, fontFamily: "Inter_600SemiBold", fontSize: 10 }}>
+                            {trendLabels[target.trend] ?? target.trend}
+                            {target.suggestedWeightKg ? ` · ${target.suggestedWeightKg}kg` : ""}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })()}
                 </View>
                 {ex.isSubstitution && (
                   <View style={[styles.subBadge, { backgroundColor: theme.warning + "20" }]}>
