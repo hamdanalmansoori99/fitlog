@@ -125,4 +125,44 @@ export const api = {
     soreness?: Record<string, number>;
     notes?: string;
   }) => request<any>("/recovery/log", { method: "POST", body: JSON.stringify(body) }),
+
+  // My Workout Templates
+  getUserTemplates: () => request<any>("/workouts/my-templates"),
+  createUserTemplate: (body: {
+    name: string;
+    activityType?: string;
+    description?: string;
+    estimatedMinutes?: number;
+    exercises?: any[];
+    sourceWorkoutId?: number;
+  }) => request<any>("/workouts/my-templates", { method: "POST", body: JSON.stringify(body) }),
+  updateUserTemplate: (id: number, body: {
+    name?: string;
+    activityType?: string;
+    description?: string;
+    estimatedMinutes?: number;
+    exercises?: any[];
+    isFavorite?: boolean;
+  }) => request<any>(`/workouts/my-templates/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteUserTemplate: (id: number) =>
+    request(`/workouts/my-templates/${id}`, { method: "DELETE" }),
+  toggleTemplateFavorite: (id: number) =>
+    request<any>(`/workouts/my-templates/${id}/favorite`, { method: "POST" }),
+  markTemplateUsed: (id: number) =>
+    request<any>(`/workouts/my-templates/${id}/use`, { method: "POST" }),
+
+  // Favourite Meals
+  getFavoriteMeals: () => request<any>("/meals/favorites"),
+  addFavoriteMeal: (body: {
+    name?: string;
+    category?: string;
+    foodItems?: any[];
+    sourceMealId?: number;
+  }) => request<any>("/meals/favorites", { method: "POST", body: JSON.stringify(body) }),
+  deleteFavoriteMeal: (id: number) =>
+    request(`/meals/favorites/${id}`, { method: "DELETE" }),
+  logFavoriteMeal: (id: number, category?: string) =>
+    request<any>(`/meals/favorites/${id}/log`, { method: "POST", body: JSON.stringify({ category }) }),
+  duplicateDayMeals: (fromDate: string, toDate?: string) =>
+    request<any>("/meals/favorites/duplicate-day", { method: "POST", body: JSON.stringify({ fromDate, toDate }) }),
 };

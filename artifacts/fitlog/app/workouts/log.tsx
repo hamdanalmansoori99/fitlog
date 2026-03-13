@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform,
   Alert,
@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
@@ -54,6 +54,8 @@ export default function LogWorkoutScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   
+  const params = useLocalSearchParams<{ prefillType?: string; prefillExercises?: string; prefillName?: string }>();
+
   const [step, setStep] = useState<"select" | "form">("select");
   const [activityType, setActivityType] = useState("");
   
@@ -109,6 +111,9 @@ export default function LogWorkoutScreen() {
   
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [savedTemplateName, setSavedTemplateName] = useState("");
+  const [templateSaved, setTemplateSaved] = useState(false);
   
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   
@@ -120,12 +125,58 @@ export default function LogWorkoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["weeklyStats"] });
       queryClient.invalidateQueries({ queryKey: ["recentActivity"] });
       setSuccess(true);
-      setTimeout(() => {
-        router.replace("/(tabs)/workouts");
-      }, 2000);
     },
     onError: (err: any) => setError(err.message),
   });
+
+  const saveTemplateMutation = useMutation({
+    mutationFn: (name: string) => {
+      const completedExercises = exercises.filter(e => e.name && e.sets.some(s => s.reps || s.weight));
+      return api.createUserTemplate({
+        name: name || workoutName || activityType || "My Template",
+        activityType,
+        exercises: activityType === "gym" ? completedExercises.map((e, i) => ({
+          name: e.name,
+          order: i,
+          sets: e.sets.filter(s => s.reps || s.weight).map(s => ({
+            reps: parseInt(s.reps) || undefined,
+            weightKg: parseFloat(s.weight) || undefined,
+            rpe: e.rpe,
+          })),
+        })) : [],
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userTemplates"] });
+      setTemplateSaved(true);
+      setShowSaveTemplate(false);
+    },
+  });
+
+  useEffect(() => {
+    if (params.prefillType) {
+      setActivityType(params.prefillType);
+      setStep("form");
+    }
+    if (params.prefillName) {
+      setWorkoutName(params.prefillName);
+    }
+    if (params.prefillExercises) {
+      try {
+        const parsed = JSON.parse(params.prefillExercises);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setExercises(parsed.map((ex: any) => ({
+            name: ex.name || "",
+            sets: ex.sets?.length > 0
+              ? ex.sets.map((s: any) => ({ reps: s.reps ? String(s.reps) : "", weight: s.weightKg ? String(s.weightKg) : "" }))
+              : [{ reps: "", weight: "" }],
+            rpe: ex.sets?.[0]?.rpe,
+          })));
+          setExerciseSearch(parsed.map(() => ""));
+        }
+      } catch {}
+    }
+  }, []);
   
   const handleSubmit = () => {
     const durationMinutes = parseInt(durationH) * 60 + parseInt(durationM || "0");
@@ -224,6 +275,42 @@ export default function LogWorkoutScreen() {
                 </View>
               );
             })}
+          </View>
+        )}
+        {/* Save as Template */}
+        {activityType === "gym" && !templateSaved && !showSaveTemplate && (
+          <Pressable
+            onPress={() => { setShowSaveTemplate(true); setSavedTemplateName(workoutName || ""); }}
+            style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 20 }}
+          >
+            <Feather name="bookmark" size={16} color={theme.secondary} />
+            <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Save as Template</Text>
+          </Pressable>
+        )}
+        {activityType === "gym" && showSaveTemplate && (
+          <View style={{ width: "100%", paddingHorizontal: 20, gap: 8 }}>
+            <TextInput
+              value={savedTemplateName}
+              onChangeText={setSavedTemplateName}
+              placeholder="Template name"
+              placeholderTextColor={theme.textMuted}
+              style={{
+                borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+                color: theme.text, borderColor: theme.border, backgroundColor: theme.card,
+                fontFamily: "Inter_400Regular", fontSize: 15,
+              }}
+            />
+            <Button
+              title={saveTemplateMutation.isPending ? "Saving…" : "Save Template"}
+              onPress={() => saveTemplateMutation.mutate(savedTemplateName)}
+              style={{ backgroundColor: theme.secondary }}
+            />
+          </View>
+        )}
+        {templateSaved && (
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 20 }}>
+            <Feather name="check-circle" size={16} color={theme.primary} />
+            <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Template saved!</Text>
           </View>
         )}
         <Button title="Go to Dashboard" onPress={() => router.replace("/(tabs)")} style={{ marginHorizontal: 20 }} />

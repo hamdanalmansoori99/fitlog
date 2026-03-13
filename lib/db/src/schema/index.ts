@@ -9,3 +9,4 @@ export * from "./conversations";
 export * from "./messages";
 export * from "./water";
 export * from "./recovery";
+export * from "./user-templates";

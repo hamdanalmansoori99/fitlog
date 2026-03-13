@@ -250,6 +250,7 @@ export default function WorkoutsScreen() {
 
   const { data: profileData, refetch: refetchProfile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
   const { data: workoutsData, refetch: refetchWorkouts } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts() });
+  const { data: userTemplatesData, refetch: refetchTemplates } = useQuery({ queryKey: ["userTemplates"], queryFn: api.getUserTemplates });
 
   const deleteMutation = useMutation({
     mutationFn: api.deleteWorkout,
@@ -259,15 +260,26 @@ export default function WorkoutsScreen() {
     },
   });
 
+  const deleteTemplateMutation = useMutation({
+    mutationFn: (id: number) => api.deleteUserTemplate(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userTemplates"] }),
+  });
+
+  const toggleFavMutation = useMutation({
+    mutationFn: (id: number) => api.toggleTemplateFavorite(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userTemplates"] }),
+  });
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchProfile(), refetchWorkouts()]);
+    await Promise.all([refetchProfile(), refetchWorkouts(), refetchTemplates()]);
     setRefreshing(false);
   }, []);
 
   const profile = profileData;
   const workouts = workoutsData?.workouts || [];
   const hasCompletedOnboarding = profile?.coachOnboardingComplete;
+  const userTemplates: any[] = userTemplatesData?.templates || [];
 
   // Build coach profile for recommendations
   const coachProfile = {
@@ -458,6 +470,78 @@ export default function WorkoutsScreen() {
           </ScrollView>
         </Animated.View>
 
+        {/* ── MY TEMPLATES ── */}
+        <Animated.View entering={FadeInDown.delay(175).duration(400)} style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>My Templates</Text>
+            {userTemplates.length > 0 && (
+              <Pressable onPress={() => router.push("/workouts/my-templates" as any)}>
+                <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 13 }}>Manage</Text>
+              </Pressable>
+            )}
+          </View>
+          {userTemplates.length === 0 ? (
+            <Pressable
+              onPress={() => router.push("/workouts/my-templates" as any)}
+              style={[styles.createTemplateCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+            >
+              <View style={[styles.createTemplateIcon, { backgroundColor: theme.secondaryDim }]}>
+                <Feather name="bookmark" size={20} color={theme.secondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Save your first template</Text>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                  Log any workout and save it as a reusable template
+                </Text>
+              </View>
+              <Feather name="arrow-right" size={18} color={theme.secondary} />
+            </Pressable>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
+              <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 }}>
+                {userTemplates.map((tmpl: any) => {
+                  const tColor = getActivityColor(tmpl.activityType, theme);
+                  const tIcon = getActivityIcon(tmpl.activityType);
+                  const exCount = tmpl.exercises?.length ?? 0;
+                  return (
+                    <Pressable
+                      key={tmpl.id}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push({ pathname: "/workouts/user-template" as any, params: { id: tmpl.id } });
+                      }}
+                      style={[styles.myTmplCard, { backgroundColor: theme.card, borderColor: tmpl.isFavorite ? tColor + "60" : theme.border }]}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <View style={[styles.myTmplIcon, { backgroundColor: tColor + "20" }]}>
+                          <Feather name={tIcon} size={16} color={tColor} />
+                        </View>
+                        <Pressable
+                          onPress={(e) => { e.stopPropagation(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleFavMutation.mutate(tmpl.id); }}
+                          hitSlop={8}
+                        >
+                          <Feather name="star" size={14} color={tmpl.isFavorite ? theme.warning : theme.textMuted} />
+                        </Pressable>
+                      </View>
+                      <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, marginBottom: 4 }} numberOfLines={2}>
+                        {tmpl.name}
+                      </Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                        {exCount > 0 ? `${exCount} exercise${exCount !== 1 ? "s" : ""}` : tmpl.activityType}
+                      </Text>
+                      {tmpl.usageCount > 0 && (
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 3 }}>
+                          Used {tmpl.usageCount}×
+                        </Text>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          )}
+        </Animated.View>
+
         {/* ── BROWSE TEMPLATES ── */}
         <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -629,6 +713,14 @@ const styles = StyleSheet.create({
   histStatText: { fontSize: 12 },
   moodChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   moodText: { fontSize: 11 },
+  // My Templates
+  createTemplateCard: {
+    flexDirection: "row", alignItems: "center", gap: 12, padding: 14,
+    borderRadius: 14, borderWidth: 1,
+  },
+  createTemplateIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  myTmplCard: { width: 140, borderRadius: 14, borderWidth: 1, padding: 12 },
+  myTmplIcon: { width: 32, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   // Empty
   empty: { alignItems: "center", gap: 10, paddingVertical: 28 },
   emptyIconBg: { width: 60, height: 60, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: 4 },

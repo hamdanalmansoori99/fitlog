@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SuccessView } from "@/components/SuccessView";
 import { calculateStrengthTarget } from "@/lib/progressionEngine";
+import { ProgressionCard } from "@/components/ProgressionCard";
 
 function DifficultyBadge({ difficulty }: { difficulty: string }) {
   const { theme } = useTheme();
@@ -154,6 +155,17 @@ export default function WorkoutTemplateScreen() {
     return map;
   }, [exerciseHistoryData]);
 
+  // Pick the first exercise with real history for the top progression card
+  const primaryProgressionEntry = useMemo(() => {
+    for (const name of gymExerciseNames) {
+      const sessions = exerciseHistoryMap[name] ?? [];
+      if (sessions.length > 0) {
+        return { name, target: calculateStrengthTarget(sessions) };
+      }
+    }
+    return null;
+  }, [gymExerciseNames, exerciseHistoryMap]);
+
   // Personal context: when did the user last do this activity type or this template?
   const lastDoneContext = React.useMemo(() => {
     if (!template || !workoutsData?.workouts?.length) return null;
@@ -278,6 +290,25 @@ export default function WorkoutTemplateScreen() {
                 </Text>
               </View>
               <Text style={[styles.whyText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>{whyGoodForYou}</Text>
+            </Card>
+          </Animated.View>
+        )}
+
+        {/* Progression card — shown when user has history for any exercise */}
+        {primaryProgressionEntry && primaryProgressionEntry.target.trend !== "first" && (
+          <Animated.View entering={FadeInDown.delay(130).duration(350)}>
+            <Card style={{ gap: 8, borderColor: (theme as any).secondaryDim }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                <Feather name="trending-up" size={14} color={theme.secondary} />
+                <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                  Progression · {primaryProgressionEntry.name}
+                </Text>
+              </View>
+              <ProgressionCard
+                target={primaryProgressionEntry.target}
+                exerciseName={primaryProgressionEntry.name}
+                compact
+              />
             </Card>
           </Animated.View>
         )}

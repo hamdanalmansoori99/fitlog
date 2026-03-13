@@ -11,13 +11,17 @@ import settingsRouter from "./settings";
 import coachRouter from "./coach";
 import waterRouter from "./water";
 import recoveryRouter from "./recovery";
+import userTemplatesRouter from "./user-templates";
+import mealFavoritesRouter from "./meal-favorites";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use("/auth", authRouter);
 router.use("/profile", profileRouter);
+router.use("/workouts/my-templates", userTemplatesRouter);
 router.use("/workouts", workoutsRouter);
+router.use("/meals/favorites", mealFavoritesRouter);
 router.use("/meals", mealsRouter);
 router.use("/equipment", equipmentRouter);
 router.use("/measurements", measurementsRouter);

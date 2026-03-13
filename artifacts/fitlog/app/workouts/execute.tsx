@@ -102,6 +102,8 @@ export default function ExecuteWorkoutScreen() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [mood, setMood] = useState("");
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateSaved, setTemplateSaved] = useState(false);
 
   // Store next position when entering rest phase
   const pendingRef = useRef<{ exIdx: number; setIdx: number } | null>(null);
@@ -185,6 +187,32 @@ export default function ExecuteWorkoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["recentActivity"] });
       queryClient.invalidateQueries({ queryKey: ["streaks"] });
       router.replace("/(tabs)" as any);
+    },
+  });
+
+  const saveTemplateMutation = useMutation({
+    mutationFn: (name: string) => api.createUserTemplate({
+      name: name || template?.name || "My Template",
+      activityType: template?.activityType || "gym",
+      estimatedMinutes: Math.round(elapsedSeconds / 60) || undefined,
+      exercises: exercises
+        .filter((e) => !e.skipped && e.sets.some((s) => s.completed))
+        .map((e, i) => ({
+          name: e.name,
+          order: i,
+          sets: e.sets
+            .filter((s) => s.completed)
+            .map((s) => ({
+              reps: parseInt(s.reps) || undefined,
+              weightKg: parseFloat(s.weight) || undefined,
+              rpe: s.rpe,
+            })),
+        })),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userTemplates"] });
+      setTemplateSaved(true);
+      setSaveAsTemplate(false);
     },
   });
 
@@ -496,6 +524,56 @@ export default function ExecuteWorkoutScreen() {
                 </Pressable>
               ))}
             </View>
+          </Animated.View>
+
+          {/* Save as Template */}
+          <Animated.View entering={FadeInDown.delay(260).duration(400)}>
+            {templateSaved ? (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 6 }}>
+                <Feather name="check-circle" size={16} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Template saved!</Text>
+              </View>
+            ) : !saveAsTemplate ? (
+              <Pressable
+                onPress={() => { setSaveAsTemplate(true); setTemplateName(template?.name || ""); }}
+                style={[{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 10, borderRadius: 12, borderWidth: 1 }, { borderColor: theme.secondary + "50", backgroundColor: theme.secondaryDim }]}
+              >
+                <Feather name="bookmark" size={17} color={theme.secondary} />
+                <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Save as Template</Text>
+              </Pressable>
+            ) : (
+              <Card style={{ gap: 10 }}>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Template Name</Text>
+                <TextInput
+                  value={templateName}
+                  onChangeText={setTemplateName}
+                  placeholder={template?.name || "My Template"}
+                  placeholderTextColor={theme.textMuted}
+                  style={{
+                    borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+                    color: theme.text, borderColor: theme.border, backgroundColor: theme.background,
+                    fontFamily: "Inter_400Regular", fontSize: 15,
+                  }}
+                />
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Pressable
+                    onPress={() => setSaveAsTemplate(false)}
+                    style={{ flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: "center", borderColor: theme.border }}
+                  >
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium" }}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => saveTemplateMutation.mutate(templateName)}
+                    disabled={saveTemplateMutation.isPending}
+                    style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: "center", backgroundColor: theme.secondary }}
+                  >
+                    <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold" }}>
+                      {saveTemplateMutation.isPending ? "Saving…" : "Save"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </Card>
+            )}
           </Animated.View>
 
           {/* Save CTA */}
