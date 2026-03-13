@@ -112,4 +112,17 @@ export const api = {
     request<any>("/water/log", { method: "POST", body: JSON.stringify({ amountMl }) }),
   deleteWaterLog: (id: number) =>
     request<any>(`/water/log/${id}`, { method: "DELETE" }),
+
+  // Recovery tracking
+  getRecoveryToday: () => request<any>("/recovery/today"),
+  getRecoveryRecent: () => request<any>("/recovery/recent"),
+  logRecovery: (body: {
+    sleepHours?: number;
+    sleepQuality?: number;
+    energyLevel?: number;
+    stressLevel?: number;
+    overallFeeling?: number;
+    soreness?: Record<string, number>;
+    notes?: string;
+  }) => request<any>("/recovery/log", { method: "POST", body: JSON.stringify(body) }),
 };

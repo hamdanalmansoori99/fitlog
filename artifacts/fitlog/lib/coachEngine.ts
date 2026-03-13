@@ -1060,9 +1060,20 @@ function buildTodayCoachingReason(
   return parts.slice(0, 2).join(". ") + ".";
 }
 
+// ─── Recovery Context ──────────────────────────────────────────────────────────
+
+export interface RecoveryContext {
+  sleepHours?: number;
+  sleepQuality?: number;   // 1–5
+  energyLevel?: number;    // 1–5
+  stressLevel?: number;    // 1–5
+  soreness?: Record<string, number>; // body_part → 0–3
+}
+
 export function getTodayRecommendation(
   profile: UserCoachProfile,
-  recentWorkouts: RecentWorkout[]
+  recentWorkouts: RecentWorkout[],
+  recovery?: RecoveryContext
 ): TodayRecommendation | null {
   const preferredDuration = DURATION_MAP[profile.preferredWorkoutDuration] || 45;
   const userLevel = DIFFICULTY_MAP[profile.experienceLevel || "Beginner"] || 1;
@@ -1159,6 +1170,56 @@ export function getTodayRecommendation(
     // ── Full equipment match bonus ──────────────────────────────────────────
     if (rec.equipmentMatch === "full") todayScore += 10;
 
+    // ── Recovery-aware scoring ─────────────────────────────────────────────
+    if (recovery) {
+      const soreness = recovery.soreness ?? {};
+      const templateLevel = DIFFICULTY_MAP[rec.template.difficulty] || 1;
+
+      // Poor sleep or low energy → strongly prefer lighter, shorter sessions
+      if (recovery.sleepQuality !== undefined && recovery.sleepQuality <= 2) {
+        if (templateLevel > 1) todayScore -= 25;
+        if (rec.template.durationMinutes > 40) todayScore -= 10;
+      } else if (recovery.sleepQuality !== undefined && recovery.sleepQuality <= 3) {
+        if (templateLevel === 3) todayScore -= 10;
+      }
+      if (recovery.energyLevel !== undefined && recovery.energyLevel <= 2) {
+        if (templateLevel > 1) todayScore -= 20;
+        if (rec.template.durationMinutes > 40) todayScore -= 8;
+      }
+
+      // High energy / great sleep → reward harder sessions
+      if (recovery.energyLevel !== undefined && recovery.energyLevel >= 4) {
+        if (templateLevel === 3) todayScore += 12;
+        else if (templateLevel === 2) todayScore += 5;
+        else todayScore -= 5;
+      }
+      if (recovery.sleepQuality !== undefined && recovery.sleepQuality >= 4) {
+        if (templateLevel >= 2) todayScore += 8;
+      }
+
+      // Leg soreness → penalise lower-body templates
+      const legSore = Math.max(soreness["legs"] ?? 0, soreness["glutes"] ?? 0);
+      if (legSore >= 2 && templateGroups.includes("lower")) todayScore -= 30;
+      else if (legSore >= 1 && templateGroups.includes("lower")) todayScore -= 12;
+
+      // Upper body soreness → penalise upper templates
+      const upperSore = Math.max(
+        soreness["chest"] ?? 0,
+        soreness["back"] ?? 0,
+        soreness["shoulders"] ?? 0,
+        soreness["arms"] ?? 0
+      );
+      if (upperSore >= 2 && templateGroups.includes("upper")) todayScore -= 30;
+      else if (upperSore >= 1 && templateGroups.includes("upper")) todayScore -= 12;
+
+      // Cardio / mobility → bonus if overall soreness is high
+      const allSore = Object.values(soreness);
+      const highSoreCount = allSore.filter((v) => v >= 2).length;
+      if (highSoreCount >= 3) {
+        if (templateGroups.includes("cardio") || templateGroups.includes("recovery")) todayScore += 15;
+      }
+    }
+
     return { rec, todayScore, templateGroups };
   });
 
@@ -1193,6 +1254,22 @@ export function getTodayRecommendation(
     pills.push("Perfect equipment match");
   } else {
     pills.push("Substitutions available");
+  }
+
+  // Recovery-aware pills
+  if (recovery) {
+    const soreness = recovery.soreness ?? {};
+    const legSore = Math.max(soreness["legs"] ?? 0, soreness["glutes"] ?? 0);
+    const upperSore = Math.max(
+      soreness["chest"] ?? 0, soreness["back"] ?? 0,
+      soreness["shoulders"] ?? 0, soreness["arms"] ?? 0
+    );
+    if (legSore >= 2) pills.unshift("🦵 Legs recovering");
+    if (upperSore >= 2) pills.unshift("💪 Upper body recovering");
+    if (recovery.energyLevel !== undefined && recovery.energyLevel >= 4) pills.unshift("⚡ High energy");
+    if (recovery.sleepQuality !== undefined && recovery.sleepQuality >= 4) pills.unshift("😴 Well rested");
+    if (recovery.sleepQuality !== undefined && recovery.sleepQuality <= 2) pills.unshift("💤 Light session");
+    if (recovery.energyLevel !== undefined && recovery.energyLevel <= 2) pills.unshift("🔋 Low energy");
   }
 
   // Build context summary

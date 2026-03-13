@@ -26,6 +26,8 @@ import {
 import { getNutritionInsights, NutritionInsight, NutritionContext } from "@/lib/nutritionCoach";
 import { SmartReminderBanner } from "@/components/SmartReminderBanner";
 import { WaterTracker } from "@/components/WaterTracker";
+import { RecoveryCheckIn } from "@/components/RecoveryCheckIn";
+import { RecoveryContext } from "@/lib/coachEngine";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -359,13 +361,19 @@ export default function HomeScreen() {
     staleTime: 60000,
   });
 
+  const { data: recoveryTodayData, refetch: refetchRecovery } = useQuery({
+    queryKey: ["recoveryToday"],
+    queryFn: api.getRecoveryToday,
+    staleTime: 60000,
+  });
+
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
       refetchStats(), refetchWeekly(), refetchRecent(),
-      refetchProfile(), refetchWorkouts(), refetchStreaks(), refetchMeals(),
+      refetchProfile(), refetchWorkouts(), refetchStreaks(), refetchMeals(), refetchRecovery(),
     ]);
     setRefreshing(false);
   }, []);
@@ -396,8 +404,18 @@ export default function HomeScreen() {
       weeklyWorkoutDays: profile.weeklyWorkoutDays || 3,
       fitnessGoals: profile.fitnessGoals || [],
     };
-    return getTodayRecommendation(coachProfile, recentWorkoutsList);
-  }, [profile, recentWorkoutsList, hasCoachOnboarding]);
+    const recoveryLog = recoveryTodayData?.log ?? undefined;
+    const recoveryCtx: RecoveryContext | undefined = recoveryLog
+      ? {
+          sleepHours: recoveryLog.sleepHours ?? undefined,
+          sleepQuality: recoveryLog.sleepQuality ?? undefined,
+          energyLevel: recoveryLog.energyLevel ?? undefined,
+          stressLevel: recoveryLog.stressLevel ?? undefined,
+          soreness: recoveryLog.soreness ?? {},
+        }
+      : undefined;
+    return getTodayRecommendation(coachProfile, recentWorkoutsList, recoveryCtx);
+  }, [profile, recentWorkoutsList, hasCoachOnboarding, recoveryTodayData]);
 
   const coachInsights = useMemo<CoachInsight[]>(() => {
     if (!profile || !hasCoachOnboarding || recentWorkoutsList.length === 0) return [];
@@ -559,6 +577,14 @@ export default function HomeScreen() {
             <NutritionInsightsCard insights={nutritionInsights} theme={theme} />
           </Animated.View>
         )}
+
+        {/* Recovery Check-In */}
+        <Animated.View entering={FadeInDown.delay(248).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 12 }]}>
+            Recovery
+          </Text>
+          <RecoveryCheckIn todayLog={recoveryTodayData?.log ?? null} theme={theme} />
+        </Animated.View>
 
         {/* Water Tracker */}
         <Animated.View entering={FadeInDown.delay(255).duration(400)} style={styles.section}>

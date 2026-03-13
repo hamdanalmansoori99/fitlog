@@ -100,6 +100,10 @@ artifacts-monorepo/
 - `GET /api/progress/streaks` — workout/meal streaks
 - `GET /api/progress/records` — personal records
 - `GET/PUT /api/settings` — user settings
+- `GET/POST/DELETE /api/water/...` — water intake tracking
+- `GET /api/recovery/today` — today's recovery log
+- `GET /api/recovery/recent` — last 7 days of recovery logs
+- `POST /api/recovery/log` — upsert today's recovery (sleep, energy, soreness, stress)
 
 ### Auth
 - `requireAuth` middleware checks `Authorization: Bearer <token>` header
@@ -107,7 +111,7 @@ artifacts-monorepo/
 
 ## Database Schema
 
-Tables: `users`, `sessions`, `profiles`, `workouts`, `workout_exercises`, `workout_sets`, `meals`, `meal_food_items`, `equipment`, `body_measurements`, `settings`
+Tables: `users`, `sessions`, `profiles`, `workouts`, `workout_exercises`, `workout_sets`, `meals`, `meal_food_items`, `equipment`, `body_measurements`, `settings`, `water_logs`, `recovery_logs`
 
 ## TypeScript & Composite Projects
 
