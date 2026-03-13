@@ -35,23 +35,45 @@ function BenefitRow({ benefit, index }: { benefit: string; index: number }) {
   const [expanded, setExpanded] = useState(false);
 
   const tips: Record<string, string> = {
-    "Builds foundational strength": "Strengthening muscles early helps protect joints and improve posture for life.",
-    "Improves coordination and balance": "Better neuromuscular control reduces injury risk in everyday activities.",
-    "No equipment required": "Consistency matters more than equipment — bodyweight training is proven to build real strength.",
-    "Scalable as you progress": "Start easy, then add reps, sets, or harder variations when you're ready.",
-    "Builds strength and muscle": "Progressive overload — gradually increasing the challenge — is the key to continuous gains.",
-    "Improves bone density": "Weight-bearing exercise strengthens bones and reduces osteoporosis risk.",
-    "Boosts resting metabolism": "More muscle means you burn more calories even while at rest.",
-    "Supports long-term body composition": "Muscle is denser than fat — a leaner look with the same weight is possible.",
-    "Builds cardiovascular endurance": "A stronger heart pumps more blood per beat, making all activities feel easier.",
-    "Burns significant calories": "Running can burn 400–600+ kcal/hour depending on pace and bodyweight.",
-    "Improves flexibility and range of motion": "Greater range of motion reduces injury risk and improves athletic performance.",
-    "Supports muscle recovery": "Mobility and stretching increase blood flow to muscles, speeding up repair.",
-    "Reduces stress and improves sleep": "Exercise lowers cortisol and boosts serotonin — a natural mood lifter.",
-    "Full-body conditioning": "Working all muscle groups in one session maximises calorie burn and functional fitness.",
-    "Zero joint impact": "Water supports your body weight — ideal for recovery or joint pain.",
-    "Great aerobic workout": "Elevating your heart rate for sustained periods improves cardiovascular health.",
-    "Effective cardiovascular workout": "Steady-state cardio strengthens the heart and improves lung efficiency.",
+    // Strength / bodyweight
+    "Builds foundational strength": "Strengthening muscles early protects your joints and improves posture for life. Compound movements like squats and push-ups recruit dozens of muscles at once.",
+    "Improves coordination and balance": "Better neuromuscular control reduces injury risk in everyday activities and sports. Balance training also activates deep core stabilisers.",
+    "No equipment required": "Consistency beats equipment every time. Bodyweight training uses your own mass as resistance and can be scaled infinitely as you get stronger.",
+    "Scalable as you progress": "Start with easier variations, then add reps, sets, tempo, or harder progressions. Linear progression means you'll always have a next level.",
+    "Builds strength and muscle": "Progressive overload — gradually increasing the challenge — is the proven driver of muscle growth. Even 1–2 reps more per week compounds over months.",
+    "Improves bone density": "Weight-bearing exercise stresses bones enough to stimulate remodelling. This is one of the best long-term defences against osteoporosis.",
+    "Boosts resting metabolism": "Each kilogram of muscle burns roughly 13 kcal/day at rest. More muscle means passive calorie burn — even while you sleep.",
+    "Supports long-term body composition": "Muscle is denser than fat. Gaining muscle while losing fat can make you leaner and stronger even if the scale barely moves.",
+    // Cardio / running
+    "Builds cardiovascular endurance": "A stronger heart pumps more blood per beat — this is called stroke volume. Over time, your resting heart rate drops and all activities feel easier.",
+    "Burns significant calories": "Running burns roughly 60–80 kcal per kilometre regardless of speed. An hour of running can torch 500–700 kcal depending on your bodyweight.",
+    "Strengthens the heart and lungs": "Regular aerobic training enlarges the heart's left ventricle and increases lung capacity — adaptations that protect you for decades.",
+    "Improves mental health and mood": "Aerobic exercise triggers endorphin release and long-term increases in BDNF — a brain protein linked to memory, learning, and mood regulation.",
+    // Flexibility / yoga
+    "Improves flexibility and range of motion": "Greater range of motion reduces injury risk and allows more effective exercise technique. Flexible muscles also recover faster after hard sessions.",
+    "Supports muscle recovery": "Mobility work and yoga increase blood flow to fatigued muscles, accelerating waste removal and nutrient delivery — the two keys to repair.",
+    "Reduces stress and improves sleep": "Just 20 minutes of yoga lowers cortisol measurably. Better sleep then accelerates every other fitness adaptation — it's the force multiplier.",
+    "Improves mobility and balance": "Mobility training targets the joints themselves — not just the muscles. Better joint health means pain-free movement at any age.",
+    // Swimming / low impact
+    "Full-body conditioning": "Water provides resistance in all directions, so every stroke works both agonist and antagonist muscles simultaneously — more muscles, less time.",
+    "Zero joint impact": "Buoyancy offloads up to 90% of your bodyweight, making swimming ideal when joints are sore, injured, or when you need active recovery.",
+    "Builds lung capacity": "Controlled breathing patterns in swimming train your respiratory muscles and increase the efficiency with which your body uses oxygen.",
+    "Excellent for recovery": "The hydrostatic pressure of water acts like a full-body compression garment, reducing inflammation and muscle soreness after hard training days.",
+    // Cycling
+    "Effective cardiovascular workout": "Steady-state cycling at 65–75% max heart rate is the most efficient zone for fat burning while sparing muscle tissue.",
+    "Lower joint impact than running": "Cycling is non-weight-bearing, so your knees, hips, and ankles experience a fraction of the stress compared to running at the same intensity.",
+    "Improves leg endurance and power": "High cadence cycling builds muscular endurance; low cadence with resistance builds raw leg power — both transfer to running, sports, and life.",
+    "Great calorie burner": "A 45-minute moderate cycling session burns 300–500 kcal. Combine with strength work for optimal body composition changes.",
+    // Tennis / sport
+    "Improves agility and reaction speed": "The multidirectional movements in tennis train your nervous system to change direction faster — a skill that transfers to almost every other sport.",
+    "Great aerobic workout": "Tennis players average a heart rate of 60–80% max during a match, qualifying it as genuine cardiovascular training with the added fun of competition.",
+    "Develops hand-eye coordination": "Tracking a moving ball and timing your swing trains the visual-motor system — coordination that improves across all sport and daily activities.",
+    "Fun and social": "Enjoyment is the most powerful predictor of long-term exercise adherence. If you love it, you'll stick with it.",
+    // Walking
+    "Improves cardiovascular health": "Even 7,000–8,000 daily steps significantly reduce cardiovascular disease risk. Walking is one of the most evidence-backed forms of exercise.",
+    "Supports sustainable fat loss": "Walking at a moderate pace uses fat as its primary fuel source. It's sustainable enough to do daily without impacting recovery.",
+    "Low impact — easy on joints": "Walking generates only 1–1.5× your bodyweight in ground reaction force vs 3–5× for running. Perfect for active recovery or injury prevention.",
+    "Great for active recovery": "Low-intensity movement on rest days increases blood flow to sore muscles without adding training stress — accelerating recovery between sessions.",
   };
 
   const tip = tips[benefit];
@@ -98,12 +120,35 @@ export default function WorkoutTemplateScreen() {
   const [success, setSuccess] = useState(false);
 
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
+  const { data: workoutsData } = useQuery({
+    queryKey: ["workouts"],
+    queryFn: () => api.getWorkouts({ limit: 30 }),
+  });
+
   const userEquipment: string[] = profile?.availableEquipment || [];
   const benefits = getActivityBenefits(template?.activityType || "gym");
   const filteredExercises = template ? getFilteredExercises(template, userEquipment) : [];
   const { level: equipMatch, missing: missingEquip } = template
     ? getEquipmentMatchLevel(template, userEquipment)
-    : { level: "full" as const, missing: [] };
+    : { level: "full" as const, missing: [] as string[] };
+
+  // Personal context: when did the user last do this activity type or this template?
+  const lastDoneContext = React.useMemo(() => {
+    if (!template || !workoutsData?.workouts?.length) return null;
+    const recent: any[] = workoutsData.workouts;
+    // Match by template name first, then by activity type
+    const byName = recent.find((w) => w.name?.toLowerCase() === template.name.toLowerCase());
+    const byType = recent.find((w) => w.activityType === template.activityType);
+    const match = byName || byType;
+    if (!match) return null;
+    const daysAgo = (Date.now() - new Date(match.date).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysAgo < 1) return { label: "Done today", sub: "Rest up after completing this!", icon: "check-circle" as const, color: theme.primary };
+    if (daysAgo < 2) return { label: "Done yesterday", sub: "Consider targeting different muscle groups today.", icon: "clock" as const, color: theme.warning || "#ff9800" };
+    const d = Math.round(daysAgo);
+    if (d <= 3) return { label: `Last done ${d} days ago`, sub: "Your muscles have had time to recover — good timing.", icon: "clock" as const, color: theme.primary };
+    if (d <= 7) return { label: `Last done ${d} days ago`, sub: "Fully recovered and ready to push harder today.", icon: "clock" as const, color: theme.primary };
+    return { label: `Last done ${d} days ago`, sub: "It's been a while — ease back in and listen to your body.", icon: "clock" as const, color: theme.textMuted };
+  }, [template, workoutsData]);
 
   const logMutation = useMutation({
     mutationFn: api.createWorkout,
@@ -185,6 +230,19 @@ export default function WorkoutTemplateScreen() {
               <Text style={[styles.statText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{template.goals[0]}</Text>
             </Animated.View>
           </View>
+
+          {/* Personal context pill */}
+          {lastDoneContext && (
+            <Animated.View entering={FadeIn.delay(300).duration(300)} style={[styles.lastDoneRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <Feather name={lastDoneContext.icon} size={12} color={lastDoneContext.color} />
+              <Text style={{ color: lastDoneContext.color, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                {lastDoneContext.label}
+              </Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, flex: 1 }}>
+                {" · "}{lastDoneContext.sub}
+              </Text>
+            </Animated.View>
+          )}
         </Animated.View>
 
         {/* Why this is good for you */}
@@ -378,6 +436,10 @@ const styles = StyleSheet.create({
   heroDesc: { fontSize: 14, textAlign: "center", lineHeight: 20, maxWidth: 300 },
   statsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center", marginTop: 4 },
   statChip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
+  lastDoneRow: {
+    flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, marginTop: 4,
+  },
   statText: { fontSize: 12 },
   badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
   badgeText: { fontSize: 12 },

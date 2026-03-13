@@ -18,7 +18,9 @@ import { Card } from "@/components/ui/Card";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import {
   getTodayRecommendation,
+  getCoachInsights,
   TodayRecommendation,
+  CoachInsight,
   UserCoachProfile,
 } from "@/lib/coachEngine";
 
@@ -209,6 +211,52 @@ function CoachCtaCard({ theme }: { theme: any }) {
   );
 }
 
+// ─── Coach Insight Card ────────────────────────────────────────────────────────
+
+function CoachInsightCard({ insights, theme }: { insights: CoachInsight[]; theme: any }) {
+  if (insights.length === 0) return null;
+
+  const iconColor = (insight: CoachInsight) =>
+    insight.positive ? theme.primary : theme.warning || "#ff9800";
+
+  const bgColor = (insight: CoachInsight) =>
+    insight.positive ? theme.primaryDim : (theme.warning || "#ff9800") + "18";
+
+  return (
+    <Animated.View entering={FadeIn.delay(60).duration(400)}>
+      <Card style={{ borderColor: theme.border, gap: 0, paddingHorizontal: 0, paddingVertical: 0, overflow: "hidden" }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Feather name="cpu" size={13} color={theme.primary} />
+          <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 0.4 }}>
+            COACH INSIGHTS
+          </Text>
+        </View>
+        {insights.map((insight, i) => (
+          <View
+            key={insight.type + i}
+            style={[
+              { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
+              i < insights.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
+            ]}
+          >
+            <View style={[{ width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" }, { backgroundColor: bgColor(insight) }]}>
+              <Feather name={insight.icon as any} size={17} color={iconColor(insight)} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 17 }}>
+                {insight.headline}
+              </Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 17 }}>
+                {insight.detail}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </Card>
+    </Animated.View>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -241,13 +289,18 @@ export default function HomeScreen() {
     queryFn: () => api.getWorkouts({ limit: 20 }),
   });
 
+  const { data: streaksData, refetch: refetchStreaks } = useQuery({
+    queryKey: ["streaks"],
+    queryFn: api.getStreaks,
+  });
+
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
       refetchStats(), refetchWeekly(), refetchRecent(),
-      refetchProfile(), refetchWorkouts(),
+      refetchProfile(), refetchWorkouts(), refetchStreaks(),
     ]);
     setRefreshing(false);
   }, []);
@@ -256,6 +309,16 @@ export default function HomeScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const hasCoachOnboarding = !!profile?.coachOnboardingComplete;
+
+  const recentWorkoutsList = useMemo(() => {
+    const workouts: any[] = workoutsData?.workouts || [];
+    return workouts.slice(0, 20).map((w: any) => ({
+      name: w.name,
+      activityType: w.activityType,
+      date: w.date,
+      durationMinutes: w.durationMinutes,
+    }));
+  }, [workoutsData]);
 
   const todayRecommendation = useMemo<TodayRecommendation | null>(() => {
     if (!profile || !hasCoachOnboarding) return null;
@@ -268,15 +331,25 @@ export default function HomeScreen() {
       weeklyWorkoutDays: profile.weeklyWorkoutDays || 3,
       fitnessGoals: profile.fitnessGoals || [],
     };
-    const workouts: any[] = workoutsData?.workouts || [];
-    const recentWorkouts = workouts.slice(0, 20).map((w: any) => ({
-      name: w.name,
-      activityType: w.activityType,
-      date: w.date,
-      durationMinutes: w.durationMinutes,
-    }));
-    return getTodayRecommendation(coachProfile, recentWorkouts);
-  }, [profile, workoutsData, hasCoachOnboarding]);
+    return getTodayRecommendation(coachProfile, recentWorkoutsList);
+  }, [profile, recentWorkoutsList, hasCoachOnboarding]);
+
+  const coachInsights = useMemo<CoachInsight[]>(() => {
+    if (!profile || !hasCoachOnboarding || recentWorkoutsList.length === 0) return [];
+    const coachProfile: UserCoachProfile = {
+      availableEquipment: profile.availableEquipment || [],
+      workoutLocation: profile.workoutLocation || "Home",
+      trainingPreferences: profile.trainingPreferences || [],
+      experienceLevel: profile.experienceLevel || "Beginner",
+      preferredWorkoutDuration: profile.preferredWorkoutDuration || "45 minutes",
+      weeklyWorkoutDays: profile.weeklyWorkoutDays || 3,
+      fitnessGoals: profile.fitnessGoals || [],
+    };
+    return getCoachInsights(coachProfile, recentWorkoutsList, {
+      currentWorkoutStreak: streaksData?.currentWorkoutStreak,
+      totalWorkouts: workoutsData?.total,
+    });
+  }, [profile, recentWorkoutsList, streaksData, workoutsData, hasCoachOnboarding]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -357,8 +430,15 @@ export default function HomeScreen() {
           )}
         </Animated.View>
 
+        {/* Coach Insights */}
+        {coachInsights.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(220).duration(400)} style={styles.section}>
+            <CoachInsightCard insights={coachInsights} theme={theme} />
+          </Animated.View>
+        )}
+
         {/* Weekly Chart */}
-        <Animated.View entering={FadeInDown.delay(240).duration(400)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(280).duration(400)} style={styles.section}>
           <Card>
             <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
               Weekly Activity
