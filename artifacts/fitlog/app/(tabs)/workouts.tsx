@@ -84,19 +84,34 @@ function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void })
         {whyGoodForYou}
       </Text>
 
+      {/* Equipment row */}
+      <View style={styles.recEquipRow}>
+        <Feather name="tool" size={11} color={theme.textMuted} />
+        <Text style={[styles.recEquipText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+          {template.requiredEquipment.length === 0
+            ? "No equipment needed"
+            : template.requiredEquipment.map((e: string) => e.replace(/_/g, " ")).join(", ")}
+        </Text>
+      </View>
+
       <View style={styles.recFooter}>
         <View style={[styles.goalTag, { backgroundColor: theme.primaryDim }]}>
           <Text style={[styles.goalTagText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
             {template.goals[0]}
           </Text>
         </View>
-        {template.requiredEquipment.length === 0 && (
-          <View style={[styles.goalTag, { backgroundColor: theme.secondaryDim }]}>
-            <Text style={[styles.goalTagText, { color: theme.secondary, fontFamily: "Inter_500Medium" }]}>
-              No equipment
-            </Text>
-          </View>
-        )}
+        <View style={[styles.goalTag, {
+          backgroundColor: template.difficulty === "Beginner" ? theme.primary + "20"
+            : template.difficulty === "Intermediate" ? theme.secondary + "20" : theme.danger + "20",
+        }]}>
+          <Text style={[styles.goalTagText, {
+            color: template.difficulty === "Beginner" ? theme.primary
+              : template.difficulty === "Intermediate" ? theme.secondary : theme.danger,
+            fontFamily: "Inter_500Medium",
+          }]}>
+            {template.difficulty}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -494,7 +509,7 @@ const styles = StyleSheet.create({
   // Recommendations
   recScroll: { marginHorizontal: -20 },
   recRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 },
-  recCardWrap: { width: 260 },
+  recCardWrap: { width: 270 },
   recCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
   recHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   recIcon: { width: 40, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center" },
@@ -502,6 +517,8 @@ const styles = StyleSheet.create({
   recMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   recMetaText: { fontSize: 11 },
   recWhy: { fontSize: 12, lineHeight: 17 },
+  recEquipRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  recEquipText: { fontSize: 11, flex: 1 },
   recFooter: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   goalTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   goalTagText: { fontSize: 11 },
