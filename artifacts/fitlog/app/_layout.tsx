@@ -20,14 +20,15 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
-  const { token } = useAuthStore();
+  const { token, _hydrated } = useAuthStore();
   const router = useRouter();
-  
+
   useEffect(() => {
+    if (!_hydrated) return;
     if (!token) {
       router.replace("/auth/login");
     }
-  }, [token]);
+  }, [token, _hydrated]);
   
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>

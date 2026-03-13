@@ -13,6 +13,7 @@ export interface UserCoachProfile {
 }
 
 export interface RecentWorkout {
+  name?: string;
   activityType: string;
   date: string;
   durationMinutes?: number;
@@ -758,6 +759,232 @@ function buildDefaultReason(template: WorkoutTemplate, goals: string[]): string 
     return "No equipment required — do this anywhere.";
   }
   return `A solid ${template.difficulty.toLowerCase()} workout for overall fitness.`;
+}
+
+// ─── Muscle group helpers ─────────────────────────────────────────────────────
+
+const MUSCLE_GROUP_TAGS: Record<string, string> = {
+  "upper-body": "upper", "chest": "upper", "back": "upper",
+  "shoulders": "upper", "arms": "upper", "pull-up": "upper",
+  "push": "upper", "pull": "upper",
+  "lower-body": "lower", "legs": "lower", "glutes": "lower",
+  "leg-press": "lower", "squat": "lower",
+  "core": "core",
+  "full-body": "full", "fullbody": "full",
+  "cardio": "cardio", "hiit": "cardio", "running": "cardio",
+  "cycling": "cardio", "swimming": "cardio", "endurance": "cardio",
+  "conditioning": "cardio", "intervals": "cardio",
+  "yoga": "recovery", "recovery": "recovery",
+  "stretching": "recovery", "mobility": "recovery",
+};
+
+function getMuscleGroups(template: WorkoutTemplate): string[] {
+  const groups = new Set<string>();
+  for (const tag of template.tags) {
+    const g = MUSCLE_GROUP_TAGS[tag];
+    if (g) groups.add(g);
+  }
+  const n = template.name.toLowerCase();
+  if (/upper|chest|back|shoulder|arm|push|pull/.test(n)) groups.add("upper");
+  if (/lower|leg|squat|glute|quad|hamstring/.test(n)) groups.add("lower");
+  if (/core|abs/.test(n)) groups.add("core");
+  if (/full.?body/.test(n)) groups.add("full");
+  if (/cardio|run|cycle|swim/.test(n)) groups.add("cardio");
+  if (/yoga|stretch|recover|mobil/.test(n)) groups.add("recovery");
+  return Array.from(groups);
+}
+
+function inferMuscleGroupsFromWorkout(name: string, activityType: string): string[] {
+  const groups = new Set<string>();
+  const n = (name || "").toLowerCase();
+  const t = (activityType || "").toLowerCase();
+
+  if (/upper|chest|back|shoulder|arm|push|pull/.test(n)) groups.add("upper");
+  if (/lower|leg|squat|glute|quad|hamstring/.test(n)) groups.add("lower");
+  if (/core|abs/.test(n)) groups.add("core");
+  if (/full.?body/.test(n)) groups.add("full");
+  if (["running", "cycling", "swimming", "walking"].includes(t)) groups.add("cardio");
+  if (t === "yoga") groups.add("recovery");
+
+  const matchedTemplate = WORKOUT_TEMPLATES.find(
+    (tmpl) => tmpl.name.toLowerCase() === n || tmpl.id === n
+  );
+  if (matchedTemplate) {
+    getMuscleGroups(matchedTemplate).forEach((g) => groups.add(g));
+  }
+  return Array.from(groups);
+}
+
+// ─── Today's enriched recommendation ─────────────────────────────────────────
+
+export interface TodayRecommendation {
+  recommendation: CoachRecommendation;
+  reasonPills: string[];
+  contextSummary: string;
+  isRestDayRecommended: boolean;
+  progressionLevel: "returning" | "normal" | "progressing";
+  daysSinceLast: number;
+}
+
+export function getTodayRecommendation(
+  profile: UserCoachProfile,
+  recentWorkouts: RecentWorkout[]
+): TodayRecommendation | null {
+  const preferredDuration = DURATION_MAP[profile.preferredWorkoutDuration] || 45;
+  const userLevel = DIFFICULTY_MAP[profile.experienceLevel || "Beginner"] || 1;
+  const now = Date.now();
+
+  const daysSinceLast = recentWorkouts[0]
+    ? (now - new Date(recentWorkouts[0].date).getTime()) / (1000 * 60 * 60 * 24)
+    : 999;
+
+  const last7 = recentWorkouts.filter(
+    (w) => (now - new Date(w.date).getTime()) / (1000 * 60 * 60 * 24) <= 7
+  );
+
+  // Determine training consistency
+  let progressionLevel: TodayRecommendation["progressionLevel"] = "normal";
+  if (last7.length >= 4) {
+    const sorted = [...last7].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    let maxGap = 0;
+    for (let i = 1; i < sorted.length; i++) {
+      const gap =
+        (new Date(sorted[i].date).getTime() - new Date(sorted[i - 1].date).getTime()) /
+        (1000 * 60 * 60 * 24);
+      maxGap = Math.max(maxGap, gap);
+    }
+    if (maxGap <= 2) progressionLevel = "progressing";
+  } else if (last7.length < 2) {
+    progressionLevel = "returning";
+  }
+
+  // What muscle groups did the user work yesterday?
+  const yesterdayWorkout = recentWorkouts.find((w) => {
+    const daysAgo = (now - new Date(w.date).getTime()) / (1000 * 60 * 60 * 24);
+    return daysAgo < 1.5;
+  });
+  const yesterdayGroups = yesterdayWorkout
+    ? inferMuscleGroupsFromWorkout(
+        yesterdayWorkout.name || yesterdayWorkout.activityType,
+        yesterdayWorkout.activityType
+      )
+    : [];
+
+  // Detect workout streak (consecutive days)
+  let workoutStreak = 0;
+  for (const w of recentWorkouts) {
+    const daysAgo = (now - new Date(w.date).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysAgo > workoutStreak + 1.5) break;
+    workoutStreak++;
+  }
+  const isRestDayRecommended = workoutStreak >= 5;
+
+  // Score all viable templates with today-specific weighting
+  const baseRecs = getRecommendations(profile, recentWorkouts, 20);
+  if (baseRecs.length === 0) return null;
+
+  const scored = baseRecs.map((rec) => {
+    let todayScore = rec.score;
+    const templateGroups = getMuscleGroups(rec.template);
+
+    // ── Muscle group avoidance (heavy penalty for same-day repeats) ────────
+    if (yesterdayGroups.length > 0) {
+      const overlapping = templateGroups.filter(
+        (g) => yesterdayGroups.includes(g) && g !== "full" && g !== "cardio"
+      );
+      if (overlapping.length > 0) todayScore -= 35;
+    }
+
+    // ── Progression ────────────────────────────────────────────────────────
+    const templateLevel = DIFFICULTY_MAP[rec.template.difficulty] || 1;
+    if (progressionLevel === "progressing") {
+      if (templateLevel > userLevel) todayScore += 20;
+      else if (templateLevel === userLevel) todayScore += 8;
+    }
+    if (progressionLevel === "returning") {
+      if (templateLevel === 1) todayScore += 20;
+      else if (templateLevel > 1) todayScore -= 10;
+    }
+
+    // ── After rest: lighter workouts ───────────────────────────────────────
+    if (daysSinceLast >= 5) {
+      if (templateLevel === 1) todayScore += 20;
+      else if (templateLevel === 3) todayScore -= 15;
+    } else if (daysSinceLast >= 2) {
+      if (templateLevel === 1) todayScore += 8;
+    }
+
+    // ── Duration match ─────────────────────────────────────────────────────
+    const durationDiff = Math.abs(rec.template.durationMinutes - preferredDuration);
+    if (durationDiff <= 5) todayScore += 8;
+    else if (durationDiff <= 15) todayScore += 3;
+    else if (durationDiff > 25) todayScore -= 5;
+
+    // ── Full equipment match bonus ──────────────────────────────────────────
+    if (rec.equipmentMatch === "full") todayScore += 10;
+
+    return { rec, todayScore, templateGroups };
+  });
+
+  scored.sort((a, b) => b.todayScore - a.todayScore);
+  const best = scored[0];
+
+  // Build reason pills (max 3)
+  const pills: string[] = [];
+
+  if (yesterdayGroups.length > 0) {
+    const noOverlap = best.templateGroups.filter(
+      (g) => yesterdayGroups.includes(g) && g !== "full"
+    ).length === 0;
+    if (noOverlap && best.templateGroups.length > 0) {
+      pills.push("Fresh muscle groups");
+    }
+  }
+
+  if (progressionLevel === "progressing") {
+    pills.push("Progression unlocked");
+  } else if (progressionLevel === "returning") {
+    pills.push("Easing back in");
+  }
+
+  if (daysSinceLast >= 5) {
+    pills.push("Gentle restart");
+  } else if (daysSinceLast >= 2) {
+    pills.push("Recovered & ready");
+  }
+
+  if (best.rec.equipmentMatch === "full") {
+    pills.push("Perfect equipment match");
+  } else {
+    pills.push("Substitutions available");
+  }
+
+  // Build context summary
+  let contextSummary: string;
+  if (daysSinceLast > 5) {
+    contextSummary = `You haven't trained in ${Math.round(daysSinceLast)} days — this lighter session will ease you back in.`;
+  } else if (daysSinceLast >= 2) {
+    const dDays = Math.round(daysSinceLast);
+    contextSummary = `${dDays} rest day${dDays !== 1 ? "s" : ""} done — your muscles are recovered and ready to work.`;
+  } else if (progressionLevel === "progressing") {
+    contextSummary = `${last7.length} sessions this week with no big gaps — time to push a level harder.`;
+  } else if (yesterdayWorkout) {
+    const yName = yesterdayWorkout.name || yesterdayWorkout.activityType;
+    contextSummary = `Yesterday you did ${yName}. Today targets fresh muscle groups to avoid overtraining.`;
+  } else {
+    contextSummary = "Picked to match your goals, available equipment, and preferred duration.";
+  }
+
+  return {
+    recommendation: best.rec,
+    reasonPills: pills.slice(0, 3),
+    contextSummary,
+    isRestDayRecommended,
+    progressionLevel,
+    daysSinceLast,
+  };
 }
 
 // ─── Today's suggestion ────────────────────────────────────────────────────────

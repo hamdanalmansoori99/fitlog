@@ -171,7 +171,7 @@ function TodaySuggestionCard({ suggestion, onPress }: { suggestion: any; onPress
               {template.durationMinutes} min
             </Text>
           </View>
-          <View style={[styles.diffDot, { backgroundColor: { Beginner: theme.primary, Intermediate: theme.secondary, Advanced: theme.danger }[template.difficulty] || theme.primary }]} />
+          <View style={[styles.diffDot, { backgroundColor: (({ Beginner: theme.primary, Intermediate: theme.secondary, Advanced: theme.danger } as Record<string, string>)[template.difficulty]) || theme.primary }]} />
           <Text style={[styles.todayStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
             {template.difficulty}
           </Text>
@@ -249,7 +249,7 @@ export default function WorkoutsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: profileData, refetch: refetchProfile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
-  const { data: workoutsData, refetch: refetchWorkouts } = useQuery({ queryKey: ["workouts"], queryFn: api.getWorkouts });
+  const { data: workoutsData, refetch: refetchWorkouts } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts() });
 
   const deleteMutation = useMutation({
     mutationFn: api.deleteWorkout,
@@ -281,6 +281,7 @@ export default function WorkoutsScreen() {
   };
 
   const recentWorkouts = workouts.slice(0, 14).map((w: any) => ({
+    name: w.name,
     activityType: w.activityType,
     date: w.date,
     durationMinutes: w.durationMinutes,

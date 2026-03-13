@@ -10,8 +10,10 @@ interface AuthState {
     firstName: string;
     lastName: string;
   } | null;
+  _hydrated: boolean;
   setAuth: (token: string, user: AuthState["user"]) => void;
   clearAuth: () => void;
+  setHydrated: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -19,12 +21,17 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       token: null,
       user: null,
+      _hydrated: false,
       setAuth: (token, user) => set({ token, user }),
       clearAuth: () => set({ token: null, user: null }),
+      setHydrated: () => set({ _hydrated: true }),
     }),
     {
       name: "fitlog-auth",
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated();
+      },
     }
   )
 );

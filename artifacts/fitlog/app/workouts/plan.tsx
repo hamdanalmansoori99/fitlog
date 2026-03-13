@@ -158,7 +158,7 @@ export default function WeeklyPlanScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
-  const { data: workoutsData } = useQuery({ queryKey: ["workouts"], queryFn: api.getWorkouts });
+  const { data: workoutsData } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts() });
 
   const recentWorkouts = (workoutsData?.workouts || []).slice(0, 14).map((w: any) => ({
     activityType: w.activityType,

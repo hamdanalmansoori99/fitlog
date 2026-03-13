@@ -42,7 +42,7 @@ artifacts-monorepo/
 
 ### Screens
 - **Login / Register** — `app/auth/login.tsx`, `app/auth/register.tsx`
-- **Home** — `app/(tabs)/index.tsx` — today stats, weekly bar chart, FAB for quick logging
+- **Home** — `app/(tabs)/index.tsx` — today stats, "Today's Recommended Workout" AI card, weekly bar chart, recent activity, FAB for quick logging
 - **Workouts (Coach Hub)** — `app/(tabs)/workouts.tsx` — today's suggestion, recommendations carousel, quick-log row, template browser, workout history
 - **Coach Onboarding** — `app/workouts/onboarding.tsx` — 7-step animated setup (equipment, location, goals, days, duration, experience, preferences)
 - **Workout Template** — `app/workouts/template.tsx` — full workout preview, exercises with sets/reps, equipment substitutions, benefits, log CTA

@@ -1,13 +1,13 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  Pressable, Platform,
+  Pressable, Platform, ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
@@ -15,6 +15,11 @@ import { StatCard } from "@/components/StatCard";
 import { WeeklyBarChart } from "@/components/WeeklyBarChart";
 import { ActivityItem } from "@/components/ActivityItem";
 import { Card } from "@/components/ui/Card";
+import {
+  getTodayRecommendation,
+  TodayRecommendation,
+  UserCoachProfile,
+} from "@/lib/coachEngine";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -27,37 +32,251 @@ function formatDate() {
   return new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
+function diffColor(d: string | undefined, theme: any) {
+  if (d === "Beginner") return theme.primary;
+  if (d === "Intermediate") return theme.secondary;
+  return theme.orange || "#ff6d00";
+}
+
+// ─── Today's Recommended Workout Card ────────────────────────────────────────
+
+function TodayWorkoutCard({
+  todayRec,
+  theme,
+}: {
+  todayRec: TodayRecommendation;
+  theme: any;
+}) {
+  const { recommendation: rec, reasonPills, contextSummary, isRestDayRecommended } = todayRec;
+
+  if (isRestDayRecommended) {
+    return (
+      <Animated.View entering={FadeIn.duration(400)}>
+        <Card style={[styles.todayCard, { borderColor: theme.secondary + "40" }]}>
+          <View style={styles.todayHeader}>
+            <View style={[styles.todayIcon, { backgroundColor: theme.secondaryDim }]}>
+              <Feather name="moon" size={18} color={theme.secondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.todayLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Today's Recommendation
+              </Text>
+              <Text style={[styles.todayTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                Rest Day
+              </Text>
+            </View>
+          </View>
+          <Text style={[styles.todayContext, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            You've trained 5+ days in a row — your body needs recovery to grow. Take a rest day or go for a light walk.
+          </Text>
+          <Pressable
+            onPress={() => router.push("/(tabs)/workouts")}
+            style={[styles.todaySecondaryBtn, { borderColor: theme.border }]}
+          >
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+              Browse all workouts anyway
+            </Text>
+            <Feather name="chevron-right" size={14} color={theme.textMuted} />
+          </Pressable>
+        </Card>
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Animated.View entering={FadeIn.duration(400)}>
+      <Card style={[styles.todayCard, { borderColor: theme.primary + "40" }]}>
+        {/* Header row */}
+        <View style={styles.todayHeader}>
+          <View style={[styles.todayIcon, { backgroundColor: theme.primaryDim }]}>
+            <Feather name="cpu" size={18} color={theme.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.todayLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              Today's Recommended Workout
+            </Text>
+            <Text
+              style={[styles.todayTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}
+              numberOfLines={1}
+            >
+              {rec.template.name}
+            </Text>
+          </View>
+        </View>
+
+        {/* Meta badges */}
+        <View style={styles.todayMeta}>
+          <View style={styles.metaBadge}>
+            <Feather name="clock" size={11} color={theme.textMuted} />
+            <Text style={[styles.metaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {rec.template.durationMinutes} min
+            </Text>
+          </View>
+          <View style={[styles.metaBadge, { backgroundColor: diffColor(rec.template.difficulty, theme) + "20" }]}>
+            <Text style={{ color: diffColor(rec.template.difficulty, theme), fontFamily: "Inter_500Medium", fontSize: 11 }}>
+              {rec.template.difficulty}
+            </Text>
+          </View>
+          <View style={[styles.metaBadge, {
+            backgroundColor: rec.equipmentMatch === "full" ? theme.primaryDim : "#ff6d0020",
+          }]}>
+            <Feather
+              name={rec.equipmentMatch === "full" ? "check-circle" : "tool"}
+              size={11}
+              color={rec.equipmentMatch === "full" ? theme.primary : theme.orange || "#ff6d00"}
+            />
+            <Text style={{
+              color: rec.equipmentMatch === "full" ? theme.primary : theme.orange || "#ff6d00",
+              fontFamily: "Inter_400Regular", fontSize: 11,
+            }}>
+              {rec.equipmentMatch === "full" ? "Full match" : "With subs"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Context summary */}
+        <Text style={[styles.todayContext, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          {contextSummary}
+        </Text>
+
+        {/* Reason pills */}
+        {reasonPills.length > 0 && (
+          <View style={styles.pillRow}>
+            {reasonPills.map((pill) => (
+              <View key={pill} style={[styles.pill, { backgroundColor: theme.primaryDim }]}>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 11 }}>
+                  {pill}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* CTA */}
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: "/workouts/template" as any,
+              params: { id: rec.template.id, whyGoodForYou: rec.whyGoodForYou },
+            })
+          }
+          style={[styles.todayCta, { backgroundColor: theme.primary }]}
+        >
+          <Feather name="play" size={15} color="#0f0f1a" />
+          <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>
+            Start Workout
+          </Text>
+        </Pressable>
+      </Card>
+    </Animated.View>
+  );
+}
+
+// ─── Coach CTA (no onboarding) ────────────────────────────────────────────────
+
+function CoachCtaCard({ theme }: { theme: any }) {
+  return (
+    <Animated.View entering={FadeIn.duration(400)}>
+      <Card style={[styles.todayCard, { borderColor: theme.secondary + "30" }]}>
+        <View style={styles.todayHeader}>
+          <View style={[styles.todayIcon, { backgroundColor: theme.secondaryDim }]}>
+            <Feather name="zap" size={18} color={theme.secondary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.todayLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              AI Coach
+            </Text>
+            <Text style={[styles.todayTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+              Unlock smart recommendations
+            </Text>
+          </View>
+        </View>
+        <Text style={[styles.todayContext, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          Tell the coach your goals, equipment and schedule — and get a personalised daily workout every time you open the app.
+        </Text>
+        <Pressable
+          onPress={() => router.push("/(tabs)/workouts")}
+          style={[styles.todayCta, { backgroundColor: theme.secondary }]}
+        >
+          <Feather name="settings" size={15} color="#0f0f1a" />
+          <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>
+            Set Up Coach
+          </Text>
+        </Pressable>
+      </Card>
+    </Animated.View>
+  );
+}
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
 export default function HomeScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
-  
-  const { data: todayStats, refetch: refetchStats, isLoading: statsLoading } = useQuery({
+
+  const { data: todayStats, refetch: refetchStats } = useQuery({
     queryKey: ["todayStats"],
     queryFn: api.getTodayStats,
   });
-  
+
   const { data: weeklyData, refetch: refetchWeekly } = useQuery({
     queryKey: ["weeklyStats"],
     queryFn: api.getWeeklyStats,
   });
-  
+
   const { data: recentData, refetch: refetchRecent } = useQuery({
     queryKey: ["recentActivity"],
     queryFn: api.getRecentActivity,
   });
-  
+
+  const { data: profile, refetch: refetchProfile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: api.getProfile,
+  });
+
+  const { data: workoutsData, refetch: refetchWorkouts } = useQuery({
+    queryKey: ["workouts"],
+    queryFn: () => api.getWorkouts({ limit: 20 }),
+  });
+
   const [refreshing, setRefreshing] = React.useState(false);
-  
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchStats(), refetchWeekly(), refetchRecent()]);
+    await Promise.all([
+      refetchStats(), refetchWeekly(), refetchRecent(),
+      refetchProfile(), refetchWorkouts(),
+    ]);
     setRefreshing(false);
   }, []);
-  
+
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
-  
+
+  const hasCoachOnboarding = !!profile?.coachOnboardingComplete;
+
+  const todayRecommendation = useMemo<TodayRecommendation | null>(() => {
+    if (!profile || !hasCoachOnboarding) return null;
+    const coachProfile: UserCoachProfile = {
+      availableEquipment: profile.availableEquipment || [],
+      workoutLocation: profile.workoutLocation || "Home",
+      trainingPreferences: profile.trainingPreferences || [],
+      experienceLevel: profile.experienceLevel || "Beginner",
+      preferredWorkoutDuration: profile.preferredWorkoutDuration || "45 minutes",
+      weeklyWorkoutDays: profile.weeklyWorkoutDays || 3,
+      fitnessGoals: profile.fitnessGoals || [],
+    };
+    const workouts: any[] = workoutsData?.workouts || [];
+    const recentWorkouts = workouts.slice(0, 20).map((w: any) => ({
+      name: w.name,
+      activityType: w.activityType,
+      date: w.date,
+      durationMinutes: w.durationMinutes,
+    }));
+    return getTodayRecommendation(coachProfile, recentWorkouts);
+  }, [profile, workoutsData, hasCoachOnboarding]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
@@ -89,42 +308,47 @@ export default function HomeScreen() {
             </Text>
           </Pressable>
         </Animated.View>
-        
+
         {/* Quick Stats */}
-        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Today</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsScroll}>
             <View style={styles.statsRow}>
-              <StatCard
-                icon="zap"
-                value={todayStats?.caloriesBurned || 0}
-                label="Cal Burned"
-                color={theme.orange}
-              />
-              <StatCard
-                icon="clock"
-                value={`${todayStats?.activeMinutes || 0}m`}
-                label="Active"
-                color={theme.secondary}
-              />
-              <StatCard
-                icon="check-circle"
-                value={todayStats?.workoutsCompleted || 0}
-                label="Workouts"
-                color={theme.primary}
-              />
-              <StatCard
-                icon="coffee"
-                value={todayStats?.mealsLogged || 0}
-                label="Meals"
-                color={theme.pink}
-              />
+              <StatCard icon="zap" value={todayStats?.caloriesBurned || 0} label="Cal Burned" color={theme.orange} />
+              <StatCard icon="clock" value={`${todayStats?.activeMinutes || 0}m`} label="Active" color={theme.secondary} />
+              <StatCard icon="check-circle" value={todayStats?.workoutsCompleted || 0} label="Workouts" color={theme.primary} />
+              <StatCard icon="coffee" value={todayStats?.mealsLogged || 0} label="Meals" color={theme.pink} />
             </View>
           </ScrollView>
         </Animated.View>
-        
+
+        {/* ── Today's Recommended Workout ── */}
+        <Animated.View entering={FadeInDown.delay(160).duration(400)} style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              Today's Workout
+            </Text>
+            {hasCoachOnboarding && (
+              <View style={[styles.aiPill, { backgroundColor: theme.primaryDim }]}>
+                <Feather name="cpu" size={10} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 10 }}>AI Coach</Text>
+              </View>
+            )}
+          </View>
+
+          {!profile ? (
+            <Card style={styles.skeletonCard}>
+              <ActivityIndicator color={theme.primary} size="small" />
+            </Card>
+          ) : hasCoachOnboarding && todayRecommendation ? (
+            <TodayWorkoutCard todayRec={todayRecommendation} theme={theme} />
+          ) : (
+            <CoachCtaCard theme={theme} />
+          )}
+        </Animated.View>
+
         {/* Weekly Chart */}
-        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(240).duration(400)} style={styles.section}>
           <Card>
             <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
               Weekly Activity
@@ -143,16 +367,16 @@ export default function HomeScreen() {
             )}
           </Card>
         </Animated.View>
-        
+
         {/* Recent Activity */}
-        <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(320).duration(400)} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
             Recent Activity
           </Text>
           <Card padding={0}>
             <View style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
               {recentData?.activities?.length > 0 ? (
-                recentData.activities.map((activity: any, i: number) => (
+                recentData.activities.map((activity: any) => (
                   <ActivityItem
                     key={`${activity.type}-${activity.id}`}
                     type={activity.type}
@@ -177,7 +401,7 @@ export default function HomeScreen() {
           </Card>
         </Animated.View>
       </ScrollView>
-      
+
       {/* FAB */}
       <View style={[styles.fabWrap, { bottom: 90 + bottomPad }]}>
         <FABMenu theme={theme} />
@@ -188,7 +412,7 @@ export default function HomeScreen() {
 
 function FABMenu({ theme }: { theme: any }) {
   const [open, setOpen] = React.useState(false);
-  
+
   return (
     <View style={styles.fab}>
       {open && (
@@ -234,7 +458,12 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 18 },
   section: { paddingHorizontal: 20, marginBottom: 20 },
-  sectionTitle: { fontSize: 17, marginBottom: 12 },
+  sectionHeaderRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  sectionTitle: { fontSize: 17 },
+  aiPill: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
+  },
   statsScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
   statsRow: { flexDirection: "row", gap: 12, paddingRight: 20 },
   cardTitle: { fontSize: 15, marginBottom: 2 },
@@ -258,4 +487,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
   },
   fabOptionText: { fontSize: 14 },
+  // Today's workout card
+  skeletonCard: { height: 80, justifyContent: "center", alignItems: "center" },
+  todayCard: { borderWidth: 1, gap: 12 },
+  todayHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  todayIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: "center", justifyContent: "center",
+  },
+  todayLabel: { fontSize: 11, marginBottom: 2 },
+  todayTitle: { fontSize: 16, lineHeight: 20 },
+  todayMeta: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  metaBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+    backgroundColor: "transparent",
+  },
+  metaText: { fontSize: 11 },
+  todayContext: { fontSize: 13, lineHeight: 19 },
+  pillRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  pill: {
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+  },
+  todayCta: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, paddingVertical: 12, borderRadius: 12,
+  },
+  todaySecondaryBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, paddingVertical: 10, borderRadius: 10, borderWidth: 1,
+  },
 });
