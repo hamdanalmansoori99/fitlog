@@ -5,3 +5,5 @@ export * from "./meals";
 export * from "./equipment";
 export * from "./measurements";
 export * from "./settings";
+export * from "./conversations";
+export * from "./messages";

@@ -314,6 +314,13 @@ export default function WorkoutsScreen() {
             </Pressable>
           )}
           <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/coach/chat" as any); }}
+            style={[styles.planBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+          >
+            <Feather name="message-circle" size={16} color={theme.secondary} />
+            <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Coach</Text>
+          </Pressable>
+          <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/workouts/log"); }}
             style={[styles.addBtn, { backgroundColor: theme.primary }]}
           >

@@ -9,6 +9,8 @@
 export * from "./activityBreakdown";
 export * from "./authResponse";
 export * from "./bodyMeasurement";
+export * from "./coachConversation";
+export * from "./coachMessage";
 export * from "./createEquipmentRequest";
 export * from "./createExerciseRequest";
 export * from "./createFoodItemRequest";
@@ -43,6 +45,7 @@ export * from "./profile";
 export * from "./recentActivityItem";
 export * from "./recentActivityResponse";
 export * from "./registerRequest";
+export * from "./sendCoachMessageBody";
 export * from "./settings";
 export * from "./streakResponse";
 export * from "./todayStats";

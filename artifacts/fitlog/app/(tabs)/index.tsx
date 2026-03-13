@@ -437,6 +437,30 @@ export default function HomeScreen() {
           </Animated.View>
         )}
 
+        {/* AI Coach Chat */}
+        <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.section}>
+          <Pressable
+            onPress={() => router.push("/coach/chat" as any)}
+            style={({ pressed }) => [
+              styles.coachChatCard,
+              { backgroundColor: theme.card, borderColor: theme.secondary + "50", opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <View style={[styles.coachChatIcon, { backgroundColor: theme.secondary + "20" }]}>
+              <Feather name="message-circle" size={22} color={theme.secondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.coachChatTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                Chat with AI Coach
+              </Text>
+              <Text style={[styles.coachChatSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Ask me what to train, get plans, or understand your progress
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={theme.textMuted} />
+          </Pressable>
+        </Animated.View>
+
         {/* Weekly Chart */}
         <Animated.View entering={FadeInDown.delay(280).duration(400)} style={styles.section}>
           <Card>
@@ -579,6 +603,16 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
   },
+  coachChatCard: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 16, borderRadius: 16, borderWidth: 1,
+  },
+  coachChatIcon: {
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: "center", justifyContent: "center",
+  },
+  coachChatTitle: { fontSize: 15, marginBottom: 2 },
+  coachChatSub: { fontSize: 13, lineHeight: 18 },
   statsScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
   statsRow: { flexDirection: "row", gap: 12, paddingRight: 20 },
   cardTitle: { fontSize: 15, marginBottom: 2 },

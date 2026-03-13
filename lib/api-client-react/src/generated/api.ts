@@ -19,6 +19,7 @@ import type {
 import type {
   AuthResponse,
   BodyMeasurement,
+  CoachConversation,
   CreateEquipmentRequest,
   CreateMealRequest,
   CreateMeasurementRequest,
@@ -42,6 +43,7 @@ import type {
   Profile,
   RecentActivityResponse,
   RegisterRequest,
+  SendCoachMessageBody,
   Settings,
   StreakResponse,
   TodayStats,
@@ -3005,3 +3007,245 @@ export function useExportData<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get or create the user's AI coach conversation with messages
+ */
+export const getGetCoachConversationUrl = () => {
+  return `/api/coach/conversation`;
+};
+
+export const getCoachConversation = async (
+  options?: RequestInit,
+): Promise<CoachConversation> => {
+  return customFetch<CoachConversation>(getGetCoachConversationUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachConversationQueryKey = () => {
+  return [`/api/coach/conversation`] as const;
+};
+
+export const getGetCoachConversationQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachConversation>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachConversation>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCoachConversationQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachConversation>>
+  > = ({ signal }) => getCoachConversation({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachConversation>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachConversationQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachConversation>>
+>;
+export type GetCoachConversationQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get or create the user's AI coach conversation with messages
+ */
+
+export function useGetCoachConversation<
+  TData = Awaited<ReturnType<typeof getCoachConversation>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachConversation>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachConversationQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Clear coach conversation history
+ */
+export const getClearCoachConversationUrl = () => {
+  return `/api/coach/conversation`;
+};
+
+export const clearCoachConversation = async (
+  options?: RequestInit,
+): Promise<CoachConversation> => {
+  return customFetch<CoachConversation>(getClearCoachConversationUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearCoachConversationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearCoachConversation>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearCoachConversation>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["clearCoachConversation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearCoachConversation>>,
+    void
+  > = () => {
+    return clearCoachConversation(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearCoachConversationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearCoachConversation>>
+>;
+
+export type ClearCoachConversationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Clear coach conversation history
+ */
+export const useClearCoachConversation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearCoachConversation>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearCoachConversation>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getClearCoachConversationMutationOptions(options));
+};
+
+/**
+ * @summary Send a message to the AI coach (SSE stream)
+ */
+export const getSendCoachMessageUrl = () => {
+  return `/api/coach/message`;
+};
+
+export const sendCoachMessage = async (
+  sendCoachMessageBody: SendCoachMessageBody,
+  options?: RequestInit,
+): Promise<unknown> => {
+  return customFetch<unknown>(getSendCoachMessageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(sendCoachMessageBody),
+  });
+};
+
+export const getSendCoachMessageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendCoachMessage>>,
+    TError,
+    { data: BodyType<SendCoachMessageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendCoachMessage>>,
+  TError,
+  { data: BodyType<SendCoachMessageBody> },
+  TContext
+> => {
+  const mutationKey = ["sendCoachMessage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendCoachMessage>>,
+    { data: BodyType<SendCoachMessageBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return sendCoachMessage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendCoachMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendCoachMessage>>
+>;
+export type SendCoachMessageMutationBody = BodyType<SendCoachMessageBody>;
+export type SendCoachMessageMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Send a message to the AI coach (SSE stream)
+ */
+export const useSendCoachMessage = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendCoachMessage>>,
+    TError,
+    { data: BodyType<SendCoachMessageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendCoachMessage>>,
+  TError,
+  { data: BodyType<SendCoachMessageBody> },
+  TContext
+> => {
+  return useMutation(getSendCoachMessageMutationOptions(options));
+};

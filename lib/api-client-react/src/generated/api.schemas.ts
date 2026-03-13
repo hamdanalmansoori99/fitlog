@@ -361,6 +361,25 @@ export interface ExportDataResponse {
   measurements: BodyMeasurement[];
 }
 
+export interface CoachMessage {
+  id: number;
+  conversationId: number;
+  role: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface CoachConversation {
+  id: number;
+  title: string;
+  createdAt: string;
+  messages: CoachMessage[];
+}
+
+export interface SendCoachMessageBody {
+  content: string;
+}
+
 export type UploadProfilePhotoBody = {
   photo?: Blob;
 };

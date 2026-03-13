@@ -25,6 +25,8 @@ tags:
     description: Progress and analytics
   - name: settings
     description: App settings
+  - name: coach
+    description: AI Coach chat operations
 paths:
   /healthz:
     get:
@@ -664,6 +666,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExportDataResponse"
+
+  /coach/conversation:
+    get:
+      operationId: getCoachConversation
+      tags: [coach]
+      summary: Get or create the user's AI coach conversation with messages
+      responses:
+        "200":
+          description: Coach conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachConversation"
+    delete:
+      operationId: clearCoachConversation
+      tags: [coach]
+      summary: Clear coach conversation history
+      responses:
+        "200":
+          description: New empty conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachConversation"
+  /coach/message:
+    post:
+      operationId: sendCoachMessage
+      tags: [coach]
+      summary: Send a message to the AI coach (SSE stream)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendCoachMessageBody"
+      responses:
+        "200":
+          description: SSE stream of assistant response chunks
+          content:
+            text/event-stream: {}
 
 components:
   schemas:
@@ -1451,3 +1493,43 @@ components:
           items:
             $ref: "#/components/schemas/BodyMeasurement"
       required: [workouts, meals, measurements]
+
+    # COACH SCHEMAS
+    CoachMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        role:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, conversationId, role, content, createdAt]
+
+    CoachConversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoachMessage"
+      required: [id, title, createdAt, messages]
+
+    SendCoachMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]

@@ -8,6 +8,7 @@ import equipmentRouter from "./equipment";
 import measurementsRouter from "./measurements";
 import progressRouter from "./progress";
 import settingsRouter from "./settings";
+import coachRouter from "./coach";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use("/equipment", equipmentRouter);
 router.use("/measurements", measurementsRouter);
 router.use("/progress", progressRouter);
 router.use("/settings", settingsRouter);
+router.use("/coach", coachRouter);
 
 export default router;

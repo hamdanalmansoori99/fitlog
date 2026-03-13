@@ -2,7 +2,7 @@ import { Platform } from "react-native";
 import { useAuthStore } from "@/store/authStore";
 
 const DOMAIN = process.env.EXPO_PUBLIC_DOMAIN || "";
-const BASE_URL = Platform.OS === "web"
+export const BASE_URL = Platform.OS === "web"
   ? "/api"
   : `https://${DOMAIN}/api`;
 
@@ -89,4 +89,8 @@ export const api = {
   // Settings
   getSettings: () => request<any>("/settings"),
   updateSettings: (body: any) => request<any>("/settings", { method: "PUT", body: JSON.stringify(body) }),
+
+  // Coach
+  getCoachConversation: () => request<any>("/coach/conversation"),
+  clearCoachConversation: () => request<any>("/coach/conversation", { method: "DELETE" }),
 };

@@ -825,3 +825,46 @@ export const ExportDataResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * @summary Get or create the user's AI coach conversation with messages
+ */
+export const GetCoachConversationResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  createdAt: zod.date(),
+  messages: zod.array(
+    zod.object({
+      id: zod.number(),
+      conversationId: zod.number(),
+      role: zod.string(),
+      content: zod.string(),
+      createdAt: zod.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Clear coach conversation history
+ */
+export const ClearCoachConversationResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  createdAt: zod.date(),
+  messages: zod.array(
+    zod.object({
+      id: zod.number(),
+      conversationId: zod.number(),
+      role: zod.string(),
+      content: zod.string(),
+      createdAt: zod.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Send a message to the AI coach (SSE stream)
+ */
+export const SendCoachMessageBody = zod.object({
+  content: zod.string(),
+});
