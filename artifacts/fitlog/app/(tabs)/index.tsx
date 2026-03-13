@@ -23,6 +23,7 @@ import {
   CoachInsight,
   UserCoachProfile,
 } from "@/lib/coachEngine";
+import { getNutritionInsights, NutritionInsight, NutritionContext } from "@/lib/nutritionCoach";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -257,6 +258,62 @@ function CoachInsightCard({ insights, theme }: { insights: CoachInsight[]; theme
   );
 }
 
+// ─── Nutrition Insights Card ───────────────────────────────────────────────────
+
+function NutritionInsightsCard({ insights, theme }: { insights: NutritionInsight[]; theme: any }) {
+  if (insights.length === 0) return null;
+
+  const borderColor = (t: NutritionInsight["type"]) => {
+    if (t === "warning") return theme.warning || "#ffab40";
+    if (t === "success") return theme.primary;
+    if (t === "info")    return theme.secondary;
+    return theme.primary;
+  };
+  const iconColor = (t: NutritionInsight["type"]) => borderColor(t);
+  const iconBg = (t: NutritionInsight["type"]) => borderColor(t) + "18";
+
+  return (
+    <Animated.View entering={FadeIn.delay(80).duration(400)}>
+      <Card style={{ borderColor: theme.border, gap: 0, paddingHorizontal: 0, paddingVertical: 0, overflow: "hidden" }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Feather name="aperture" size={13} color={theme.secondary} />
+          <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 0.4 }}>
+            NUTRITION INSIGHTS
+          </Text>
+        </View>
+        {insights.map((insight, i) => (
+          <View
+            key={insight.id}
+            style={[
+              { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
+              i < insights.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
+            ]}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: iconBg(insight.type) }}>
+              <Feather name={insight.icon as any} size={17} color={iconColor(insight.type)} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 17 }}>
+                {insight.headline}
+              </Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 17 }}>
+                {insight.detail}
+              </Text>
+            </View>
+          </View>
+        ))}
+        <Pressable
+          onPress={() => router.push("/(tabs)/meals" as any)}
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderTopWidth: 1, borderTopColor: theme.border, gap: 4 }}
+        >
+          <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>View nutrition</Text>
+          <Feather name="chevron-right" size={12} color={theme.secondary} />
+        </Pressable>
+      </Card>
+    </Animated.View>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -294,13 +351,19 @@ export default function HomeScreen() {
     queryFn: api.getStreaks,
   });
 
+  const { data: todayMealsData, refetch: refetchMeals } = useQuery({
+    queryKey: ["mealsToday"],
+    queryFn: () => api.getMeals(),
+    staleTime: 60000,
+  });
+
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
       refetchStats(), refetchWeekly(), refetchRecent(),
-      refetchProfile(), refetchWorkouts(), refetchStreaks(),
+      refetchProfile(), refetchWorkouts(), refetchStreaks(), refetchMeals(),
     ]);
     setRefreshing(false);
   }, []);
@@ -350,6 +413,45 @@ export default function HomeScreen() {
       totalWorkouts: workoutsData?.total,
     });
   }, [profile, recentWorkoutsList, streaksData, workoutsData, hasCoachOnboarding]);
+
+  const nutritionInsights = useMemo<NutritionInsight[]>(() => {
+    const totals = todayMealsData?.dailyTotals;
+    const meals: any[] = todayMealsData?.meals || [];
+    if (!totals && meals.length === 0) return [];
+
+    const todayWorkouts: any[] = (workoutsData?.workouts || []).filter((w: any) => {
+      const d = new Date(w.date);
+      const today = new Date();
+      return (
+        d.getFullYear() === today.getFullYear() &&
+        d.getMonth() === today.getMonth() &&
+        d.getDate() === today.getDate()
+      );
+    });
+
+    const trainedToday = todayWorkouts.length > 0;
+    const topWorkout = todayWorkouts[0];
+    const lastMeal = meals.length > 0 ? meals[meals.length - 1] : null;
+
+    const ctx: NutritionContext = {
+      calories: totals?.calories ?? 0,
+      proteinG: totals?.proteinG ?? 0,
+      carbsG: totals?.carbsG ?? 0,
+      fatG: totals?.fatG ?? 0,
+      calorieGoal: todayMealsData?.calorieGoal ?? profile?.dailyCalorieGoal ?? null,
+      proteinGoalG: profile?.dailyProteinGoal ?? null,
+      fitnessGoals: profile?.fitnessGoals || [],
+      trainedToday,
+      workoutType: topWorkout?.activityType ?? null,
+      workoutDurationMinutes: topWorkout?.durationMinutes ?? null,
+      lastMealTime: lastMeal ? new Date(lastMeal.date) : null,
+      lastMealCalories: lastMeal?.totalCalories ?? 0,
+      mealCount: meals.length,
+      currentHour: new Date().getHours(),
+    };
+
+    return getNutritionInsights(ctx);
+  }, [todayMealsData, workoutsData, profile]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -434,6 +536,13 @@ export default function HomeScreen() {
         {coachInsights.length > 0 && (
           <Animated.View entering={FadeInDown.delay(220).duration(400)} style={styles.section}>
             <CoachInsightCard insights={coachInsights} theme={theme} />
+          </Animated.View>
+        )}
+
+        {/* Nutrition Insights */}
+        {nutritionInsights.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(240).duration(400)} style={styles.section}>
+            <NutritionInsightsCard insights={nutritionInsights} theme={theme} />
           </Animated.View>
         )}
 
