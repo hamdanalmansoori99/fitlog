@@ -246,6 +246,77 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/recent-foods", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const limit = Math.min(parseInt(req.query.limit as string) || 25, 50);
+    const since = new Date();
+    since.setDate(since.getDate() - 90);
+
+    const foods = await db
+      .select({
+        name: mealFoodItemsTable.name,
+        unit: mealFoodItemsTable.unit,
+        avgCalories: sql<number>`round(avg(${mealFoodItemsTable.calories}))`,
+        avgProteinG: sql<number>`round(avg(${mealFoodItemsTable.proteinG}), 1)`,
+        avgCarbsG: sql<number>`round(avg(${mealFoodItemsTable.carbsG}), 1)`,
+        avgFatG: sql<number>`round(avg(${mealFoodItemsTable.fatG}), 1)`,
+        avgPortion: sql<number>`round(avg(${mealFoodItemsTable.portionSize}), 0)`,
+        useCount: sql<number>`count(*)`,
+      })
+      .from(mealFoodItemsTable)
+      .innerJoin(mealsTable, eq(mealFoodItemsTable.mealId, mealsTable.id))
+      .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, since)))
+      .groupBy(mealFoodItemsTable.name, mealFoodItemsTable.unit)
+      .orderBy(sql`count(*) desc`)
+      .limit(limit);
+
+    res.json({ foods });
+  } catch (err) {
+    console.error("recent-foods error:", err);
+    res.status(500).json({ error: "Failed to get recent foods" });
+  }
+});
+
+router.get("/frequent", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const limit = Math.min(parseInt(req.query.limit as string) || 6, 20);
+
+    const result = await db.execute(sql`
+      SELECT
+        m.name,
+        m.category,
+        count(*)::int AS use_count,
+        round(avg(COALESCE(sub.total_calories, 0)))::int AS avg_calories,
+        round(avg(COALESCE(sub.total_protein_g, 0)), 1)::float AS avg_protein_g,
+        round(avg(COALESCE(sub.total_carbs_g, 0)), 1)::float AS avg_carbs_g,
+        round(avg(COALESCE(sub.total_fat_g, 0)), 1)::float AS avg_fat_g,
+        max(m.id)::int AS latest_meal_id
+      FROM meals m
+      LEFT JOIN (
+        SELECT meal_id,
+          sum(calories) AS total_calories,
+          sum(protein_g) AS total_protein_g,
+          sum(carbs_g) AS total_carbs_g,
+          sum(fat_g) AS total_fat_g
+        FROM meal_food_items
+        GROUP BY meal_id
+      ) sub ON sub.meal_id = m.id
+      WHERE m.user_id = ${user.id}
+      GROUP BY m.name, m.category
+      ORDER BY count(*) DESC
+      LIMIT ${limit}
+    `);
+
+    const rows = (result as any).rows ?? Array.from(result as any);
+    res.json({ meals: rows });
+  } catch (err) {
+    console.error("frequent meals error:", err);
+    res.status(500).json({ error: "Failed to get frequent meals" });
+  }
+});
+
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
@@ -349,6 +420,53 @@ router.delete("/:id", requireAuth, async (req, res) => {
     res.json({ message: "Meal deleted" });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete meal" });
+  }
+});
+
+router.post("/:id/duplicate", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const mealId = parseInt(req.params.id);
+    const { targetDate } = req.body;
+
+    const original = await getMealWithFoodItems(mealId, user.id);
+    if (!original) {
+      res.status(404).json({ error: "Meal not found" });
+      return;
+    }
+
+    const date = targetDate
+      ? new Date(targetDate + "T12:00:00")
+      : (() => { const d = new Date(); d.setHours(12, 0, 0, 0); return d; })();
+
+    const [newMeal] = await db.insert(mealsTable).values({
+      userId: user.id,
+      name: original.name,
+      category: original.category,
+      date,
+      notes: original.notes ?? undefined,
+    }).returning();
+
+    if (original.foodItems.length > 0) {
+      await db.insert(mealFoodItemsTable).values(
+        original.foodItems.map((fi) => ({
+          mealId: newMeal.id,
+          name: fi.name,
+          portionSize: fi.portionSize,
+          unit: fi.unit,
+          calories: fi.calories,
+          proteinG: fi.proteinG,
+          carbsG: fi.carbsG,
+          fatG: fi.fatG,
+        }))
+      );
+    }
+
+    const full = await getMealWithFoodItems(newMeal.id, user.id);
+    res.json(full);
+  } catch (err) {
+    console.error("duplicate meal error:", err);
+    res.status(500).json({ error: "Failed to duplicate meal" });
   }
 });
 

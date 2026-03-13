@@ -73,6 +73,10 @@ export const api = {
   updateMeal: (id: number, body: any) => request<any>(`/meals/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteMeal: (id: number) => request(`/meals/${id}`, { method: "DELETE" }),
   getNutritionStats: () => request<any>("/meals/stats/nutrition"),
+  getRecentFoods: (limit = 25) => request<any>(`/meals/recent-foods?limit=${limit}`),
+  getFrequentMeals: (limit = 6) => request<any>(`/meals/frequent?limit=${limit}`),
+  duplicateMeal: (id: number, targetDate?: string) =>
+    request<any>(`/meals/${id}/duplicate`, { method: "POST", body: JSON.stringify({ targetDate }) }),
   
   // Equipment
   getEquipment: () => request<any>("/equipment"),
