@@ -9,6 +9,7 @@ import measurementsRouter from "./measurements";
 import progressRouter from "./progress";
 import settingsRouter from "./settings";
 import coachRouter from "./coach";
+import waterRouter from "./water";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/measurements", measurementsRouter);
 router.use("/progress", progressRouter);
 router.use("/settings", settingsRouter);
 router.use("/coach", coachRouter);
+router.use("/water", waterRouter);
 
 export default router;

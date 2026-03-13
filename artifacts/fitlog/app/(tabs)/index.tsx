@@ -25,6 +25,7 @@ import {
 } from "@/lib/coachEngine";
 import { getNutritionInsights, NutritionInsight, NutritionContext } from "@/lib/nutritionCoach";
 import { SmartReminderBanner } from "@/components/SmartReminderBanner";
+import { WaterTracker } from "@/components/WaterTracker";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -558,6 +559,14 @@ export default function HomeScreen() {
             <NutritionInsightsCard insights={nutritionInsights} theme={theme} />
           </Animated.View>
         )}
+
+        {/* Water Tracker */}
+        <Animated.View entering={FadeInDown.delay(255).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 12 }]}>
+            Hydration
+          </Text>
+          <WaterTracker workedOutToday={(todayStats?.workoutsCompleted ?? 0) > 0} />
+        </Animated.View>
 
         {/* AI Coach Chat */}
         <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.section}>

@@ -32,7 +32,7 @@ router.put("/", requireAuth, async (req, res) => {
     const {
       firstName, lastName, age, gender, heightCm, weightKg,
       fitnessGoals, activityLevel, dailyCalorieGoal, dailyProteinGoal,
-      dailyCarbsGoal, dailyFatGoal,
+      dailyCarbsGoal, dailyFatGoal, dailyWaterGoalMl,
       availableEquipment, workoutLocation, trainingPreferences,
       experienceLevel, preferredWorkoutDuration, weeklyWorkoutDays,
       coachOnboardingComplete, savedWeeklyPlan,
@@ -52,6 +52,7 @@ router.put("/", requireAuth, async (req, res) => {
         fitnessGoals: fitnessGoals || [],
         activityLevel, dailyCalorieGoal, dailyProteinGoal,
         dailyCarbsGoal, dailyFatGoal,
+        dailyWaterGoalMl: dailyWaterGoalMl ?? undefined,
         availableEquipment: availableEquipment ?? undefined,
         workoutLocation: workoutLocation ?? undefined,
         trainingPreferences: trainingPreferences ?? undefined,

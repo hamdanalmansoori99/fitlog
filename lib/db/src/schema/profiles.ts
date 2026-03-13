@@ -24,6 +24,7 @@ export const profilesTable = pgTable("profiles", {
   experienceLevel: text("experience_level"),
   preferredWorkoutDuration: text("preferred_workout_duration"),
   weeklyWorkoutDays: integer("weekly_workout_days"),
+  dailyWaterGoalMl: integer("daily_water_goal_ml").notNull().default(2000),
   onboardingComplete: boolean("onboarding_complete").notNull().default(false),
   coachOnboardingComplete: boolean("coach_onboarding_complete").notNull().default(false),
   savedWeeklyPlan: jsonb("saved_weekly_plan").$type<any>(),

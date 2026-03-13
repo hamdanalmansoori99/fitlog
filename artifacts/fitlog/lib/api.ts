@@ -105,4 +105,11 @@ export const api = {
   getCardioHistory: (type: string, limit = 10) =>
     request<any>(`/progress/cardio-history?type=${encodeURIComponent(type)}&limit=${limit}`),
   getConsistency: () => request<any>("/progress/consistency"),
+
+  // Water tracking
+  getWaterToday: () => request<any>("/water/today"),
+  logWater: (amountMl: number) =>
+    request<any>("/water/log", { method: "POST", body: JSON.stringify({ amountMl }) }),
+  deleteWaterLog: (id: number) =>
+    request<any>(`/water/log/${id}`, { method: "DELETE" }),
 };

@@ -64,6 +64,7 @@ export default function ProfileScreen() {
   const [proteinGoal, setProteinGoal] = useState("");
   const [carbsGoal, setCarbsGoal] = useState("");
   const [fatGoal, setFatGoal] = useState("");
+  const [waterGoalMl, setWaterGoalMl] = useState("2000");
   
   const [profileLoaded, setProfileLoaded] = useState(false);
   
@@ -84,6 +85,7 @@ export default function ProfileScreen() {
         setProteinGoal(data.dailyProteinGoal?.toString() || "");
         setCarbsGoal(data.dailyCarbsGoal?.toString() || "");
         setFatGoal(data.dailyFatGoal?.toString() || "");
+        setWaterGoalMl(data.dailyWaterGoalMl?.toString() || "2000");
         setProfileLoaded(true);
       }
     },
@@ -165,6 +167,7 @@ export default function ProfileScreen() {
       dailyProteinGoal: proteinGoal ? parseInt(proteinGoal) : undefined,
       dailyCarbsGoal: carbsGoal ? parseInt(carbsGoal) : undefined,
       dailyFatGoal: fatGoal ? parseInt(fatGoal) : undefined,
+      dailyWaterGoalMl: waterGoalMl ? parseInt(waterGoalMl) : undefined,
     });
   };
   
@@ -323,6 +326,7 @@ export default function ProfileScreen() {
                 <View style={{ flex: 1 }}><Input label="Carbs (g)" value={carbsGoal} onChangeText={setCarbsGoal} placeholder="200" keyboardType="numeric" /></View>
                 <View style={{ flex: 1 }}><Input label="Fat (g)" value={fatGoal} onChangeText={setFatGoal} placeholder="60" keyboardType="numeric" /></View>
               </View>
+              <Input label="Daily Water Goal (ml)" value={waterGoalMl} onChangeText={setWaterGoalMl} placeholder="2000" keyboardType="numeric" />
             </Card>
             
             <Button title="Save Profile" onPress={handleSave} loading={updateMutation.isPending} />
