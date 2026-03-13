@@ -60,6 +60,11 @@ export const api = {
   getRecentActivity: () => request<any>("/workouts/recent"),
   
   // Meals
+  analyzeMealPhoto: (imageBase64: string, mimeType = "image/jpeg") =>
+    request<any>("/meals/analyze-photo", {
+      method: "POST",
+      body: JSON.stringify({ imageBase64, mimeType }),
+    }),
   getMeals: (date?: string) => {
     const q = date ? `?date=${date}` : "";
     return request<any>(`/meals${q}`);

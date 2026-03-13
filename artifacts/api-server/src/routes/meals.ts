@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, mealsTable, mealFoodItemsTable, profilesTable } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
+import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 const router = Router();
 
@@ -23,6 +24,97 @@ async function getMealWithFoodItems(mealId: number, userId: number) {
   
   return { ...meal, foodItems, totalCalories, totalProteinG, totalCarbsG, totalFatG };
 }
+
+router.post("/analyze-photo", requireAuth, async (req, res) => {
+  try {
+    const { imageBase64, mimeType = "image/jpeg" } = req.body;
+    if (!imageBase64) {
+      res.status(400).json({ error: "imageBase64 is required" });
+      return;
+    }
+
+    const prompt = `You are a nutrition expert analyzing a meal photo. Identify every food item visible and estimate nutrition.
+
+Return ONLY valid JSON in this exact structure — no markdown, no explanation:
+{
+  "mealName": "descriptive name of the overall meal",
+  "foods": [
+    {
+      "name": "specific food item name",
+      "portionSize": 150,
+      "unit": "grams",
+      "calories": 250,
+      "proteinG": 20,
+      "carbsG": 30,
+      "fatG": 8
+    }
+  ]
+}
+
+Rules:
+- Identify each distinct food item separately (e.g. chicken breast, rice, broccoli)
+- Estimate portion sizes visually (common units: grams, oz, cups, pieces, servings, ml)
+- Estimate calories and macros per portion shown
+- All numbers must be integers or decimals, never strings
+- If you cannot identify a food, use your best guess
+- Return at minimum 1 food item`;
+
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 1024,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: mimeType as any,
+                data: imageBase64,
+              },
+            },
+            { type: "text", text: prompt },
+          ],
+        },
+      ],
+    });
+
+    const raw = response.content[0].type === "text" ? response.content[0].text : "";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      res.status(422).json({ error: "Could not parse AI response", raw });
+      return;
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    const foods = (parsed.foods || []).map((f: any) => ({
+      name: String(f.name || "Unknown food"),
+      portionSize: Number(f.portionSize) || 100,
+      unit: String(f.unit || "grams"),
+      calories: Math.round(Number(f.calories) || 0),
+      proteinG: Math.round(Number(f.proteinG) || 0),
+      carbsG: Math.round(Number(f.carbsG) || 0),
+      fatG: Math.round(Number(f.fatG) || 0),
+    }));
+
+    const totals = foods.reduce(
+      (acc: any, f: any) => ({
+        calories: acc.calories + f.calories,
+        proteinG: acc.proteinG + f.proteinG,
+        carbsG: acc.carbsG + f.carbsG,
+        fatG: acc.fatG + f.fatG,
+      }),
+      { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
+    );
+
+    res.json({ mealName: parsed.mealName || "AI-analyzed meal", foods, totals });
+  } catch (err: any) {
+    console.error("Photo analysis error:", err?.message);
+    res.status(500).json({ error: "Failed to analyze photo" });
+  }
+});
 
 router.get("/stats/nutrition", requireAuth, async (req, res) => {
   try {

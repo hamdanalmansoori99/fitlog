@@ -207,10 +207,13 @@ export function getNutritionInsights(ctx: NutritionContext): NutritionInsight[] 
     });
   }
 
-  // ─── 9. Macros very skewed ────────────────────────────────────────────────
+  // ─── 9. Macros very skewed / balanced ────────────────────────────────────
   const macroTotal = proteinG + carbsG + fatG;
   if (macroTotal > 50) {
     const fatPct = fatG / macroTotal;
+    const protPctMacro = proteinG / macroTotal;
+    const carbPctMacro = carbsG / macroTotal;
+
     if (fatPct > 0.55) {
       insights.push({
         id: "fat-heavy",
@@ -221,7 +224,34 @@ export function getNutritionInsights(ctx: NutritionContext): NutritionInsight[] 
         type: "info",
         priority: 35,
       });
+    } else if (
+      protPctMacro >= 0.2 && protPctMacro <= 0.45 &&
+      carbPctMacro >= 0.3 && carbPctMacro <= 0.55 &&
+      fatPct >= 0.15 && fatPct <= 0.35 &&
+      mealCount >= 2
+    ) {
+      insights.push({
+        id: "macros-balanced",
+        icon: "check-circle",
+        headline: "Your macros look well balanced",
+        detail: `Protein ${Math.round(protPctMacro * 100)}%, carbs ${Math.round(carbPctMacro * 100)}%, fat ${Math.round(fatPct * 100)}% — a good distribution for energy and recovery.`,
+        type: "success",
+        priority: 38,
+      });
     }
+  }
+
+  // ─── 9b. Calories significantly over goal → suggest light activity ────────
+  if (calPct > 1.2 && mealCount > 0 && !trainedToday) {
+    const over = Math.round(calories - calGoal);
+    insights.push({
+      id: "over-goal-activity",
+      icon: "navigation",
+      headline: "A short walk could help offset today",
+      detail: `You're about ${over} kcal over your goal. A 20–30 min walk burns ~100–150 kcal and improves digestion — no pressure, just an option.`,
+      type: "tip",
+      priority: 68,
+    });
   }
 
   // ─── 10. Goal-aligned meal suggestion ────────────────────────────────────
