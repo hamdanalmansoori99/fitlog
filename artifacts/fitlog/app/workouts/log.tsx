@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { SuccessView } from "@/components/SuccessView";
 
 const ACTIVITY_TYPES = [
   { id: "cycling", label: "Cycling", icon: "wind" as const, color: "secondary" },
@@ -93,7 +94,7 @@ export default function LogWorkoutScreen() {
       setSuccess(true);
       setTimeout(() => {
         router.replace("/(tabs)/workouts");
-      }, 1000);
+      }, 2000);
     },
     onError: (err: any) => setError(err.message),
   });
@@ -153,17 +154,17 @@ export default function LogWorkoutScreen() {
   };
   
   if (success) {
+    const activityLabel = ACTIVITY_TYPES.find(a => a.id === activityType)?.label || "workout";
     return (
       <View style={[styles.successScreen, { backgroundColor: theme.background }]}>
-        <View style={[styles.successCircle, { backgroundColor: theme.primaryDim }]}>
-          <Feather name="check" size={48} color={theme.primary} />
-        </View>
-        <Text style={[styles.successTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Workout Logged!</Text>
-        <Text style={[styles.successSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Great job crushing it today</Text>
+        <SuccessView
+          title="Workout Logged!"
+          subtitle={`${activityLabel} recorded. Keep up the great work!`}
+        />
       </View>
     );
   }
-  
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}

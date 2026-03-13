@@ -1,13 +1,13 @@
 import React, { useCallback, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  Pressable, Platform, ActivityIndicator,
+  Pressable, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, ZoomIn } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
@@ -15,6 +15,7 @@ import { StatCard } from "@/components/StatCard";
 import { WeeklyBarChart } from "@/components/WeeklyBarChart";
 import { ActivityItem } from "@/components/ActivityItem";
 import { Card } from "@/components/ui/Card";
+import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import {
   getTodayRecommendation,
   TodayRecommendation,
@@ -215,7 +216,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
 
-  const { data: todayStats, refetch: refetchStats } = useQuery({
+  const { data: todayStats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: ["todayStats"],
     queryFn: api.getTodayStats,
   });
@@ -225,12 +226,12 @@ export default function HomeScreen() {
     queryFn: api.getWeeklyStats,
   });
 
-  const { data: recentData, refetch: refetchRecent } = useQuery({
+  const { data: recentData, isLoading: recentLoading, refetch: refetchRecent } = useQuery({
     queryKey: ["recentActivity"],
     queryFn: api.getRecentActivity,
   });
 
-  const { data: profile, refetch: refetchProfile } = useQuery({
+  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
     queryKey: ["profile"],
     queryFn: api.getProfile,
   });
@@ -314,10 +315,10 @@ export default function HomeScreen() {
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Today</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsScroll}>
             <View style={styles.statsRow}>
-              <StatCard icon="zap" value={todayStats?.caloriesBurned || 0} label="Cal Burned" color={theme.orange} />
-              <StatCard icon="clock" value={`${todayStats?.activeMinutes || 0}m`} label="Active" color={theme.secondary} />
-              <StatCard icon="check-circle" value={todayStats?.workoutsCompleted || 0} label="Workouts" color={theme.primary} />
-              <StatCard icon="coffee" value={todayStats?.mealsLogged || 0} label="Meals" color={theme.pink} />
+              <StatCard icon="zap" value={todayStats?.caloriesBurned || 0} label="Cal Burned" color={theme.orange} loading={statsLoading} />
+              <StatCard icon="clock" value={`${todayStats?.activeMinutes || 0}m`} label="Active" color={theme.secondary} loading={statsLoading} />
+              <StatCard icon="check-circle" value={todayStats?.workoutsCompleted || 0} label="Workouts" color={theme.primary} loading={statsLoading} />
+              <StatCard icon="coffee" value={todayStats?.mealsLogged || 0} label="Meals" color={theme.pink} loading={statsLoading} />
             </View>
           </ScrollView>
         </Animated.View>
@@ -336,10 +337,19 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {!profile ? (
-            <Card style={styles.skeletonCard}>
-              <ActivityIndicator color={theme.primary} size="small" />
-            </Card>
+          {profileLoading ? (
+            <SkeletonCard>
+              <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+                <SkeletonBox width={40} height={40} borderRadius={12} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <SkeletonBox width="60%" height={13} />
+                  <SkeletonBox width="80%" height={18} />
+                </View>
+              </View>
+              <SkeletonBox width="100%" height={12} />
+              <SkeletonBox width="75%" height={12} />
+              <SkeletonBox width="100%" height={42} borderRadius={12} />
+            </SkeletonCard>
           ) : hasCoachOnboarding && todayRecommendation ? (
             <TodayWorkoutCard todayRec={todayRecommendation} theme={theme} />
           ) : (
@@ -360,8 +370,9 @@ export default function HomeScreen() {
               <WeeklyBarChart data={weeklyData.days} />
             ) : (
               <View style={styles.emptyChart}>
-                <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Log workouts to see your weekly activity
+                <Feather name="bar-chart-2" size={28} color={theme.border} />
+                <Text style={[styles.emptyChartText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Log your first workout to see your weekly activity chart
                 </Text>
               </View>
             )}
@@ -375,7 +386,20 @@ export default function HomeScreen() {
           </Text>
           <Card padding={0}>
             <View style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
-              {recentData?.activities?.length > 0 ? (
+              {recentLoading ? (
+                <View style={{ gap: 12, paddingVertical: 8 }}>
+                  {[0, 1, 2].map(i => (
+                    <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 6 }}>
+                      <SkeletonBox width={40} height={40} borderRadius={12} />
+                      <View style={{ flex: 1, gap: 6 }}>
+                        <SkeletonBox width="55%" height={13} />
+                        <SkeletonBox width="35%" height={11} />
+                      </View>
+                      <SkeletonBox width={30} height={11} borderRadius={4} />
+                    </View>
+                  ))}
+                </View>
+              ) : recentData?.activities?.length > 0 ? (
                 recentData.activities.map((activity: any) => (
                   <ActivityItem
                     key={`${activity.type}-${activity.id}`}
@@ -387,15 +411,26 @@ export default function HomeScreen() {
                   />
                 ))
               ) : (
-                <View style={styles.emptyActivity}>
-                  <Feather name="activity" size={32} color={theme.textMuted} />
+                <Animated.View entering={ZoomIn.duration(400)} style={styles.emptyActivity}>
+                  <View style={[styles.emptyIconWrap, { backgroundColor: theme.primaryDim }]}>
+                    <Feather name="activity" size={28} color={theme.primary} />
+                  </View>
                   <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                    No activity yet
+                    Nothing logged yet
                   </Text>
                   <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    Tap + to log your first workout!
+                    Tap the + button to log your first workout or meal — every step counts!
                   </Text>
-                </View>
+                  <Pressable
+                    onPress={() => router.push("/workouts/log")}
+                    style={[styles.emptyBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "50" }]}
+                  >
+                    <Feather name="plus" size={14} color={theme.primary} />
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                      Log a workout
+                    </Text>
+                  </Pressable>
+                </Animated.View>
               )}
             </View>
           </Card>
@@ -468,10 +503,17 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: "row", gap: 12, paddingRight: 20 },
   cardTitle: { fontSize: 15, marginBottom: 2 },
   cardSub: { fontSize: 12, marginBottom: 16 },
-  emptyChart: { height: 80, justifyContent: "center", alignItems: "center" },
-  emptyActivity: { paddingVertical: 32, alignItems: "center", gap: 8 },
-  emptyTitle: { fontSize: 15 },
-  emptyText: { fontSize: 13, textAlign: "center" },
+  emptyChart: { height: 90, justifyContent: "center", alignItems: "center", gap: 10 },
+  emptyChartText: { fontSize: 13, textAlign: "center", maxWidth: 240, lineHeight: 18 },
+  emptyActivity: { paddingVertical: 36, alignItems: "center", gap: 10 },
+  emptyIconWrap: { width: 60, height: 60, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  emptyTitle: { fontSize: 16 },
+  emptyText: { fontSize: 13, textAlign: "center", lineHeight: 19, maxWidth: 240 },
+  emptyBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginTop: 6, paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 10, borderWidth: 1,
+  },
   fabWrap: { position: "absolute", right: 20 },
   fab: { alignItems: "flex-end", gap: 10 },
   fabMain: {
@@ -488,7 +530,6 @@ const styles = StyleSheet.create({
   },
   fabOptionText: { fontSize: 14 },
   // Today's workout card
-  skeletonCard: { height: 80, justifyContent: "center", alignItems: "center" },
   todayCard: { borderWidth: 1, gap: 12 },
   todayHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   todayIcon: {

@@ -144,6 +144,30 @@ export default function MealsScreen() {
       >
         {/* Calorie summary */}
         {data && <CalorieSummary data={data} />}
+
+        {/* First meal empty state */}
+        {data && meals.length === 0 && isToday && (
+          <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+            <View style={[styles.firstMealCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View style={[styles.firstMealIcon, { backgroundColor: theme.orange + "20" }]}>
+                <Feather name="sun" size={28} color={theme.orange} />
+              </View>
+              <Text style={[styles.firstMealTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                {new Date().getHours() < 11 ? "Start your day right!" : new Date().getHours() < 15 ? "Time for lunch?" : "How's your nutrition today?"}
+              </Text>
+              <Text style={[styles.firstMealSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Log your meals to track calories and macros. Consistent logging leads to better results.
+              </Text>
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/meals/add"); }}
+                style={[styles.firstMealBtn, { backgroundColor: theme.orange + "20", borderColor: theme.orange + "50" }]}
+              >
+                <Feather name="plus" size={14} color={theme.orange} />
+                <Text style={{ color: theme.orange, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Log first meal</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        )}
         
         {/* Meal categories */}
         {CATEGORIES.map((cat) => {
@@ -257,4 +281,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   addMealText: { fontSize: 14 },
+  firstMealCard: {
+    borderRadius: 16, borderWidth: 1, padding: 20,
+    alignItems: "center", gap: 10,
+  },
+  firstMealIcon: { width: 60, height: 60, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  firstMealTitle: { fontSize: 17, textAlign: "center" },
+  firstMealSub: { fontSize: 13, lineHeight: 19, textAlign: "center", maxWidth: 280 },
+  firstMealBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, marginTop: 4,
+  },
 });

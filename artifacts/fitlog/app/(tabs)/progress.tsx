@@ -6,10 +6,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
+import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { WeeklyBarChart } from "@/components/WeeklyBarChart";
+import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 
 function MiniLineChart({ data, color }: { data: number[]; color: string }) {
   const { theme } = useTheme();
@@ -64,9 +66,9 @@ export default function ProgressScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   
-  const { data: workoutSummary } = useQuery({ queryKey: ["workoutSummary"], queryFn: api.getWorkoutSummary });
+  const { data: workoutSummary, isLoading: summaryLoading } = useQuery({ queryKey: ["workoutSummary"], queryFn: api.getWorkoutSummary });
   const { data: nutritionStats } = useQuery({ queryKey: ["nutritionStats"], queryFn: api.getNutritionStats });
-  const { data: streaks } = useQuery({ queryKey: ["streaks"], queryFn: api.getStreaks });
+  const { data: streaks, isLoading: streaksLoading } = useQuery({ queryKey: ["streaks"], queryFn: api.getStreaks });
   const { data: records } = useQuery({ queryKey: ["records"], queryFn: api.getPersonalRecords });
   const { data: measurements } = useQuery({ queryKey: ["measurements", measureDays], queryFn: () => api.getMeasurements(measureDays) });
   
@@ -108,34 +110,65 @@ export default function ProgressScreen() {
         contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 16 }}
       >
         {/* Streaks */}
-        <View>
+        <Animated.View entering={FadeInDown.duration(350)}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Streaks</Text>
-          <View style={styles.streaksRow}>
-            <StreakCard icon="zap" value={streaks?.currentWorkoutStreak || 0} label="Workout Streak" color={theme.primary} />
-            <StreakCard icon="award" value={streaks?.longestWorkoutStreak || 0} label="Longest Streak" color={theme.warning} />
-            <StreakCard icon="coffee" value={streaks?.currentMealStreak || 0} label="Meal Streak" color={theme.pink} />
-          </View>
-        </View>
+          {streaksLoading ? (
+            <View style={styles.streaksRow}>
+              {[0, 1, 2].map(i => (
+                <SkeletonCard key={i} style={{ flex: 1, alignItems: "center", gap: 8, paddingVertical: 18 } as any}>
+                  <SkeletonBox width={24} height={24} borderRadius={8} />
+                  <SkeletonBox width={32} height={28} borderRadius={6} />
+                  <SkeletonBox width={52} height={11} borderRadius={4} />
+                </SkeletonCard>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.streaksRow}>
+              <StreakCard icon="zap" value={streaks?.currentWorkoutStreak || 0} label="Workout Streak" color={theme.primary} />
+              <StreakCard icon="award" value={streaks?.longestWorkoutStreak || 0} label="Longest Streak" color={theme.warning} />
+              <StreakCard icon="coffee" value={streaks?.currentMealStreak || 0} label="Meal Streak" color={theme.pink} />
+            </View>
+          )}
+        </Animated.View>
         
         {/* Workout Stats */}
-        <Card>
-          <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Workout Stats</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
-                {workoutSummary?.totalThisWeek || 0}
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>This Week</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
-                {workoutSummary?.totalThisMonth || 0}
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>This Month</Text>
-            </View>
-          </View>
-        </Card>
+        <Animated.View entering={FadeInDown.delay(50).duration(350)}>
+          {summaryLoading ? (
+            <SkeletonCard>
+              <SkeletonBox width="40%" height={15} borderRadius={6} style={{ marginBottom: 10 } as any} />
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
+                  <SkeletonBox width={52} height={36} borderRadius={8} />
+                  <SkeletonBox width={60} height={12} borderRadius={4} />
+                </View>
+                <View style={{ width: 1, height: 40, backgroundColor: "transparent" }} />
+                <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
+                  <SkeletonBox width={52} height={36} borderRadius={8} />
+                  <SkeletonBox width={60} height={12} borderRadius={4} />
+                </View>
+              </View>
+            </SkeletonCard>
+          ) : (
+            <Card>
+              <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Workout Stats</Text>
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
+                    {workoutSummary?.totalThisWeek || 0}
+                  </Text>
+                  <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>This Week</Text>
+                </View>
+                <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
+                    {workoutSummary?.totalThisMonth || 0}
+                  </Text>
+                  <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>This Month</Text>
+                </View>
+              </View>
+            </Card>
+          )}
+        </Animated.View>
         
         {/* Weekly Frequency */}
         {workoutSummary?.weeklyFrequency && (
@@ -206,17 +239,28 @@ export default function ProgressScreen() {
               </View>
             </Card>
           ) : (
-            <Card>
-              <View style={styles.empty}>
-                <Feather name="trending-up" size={32} color={theme.textMuted} />
-                <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }]}>
-                  Log measurements to track progress
-                </Text>
-                <Pressable onPress={() => router.push("/measurements/add")}>
-                  <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>Log Now</Text>
-                </Pressable>
-              </View>
-            </Card>
+            <Animated.View entering={ZoomIn.duration(350)}>
+              <Card>
+                <View style={styles.empty}>
+                  <View style={[styles.emptyIconWrap, { backgroundColor: theme.primaryDim }]}>
+                    <Feather name="trending-up" size={24} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    No measurements yet
+                  </Text>
+                  <Text style={[styles.emptyDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Log your weight and body measurements to visualise your progress over time.
+                  </Text>
+                  <Pressable
+                    onPress={() => router.push("/measurements/add")}
+                    style={[styles.emptyBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "50" }]}
+                  >
+                    <Feather name="plus" size={14} color={theme.primary} />
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Log measurement</Text>
+                  </Pressable>
+                </View>
+              </Card>
+            </Animated.View>
           )}
         </View>
         
@@ -307,7 +351,15 @@ const styles = StyleSheet.create({
   rangeBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
   weightInfo: { marginTop: 8, flexDirection: "row", alignItems: "baseline", gap: 6 },
   weightCurrent: { fontSize: 22 },
-  empty: { alignItems: "center", gap: 8, paddingVertical: 16 },
+  empty: { alignItems: "center", gap: 10, paddingVertical: 20 },
+  emptyIconWrap: { width: 56, height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  emptyTitle: { fontSize: 15 },
+  emptyDesc: { fontSize: 13, textAlign: "center", lineHeight: 18, maxWidth: 240 },
+  emptyBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 14, paddingVertical: 9,
+    borderRadius: 10, borderWidth: 1, marginTop: 4,
+  },
   recordCard: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8, paddingVertical: 12 },
   recordIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   recordLabel: { fontSize: 12 },

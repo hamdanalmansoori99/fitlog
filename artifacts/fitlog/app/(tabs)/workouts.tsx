@@ -486,15 +486,30 @@ export default function WorkoutsScreen() {
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>History</Text>
 
           {workouts.length === 0 ? (
-            <Card>
-              <View style={styles.empty}>
-                <Feather name="activity" size={40} color={theme.textMuted} />
-                <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>No workouts yet</Text>
-                <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Tap + or choose a template above to get started
-                </Text>
-              </View>
-            </Card>
+            <Animated.View entering={FadeInDown.delay(300).duration(400)}>
+              <Card>
+                <View style={styles.empty}>
+                  <View style={[styles.emptyIconBg, { backgroundColor: theme.primaryDim }]}>
+                    <Feather name="zap" size={26} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                    Your journey starts here
+                  </Text>
+                  <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Choose a template above or log a custom workout to start building your history.
+                  </Text>
+                  <Pressable
+                    onPress={() => router.push("/workouts/log" as any)}
+                    style={[styles.emptyBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "50" }]}
+                  >
+                    <Feather name="plus" size={14} color={theme.primary} />
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                      Log your first workout
+                    </Text>
+                  </Pressable>
+                </View>
+              </Card>
+            </Animated.View>
           ) : (
             <View style={{ gap: 10 }}>
               {workouts.map((w: any) => (
@@ -609,6 +624,12 @@ const styles = StyleSheet.create({
   moodText: { fontSize: 11 },
   // Empty
   empty: { alignItems: "center", gap: 10, paddingVertical: 28 },
+  emptyIconBg: { width: 60, height: 60, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: 4 },
   emptyTitle: { fontSize: 16 },
-  emptyText: { fontSize: 13, textAlign: "center" },
+  emptyText: { fontSize: 13, textAlign: "center", lineHeight: 19, maxWidth: 240 },
+  emptyBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 10, borderWidth: 1, marginTop: 4,
+  },
 });
