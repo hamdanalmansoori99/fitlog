@@ -445,19 +445,48 @@ export default function WorkoutTemplateScreen() {
 
       {/* CTA Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: theme.border, backgroundColor: theme.background }]}>
-        <Button
-          title="Log as Completed"
-          onPress={handleLogWorkout}
-          loading={logMutation.isPending}
-        />
-        <Button
-          title="Customise & Log"
-          onPress={() => router.push({
-            pathname: "/workouts/log" as any,
-            params: { prefillName: template.name, prefillType: template.activityType, prefillDuration: template.durationMinutes.toString() },
-          })}
-          variant="outline"
-        />
+        {template.activityType === "gym" ? (
+          <>
+            <Button
+              title="▶  Start Workout"
+              onPress={() => router.push({ pathname: "/workouts/execute" as any, params: { id: template.id } })}
+            />
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Button
+                title="Log as Done"
+                onPress={handleLogWorkout}
+                loading={logMutation.isPending}
+                variant="outline"
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Customise"
+                onPress={() => router.push({
+                  pathname: "/workouts/log" as any,
+                  params: { prefillName: template.name, prefillType: template.activityType, prefillDuration: template.durationMinutes.toString() },
+                })}
+                variant="outline"
+                style={{ flex: 1 }}
+              />
+            </View>
+          </>
+        ) : (
+          <>
+            <Button
+              title="Log as Completed"
+              onPress={handleLogWorkout}
+              loading={logMutation.isPending}
+            />
+            <Button
+              title="Customise & Log"
+              onPress={() => router.push({
+                pathname: "/workouts/log" as any,
+                params: { prefillName: template.name, prefillType: template.activityType, prefillDuration: template.durationMinutes.toString() },
+              })}
+              variant="outline"
+            />
+          </>
+        )}
       </View>
     </View>
   );
