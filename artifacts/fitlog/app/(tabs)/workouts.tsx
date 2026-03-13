@@ -44,9 +44,31 @@ function DifficultyDot({ difficulty }: { difficulty: string }) {
   return <View style={[styles.diffDot, { backgroundColor: color }]} />;
 }
 
+function EquipmentMatchBadge({ match }: { match: "full" | "partial" | "none" }) {
+  const { theme } = useTheme();
+  if (match === "full") {
+    return (
+      <View style={[styles.matchBadge, { backgroundColor: theme.primary + "20" }]}>
+        <Feather name="check-circle" size={10} color={theme.primary} />
+        <Text style={[styles.matchBadgeText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
+          Full match
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View style={[styles.matchBadge, { backgroundColor: theme.warning + "20" }]}>
+      <Feather name="refresh-cw" size={10} color={theme.warning} />
+      <Text style={[styles.matchBadgeText, { color: theme.warning, fontFamily: "Inter_500Medium" }]}>
+        With substitutions
+      </Text>
+    </View>
+  );
+}
+
 function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void }) {
   const { theme } = useTheme();
-  const { template, whyGoodForYou } = rec;
+  const { template, whyGoodForYou, equipmentMatch, missingEquipment } = rec;
   const color = getActivityColor(template.activityType, theme);
 
   return (
@@ -70,7 +92,7 @@ function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void })
             <Text style={[styles.recMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               {template.difficulty}
             </Text>
-            <Text style={[{ color: theme.border }]}> · </Text>
+            <Text style={{ color: theme.border }}> · </Text>
             <Feather name="clock" size={10} color={theme.textMuted} />
             <Text style={[styles.recMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               {template.durationMinutes} min
@@ -80,6 +102,7 @@ function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void })
         <Feather name="chevron-right" size={18} color={theme.textMuted} />
       </View>
 
+      {/* Why it's good for you */}
       <Text style={[styles.recWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
         {whyGoodForYou}
       </Text>
@@ -94,24 +117,24 @@ function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void })
         </Text>
       </View>
 
+      {/* Missing equipment note */}
+      {missingEquipment && missingEquipment.length > 0 && (
+        <View style={[styles.missingRow, { backgroundColor: theme.warning + "14" }]}>
+          <Feather name="alert-circle" size={10} color={theme.warning} />
+          <Text style={[styles.missingText, { color: theme.warning, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+            Missing: {missingEquipment.map((e: string) => e.replace(/_/g, " ")).join(", ")} — alternatives shown inside
+          </Text>
+        </View>
+      )}
+
+      {/* Footer tags */}
       <View style={styles.recFooter}>
         <View style={[styles.goalTag, { backgroundColor: theme.primaryDim }]}>
           <Text style={[styles.goalTagText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
             {template.goals[0]}
           </Text>
         </View>
-        <View style={[styles.goalTag, {
-          backgroundColor: template.difficulty === "Beginner" ? theme.primary + "20"
-            : template.difficulty === "Intermediate" ? theme.secondary + "20" : theme.danger + "20",
-        }]}>
-          <Text style={[styles.goalTagText, {
-            color: template.difficulty === "Beginner" ? theme.primary
-              : template.difficulty === "Intermediate" ? theme.secondary : theme.danger,
-            fontFamily: "Inter_500Medium",
-          }]}>
-            {template.difficulty}
-          </Text>
-        </View>
+        <EquipmentMatchBadge match={equipmentMatch ?? "full"} />
       </View>
     </Pressable>
   );
@@ -519,9 +542,13 @@ const styles = StyleSheet.create({
   recWhy: { fontSize: 12, lineHeight: 17 },
   recEquipRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   recEquipText: { fontSize: 11, flex: 1 },
+  missingRow: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 6 },
+  missingText: { fontSize: 10, flex: 1 },
   recFooter: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   goalTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   goalTagText: { fontSize: 11 },
+  matchBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  matchBadgeText: { fontSize: 10 },
   diffDot: { width: 6, height: 6, borderRadius: 3 },
   // Quick actions
   quickRow: { flexDirection: "row", gap: 10, paddingRight: 8 },

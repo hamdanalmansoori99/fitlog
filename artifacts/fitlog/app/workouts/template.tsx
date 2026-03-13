@@ -8,7 +8,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { getTemplateById } from "@/lib/workoutTemplates";
-import { getEquipmentSubstitutions, getActivityBenefits } from "@/lib/coachEngine";
+import { getFilteredExercises, getActivityBenefits, getEquipmentMatchLevel } from "@/lib/coachEngine";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -42,6 +42,10 @@ export default function WorkoutTemplateScreen() {
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
   const userEquipment: string[] = profile?.availableEquipment || [];
   const benefits = getActivityBenefits(template?.activityType || "gym");
+  const filteredExercises = template ? getFilteredExercises(template, userEquipment) : [];
+  const { level: equipMatch, missing: missingEquip } = template
+    ? getEquipmentMatchLevel(template, userEquipment)
+    : { level: "full" as const, missing: [] };
 
   const logMutation = useMutation({
     mutationFn: api.createWorkout,
@@ -144,14 +148,28 @@ export default function WorkoutTemplateScreen() {
           <Card>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Equipment needed</Text>
             <View style={styles.tagRow}>
-              {template.requiredEquipment.map(eq => (
-                <View key={eq} style={[styles.tagChip, { backgroundColor: theme.secondaryDim, borderColor: theme.secondary }]}>
-                  <Text style={{ color: theme.secondary, fontFamily: "Inter_400Regular", fontSize: 13 }}>
-                    {eq.replace(/_/g, " ")}
-                  </Text>
-                </View>
-              ))}
+              {template.requiredEquipment.map(eq => {
+                const isMissing = missingEquip.includes(eq);
+                return (
+                  <View key={eq} style={[
+                    styles.tagChip,
+                    isMissing
+                      ? { backgroundColor: theme.warning + "18", borderColor: theme.warning }
+                      : { backgroundColor: theme.primaryDim, borderColor: theme.primary },
+                  ]}>
+                    <Feather name={isMissing ? "x-circle" : "check-circle"} size={12} color={isMissing ? theme.warning : theme.primary} />
+                    <Text style={{ color: isMissing ? theme.warning : theme.primary, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                      {eq.replace(/_/g, " ")}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
+            {equipMatch === "partial" && (
+              <Text style={[styles.subNote, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Missing items are replaced with alternatives below.
+              </Text>
+            )}
           </Card>
         )}
 
@@ -171,47 +189,64 @@ export default function WorkoutTemplateScreen() {
         {/* Exercises */}
         <Card>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            {template.exercises.length} Exercises
+            {filteredExercises.length} Exercises
           </Text>
-          {template.exercises.map((ex, i) => {
-            const subs = getEquipmentSubstitutions(ex.name, userEquipment);
-            return (
-              <View key={i} style={[styles.exerciseRow, { borderBottomColor: theme.border }]}>
-                <View style={[styles.exNum, { backgroundColor: theme.primaryDim }]}>
-                  <Text style={[styles.exNumText, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>{i + 1}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.exName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{ex.name}</Text>
-                  <View style={styles.exDetails}>
-                    {ex.sets && (
-                      <Text style={[styles.exStat, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        {ex.sets} × {ex.reps || ex.duration}
-                      </Text>
-                    )}
-                    {!ex.sets && ex.duration && (
-                      <Text style={[styles.exStat, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{ex.duration}</Text>
-                    )}
-                    {ex.rest && (
-                      <Text style={[styles.exStat, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Rest: {ex.rest}</Text>
-                    )}
-                  </View>
-                  {subs.length > 0 && (
-                    <View style={[styles.altPill, { backgroundColor: theme.warning + "20", borderColor: theme.warning }]}>
-                      <Feather name="refresh-cw" size={11} color={theme.warning} />
-                      <Text style={[styles.altText, { color: theme.warning, fontFamily: "Inter_400Regular" }]}>
-                        Alternative for your setup: {subs[0]}
-                      </Text>
-                    </View>
-                  )}
-                  {ex.alternatives && subs.length === 0 && ex.alternatives.length > 0 && (
-                    <Text style={[styles.exNote, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      Alternative: {ex.alternatives[0]}
+          {filteredExercises.map((ex, i) => (
+            <View key={i} style={[styles.exerciseRow, { borderBottomColor: theme.border }]}>
+              <View style={[
+                styles.exNum,
+                { backgroundColor: ex.isSubstitution ? theme.warning + "20" : theme.primaryDim },
+              ]}>
+                <Text style={[styles.exNumText, { color: ex.isSubstitution ? theme.warning : theme.primary, fontFamily: "Inter_700Bold" }]}>
+                  {i + 1}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                {/* Substitution label above name */}
+                {ex.isSubstitution && (
+                  <Text style={[styles.subLabel, { color: theme.warning, fontFamily: "Inter_500Medium" }]}>
+                    Replaces: {ex.substituteFor}
+                  </Text>
+                )}
+                {/* Missing equipment fallback label */}
+                {ex.missingEquipment && !ex.isSubstitution && (
+                  <Text style={[styles.subLabel, { color: theme.danger, fontFamily: "Inter_500Medium" }]}>
+                    Needs: {ex.missingEquipment.replace(/_/g, " ")} (not available)
+                  </Text>
+                )}
+                <Text style={[
+                  styles.exName,
+                  { color: ex.isSubstitution ? theme.warning : theme.text, fontFamily: "Inter_600SemiBold" },
+                ]}>
+                  {ex.name}
+                </Text>
+                <View style={styles.exDetails}>
+                  {ex.sets && (
+                    <Text style={[styles.exStat, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {ex.sets} × {ex.reps || ex.duration}
                     </Text>
                   )}
+                  {!ex.sets && ex.duration && (
+                    <Text style={[styles.exStat, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{ex.duration}</Text>
+                  )}
+                  {ex.rest && (
+                    <Text style={[styles.exStat, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Rest: {ex.rest}</Text>
+                  )}
                 </View>
+                {/* General alternatives note (when exercise isn't already substituted) */}
+                {!ex.isSubstitution && !ex.missingEquipment && ex.alternatives && ex.alternatives.length > 0 && (
+                  <Text style={[styles.exNote, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Alt: {ex.alternatives[0]}
+                  </Text>
+                )}
               </View>
-            );
-          })}
+              {ex.isSubstitution && (
+                <View style={[styles.subBadge, { backgroundColor: theme.warning + "20" }]}>
+                  <Feather name="refresh-cw" size={12} color={theme.warning} />
+                </View>
+              )}
+            </View>
+          ))}
         </Card>
       </ScrollView>
 
@@ -262,7 +297,10 @@ const styles = StyleSheet.create({
   whyText: { fontSize: 14, lineHeight: 20 },
   sectionTitle: { fontSize: 15, marginBottom: 12 },
   tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  tagChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
+  tagChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
+  subNote: { fontSize: 12, marginTop: 8, lineHeight: 17 },
+  subLabel: { fontSize: 10, marginBottom: 1 },
+  subBadge: { width: 24, height: 24, borderRadius: 6, alignItems: "center", justifyContent: "center", marginTop: 2 },
   benefitsList: { gap: 8 },
   benefitRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   benefitDot: { width: 6, height: 6, borderRadius: 3, marginTop: 6 },
