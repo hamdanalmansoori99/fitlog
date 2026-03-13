@@ -24,6 +24,7 @@ import {
   UserCoachProfile,
 } from "@/lib/coachEngine";
 import { getNutritionInsights, NutritionInsight, NutritionContext } from "@/lib/nutritionCoach";
+import { SmartReminderBanner } from "@/components/SmartReminderBanner";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -496,6 +497,18 @@ export default function HomeScreen() {
               <StatCard icon="coffee" value={todayStats?.mealsLogged || 0} label="Meals" color={theme.pink} loading={statsLoading} />
             </View>
           </ScrollView>
+        </Animated.View>
+
+        {/* Smart Reminder Banner */}
+        <Animated.View entering={FadeInDown.delay(120).duration(400)} style={styles.section}>
+          <SmartReminderBanner
+            streaksData={streaksData}
+            todayStats={todayStats}
+            todayMealsData={todayMealsData}
+            profile={profile}
+            workoutsData={workoutsData}
+            weeklyData={weeklyData}
+          />
         </Animated.View>
 
         {/* ── Today's Recommended Workout ── */}

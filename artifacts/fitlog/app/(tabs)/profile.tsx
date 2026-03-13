@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Switch, Alert, Platform,
 } from "react-native";
@@ -9,11 +9,30 @@ import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useNotificationStore, NOTIF_META, NOTIF_TYPES, type NotifType } from "@/store/notificationStore";
+import {
+  requestNotificationPermission,
+  scheduleNativeNotifications,
+  cancelAllNativeNotifications,
+} from "@/lib/notifications";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { Toast } from "@/components/ui/Toast";
+
+const PRESET_TIMES = [
+  "06:00","07:00","07:30","08:00","08:30","09:00","10:00","11:00",
+  "12:00","12:30","13:00","14:00","15:00","16:00","17:00","18:00",
+  "19:00","20:00","21:00","22:00",
+];
+
+function fmtTime(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "pm" : "am";
+  const hr = h % 12 || 12;
+  return m === 0 ? `${hr}${ampm}` : `${hr}:${m.toString().padStart(2, "0")}${ampm}`;
+}
 
 const FITNESS_GOALS = ["Lose Weight", "Build Muscle", "Stay Active", "Improve Endurance", "Improve Flexibility"];
 const ACTIVITY_LEVELS = ["Sedentary", "Lightly Active", "Moderately Active", "Very Active"];
@@ -23,6 +42,8 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, clearAuth } = useAuthStore();
   const { darkMode, unitSystem, setDarkMode, setUnitSystem } = useSettingsStore();
+  const { globalEnabled, prefs, setGlobalEnabled, setEnabled, setTime } = useNotificationStore();
+  const [expandedNotifType, setExpandedNotifType] = useState<NotifType | null>(null);
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -85,6 +106,41 @@ export default function ProfileScreen() {
     },
   });
   
+  const handleToggleGlobalNotifs = useCallback(async (val: boolean) => {
+    if (val) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert(
+          "Permission required",
+          "Please enable notifications in your device settings to use this feature.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
+      setGlobalEnabled(true);
+      await scheduleNativeNotifications(prefs);
+    } else {
+      setGlobalEnabled(false);
+      await cancelAllNativeNotifications();
+    }
+  }, [prefs, setGlobalEnabled]);
+
+  const handleToggleType = useCallback(async (type: NotifType, val: boolean) => {
+    setEnabled(type, val);
+    if (globalEnabled) {
+      const updated = { ...prefs, [type]: { ...prefs[type], enabled: val } };
+      await scheduleNativeNotifications(updated);
+    }
+  }, [globalEnabled, prefs, setEnabled]);
+
+  const handleSetTime = useCallback(async (type: NotifType, time: string) => {
+    setTime(type, time);
+    if (globalEnabled && prefs[type].enabled) {
+      const updated = { ...prefs, [type]: { ...prefs[type], time } };
+      await scheduleNativeNotifications(updated);
+    }
+  }, [globalEnabled, prefs, setTime]);
+
   const handleSave = () => {
     // Auto-calculate calorie goal if height/weight/age set
     let calculatedGoal = calorieGoal ? parseInt(calorieGoal) : undefined;
@@ -278,6 +334,106 @@ export default function ProfileScreen() {
           </>
         ) : (
           <>
+            {/* ── Notifications ── */}
+            <Card>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: globalEnabled ? 16 : 0 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View style={[{ width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+                    { backgroundColor: globalEnabled ? theme.primaryDim : theme.card }]}>
+                    <Feather name="bell" size={18} color={globalEnabled ? theme.primary : theme.textMuted} />
+                  </View>
+                  <View>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Notifications</Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+                      {globalEnabled ? "Smart reminders on" : "All reminders off"}
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={globalEnabled}
+                  onValueChange={handleToggleGlobalNotifs}
+                  trackColor={{ false: theme.border, true: theme.primary + "80" }}
+                  thumbColor={globalEnabled ? theme.primary : theme.textMuted}
+                />
+              </View>
+
+              {globalEnabled && NOTIF_TYPES.map((type, i) => {
+                const meta = NOTIF_META[type];
+                const pref = prefs[type];
+                const isLast = i === NOTIF_TYPES.length - 1;
+                const expanded = expandedNotifType === type;
+
+                return (
+                  <View
+                    key={type}
+                    style={[
+                      { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 },
+                      !isLast && { paddingBottom: 12 },
+                    ]}
+                  >
+                    {/* Row: icon + label + toggle */}
+                    <Pressable
+                      onPress={() => setExpandedNotifType(expanded ? null : type)}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+                    >
+                      <View style={[{ width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+                        { backgroundColor: pref.enabled ? meta.color + "20" : theme.card }]}>
+                        <Feather name={meta.icon as any} size={15} color={pref.enabled ? meta.color : theme.textMuted} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 14 }}>{meta.label}</Text>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                          {pref.enabled ? `Daily at ${fmtTime(pref.time)}` : meta.description}
+                        </Text>
+                      </View>
+                      <Switch
+                        value={pref.enabled}
+                        onValueChange={(v) => handleToggleType(type, v)}
+                        trackColor={{ false: theme.border, true: meta.color + "80" }}
+                        thumbColor={pref.enabled ? meta.color : theme.textMuted}
+                      />
+                    </Pressable>
+
+                    {/* Time picker (expanded) */}
+                    {expanded && pref.enabled && (
+                      <View style={{ marginTop: 10 }}>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginBottom: 8 }}>
+                          Reminder time
+                        </Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          <View style={{ flexDirection: "row", gap: 6 }}>
+                            {PRESET_TIMES.map((t) => {
+                              const sel = pref.time === t;
+                              return (
+                                <Pressable
+                                  key={t}
+                                  onPress={() => handleSetTime(type, t)}
+                                  style={[{
+                                    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+                                    borderWidth: 1.5,
+                                    backgroundColor: sel ? meta.color + "20" : "transparent",
+                                    borderColor: sel ? meta.color : theme.border,
+                                  }]}
+                                >
+                                  <Text style={{
+                                    color: sel ? meta.color : theme.textMuted,
+                                    fontFamily: sel ? "Inter_600SemiBold" : "Inter_400Regular",
+                                    fontSize: 12,
+                                  }}>
+                                    {fmtTime(t)}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </Card>
+
             {/* Settings */}
             <Card>
               <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Appearance</Text>
