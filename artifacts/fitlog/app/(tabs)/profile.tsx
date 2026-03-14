@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Switch, Alert, Platform,
 } from "react-native";
@@ -77,25 +77,26 @@ export default function ProfileScreen() {
   const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: api.getProfile,
-    onSuccess: (data: any) => {
-      if (!profileLoaded) {
-        setFirstName(data.firstName || "");
-        setLastName(data.lastName || "");
-        setAge(data.age?.toString() || "");
-        setGender(data.gender || "");
-        setHeightCm(data.heightCm?.toString() || "");
-        setWeightKg(data.weightKg?.toString() || "");
-        setFitnessGoals(data.fitnessGoals || []);
-        setActivityLevel(data.activityLevel || "");
-        setCalorieGoal(data.dailyCalorieGoal?.toString() || "");
-        setProteinGoal(data.dailyProteinGoal?.toString() || "");
-        setCarbsGoal(data.dailyCarbsGoal?.toString() || "");
-        setFatGoal(data.dailyFatGoal?.toString() || "");
-        setWaterGoalMl(data.dailyWaterGoalMl?.toString() || "2000");
-        setProfileLoaded(true);
-      }
-    },
-  } as any);
+  });
+
+  useEffect(() => {
+    if (profile && !profileLoaded) {
+      setFirstName(profile.firstName || "");
+      setLastName(profile.lastName || "");
+      setAge(profile.age?.toString() || "");
+      setGender(profile.gender || "");
+      setHeightCm(profile.heightCm?.toString() || "");
+      setWeightKg(profile.weightKg?.toString() || "");
+      setFitnessGoals(profile.fitnessGoals || []);
+      setActivityLevel(profile.activityLevel || "");
+      setCalorieGoal(profile.dailyCalorieGoal?.toString() || "");
+      setProteinGoal(profile.dailyProteinGoal?.toString() || "");
+      setCarbsGoal(profile.dailyCarbsGoal?.toString() || "");
+      setFatGoal(profile.dailyFatGoal?.toString() || "");
+      setWaterGoalMl(profile.dailyWaterGoalMl?.toString() || "2000");
+      setProfileLoaded(true);
+    }
+  }, [profile]);
   
   const updateMutation = useMutation({
     mutationFn: api.updateProfile,
@@ -154,10 +155,14 @@ export default function ProfileScreen() {
     let calculatedGoal = calorieGoal ? parseInt(calorieGoal) : undefined;
     if (!calculatedGoal && heightCm && weightKg && age) {
       const h = parseFloat(heightCm), w = parseFloat(weightKg), a = parseInt(age);
-      // Mifflin-St Jeor (male default): 10*w + 6.25*h - 5*a + 5
-      const bmr = 10 * w + 6.25 * h - 5 * a + 5;
-      const actMults = { "Sedentary": 1.2, "Lightly Active": 1.375, "Moderately Active": 1.55, "Very Active": 1.725 };
-      const mult = (actMults as any)[activityLevel] || 1.375;
+      // Mifflin-St Jeor: male +5, female -161, other defaults to male
+      const genderOffset = gender === "Female" ? -161 : 5;
+      const bmr = 10 * w + 6.25 * h - 5 * a + genderOffset;
+      const actMults: Record<string, number> = {
+        "Sedentary": 1.2, "Lightly Active": 1.375,
+        "Moderately Active": 1.55, "Very Active": 1.725,
+      };
+      const mult = actMults[activityLevel] || 1.375;
       calculatedGoal = Math.round(bmr * mult);
     }
     

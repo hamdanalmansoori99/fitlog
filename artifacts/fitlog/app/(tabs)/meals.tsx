@@ -404,7 +404,12 @@ export default function MealsScreen() {
                 const isDuplicating = duplicateMealMutation.isPending;
 
                 return (
-                  <Card key={meal.id} style={styles.mealCard}>
+                  <Pressable
+                    key={meal.id}
+                    onPress={() => router.push({ pathname: "/meals/[id]" as any, params: { id: meal.id } })}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+                  >
+                  <Card style={styles.mealCard}>
                     <View style={styles.mealHeader}>
                       <View style={[styles.mealIcon, { backgroundColor: theme.orange + "20" }]}>
                         <Feather name={catIcon} size={18} color={theme.orange} />
@@ -417,7 +422,7 @@ export default function MealsScreen() {
                       </View>
                       {/* Star / Save as favourite */}
                       <Pressable
-                        onPress={() => handleSaveAsFavorite(meal)}
+                        onPress={(e) => { e.stopPropagation(); handleSaveAsFavorite(meal); }}
                         disabled={isSavingThis}
                         hitSlop={8}
                         style={{ padding: 4 }}
@@ -426,7 +431,7 @@ export default function MealsScreen() {
                       </Pressable>
                       {/* Duplicate to today */}
                       <Pressable
-                        onPress={() => handleDuplicateMeal(meal)}
+                        onPress={(e) => { e.stopPropagation(); handleDuplicateMeal(meal); }}
                         disabled={isDuplicating}
                         hitSlop={8}
                         style={{ padding: 4 }}
@@ -435,10 +440,13 @@ export default function MealsScreen() {
                       </Pressable>
                       {/* Delete */}
                       <Pressable
-                        onPress={() => Alert.alert("Delete meal?", "This cannot be undone.", [
-                          { text: "Cancel", style: "cancel" },
-                          { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(meal.id) },
-                        ])}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          Alert.alert("Delete meal?", "This cannot be undone.", [
+                            { text: "Cancel", style: "cancel" },
+                            { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(meal.id) },
+                          ]);
+                        }}
                         hitSlop={8}
                         style={{ padding: 4 }}
                       >
@@ -453,6 +461,7 @@ export default function MealsScreen() {
                       <Text style={[styles.mealMacro, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{meal.foodItems.length} item{meal.foodItems.length !== 1 ? "s" : ""}</Text>
                     </View>
                   </Card>
+                  </Pressable>
                 );
               })}
 

@@ -51,6 +51,7 @@ export const api = {
     const q = params ? `?${new URLSearchParams(params as any).toString()}` : "";
     return request<any>(`/workouts${q}`);
   },
+  getWorkout: (id: number) => request<any>(`/workouts/${id}`),
   createWorkout: (body: any) => request<any>("/workouts", { method: "POST", body: JSON.stringify(body) }),
   updateWorkout: (id: number, body: any) => request<any>(`/workouts/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteWorkout: (id: number) => request(`/workouts/${id}`, { method: "DELETE" }),
@@ -69,6 +70,7 @@ export const api = {
     const q = date ? `?date=${date}` : "";
     return request<any>(`/meals${q}`);
   },
+  getMeal: (id: number) => request<any>(`/meals/${id}`),
   createMeal: (body: any) => request<any>("/meals", { method: "POST", body: JSON.stringify(body) }),
   updateMeal: (id: number, body: any) => request<any>(`/meals/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteMeal: (id: number) => request(`/meals/${id}`, { method: "DELETE" }),

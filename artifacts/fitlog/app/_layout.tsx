@@ -5,7 +5,7 @@ import {
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useQuery, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
@@ -14,6 +14,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/authStore";
+import { api } from "@/lib/api";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,28 +24,44 @@ function RootLayoutNav() {
   const { token, _hydrated } = useAuthStore();
   const router = useRouter();
 
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: api.getProfile,
+    enabled: !!token && !!_hydrated,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
   useEffect(() => {
     if (!_hydrated) return;
     if (!token) {
       router.replace("/auth/login");
+      return;
     }
-  }, [token, _hydrated]);
-  
+    if (profile && profile.onboardingComplete === false) {
+      router.replace("/onboarding");
+    }
+  }, [token, _hydrated, profile]);
+
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="auth/login" options={{ headerShown: false }} />
       <Stack.Screen name="auth/register" options={{ headerShown: false }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen name="achievements" options={{ headerShown: false }} />
       <Stack.Screen name="workouts/log" options={{ headerShown: false }} />
       <Stack.Screen name="workouts/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="workouts/execute" options={{ headerShown: false }} />
       <Stack.Screen name="workouts/onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="workouts/template" options={{ headerShown: false }} />
       <Stack.Screen name="workouts/plan" options={{ headerShown: false }} />
+      <Stack.Screen name="workouts/my-templates" options={{ headerShown: false }} />
+      <Stack.Screen name="workouts/user-template" options={{ headerShown: false }} />
       <Stack.Screen name="meals/add" options={{ headerShown: false }} />
       <Stack.Screen name="meals/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="equipment/add" options={{ headerShown: false }} />
       <Stack.Screen name="measurements/add" options={{ headerShown: false }} />
-      <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
     </Stack>
   );
 }

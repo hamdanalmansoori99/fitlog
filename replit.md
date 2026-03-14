@@ -223,6 +223,26 @@ All mutations that modify state invalidate the full set of affected query keys:
 - **Today's nutrition** — meals logged, calories, protein, carbs, fat vs. goals
 - All 25+ workout template names (so coach can make precise in-app references)
 
+## Full Product Pass Fixes (March 2026)
+
+**Routing & Navigation:**
+- `_layout.tsx` now registers all screens: `achievements`, `workouts/execute`, `workouts/my-templates`, `workouts/user-template` (were missing)
+- `_layout.tsx` now redirects unauthenticated users to `/auth/login` and users with `onboardingComplete=false` to `/onboarding` (first-run detection)
+- `WorkoutHistoryCard` in the Workouts tab is now tappable — tapping navigates to `/workouts/[id]` (delete trash icon still works separately)
+- Meal cards in the Meals tab are now tappable — tapping navigates to `/meals/[id]` (star/copy/delete icons still work separately via event isolation)
+
+**Detail Screens (were blank stubs):**
+- `workouts/[id].tsx` — Full workout detail: header (name, date, type), stat pills (duration, distance, calories, mood), notes, exercises list with sets table (weight/reps/time, RPE, completion), delete with confirmation
+- `meals/[id].tsx` — Full meal detail: header (name, category, date), calorie total, macro bars (protein/carbs/fat), notes, food items list with per-item macros, delete with confirmation, quick "log another" button
+
+**Profile Screen:**
+- BMR calculation now uses gender-correct Mifflin-St Jeor: Female = `10w + 6.25h − 5a − 161`, Male/Other = `10w + 6.25h − 5a + 5` (was always using male formula)
+- `useQuery onSuccess` removed (React Query v5 removed this callback) — replaced with `useEffect` watching `profile` data
+
+**API Client:**
+- Added `getWorkout(id: number)` → `GET /workouts/:id`
+- Added `getMeal(id: number)` → `GET /meals/:id`
+
 ## Key Decisions
 
 - No JWT library — custom SHA-256 + random session tokens

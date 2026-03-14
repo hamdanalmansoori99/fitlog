@@ -187,6 +187,10 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
   const icon = getActivityIcon(workout.activityType);
 
   return (
+    <Pressable
+      onPress={() => router.push({ pathname: "/workouts/[id]" as any, params: { id: workout.id } })}
+      style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+    >
     <Card style={styles.historyCard}>
       <View style={styles.historyHeader}>
         <View style={[styles.historyIcon, { backgroundColor: color + "20" }]}>
@@ -200,7 +204,7 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
             {new Date(workout.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </Text>
         </View>
-        <Pressable onPress={onDelete} style={styles.deleteBtn}>
+        <Pressable onPress={(e) => { e.stopPropagation(); onDelete(); }} style={styles.deleteBtn} hitSlop={8}>
           <Feather name="trash-2" size={15} color={theme.danger} />
         </Pressable>
       </View>
@@ -236,6 +240,7 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
         )}
       </View>
     </Card>
+    </Pressable>
   );
 }
 
