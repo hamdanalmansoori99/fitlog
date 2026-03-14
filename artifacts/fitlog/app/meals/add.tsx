@@ -185,9 +185,9 @@ export default function AddMealScreen() {
 
   const onBarcodeScanned = useCallback(async (result: BarcodeScanningResult) => {
     if (barcodeProcessed.current || barcodeLooking) return;
-    barcodeProcessed.current = true;
     const code = result.data;
-    if (!code) return;
+    if (!code || !/^\d{4,14}$/.test(code)) return;
+    barcodeProcessed.current = true;
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setBarcodeLooking(true);
@@ -771,7 +771,7 @@ export default function AddMealScreen() {
             <CameraView
               style={styles.barcodeCamera}
               facing="back"
-              barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "code128", "code39"] }}
+              barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }}
               onBarcodeScanned={onBarcodeScanned}
             >
               <View style={styles.barcodeOverlay}>
