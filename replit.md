@@ -345,6 +345,46 @@ All mutations that modify state invalidate the full set of affected query keys:
 **Notification Preferences:**
 - Confirmed working correctly — time prefs are device-local (AsyncStorage via Zustand persist `"fitlog-notifications"` key), no server columns needed since notifications are scheduled on-device
 
+## Security & Privacy
+
+### Route protection
+Every API route uses `requireAuth` middleware — session token validated against DB on every request, expiry enforced.
+
+### Data scoping
+All DB queries filter by the authenticated `user.id`. Mutations (PUT/DELETE) verify ownership before writing (`AND userId = ?` in WHERE clause), returning 404 on mismatch to avoid leaking existence.
+
+### Password & session
+- SHA-256 + hardcoded salt (simple; no bcrypt for now — note for future upgrade)
+- Session IDs are 32 bytes of `crypto.randomBytes` — 256-bit entropy
+- Sessions have 30-day expiry, deleted on logout
+- Account deletion cascades via `onDelete: "cascade"` on all FK columns — all user data is purged at the DB level
+
+### Input validation
+- **Register**: email format regex, name length 1–100 chars, password min 8 chars, email lowercased + trimmed
+- **Login**: email lowercased + trimmed before lookup
+- **photoUrl** (`POST /profile/photo`): URL-parsed, must be `https:`, max 2048 chars
+- **mimeType** (`POST /meals/analyze-photo`): whitelisted to `image/jpeg | image/png | image/gif | image/webp`
+- **imageBase64**: size-capped at 6 MB string length (~4 MB decoded)
+
+### Body size limits
+- Global JSON body limit: **1 MB** (prevents oversized-payload DoS)
+- `/api/meals/analyze-photo` route gets a higher **6 MB** limit (base64 image needed)
+
+### API response hygiene
+- Auth responses (`/register`, `/login`, `/me`) never include `passwordHash`
+- Export endpoint (`GET /settings/export`) strips `userId` from every exported record; includes `foodItems` nested in meals
+- Session token never returned after initial login (stored client-side only)
+
+### Feature gating
+- `POST /meals/analyze-photo` → 403 for free users (`feature: "aiPhotoAnalysis"`)
+- `POST /workouts/my-templates` → 403 when free user hits 10-template cap
+- `GET /settings/export` → 403 for free users (`feature: "exportData"`)
+- `POST /subscription/simulate` → 404 in `NODE_ENV=production`
+
+### Account deletion
+- Client: two-step `Alert.alert` confirmation before calling `DELETE /profile/delete`
+- Backend: deletes user row; all child rows cascade automatically
+
 ## Key Decisions
 
 - No JWT library — custom SHA-256 + random session tokens

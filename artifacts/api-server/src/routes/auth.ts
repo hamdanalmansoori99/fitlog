@@ -15,12 +15,29 @@ router.post("/register", async (req, res) => {
       return;
     }
 
-    if (password.length < 6) {
-      res.status(400).json({ error: "Password must be at least 6 characters" });
+    if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      res.status(400).json({ error: "A valid email address is required" });
       return;
     }
 
-    const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    if (typeof firstName !== "string" || firstName.trim().length < 1 || firstName.trim().length > 100) {
+      res.status(400).json({ error: "First name must be between 1 and 100 characters" });
+      return;
+    }
+
+    if (typeof lastName !== "string" || lastName.trim().length < 1 || lastName.trim().length > 100) {
+      res.status(400).json({ error: "Last name must be between 1 and 100 characters" });
+      return;
+    }
+
+    if (typeof password !== "string" || password.length < 8) {
+      res.status(400).json({ error: "Password must be at least 8 characters" });
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existing = await db.select().from(usersTable).where(eq(usersTable.email, normalizedEmail)).limit(1);
     if (existing.length > 0) {
       res.status(409).json({ error: "Email already registered" });
       return;
@@ -28,10 +45,10 @@ router.post("/register", async (req, res) => {
 
     const passwordHash = hashPassword(password);
     const [user] = await db.insert(usersTable).values({
-      email,
+      email: normalizedEmail,
       passwordHash,
-      firstName,
-      lastName,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
     }).returning();
 
     // Create default profile
@@ -82,7 +99,7 @@ router.post("/login", async (req, res) => {
       return;
     }
 
-    const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    const users = await db.select().from(usersTable).where(eq(usersTable.email, email.trim().toLowerCase())).limit(1);
     if (users.length === 0) {
       res.status(401).json({ error: "Invalid credentials" });
       return;

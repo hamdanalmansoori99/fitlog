@@ -243,10 +243,27 @@ export default function ProfileScreen() {
   const handleDeleteAccount = () => {
     Alert.alert(
       "Delete Account",
-      "This will permanently delete your account and all data. This cannot be undone.",
+      "This will permanently delete your account and all your data — workouts, meals, measurements, and progress. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate() },
+        {
+          text: "Continue",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Are you absolutely sure?",
+              "There is no recovery option. Your data will be gone forever.",
+              [
+                { text: "Go Back", style: "cancel" },
+                {
+                  text: "Yes, Delete My Account",
+                  style: "destructive",
+                  onPress: () => deleteMutation.mutate(),
+                },
+              ]
+            );
+          },
+        },
       ]
     );
   };

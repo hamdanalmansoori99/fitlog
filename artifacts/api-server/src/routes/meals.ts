@@ -46,6 +46,18 @@ router.post("/analyze-photo", requireAuth, async (req, res) => {
       return;
     }
 
+    const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
+    if (!ALLOWED_MIME_TYPES.includes(mimeType as any)) {
+      res.status(400).json({ error: "mimeType must be one of: image/jpeg, image/png, image/gif, image/webp" });
+      return;
+    }
+
+    // Base64-encoded ~4 MB image ≈ 5.5 MB of base64 text. Reject if over 6 MB string length.
+    if (typeof imageBase64 !== "string" || imageBase64.length > 6 * 1024 * 1024) {
+      res.status(413).json({ error: "Image too large. Maximum size is 4 MB." });
+      return;
+    }
+
     const prompt = `You are a nutrition expert analyzing a meal photo. Identify every food item visible and estimate nutrition.
 
 Return ONLY valid JSON in this exact structure — no markdown, no explanation:

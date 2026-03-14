@@ -79,14 +79,35 @@ router.put("/", requireAuth, async (req, res) => {
 });
 
 router.post("/photo", requireAuth, async (req, res) => {
-  // For MVP, just accept a URL or base64
   const { photoUrl } = req.body;
   const user = getUser(req);
-  
+
+  if (!photoUrl || typeof photoUrl !== "string") {
+    res.status(400).json({ error: "photoUrl is required" });
+    return;
+  }
+
+  // Only allow absolute https:// URLs to prevent javascript: XSS and SSRF
+  let parsed: URL;
+  try {
+    parsed = new URL(photoUrl);
+  } catch {
+    res.status(400).json({ error: "photoUrl must be a valid URL" });
+    return;
+  }
+  if (parsed.protocol !== "https:") {
+    res.status(400).json({ error: "photoUrl must use HTTPS" });
+    return;
+  }
+  if (photoUrl.length > 2048) {
+    res.status(400).json({ error: "photoUrl is too long" });
+    return;
+  }
+
   await db.update(profilesTable)
     .set({ photoUrl, updatedAt: new Date() })
     .where(eq(profilesTable.userId, user.id));
-  
+
   res.json({ url: photoUrl });
 });
 
