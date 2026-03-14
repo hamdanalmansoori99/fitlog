@@ -71,10 +71,10 @@ export default function ProgressScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   
   const { data: workoutSummary, isLoading: summaryLoading } = useQuery({ queryKey: ["workoutSummary"], queryFn: api.getWorkoutSummary });
-  const { data: nutritionStats } = useQuery({ queryKey: ["nutritionStats"], queryFn: api.getNutritionStats });
+  const { data: nutritionStats, isLoading: nutritionLoading } = useQuery({ queryKey: ["nutritionStats"], queryFn: api.getNutritionStats });
   const { data: streaks, isLoading: streaksLoading } = useQuery({ queryKey: ["streaks"], queryFn: api.getStreaks });
-  const { data: records } = useQuery({ queryKey: ["records"], queryFn: api.getPersonalRecords });
-  const { data: measurements } = useQuery({ queryKey: ["measurements", measureDays], queryFn: () => api.getMeasurements(measureDays) });
+  const { data: records, isLoading: recordsLoading } = useQuery({ queryKey: ["records"], queryFn: api.getPersonalRecords });
+  const { data: measurements, isLoading: measurementsLoading } = useQuery({ queryKey: ["measurements", measureDays], queryFn: () => api.getMeasurements(measureDays) });
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
   const { data: workoutsData } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts({ limit: 60 }), staleTime: 120000 });
   const { data: recoveryTodayData } = useQuery({ queryKey: ["recoveryToday"], queryFn: api.getRecoveryToday, staleTime: 60000 });
@@ -219,7 +219,16 @@ export default function ProgressScreen() {
         </Animated.View>
         
         {/* Weekly Frequency */}
-        {workoutSummary?.weeklyFrequency && (
+        {summaryLoading ? (
+          <SkeletonCard>
+            <SkeletonBox width="50%" height={15} borderRadius={6} style={{ marginBottom: 14 }} />
+            <View style={{ flexDirection: "row", alignItems: "flex-end", height: 100, gap: 6 }}>
+              {[55, 80, 40, 100, 65, 45, 90].map((h, i) => (
+                <SkeletonBox key={i} style={{ flex: 1 } as any} height={h} borderRadius={6} />
+              ))}
+            </View>
+          </SkeletonCard>
+        ) : workoutSummary?.weeklyFrequency ? (
           <Card>
             <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Workouts per Week</Text>
             <WeeklyBarChart
@@ -230,10 +239,10 @@ export default function ProgressScreen() {
               }))}
             />
           </Card>
-        )}
+        ) : null}
         
         {/* Activity Breakdown */}
-        {workoutSummary?.activityBreakdown?.length > 0 && (
+        {summaryLoading ? null : workoutSummary?.activityBreakdown?.length > 0 ? (
           <Card>
             <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Activity Type</Text>
             <SimplePieChart
@@ -244,7 +253,7 @@ export default function ProgressScreen() {
               }))}
             />
           </Card>
-        )}
+        ) : null}
         
         {/* Body Measurements */}
         <View>
@@ -271,7 +280,20 @@ export default function ProgressScreen() {
             </View>
           </View>
           
-          {weightData.length > 0 ? (
+          {measurementsLoading ? (
+            <SkeletonCard>
+              <SkeletonBox width="50%" height={13} borderRadius={5} style={{ marginBottom: 12 }} />
+              <View style={{ flexDirection: "row", alignItems: "flex-end", height: 80, gap: 6 }}>
+                {[40, 60, 35, 70, 50, 65, 45].map((h, i) => (
+                  <SkeletonBox key={i} style={{ flex: 1 } as any} height={h} borderRadius={4} />
+                ))}
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 12 }}>
+                <SkeletonBox width={60} height={24} borderRadius={6} />
+                <SkeletonBox width={80} height={13} borderRadius={5} />
+              </View>
+            </SkeletonCard>
+          ) : weightData.length > 0 ? (
             <>
               <Card>
                 <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -340,7 +362,22 @@ export default function ProgressScreen() {
         </View>
         
         {/* Nutrition Stats */}
-        {nutritionStats && (
+        {nutritionLoading ? (
+          <SkeletonCard>
+            <SkeletonBox width="35%" height={15} borderRadius={6} style={{ marginBottom: 14 }} />
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
+                <SkeletonBox width={52} height={32} borderRadius={8} />
+                <SkeletonBox width={70} height={12} borderRadius={4} />
+              </View>
+              <View style={{ width: 1, height: 40, backgroundColor: "transparent" }} />
+              <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
+                <SkeletonBox width={52} height={32} borderRadius={8} />
+                <SkeletonBox width={70} height={12} borderRadius={4} />
+              </View>
+            </View>
+          </SkeletonCard>
+        ) : nutritionStats ? (
           <Card>
             <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Nutrition</Text>
             <View style={styles.statsGrid}>
@@ -366,30 +403,76 @@ export default function ProgressScreen() {
               ]}
             />
           </Card>
+        ) : (
+          <Card>
+            <View style={styles.empty}>
+              <View style={[styles.emptyIconWrap, { backgroundColor: theme.cardAlt }]}>
+                <Feather name="coffee" size={22} color={theme.textMuted} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>No nutrition data yet</Text>
+              <Text style={[styles.emptyDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Log meals to see your calorie and macro breakdown here.
+              </Text>
+              <Pressable
+                onPress={() => router.push("/meals/add" as any)}
+                style={[styles.emptyBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "50" }]}
+              >
+                <Feather name="plus" size={14} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Log first meal</Text>
+              </Pressable>
+            </View>
+          </Card>
         )}
         
         {/* Personal Records */}
-        {records?.records?.length > 0 && (
-          <View>
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Personal Records</Text>
-            {records.records.map((r: any, i: number) => (
-              <Card key={i} style={styles.recordCard}>
-                <View style={[styles.recordIcon, { backgroundColor: theme.primary + "20" }]}>
-                  <Feather name="award" size={18} color={theme.primary} />
+        <View style={{ marginBottom: 8 }}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Personal Records</Text>
+          {recordsLoading ? (
+            <View style={{ gap: 8 }}>
+              {[0, 1, 2].map(i => (
+                <SkeletonCard key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 } as any}>
+                  <SkeletonBox width={40} height={40} borderRadius={12} />
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <SkeletonBox width="40%" height={12} borderRadius={4} />
+                    <SkeletonBox width="60%" height={18} borderRadius={5} />
+                  </View>
+                  <SkeletonBox width={38} height={12} borderRadius={4} />
+                </SkeletonCard>
+              ))}
+            </View>
+          ) : records?.records?.length > 0 ? (
+            <>
+              {records.records.map((r: any, i: number) => (
+                <Card key={i} style={styles.recordCard}>
+                  <View style={[styles.recordIcon, { backgroundColor: theme.primary + "20" }]}>
+                    <Feather name="award" size={18} color={theme.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.recordLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
+                    <Text style={[styles.recordValue, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{r.value}</Text>
+                  </View>
+                  {r.date && (
+                    <Text style={[styles.recordDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {new Date(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </Text>
+                  )}
+                </Card>
+              ))}
+            </>
+          ) : (
+            <Card>
+              <View style={styles.empty}>
+                <View style={[styles.emptyIconWrap, { backgroundColor: theme.cardAlt }]}>
+                  <Feather name="award" size={22} color={theme.textMuted} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.recordLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
-                  <Text style={[styles.recordValue, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{r.value}</Text>
-                </View>
-                {r.date && (
-                  <Text style={[styles.recordDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    {new Date(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </Text>
-                )}
-              </Card>
-            ))}
-          </View>
-        )}
+                <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>No PRs yet</Text>
+                <Text style={[styles.emptyDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Log gym workouts to automatically track your personal bests.
+                </Text>
+              </View>
+            </Card>
+          )}
+        </View>
       </ScrollView>
     </View>
   );

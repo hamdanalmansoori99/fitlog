@@ -11,6 +11,8 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
+import { useToast } from "@/components/ui/Toast";
+import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 
 const CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
@@ -100,11 +102,12 @@ export default function MealsScreen() {
   const [savingFavId, setSavingFavId] = useState<number | null>(null);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const { showToast } = useToast();
 
   const today = new Date().toISOString().split("T")[0];
   const isToday = selectedDate === today;
 
-  const { data } = useQuery({
+  const { data, isLoading: mealsLoading } = useQuery({
     queryKey: ["meals", selectedDate],
     queryFn: () => api.getMeals(selectedDate),
   });
@@ -137,7 +140,11 @@ export default function MealsScreen() {
 
   const deleteMutation = useMutation({
     mutationFn: api.deleteMeal,
-    onSuccess: () => invalidateMealRelated(),
+    onSuccess: () => {
+      invalidateMealRelated();
+      showToast("Meal deleted", "success");
+    },
+    onError: () => showToast("Could not delete meal. Please try again.", "error"),
   });
 
   const saveFavMutation = useMutation({
@@ -145,8 +152,12 @@ export default function MealsScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["favoriteMeals"] });
       setSavingFavId(null);
+      showToast("Saved to favourites ⭐", "success");
     },
-    onError: () => setSavingFavId(null),
+    onError: () => {
+      setSavingFavId(null);
+      showToast("Could not save favourite. Please try again.", "error");
+    },
   });
 
   const logFavMutation = useMutation({
@@ -156,12 +167,18 @@ export default function MealsScreen() {
       queryClient.invalidateQueries({ queryKey: ["favoriteMeals"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedDate(today);
+      showToast("Meal logged!", "success");
     },
+    onError: () => showToast("Could not log meal. Please try again.", "error"),
   });
 
   const deleteFavMutation = useMutation({
     mutationFn: (id: number) => api.deleteFavoriteMeal(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["favoriteMeals"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["favoriteMeals"] });
+      showToast("Removed from favourites", "success");
+    },
+    onError: () => showToast("Could not remove favourite", "error"),
   });
 
   const duplicateMutation = useMutation({
@@ -170,9 +187,9 @@ export default function MealsScreen() {
       invalidateMealRelated();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedDate(today);
-      Alert.alert("Done!", `${res.count} meal${res.count !== 1 ? "s" : ""} copied to today.`);
+      showToast(`${res.count} meal${res.count !== 1 ? "s" : ""} copied to today`, "success");
     },
-    onError: () => Alert.alert("Error", "Could not copy meals. Please try again."),
+    onError: () => showToast("Could not copy meals. Please try again.", "error"),
   });
 
   const duplicateMealMutation = useMutation({
@@ -183,7 +200,9 @@ export default function MealsScreen() {
       queryClient.invalidateQueries({ queryKey: ["frequentMeals"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (!isToday) setSelectedDate(today);
+      showToast("Meal copied to today", "success");
     },
+    onError: () => showToast("Could not copy meal. Please try again.", "error"),
   });
 
   const logFrequentMutation = useMutation({
@@ -192,7 +211,9 @@ export default function MealsScreen() {
       invalidateMealRelated();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedDate(today);
+      showToast("Meal logged!", "success");
     },
+    onError: () => showToast("Could not log meal. Please try again.", "error"),
   });
 
   function handleSaveAsFavorite(meal: any) {
@@ -356,10 +377,29 @@ export default function MealsScreen() {
         )}
 
         {/* Calorie summary */}
-        {data && <CalorieSummary data={data} />}
+        {mealsLoading ? (
+          <Animated.View entering={FadeInDown.delay(50).duration(400)} style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+            <SkeletonCard>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+                <SkeletonBox width={80} height={80} borderRadius={40} />
+                <View style={{ flex: 1, gap: 10 }}>
+                  <SkeletonBox width="55%" height={34} borderRadius={8} />
+                  <SkeletonBox width="70%" height={13} borderRadius={6} />
+                </View>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 12 }}>
+                <SkeletonBox width={56} height={38} borderRadius={8} />
+                <SkeletonBox width={56} height={38} borderRadius={8} />
+                <SkeletonBox width={56} height={38} borderRadius={8} />
+              </View>
+            </SkeletonCard>
+          </Animated.View>
+        ) : data ? (
+          <CalorieSummary data={data} />
+        ) : null}
 
         {/* First meal empty state */}
-        {data && meals.length === 0 && isToday && (
+        {!mealsLoading && data && meals.length === 0 && isToday && (
           <Animated.View entering={FadeInDown.delay(100).duration(400)}>
             <View style={[styles.firstMealCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <View style={[styles.firstMealIcon, { backgroundColor: theme.orange + "20" }]}>
@@ -378,6 +418,23 @@ export default function MealsScreen() {
                 <Feather name="plus" size={14} color={theme.orange} />
                 <Text style={{ color: theme.orange, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Log first meal</Text>
               </Pressable>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* Past-day empty state */}
+        {!mealsLoading && data && meals.length === 0 && !isToday && (
+          <Animated.View entering={FadeInDown.delay(100).duration(400)} style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+            <View style={[styles.firstMealCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View style={[styles.firstMealIcon, { backgroundColor: theme.secondary + "20" }]}>
+                <Feather name="calendar" size={28} color={theme.secondary} />
+              </View>
+              <Text style={[styles.firstMealTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                Nothing logged
+              </Text>
+              <Text style={[styles.firstMealSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                No meals were recorded for this day.
+              </Text>
             </View>
           </Animated.View>
         )}

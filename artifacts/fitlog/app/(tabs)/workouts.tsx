@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  RefreshControl, Platform,
+  RefreshControl, Platform, Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,8 @@ import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { getRecommendations, getTodaySuggestion } from "@/lib/coachEngine";
 import { WORKOUT_TEMPLATES, WorkoutTemplate } from "@/lib/workoutTemplates";
+import { useToast } from "@/components/ui/Toast";
+import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 
 function formatDuration(mins?: number | null) {
   if (!mins) return "";
@@ -252,9 +254,10 @@ export default function WorkoutsScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [refreshing, setRefreshing] = useState(false);
+  const { showToast } = useToast();
 
   const { data: profileData, refetch: refetchProfile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
-  const { data: workoutsData, refetch: refetchWorkouts } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts() });
+  const { data: workoutsData, refetch: refetchWorkouts, isLoading: workoutsLoading } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts() });
   const { data: userTemplatesData, refetch: refetchTemplates } = useQuery({ queryKey: ["userTemplates"], queryFn: api.getUserTemplates });
 
   const deleteMutation = useMutation({
@@ -267,17 +270,24 @@ export default function WorkoutsScreen() {
       queryClient.invalidateQueries({ queryKey: ["recentActivity"] });
       queryClient.invalidateQueries({ queryKey: ["streaks"] });
       queryClient.invalidateQueries({ queryKey: ["achievements"] });
+      showToast("Workout deleted", "success");
     },
+    onError: () => showToast("Could not delete workout. Please try again.", "error"),
   });
 
   const deleteTemplateMutation = useMutation({
     mutationFn: (id: number) => api.deleteUserTemplate(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userTemplates"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userTemplates"] });
+      showToast("Template deleted", "success");
+    },
+    onError: () => showToast("Could not delete template. Please try again.", "error"),
   });
 
   const toggleFavMutation = useMutation({
     mutationFn: (id: number) => api.toggleTemplateFavorite(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userTemplates"] }),
+    onError: () => showToast("Could not update favourite", "error"),
   });
 
   const onRefresh = useCallback(async () => {
@@ -586,7 +596,26 @@ export default function WorkoutsScreen() {
         <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>History</Text>
 
-          {workouts.length === 0 ? (
+          {workoutsLoading ? (
+            <View style={{ gap: 10 }}>
+              {[0, 1, 2, 3].map(i => (
+                <SkeletonCard key={i}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <SkeletonBox width={36} height={36} borderRadius={10} />
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <SkeletonBox width="55%" height={14} borderRadius={5} />
+                      <SkeletonBox width="35%" height={11} borderRadius={4} />
+                    </View>
+                    <SkeletonBox width={20} height={14} borderRadius={4} />
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
+                    <SkeletonBox width={60} height={12} borderRadius={4} />
+                    <SkeletonBox width={60} height={12} borderRadius={4} />
+                  </View>
+                </SkeletonCard>
+              ))}
+            </View>
+          ) : workouts.length === 0 ? (
             <Animated.View entering={FadeInDown.delay(300).duration(400)}>
               <Card>
                 <View style={styles.empty}>
@@ -618,8 +647,21 @@ export default function WorkoutsScreen() {
                   key={w.id}
                   workout={w}
                   onDelete={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    deleteMutation.mutate(w.id);
+                    Alert.alert(
+                      "Delete workout?",
+                      "This cannot be undone.",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Delete",
+                          style: "destructive",
+                          onPress: () => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            deleteMutation.mutate(w.id);
+                          },
+                        },
+                      ]
+                    );
                   }}
                 />
               ))}

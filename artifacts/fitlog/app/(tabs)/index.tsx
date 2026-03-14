@@ -386,7 +386,7 @@ export default function HomeScreen() {
     queryFn: api.getTodayStats,
   });
 
-  const { data: weeklyData, refetch: refetchWeekly } = useQuery({
+  const { data: weeklyData, refetch: refetchWeekly, isLoading: weeklyLoading } = useQuery({
     queryKey: ["weeklyStats"],
     queryFn: api.getWeeklyStats,
   });
@@ -756,7 +756,13 @@ export default function HomeScreen() {
             <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               Active minutes per day
             </Text>
-            {weeklyData?.days ? (
+            {weeklyLoading ? (
+              <View style={{ flexDirection: "row", alignItems: "flex-end", height: 120, gap: 5, marginTop: 8 }}>
+                {[45, 70, 30, 95, 55, 40, 75].map((h, i) => (
+                  <SkeletonBox key={i} style={{ flex: 1 } as any} height={h} borderRadius={6} />
+                ))}
+              </View>
+            ) : weeklyData?.days ? (
               <WeeklyBarChart data={weeklyData.days} />
             ) : (
               <View style={styles.emptyChart}>
