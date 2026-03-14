@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, real, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, real, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -16,7 +16,10 @@ export const recoveryLogsTable = pgTable("recovery_logs", {
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("recovery_logs_user_id_idx").on(table.userId),
+  index("recovery_logs_user_id_date_idx").on(table.userId, table.date),
+]);
 
 export const insertRecoveryLogSchema = createInsertSchema(recoveryLogsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertRecoveryLog = z.infer<typeof insertRecoveryLogSchema>;

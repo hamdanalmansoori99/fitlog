@@ -1,8 +1,11 @@
 import { Router } from "express";
-import { db, conversations, messages, profilesTable, workoutsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable } from "@workspace/db";
+import { db, conversationsTable, messagesTable, profilesTable, workoutsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable } from "@workspace/db";
 import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
+
+const conversations = conversationsTable;
+const messages = messagesTable;
 
 const router = Router();
 

@@ -52,7 +52,7 @@ router.post("/", requireAuth, async (req, res) => {
 router.put("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const equipId = parseInt(req.params.id);
+    const equipId = parseInt(req.params.id as string);
     const existing = await db.select().from(equipmentTable)
       .where(and(eq(equipmentTable.id, equipId), eq(equipmentTable.userId, user.id))).limit(1);
     if (existing.length === 0) { res.status(404).json({ error: "Equipment not found" }); return; }
@@ -72,7 +72,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const equipId = parseInt(req.params.id);
+    const equipId = parseInt(req.params.id as string);
     const existing = await db.select().from(equipmentTable)
       .where(and(eq(equipmentTable.id, equipId), eq(equipmentTable.userId, user.id))).limit(1);
     if (existing.length === 0) { res.status(404).json({ error: "Equipment not found" }); return; }

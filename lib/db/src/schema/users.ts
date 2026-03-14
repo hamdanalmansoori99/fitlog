@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -15,7 +15,7 @@ export const usersTable = pgTable("users", {
 
 export const sessionsTable = pgTable("sessions", {
   id: text("id").primaryKey(),
-  userId: serial("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [

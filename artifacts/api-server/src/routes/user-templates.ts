@@ -77,7 +77,7 @@ router.post("/", requireAuth, async (req, res) => {
 router.put("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const { name, activityType, description, estimatedMinutes, exercises, isFavorite } = req.body;
 
     const [template] = await db.update(userWorkoutTemplatesTable)
@@ -93,7 +93,7 @@ router.put("/:id", requireAuth, async (req, res) => {
       .where(and(eq(userWorkoutTemplatesTable.id, id), eq(userWorkoutTemplatesTable.userId, user.id)))
       .returning();
 
-    if (!template) return res.status(404).json({ error: "Template not found" });
+    if (!template) { res.status(404).json({ error: "Template not found" }); return; }
     res.json({ template });
   } catch {
     res.status(500).json({ error: "Failed to update template" });
@@ -104,7 +104,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     await db.delete(userWorkoutTemplatesTable)
       .where(and(eq(userWorkoutTemplatesTable.id, id), eq(userWorkoutTemplatesTable.userId, user.id)));
     res.json({ ok: true });
@@ -117,10 +117,10 @@ router.delete("/:id", requireAuth, async (req, res) => {
 router.post("/:id/favorite", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const [existing] = await db.select().from(userWorkoutTemplatesTable)
       .where(and(eq(userWorkoutTemplatesTable.id, id), eq(userWorkoutTemplatesTable.userId, user.id)));
-    if (!existing) return res.status(404).json({ error: "Template not found" });
+    if (!existing) { res.status(404).json({ error: "Template not found" }); return; }
 
     const [template] = await db.update(userWorkoutTemplatesTable)
       .set({ isFavorite: !existing.isFavorite, updatedAt: new Date() })
@@ -136,10 +136,10 @@ router.post("/:id/favorite", requireAuth, async (req, res) => {
 router.post("/:id/use", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const [existing] = await db.select().from(userWorkoutTemplatesTable)
       .where(and(eq(userWorkoutTemplatesTable.id, id), eq(userWorkoutTemplatesTable.userId, user.id)));
-    if (!existing) return res.status(404).json({ error: "Template not found" });
+    if (!existing) { res.status(404).json({ error: "Template not found" }); return; }
 
     const [template] = await db.update(userWorkoutTemplatesTable)
       .set({ usageCount: (existing.usageCount || 0) + 1, lastUsedAt: new Date(), updatedAt: new Date() })

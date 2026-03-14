@@ -47,7 +47,7 @@ router.post("/", requireAuth, async (req, res) => {
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const measureId = parseInt(req.params.id);
+    const measureId = parseInt(req.params.id as string);
     if (isNaN(measureId)) { res.status(400).json({ error: "Invalid id" }); return; }
     const [measurement] = await db.select().from(bodyMeasurementsTable)
       .where(and(eq(bodyMeasurementsTable.id, measureId), eq(bodyMeasurementsTable.userId, user.id)))
@@ -62,7 +62,7 @@ router.get("/:id", requireAuth, async (req, res) => {
 router.put("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const measureId = parseInt(req.params.id);
+    const measureId = parseInt(req.params.id as string);
     if (isNaN(measureId)) { res.status(400).json({ error: "Invalid id" }); return; }
     const existing = await db.select().from(bodyMeasurementsTable)
       .where(and(eq(bodyMeasurementsTable.id, measureId), eq(bodyMeasurementsTable.userId, user.id))).limit(1);
@@ -76,6 +76,7 @@ router.put("/:id", requireAuth, async (req, res) => {
         ...(waistCm !== undefined && { waistCm }),
         ...(hipsCm !== undefined && { hipsCm }),
         ...(armsCm !== undefined && { armsCm }),
+        updatedAt: new Date(),
       })
       .where(eq(bodyMeasurementsTable.id, measureId))
       .returning();
@@ -88,7 +89,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const measureId = parseInt(req.params.id);
+    const measureId = parseInt(req.params.id as string);
     const existing = await db.select().from(bodyMeasurementsTable)
       .where(and(eq(bodyMeasurementsTable.id, measureId), eq(bodyMeasurementsTable.userId, user.id))).limit(1);
     if (existing.length === 0) { res.status(404).json({ error: "Measurement not found" }); return; }

@@ -48,7 +48,8 @@ router.post("/log", requireAuth, async (req, res) => {
     const { amountMl, loggedAt } = req.body;
 
     if (!amountMl || typeof amountMl !== "number" || amountMl <= 0) {
-      return res.status(400).json({ error: "amountMl must be a positive number" });
+      res.status(400).json({ error: "amountMl must be a positive number" });
+      return;
     }
 
     const [log] = await db.insert(waterLogsTable).values({
@@ -67,8 +68,8 @@ router.post("/log", requireAuth, async (req, res) => {
 router.delete("/log/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const id = parseInt(req.params.id as string);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
     await db.delete(waterLogsTable)
       .where(and(eq(waterLogsTable.id, id), eq(waterLogsTable.userId, user.id)));

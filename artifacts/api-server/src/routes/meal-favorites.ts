@@ -72,7 +72,7 @@ router.post("/", requireAuth, async (req, res) => {
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     await db.delete(favoriteMealsTable)
       .where(and(eq(favoriteMealsTable.id, id), eq(favoriteMealsTable.userId, user.id)));
     res.json({ ok: true });
@@ -85,12 +85,12 @@ router.delete("/:id", requireAuth, async (req, res) => {
 router.post("/:id/log", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const { category } = req.body;
 
     const [fav] = await db.select().from(favoriteMealsTable)
       .where(and(eq(favoriteMealsTable.id, id), eq(favoriteMealsTable.userId, user.id)));
-    if (!fav) return res.status(404).json({ error: "Favourite not found" });
+    if (!fav) { res.status(404).json({ error: "Favourite not found" }); return; }
 
     // Create the meal entry for today
     const [meal] = await db.insert(mealsTable).values({
@@ -134,7 +134,7 @@ router.post("/duplicate-day", requireAuth, async (req, res) => {
     const user = getUser(req);
     const { fromDate, toDate } = req.body;
 
-    if (!fromDate) return res.status(400).json({ error: "fromDate required" });
+    if (!fromDate) { res.status(400).json({ error: "fromDate required" }); return; }
 
     const from = new Date(fromDate);
     from.setHours(0, 0, 0, 0);
@@ -153,7 +153,8 @@ router.post("/duplicate-day", requireAuth, async (req, res) => {
       ));
 
     if (sourceMeals.length === 0) {
-      return res.json({ count: 0, meals: [] });
+      res.json({ count: 0, meals: [] });
+      return;
     }
 
     const created: any[] = [];

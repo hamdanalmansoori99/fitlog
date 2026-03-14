@@ -259,7 +259,7 @@ router.get("/", requireAuth, async (req, res) => {
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const workout = await getWorkoutWithExercises(parseInt(req.params.id), user.id);
+    const workout = await getWorkoutWithExercises(parseInt(req.params.id as string), user.id);
     if (!workout) {
       res.status(404).json({ error: "Workout not found" });
       return;
@@ -328,7 +328,7 @@ router.post("/", requireAuth, async (req, res) => {
 router.put("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const workoutId = parseInt(req.params.id);
+    const workoutId = parseInt(req.params.id as string);
     
     const existing = await db.select().from(workoutsTable)
       .where(and(eq(workoutsTable.id, workoutId), eq(workoutsTable.userId, user.id)))
@@ -355,7 +355,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const workoutId = parseInt(req.params.id);
+    const workoutId = parseInt(req.params.id as string);
     
     const existing = await db.select().from(workoutsTable)
       .where(and(eq(workoutsTable.id, workoutId), eq(workoutsTable.userId, user.id)))

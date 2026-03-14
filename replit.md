@@ -243,6 +243,33 @@ All mutations that modify state invalidate the full set of affected query keys:
 - Added `getWorkout(id: number)` → `GET /workouts/:id`
 - Added `getMeal(id: number)` → `GET /meals/:id`
 
+## Schema Consistency Audit (March 2026 — Session 4)
+
+**Bug Fixes:**
+- `sessionsTable.userId` — changed from `serial()` to `integer()`. `serial` auto-generates values and must never be used for FK columns
+- `conversations` / `messages` — renamed to `conversationsTable` / `messagesTable` to match the `*Table` convention used by every other table. Backward-compat aliases kept as `@deprecated` exports so nothing breaks silently
+
+**Indexes Added (all missing):**
+- `equipment`: `(userId)`
+- `recovery_logs`: `(userId)` + `(userId, date)` composite
+- `body_measurements`: `(userId)` + `(userId, date)` composite
+- `achievements`: `(userId)`
+- `water_logs`: `(userId)` + `(userId, loggedAt)` composite
+- `user_workout_templates`: `(userId)`
+- `favorite_meals`: `(userId)`
+- `conversations`: `(userId)`
+- `messages`: `(conversationId)`
+
+**Data Integrity:**
+- `achievementsTable` — added `unique("achievements_user_id_key_uniq").on(userId, key)` — prevents duplicate badge awards
+- `bodyMeasurementsTable` — added `updatedAt` field (was missing, inconsistent with all other tables that have edit endpoints)
+
+**TypeScript Fixes (surfaced by dist rebuild):**
+- `parseInt(req.params.id)` → `parseInt(req.params.id as string)` across all route files (`measurements`, `equipment`, `meals`, `meal-favorites`, `user-templates`, `water`, `workouts`)
+- `return res.status(X).json(...)` early-exit pattern replaced with `res.status(X).json(...); return;` across `meal-favorites`, `user-templates`, `water` — Express 5 returns `Response` from `.json()` causing TS7030 mixed-return-type errors
+
+**Schema push:** `drizzle-kit push --force` applied all changes to the live database.
+
 ## Audit Fixes (March 2026 — Session 3)
 
 **Progress / Streaks:**

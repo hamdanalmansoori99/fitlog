@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, real, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, real, timestamp, jsonb, boolean, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -22,7 +22,9 @@ export const userWorkoutTemplatesTable = pgTable("user_workout_templates", {
   lastUsedAt: timestamp("last_used_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("user_workout_templates_user_id_idx").on(table.userId),
+]);
 
 export interface FavoriteFoodItem {
   name: string;
@@ -45,7 +47,9 @@ export const favoriteMealsTable = pgTable("favorite_meals", {
   usageCount: integer("usage_count").notNull().default(0),
   lastUsedAt: timestamp("last_used_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("favorite_meals_user_id_idx").on(table.userId),
+]);
 
 export const insertUserWorkoutTemplateSchema = createInsertSchema(userWorkoutTemplatesTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertFavoriteMealSchema = createInsertSchema(favoriteMealsTable).omit({ id: true, createdAt: true });

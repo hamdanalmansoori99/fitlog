@@ -321,7 +321,7 @@ router.get("/frequent", requireAuth, async (req, res) => {
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const meal = await getMealWithFoodItems(parseInt(req.params.id), user.id);
+    const meal = await getMealWithFoodItems(parseInt(req.params.id as string), user.id);
     if (!meal) {
       res.status(404).json({ error: "Meal not found" });
       return;
@@ -379,7 +379,7 @@ router.post("/", requireAuth, async (req, res) => {
 router.put("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const mealId = parseInt(req.params.id);
+    const mealId = parseInt(req.params.id as string);
     
     const existing = await db.select().from(mealsTable)
       .where(and(eq(mealsTable.id, mealId), eq(mealsTable.userId, user.id))).limit(1);
@@ -420,7 +420,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const mealId = parseInt(req.params.id);
+    const mealId = parseInt(req.params.id as string);
     const existing = await db.select().from(mealsTable)
       .where(and(eq(mealsTable.id, mealId), eq(mealsTable.userId, user.id))).limit(1);
     if (existing.length === 0) { res.status(404).json({ error: "Meal not found" }); return; }
@@ -434,7 +434,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
 router.post("/:id/duplicate", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const mealId = parseInt(req.params.id);
+    const mealId = parseInt(req.params.id as string);
     const { targetDate } = req.body;
 
     const original = await getMealWithFoodItems(mealId, user.id);
