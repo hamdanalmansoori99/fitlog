@@ -27,7 +27,7 @@
     "web": {
       "favicon": "./assets/images/icon.png",
       "bundler": "metro",
-      "name": "FitLog",
+      "name": "FitLog – AI Fitness Tracker",
       "shortName": "FitLog",
       "description": "Your personal AI-powered fitness companion — workouts, nutrition, coaching and progress tracking.",
       "themeColor": "#00e676",

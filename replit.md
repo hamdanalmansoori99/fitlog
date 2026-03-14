@@ -6,7 +6,9 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Project: FitLog
 
-A full-featured mobile fitness tracking PWA built with Expo React Native. Features workout logging (8 activity types), meal tracking with macros, progress analytics, body measurements, a beautiful dark-mode UI, and a smart fitness coach system with personalised workout recommendations, weekly plan generation, and a 25+ template library. Also includes: smart meal logging intelligence (recent foods, serving suggestions, frequent meals, duplicate), saved workout templates, a gamification system (streaks, badges, personal records, weekly score), and UI enhancements including shimmer skeleton loading, animated success overlays, contextual empty states, and staggered spring animations.
+A full-featured mobile fitness tracking PWA built with Expo React Native. Features workout logging (8 activity types), meal tracking with macros, progress analytics, body measurements, a beautiful dark-mode UI, a smart fitness coach system with personalised workout recommendations, weekly plan generation, and a 25+ template library. Also includes: smart meal logging intelligence, saved workout templates, a gamification system (streaks, badges, personal records, weekly score), and UI enhancements including shimmer skeleton loading, animated success overlays, contextual empty states, and staggered spring animations.
+
+PWA features: manifest.json with 10 icon sizes (72–512px + apple-touch-icon), service worker with cache-first/network-first/stale-while-revalidate strategies, iOS standalone mode meta tags, install prompt banner (BeforeInstallPromptEvent), and app shortcuts (Log Workout, Log Meal). Key PWA files: `public/manifest.json`, `public/sw.js`, `public/icons/`, `app/+html.tsx`, `hooks/useInstallPrompt.ts`, `hooks/useServiceWorker.ts`, `components/InstallBanner.tsx`.
 
 ## Stack
 

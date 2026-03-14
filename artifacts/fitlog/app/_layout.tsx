@@ -13,8 +13,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { InstallBanner } from "@/components/InstallBanner";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useAuthStore } from "@/store/authStore";
+import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { api } from "@/lib/api";
 
 SplashScreen.preventAutoHideAsync();
@@ -75,6 +77,8 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
+  useServiceWorker();
+
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
@@ -91,6 +95,7 @@ export default function RootLayout() {
             <KeyboardProvider>
               <ToastProvider>
                 <RootLayoutNav />
+                <InstallBanner />
               </ToastProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
