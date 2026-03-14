@@ -124,6 +124,9 @@ export default function LogWorkoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["todayStats"] });
       queryClient.invalidateQueries({ queryKey: ["weeklyStats"] });
       queryClient.invalidateQueries({ queryKey: ["recentActivity"] });
+      queryClient.invalidateQueries({ queryKey: ["workoutSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["streaks"] });
+      queryClient.invalidateQueries({ queryKey: ["achievements"] });
       setSuccess(true);
     },
     onError: (err: any) => setError(err.message),

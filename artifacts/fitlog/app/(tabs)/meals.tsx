@@ -125,12 +125,18 @@ export default function MealsScreen() {
   const favNames = new Set(favorites.map((f: any) => f.name.toLowerCase()));
   const frequentOnly = frequentMeals.filter(m => !favNames.has(m.name.toLowerCase()));
 
+  function invalidateMealRelated() {
+    queryClient.invalidateQueries({ queryKey: ["meals"] });
+    queryClient.invalidateQueries({ queryKey: ["mealsToday"] });
+    queryClient.invalidateQueries({ queryKey: ["todayStats"] });
+    queryClient.invalidateQueries({ queryKey: ["nutritionStats"] });
+    queryClient.invalidateQueries({ queryKey: ["streaks"] });
+    queryClient.invalidateQueries({ queryKey: ["achievements"] });
+  }
+
   const deleteMutation = useMutation({
     mutationFn: api.deleteMeal,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["meals", selectedDate] });
-      queryClient.invalidateQueries({ queryKey: ["todayStats"] });
-    },
+    onSuccess: () => invalidateMealRelated(),
   });
 
   const saveFavMutation = useMutation({
@@ -145,8 +151,7 @@ export default function MealsScreen() {
   const logFavMutation = useMutation({
     mutationFn: ({ id }: { id: number }) => api.logFavoriteMeal(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["meals", today] });
-      queryClient.invalidateQueries({ queryKey: ["todayStats"] });
+      invalidateMealRelated();
       queryClient.invalidateQueries({ queryKey: ["favoriteMeals"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedDate(today);
@@ -161,8 +166,7 @@ export default function MealsScreen() {
   const duplicateMutation = useMutation({
     mutationFn: (fromDate: string) => api.duplicateDayMeals(fromDate),
     onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ["meals", today] });
-      queryClient.invalidateQueries({ queryKey: ["todayStats"] });
+      invalidateMealRelated();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedDate(today);
       Alert.alert("Done!", `${res.count} meal${res.count !== 1 ? "s" : ""} copied to today.`);
@@ -174,8 +178,7 @@ export default function MealsScreen() {
     mutationFn: ({ id, targetDate }: { id: number; targetDate?: string }) =>
       api.duplicateMeal(id, targetDate),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["meals", today] });
-      queryClient.invalidateQueries({ queryKey: ["todayStats"] });
+      invalidateMealRelated();
       queryClient.invalidateQueries({ queryKey: ["frequentMeals"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (!isToday) setSelectedDate(today);
@@ -185,8 +188,7 @@ export default function MealsScreen() {
   const logFrequentMutation = useMutation({
     mutationFn: (latestMealId: number) => api.duplicateMeal(latestMealId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["meals", today] });
-      queryClient.invalidateQueries({ queryKey: ["todayStats"] });
+      invalidateMealRelated();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedDate(today);
     },

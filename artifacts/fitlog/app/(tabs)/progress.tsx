@@ -74,7 +74,7 @@ export default function ProgressScreen() {
   const { data: records } = useQuery({ queryKey: ["records"], queryFn: api.getPersonalRecords });
   const { data: measurements } = useQuery({ queryKey: ["measurements", measureDays], queryFn: () => api.getMeasurements(measureDays) });
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
-  const { data: workoutsData } = useQuery({ queryKey: ["workouts", 0], queryFn: () => api.getWorkouts({ limit: 60 }), staleTime: 120000 });
+  const { data: workoutsData } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts({ limit: 60 }), staleTime: 120000 });
   const { data: recoveryTodayData } = useQuery({ queryKey: ["recoveryToday"], queryFn: api.getRecoveryToday, staleTime: 60000 });
   
   const weightData = (measurements?.measurements || [])

@@ -257,6 +257,11 @@ export default function WorkoutsScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
       queryClient.invalidateQueries({ queryKey: ["todayStats"] });
+      queryClient.invalidateQueries({ queryKey: ["weeklyStats"] });
+      queryClient.invalidateQueries({ queryKey: ["workoutSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["recentActivity"] });
+      queryClient.invalidateQueries({ queryKey: ["streaks"] });
+      queryClient.invalidateQueries({ queryKey: ["achievements"] });
     },
   });
 

@@ -186,6 +186,9 @@ export default function ExecuteWorkoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["todayStats"] });
       queryClient.invalidateQueries({ queryKey: ["recentActivity"] });
       queryClient.invalidateQueries({ queryKey: ["streaks"] });
+      queryClient.invalidateQueries({ queryKey: ["weeklyStats"] });
+      queryClient.invalidateQueries({ queryKey: ["workoutSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["achievements"] });
       router.replace("/(tabs)" as any);
     },
   });

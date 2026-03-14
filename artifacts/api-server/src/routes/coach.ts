@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { db, conversations, messages, profilesTable, workoutsTable, equipmentTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { db, conversations, messages, profilesTable, workoutsTable, equipmentTable, mealsTable, mealFoodItemsTable } from "@workspace/db";
+import { eq, and, desc, gte } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 const router = Router();
 
-function buildSystemPrompt(profile: any, recentWorkouts: any[], equipment: any[]): string {
+function buildSystemPrompt(profile: any, recentWorkouts: any[], equipment: any[], todayNutrition?: { calories: number; proteinG: number; carbsG: number; fatG: number; mealCount: number } | null): string {
   const today = new Date();
   const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
   const dateStr = today.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -77,6 +77,14 @@ USER PROFILE:
 
 RECENT WORKOUT HISTORY (last 30 days):
 ${recentStr}
+
+TODAY'S NUTRITION:
+${todayNutrition
+  ? `- Meals logged so far: ${todayNutrition.mealCount}
+- Calories: ${Math.round(todayNutrition.calories)} kcal${profile?.dailyCalorieGoal ? ` / ${profile.dailyCalorieGoal} kcal goal` : ""}
+- Protein: ${Math.round(todayNutrition.proteinG)}g${profile?.dailyProteinGoal ? ` / ${profile.dailyProteinGoal}g goal` : ""}
+- Carbs: ${Math.round(todayNutrition.carbsG)}g  |  Fat: ${Math.round(todayNutrition.fatG)}g`
+  : "No meals logged today yet."}
 
 ${availableTemplates}
 
@@ -202,7 +210,31 @@ router.post("/message", requireAuth, async (req, res) => {
       .from(equipmentTable)
       .where(and(eq(equipmentTable.userId, user.id)));
 
-    const systemPrompt = buildSystemPrompt(profile, recentWorkouts, userEquipment);
+    // Today's nutrition context
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayMeals = await db
+      .select()
+      .from(mealsTable)
+      .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, todayStart)));
+
+    let todayNutrition: { calories: number; proteinG: number; carbsG: number; fatG: number; mealCount: number } | null = null;
+    if (todayMeals.length > 0) {
+      const mealIds = todayMeals.map((m) => m.id);
+      const allFoodItems = await Promise.all(
+        mealIds.map((id) => db.select().from(mealFoodItemsTable).where(eq(mealFoodItemsTable.mealId, id)))
+      );
+      const flatItems = allFoodItems.flat();
+      todayNutrition = {
+        mealCount: todayMeals.length,
+        calories: flatItems.reduce((s, f) => s + f.calories, 0),
+        proteinG: flatItems.reduce((s, f) => s + f.proteinG, 0),
+        carbsG: flatItems.reduce((s, f) => s + f.carbsG, 0),
+        fatG: flatItems.reduce((s, f) => s + f.fatG, 0),
+      };
+    }
+
+    const systemPrompt = buildSystemPrompt(profile, recentWorkouts, userEquipment, todayNutrition);
 
     const chatMessages = history.map((m) => ({
       role: m.role as "user" | "assistant",

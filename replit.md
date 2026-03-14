@@ -194,6 +194,35 @@ Every package extends `tsconfig.base.json` with `composite: true`. Always typech
 
 `components/GoalInsightsPanel.tsx` — renders goal sections with collapsible headers, 2-column insight cards (icon, value, progress bar, trend arrow, detail text). `compact` prop shows top 2 per goal (dashboard). Full mode (progress page) shows all 4.
 
+## Health Integration Architecture
+
+`lib/healthIntegration.ts` — Apple Health & Google Fit ready stub module:
+- Full TypeScript type definitions for `HealthWorkout`, `HealthBodyMeasurement`, `HealthStepCount`, `HealthSleep`, `HealthHeartRate`
+- `getHealthPlatform()` — returns `"apple_health" | "health_connect" | "none"`
+- `requestHealthPermissions()` / `getHealthPermissions()` — stub permission flow
+- Read stubs: `fetchHealthWorkouts()`, `fetchLatestWeight()`, `fetchStepCounts()`, `fetchSleepData()`, `fetchHeartRateData()`
+- Write stubs: `writeWorkoutToHealth()`, `writeWaterIntakeToHealth()`
+- `getImportableWorkouts()` — diff helper for future Health → FitLog import flow
+- All stubs return empty/null with documented TODO comments for native SDK wiring
+
+## Cache Invalidation Pattern
+
+All mutations that modify state invalidate the full set of affected query keys:
+
+**Workout mutations** (`log.tsx`, `execute.tsx`, `workouts.tsx` delete) invalidate:
+`workouts`, `todayStats`, `weeklyStats`, `workoutSummary`, `recentActivity`, `streaks`, `achievements`
+
+**Meal mutations** (`meals/add.tsx` create; `meals.tsx` delete/duplicate/logFav) invalidate via `invalidateMealRelated()` helper:
+`meals`, `mealsToday`, `todayStats`, `nutritionStats`, `streaks`, `achievements`
+
+## AI Coach Context
+
+`POST /api/coach/message` builds a rich system prompt including:
+- User profile (goals, experience, equipment, location, duration preference, weekly days)
+- Recent 20 workouts (last 30 days with days-ago labels)
+- **Today's nutrition** — meals logged, calories, protein, carbs, fat vs. goals
+- All 25+ workout template names (so coach can make precise in-app references)
+
 ## Key Decisions
 
 - No JWT library — custom SHA-256 + random session tokens
@@ -201,3 +230,4 @@ Every package extends `tsconfig.base.json` with `composite: true`. Always typech
 - No `victory-native` (requires Skia) — custom SVG/View-based charts
 - Web platform: top inset 67px, bottom 34px
 - `EXPO_PUBLIC_DOMAIN` env var used for API base URL
+- Query key convention: bare string arrays e.g. `["workouts"]`, never add numeric suffixes

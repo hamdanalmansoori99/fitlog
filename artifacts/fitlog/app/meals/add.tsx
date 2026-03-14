@@ -106,6 +106,9 @@ export default function AddMealScreen() {
       queryClient.invalidateQueries({ queryKey: ["meals"] });
       queryClient.invalidateQueries({ queryKey: ["mealsToday"] });
       queryClient.invalidateQueries({ queryKey: ["todayStats"] });
+      queryClient.invalidateQueries({ queryKey: ["nutritionStats"] });
+      queryClient.invalidateQueries({ queryKey: ["streaks"] });
+      queryClient.invalidateQueries({ queryKey: ["achievements"] });
       setSuccess(true);
       setTimeout(() => router.back(), 1800);
     },
