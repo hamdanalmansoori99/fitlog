@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, recoveryLogsTable } from "@workspace/db";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lt, desc } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
 const router = Router();
@@ -22,7 +22,7 @@ router.get("/today", requireAuth, async (req, res) => {
       .where(and(
         eq(recoveryLogsTable.userId, user.id),
         gte(recoveryLogsTable.date, start),
-        lte(recoveryLogsTable.date, end)
+        lt(recoveryLogsTable.date, end)
       ))
       .limit(1);
     res.json({ log: log ?? null });
@@ -59,7 +59,7 @@ router.post("/log", requireAuth, async (req, res) => {
       .where(and(
         eq(recoveryLogsTable.userId, user.id),
         gte(recoveryLogsTable.date, start),
-        lte(recoveryLogsTable.date, end)
+        lt(recoveryLogsTable.date, end)
       ));
 
     const [log] = await db.insert(recoveryLogsTable).values({

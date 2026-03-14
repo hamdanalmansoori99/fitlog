@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable, profilesTable } from "@workspace/db";
-import { eq, and, gte, lte, desc, inArray } from "drizzle-orm";
+import { eq, and, gte, desc, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
 const router = Router();

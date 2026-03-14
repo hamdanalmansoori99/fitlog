@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, workoutsTable, workoutExercisesTable, workoutSetsTable, mealsTable, mealFoodItemsTable, profilesTable } from "@workspace/db";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { trackEvent } from "../services/analyticsService";
 
@@ -42,14 +42,14 @@ router.get("/stats/today", requireAuth, async (req, res) => {
       .where(and(
         eq(workoutsTable.userId, user.id),
         gte(workoutsTable.date, today),
-        lte(workoutsTable.date, tomorrow)
+        lt(workoutsTable.date, tomorrow)
       ));
 
     const todayMeals = await db.select().from(mealsTable)
       .where(and(
         eq(mealsTable.userId, user.id),
         gte(mealsTable.date, today),
-        lte(mealsTable.date, tomorrow)
+        lt(mealsTable.date, tomorrow)
       ));
 
     const caloriesBurned = todayWorkouts.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0);
@@ -83,7 +83,7 @@ router.get("/stats/weekly", requireAuth, async (req, res) => {
         .where(and(
           eq(workoutsTable.userId, user.id),
           gte(workoutsTable.date, date),
-          lte(workoutsTable.date, nextDay)
+          lt(workoutsTable.date, nextDay)
         ));
 
       const activeMinutes = workouts.reduce((sum, w) => sum + (w.durationMinutes || 0), 0);
@@ -136,7 +136,7 @@ router.get("/stats/summary", requireAuth, async (req, res) => {
         .where(and(
           eq(workoutsTable.userId, user.id),
           gte(workoutsTable.date, weekStart),
-          lte(workoutsTable.date, weekEnd)
+          lt(workoutsTable.date, weekEnd)
         ));
       
       const weekLabel = `W${8 - i}`;

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, waterLogsTable, profilesTable } from "@workspace/db";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lt, desc } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
 const router = Router();
@@ -21,7 +21,7 @@ router.get("/today", requireAuth, async (req, res) => {
           and(
             eq(waterLogsTable.userId, user.id),
             gte(waterLogsTable.loggedAt, today),
-            lte(waterLogsTable.loggedAt, tomorrow)
+            lt(waterLogsTable.loggedAt, tomorrow)
           )
         )
         .orderBy(desc(waterLogsTable.loggedAt)),

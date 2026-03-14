@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, conversationsTable, messagesTable, profilesTable, workoutsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable } from "@workspace/db";
-import { eq, and, desc, gte, lte } from "drizzle-orm";
+import { eq, and, desc, gte, lt } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
@@ -258,7 +258,7 @@ router.post("/message", requireAuth, async (req, res) => {
       .where(and(
         eq(recoveryLogsTable.userId, user.id),
         gte(recoveryLogsTable.date, todayStart),
-        lte(recoveryLogsTable.date, todayEnd),
+        lt(recoveryLogsTable.date, todayEnd),
       ))
       .limit(1);
     const todayRecovery = recoveryRows[0] ?? null;
