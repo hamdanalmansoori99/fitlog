@@ -184,31 +184,6 @@ router.get("/recent", requireAuth, async (req, res) => {
       .orderBy(desc(mealsTable.date))
       .limit(3);
     
-    const activities = [
-      ...recentWorkouts.map(w => ({
-        id: w.id,
-        type: "workout" as const,
-        name: w.name || w.activityType,
-        date: w.date,
-        activityType: w.activityType,
-        keyStat: w.durationMinutes 
-          ? `${w.durationMinutes} min${w.distanceKm ? ` · ${w.distanceKm.toFixed(1)} km` : ""}` 
-          : w.caloriesBurned ? `${w.caloriesBurned} kcal` : null,
-      })),
-      ...recentMeals.map(async m => {
-        const foodItems = await db.select().from(mealFoodItemsTable).where(eq(mealFoodItemsTable.mealId, m.id));
-        const totalCal = foodItems.reduce((s, f) => s + f.calories, 0);
-        return {
-          id: m.id,
-          type: "meal" as const,
-          name: m.name,
-          date: m.date,
-          activityType: m.category,
-          keyStat: `${Math.round(totalCal)} kcal`,
-        };
-      })
-    ];
-    
     const resolvedMeals = await Promise.all(recentMeals.map(async m => {
       const foodItems = await db.select().from(mealFoodItemsTable).where(eq(mealFoodItemsTable.mealId, m.id));
       const totalCal = foodItems.reduce((s, f) => s + f.calories, 0);

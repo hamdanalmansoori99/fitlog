@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { db, conversations, messages, profilesTable, workoutsTable, equipmentTable, mealsTable, mealFoodItemsTable } from "@workspace/db";
-import { eq, and, desc, gte } from "drizzle-orm";
+import { db, conversations, messages, profilesTable, workoutsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable } from "@workspace/db";
+import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 const router = Router();
 
-function buildSystemPrompt(profile: any, recentWorkouts: any[], equipment: any[], todayNutrition?: { calories: number; proteinG: number; carbsG: number; fatG: number; mealCount: number } | null): string {
+function buildSystemPrompt(profile: any, recentWorkouts: any[], equipment: any[], todayNutrition?: { calories: number; proteinG: number; carbsG: number; fatG: number; mealCount: number } | null, todayRecovery?: { sleepHours?: number | null; sleepQuality?: number | null; energyLevel?: number | null; stressLevel?: number | null; overallFeeling?: number | null; soreness?: Record<string, number> | null } | null): string {
   const today = new Date();
   const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
   const dateStr = today.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -85,6 +85,19 @@ ${todayNutrition
 - Protein: ${Math.round(todayNutrition.proteinG)}g${profile?.dailyProteinGoal ? ` / ${profile.dailyProteinGoal}g goal` : ""}
 - Carbs: ${Math.round(todayNutrition.carbsG)}g  |  Fat: ${Math.round(todayNutrition.fatG)}g`
   : "No meals logged today yet."}
+
+TODAY'S RECOVERY:
+${todayRecovery
+  ? [
+      todayRecovery.sleepHours != null ? `- Sleep: ${todayRecovery.sleepHours}h${todayRecovery.sleepQuality != null ? ` (quality ${todayRecovery.sleepQuality}/5)` : ""}` : null,
+      todayRecovery.energyLevel != null ? `- Energy level: ${todayRecovery.energyLevel}/5` : null,
+      todayRecovery.stressLevel != null ? `- Stress level: ${todayRecovery.stressLevel}/5` : null,
+      todayRecovery.overallFeeling != null ? `- Overall feeling: ${todayRecovery.overallFeeling}/5` : null,
+      todayRecovery.soreness && Object.keys(todayRecovery.soreness).length > 0
+        ? `- Muscle soreness: ${Object.entries(todayRecovery.soreness).map(([part, val]) => `${part} (${val}/3)`).join(", ")}`
+        : null,
+    ].filter(Boolean).join("\n") || "No recovery data logged today."
+  : "No recovery data logged today."}
 
 ${availableTemplates}
 
@@ -234,7 +247,20 @@ router.post("/message", requireAuth, async (req, res) => {
       };
     }
 
-    const systemPrompt = buildSystemPrompt(profile, recentWorkouts, userEquipment, todayNutrition);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+    const recoveryRows = await db
+      .select()
+      .from(recoveryLogsTable)
+      .where(and(
+        eq(recoveryLogsTable.userId, user.id),
+        gte(recoveryLogsTable.date, todayStart),
+        lte(recoveryLogsTable.date, todayEnd),
+      ))
+      .limit(1);
+    const todayRecovery = recoveryRows[0] ?? null;
+
+    const systemPrompt = buildSystemPrompt(profile, recentWorkouts, userEquipment, todayNutrition, todayRecovery);
 
     const chatMessages = history.map((m) => ({
       role: m.role as "user" | "assistant",

@@ -69,8 +69,8 @@ router.put("/", requireAuth, async (req, res) => {
 
     res.json({
       ...profile,
-      firstName,
-      lastName,
+      firstName: firstName ?? user.firstName,
+      lastName: lastName ?? user.lastName,
     });
   } catch (err) {
     console.error("Profile update error:", err);

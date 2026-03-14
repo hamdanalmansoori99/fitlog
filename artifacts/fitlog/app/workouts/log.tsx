@@ -224,12 +224,17 @@ export default function LogWorkoutScreen() {
         }))
       : [];
     
+    const parsedDistance = distanceKm ? parseFloat(distanceKm) : undefined;
+    if (parsedDistance && parsedDistance > 0 && durationMinutes > 0) {
+      metadata.paceMinPerKm = parseFloat((durationMinutes / parsedDistance).toFixed(2));
+    }
+
     mutation.mutate({
       activityType,
       name: workoutName || undefined,
       date: new Date(date + "T" + new Date().toTimeString().slice(0, 5)).toISOString(),
       durationMinutes: durationMinutes || undefined,
-      distanceKm: distanceKm ? parseFloat(distanceKm) : undefined,
+      distanceKm: parsedDistance,
       caloriesBurned: estimatedCals,
       mood: mood || undefined,
       notes: notes || undefined,
