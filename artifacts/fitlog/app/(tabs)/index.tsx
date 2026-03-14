@@ -643,8 +643,8 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* Quick Stats */}
-        <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Today</Text>
+        <Animated.View entering={FadeInDown.delay(80).duration(400)} style={[styles.section, { marginBottom: 28 }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 8 }]}>Today</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsScroll}>
             <View style={styles.statsRow}>
               <StatCard icon="zap" value={todayStats?.caloriesBurned || 0} label="Cal Burned" color={theme.orange} loading={statsLoading} />
