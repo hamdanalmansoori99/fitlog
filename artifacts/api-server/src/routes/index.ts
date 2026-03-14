@@ -13,6 +13,7 @@ import waterRouter from "./water";
 import recoveryRouter from "./recovery";
 import userTemplatesRouter from "./user-templates";
 import mealFavoritesRouter from "./meal-favorites";
+import achievementsRouter from "./achievements";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use("/settings", settingsRouter);
 router.use("/coach", coachRouter);
 router.use("/water", waterRouter);
 router.use("/recovery", recoveryRouter);
+router.use("/achievements", achievementsRouter);
 
 export default router;

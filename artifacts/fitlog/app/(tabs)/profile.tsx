@@ -338,6 +338,21 @@ export default function ProfileScreen() {
           </>
         ) : (
           <>
+            {/* ── Achievements ── */}
+            <Pressable
+              onPress={() => router.push("/achievements" as any)}
+              style={[styles.achieveRow, { backgroundColor: theme.card, borderColor: theme.border }]}
+            >
+              <View style={[styles.achieveIcon, { backgroundColor: "#e040fb" + "18" }]}>
+                <Feather name="award" size={18} color="#e040fb" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Achievements</Text>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>Badges, streaks &amp; personal records</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={theme.textMuted} />
+            </Pressable>
+
             {/* ── Notifications ── */}
             <Card>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: globalEnabled ? 16 : 0 }}>
@@ -563,4 +578,12 @@ const styles = StyleSheet.create({
   },
   versionInfo: { alignItems: "center", paddingVertical: 8 },
   versionText: { fontSize: 13 },
+  achieveRow: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 14, borderRadius: 14, borderWidth: 1,
+  },
+  achieveIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: "center", justifyContent: "center",
+  },
 });

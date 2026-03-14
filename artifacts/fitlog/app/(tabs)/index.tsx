@@ -320,6 +320,60 @@ function NutritionInsightsCard({ insights, theme }: { insights: NutritionInsight
   );
 }
 
+// ─── Streak & Achievements Summary Card ───────────────────────────────────────
+
+function StreakSummaryCard({ data, theme }: { data: any; theme: any }) {
+  if (!data) return null;
+  const { streaks, weeklyScore, achievements } = data;
+  const earned = (achievements ?? []).filter((a: any) => a.earned).length;
+  const total = (achievements ?? []).length;
+  const score = weeklyScore?.score ?? 0;
+  const scoreColor = score >= 70 ? theme.primary : score >= 40 ? theme.warning : theme.danger;
+
+  return (
+    <Card style={{ gap: 12 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Streaks</Text>
+        <Pressable
+          onPress={() => router.push("/achievements" as any)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+        >
+          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+            {earned}/{total} badges
+          </Text>
+          <Feather name="chevron-right" size={13} color={theme.primary} />
+        </Pressable>
+      </View>
+
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {[
+          { icon: "activity" as const, value: streaks?.workout?.current ?? 0,    label: "Workout",   color: "#00e676" },
+          { icon: "coffee"   as const, value: streaks?.meal?.current ?? 0,       label: "Meals",     color: "#ffab40" },
+          { icon: "droplet"  as const, value: streaks?.hydration?.current ?? 0,  label: "Hydration", color: "#448aff" },
+        ].map((s, i) => (
+          <View key={s.label} style={{ flex: 1, alignItems: "center", gap: 3 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Feather name={s.icon} size={13} color={s.color} />
+              <Text style={{ color: s.color, fontFamily: "Inter_700Bold", fontSize: 24, lineHeight: 28 }}>{s.value}</Text>
+            </View>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{s.label}</Text>
+          </View>
+        ))}
+        <View style={{ width: 1, backgroundColor: theme.border, height: 44, marginHorizontal: 4 }} />
+        <Pressable
+          onPress={() => router.push("/achievements" as any)}
+          style={{ flex: 1, alignItems: "center", gap: 3 }}
+        >
+          <Text style={{ color: scoreColor, fontFamily: "Inter_700Bold", fontSize: 24, lineHeight: 28 }}>
+            {score}%
+          </Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>This week</Text>
+        </Pressable>
+      </View>
+    </Card>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -381,6 +435,12 @@ export default function HomeScreen() {
     staleTime: 120000,
   });
 
+  const { data: achievementsData, refetch: refetchAchievements } = useQuery({
+    queryKey: ["achievements"],
+    queryFn: api.getAchievements,
+    staleTime: 300000,
+  });
+
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
@@ -388,7 +448,8 @@ export default function HomeScreen() {
     await Promise.all([
       refetchStats(), refetchWeekly(), refetchRecent(),
       refetchProfile(), refetchWorkouts(), refetchStreaks(),
-      refetchMeals(), refetchRecovery(), refetchNutrition(), refetchSummary(),
+      refetchMeals(), refetchRecovery(), refetchNutrition(),
+      refetchSummary(), refetchAchievements(),
     ]);
     setRefreshing(false);
   }, []);
@@ -562,6 +623,13 @@ export default function HomeScreen() {
             </View>
           </ScrollView>
         </Animated.View>
+
+        {/* Streaks & Achievements */}
+        {achievementsData && (
+          <Animated.View entering={FadeInDown.delay(110).duration(400)} style={styles.section}>
+            <StreakSummaryCard data={achievementsData} theme={theme} />
+          </Animated.View>
+        )}
 
         {/* Smart Reminder Banner */}
         <Animated.View entering={FadeInDown.delay(120).duration(400)} style={styles.section}>

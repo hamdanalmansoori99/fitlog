@@ -10,3 +10,4 @@ export * from "./messages";
 export * from "./water";
 export * from "./recovery";
 export * from "./user-templates";
+export * from "./achievements";
