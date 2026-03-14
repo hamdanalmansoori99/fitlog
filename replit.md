@@ -52,9 +52,11 @@ A flexible subscription system (`src/lib/plans.ts`) defines 'Free' and 'Premium'
 
 ### Data Management
 - **Workouts**: Comprehensive logging for 8 activity types, gym exercise tracker with autocomplete, workout templates, and history.
-- **Meals**: Multi-item food logging with macros, calorie summaries, nutrition statistics, barcode scanner (via Open Food Facts API), and AI photo analysis with non-food detection.
-- **Progress**: Tracks streaks, activity breakdown, weight charts, PRs, and body measurements.
+- **Meals**: Multi-item food logging with macros, calorie summaries, nutrition statistics, barcode scanner (via Open Food Facts API), AI photo analysis with non-food detection, AI single-day meal plan generator (Premium), and 7-day AI weekly meal planner (Premium) via `/meals/weekly-plan` — stored in Zustand+AsyncStorage, allows per-meal logging.
+- **Progress**: Tracks streaks, activity breakdown, weight charts, PRs, body measurements, workout history calendar, and progress photos.
 - **Goal-Based Insights**: Client-side engine (`lib/goalInsights.ts`) provides personalized insights based on fitness goals (e.g., weight loss, muscle gain, endurance).
+- **Smart Notifications**: `computeActiveReminders` (lib/notifications.ts) produces ranked, data-aware in-app reminders shown via `SmartReminderBanner`. Banner also fires a personalized web push notification once per day (AsyncStorage-gated). Hydration reminder uses live water log data. Banner receives `waterData` prop from home screen.
+- **Body Measurements Shortcut**: Home screen has a `WeightShortcutCard` chip below the Today stat cards. Shows "Log today's weight" if not yet logged, or today's weight in lbs if already logged. Taps navigate to `/measurements/add` or `/measurements/edit`.
 
 ## API Server
 The Express API server exposes endpoints for user authentication, profile management, workout and meal CRUD operations, progress tracking, equipment, measurements, water intake, and recovery logs. A service layer (`src/services/`) encapsulates business logic.

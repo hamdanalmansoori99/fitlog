@@ -93,11 +93,11 @@ export async function cancelAllNativeNotifications(): Promise<void> {
 
 // ─── Web browser notifications ────────────────────────────────────────────────
 
-export function sendWebNotification(type: NotifType, body?: string): void {
+export function sendWebNotification(type: NotifType, body?: string, title?: string): void {
   if (Platform.OS !== "web" || !("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
   const content = STATIC_CONTENT[type];
-  new Notification(content.title, { body: body || content.body, icon: "/favicon.ico" });
+  new Notification(title || content.title, { body: body || content.body, icon: "/favicon.ico" });
 }
 
 // ─── Dismiss state (AsyncStorage) ────────────────────────────────────────────
@@ -127,9 +127,10 @@ export function computeActiveReminders(data: {
   profile?: any;
   workoutsData?: any;
   weeklyData?: any;
+  waterData?: any;
   enabledTypes: Set<NotifType>;
 }): ReminderData[] {
-  const { streaksData, todayStats, profile, workoutsData, weeklyData, enabledTypes } = data;
+  const { streaksData, todayStats, profile, workoutsData, weeklyData, waterData, enabledTypes } = data;
 
   const hour = new Date().getHours();
   const dayOfWeek = new Date().getDay();
@@ -250,15 +251,39 @@ export function computeActiveReminders(data: {
   }
 
   // ── Hydration (afternoon) ─────────────────────────────────────────────────
+  const waterMl: number = waterData?.totalMl ?? waterData?.logs?.reduce((s: number, l: any) => s + (l.amountMl ?? 0), 0) ?? -1;
+  const waterGoalMl: number = (profile?.dailyWaterGoalOz ?? 64) * 29.5735;
+  const waterKnown = waterMl >= 0;
   if (enabledTypes.has("hydration") && hour >= 12 && hour <= 20) {
-    candidates.push({
-      type: "hydration",
-      priority: 5,
-      title: "You haven't logged water today 💧",
-      body: "Staying hydrated boosts energy and recovery. Aim for 2–3 litres throughout the day.",
-      icon: "droplet",
-      color: "#448aff",
-    });
+    if (!waterKnown) {
+      candidates.push({
+        type: "hydration",
+        priority: 5,
+        title: "Stay hydrated 💧",
+        body: "Staying hydrated boosts energy and recovery. Aim for 2–3 litres throughout the day.",
+        icon: "droplet",
+        color: "#448aff",
+      });
+    } else if (waterMl === 0) {
+      candidates.push({
+        type: "hydration",
+        priority: 4,
+        title: "You haven't logged water today 💧",
+        body: "Log your first glass of water — small habits add up. Aim for 2–3 litres by end of day.",
+        icon: "droplet",
+        color: "#448aff",
+      });
+    } else if (waterGoalMl > 0 && waterMl < waterGoalMl * 0.5) {
+      const liters = (waterGoalMl / 1000).toFixed(1);
+      candidates.push({
+        type: "hydration",
+        priority: 5,
+        title: `Halfway to your water goal 💧`,
+        body: `You're at ${Math.round(waterMl / 1000 * 10) / 10}L of your ${liters}L target — keep sipping!`,
+        icon: "droplet",
+        color: "#448aff",
+      });
+    }
   }
 
   // ── Weekly check-in (Sunday / Monday morning) ─────────────────────────────

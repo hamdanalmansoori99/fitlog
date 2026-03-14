@@ -5,7 +5,8 @@ import Animated, { FadeInDown, FadeOutUp, useAnimatedStyle, useSharedValue, with
 import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useNotificationStore, NOTIF_TYPES } from "@/store/notificationStore";
-import { computeActiveReminders, dismissReminder, type ReminderData } from "@/lib/notifications";
+import { computeActiveReminders, dismissReminder, sendWebNotification, type ReminderData } from "@/lib/notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface Props {
   streaksData?: any;
@@ -14,10 +15,11 @@ interface Props {
   profile?: any;
   workoutsData?: any;
   weeklyData?: any;
+  waterData?: any;
 }
 
 export function SmartReminderBanner({
-  streaksData, todayStats, todayMealsData, profile, workoutsData, weeklyData,
+  streaksData, todayStats, todayMealsData, profile, workoutsData, weeklyData, waterData,
 }: Props) {
   const { theme } = useTheme();
   const { globalEnabled, prefs } = useNotificationStore();
@@ -34,7 +36,7 @@ export function SmartReminderBanner({
     if (!globalEnabled) { setChecked(true); return; }
 
     const allReminders = computeActiveReminders({
-      streaksData, todayStats, todayMealsData, profile, workoutsData, weeklyData, enabledTypes,
+      streaksData, todayStats, todayMealsData, profile, workoutsData, weeklyData, waterData, enabledTypes,
     });
 
     // Filter out ones dismissed recently
@@ -45,6 +47,16 @@ export function SmartReminderBanner({
         setReminder(r);
         setDismissed(false);
         setChecked(true);
+
+        // Fire a personalized web push notification once per day
+        if (Platform.OS === "web") {
+          const dayKey = `smart-web-push-${new Date().toDateString()}`;
+          const alreadySent = await AsyncStorage.getItem(dayKey);
+          if (!alreadySent) {
+            sendWebNotification(r.type, r.body, r.title);
+            await AsyncStorage.setItem(dayKey, "1");
+          }
+        }
         return;
       }
     }

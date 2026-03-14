@@ -625,4 +625,83 @@ The sum of calories across all meals should be close to ${calorieGoal}. Return o
   }
 });
 
+router.post("/generate-week-plan", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+
+    const { getActiveSubscription } = await import("../services/subscriptionService");
+    const sub = await getActiveSubscription(user.id, user.role ?? "user");
+    if (!sub.plan.features.aiPhotoAnalysis) {
+      res.status(403).json({ error: "AI weekly meal plan is a Premium feature" });
+      return;
+    }
+
+    const profiles = await db.select().from(profilesTable).where(eq(profilesTable.userId, user.id)).limit(1);
+    const profile = profiles[0] || {};
+
+    const calorieGoal = req.body.calorieGoal ?? profile.dailyCalorieGoal ?? 2000;
+    const proteinGoal = req.body.proteinGoalG ?? profile.dailyProteinGoal ?? 150;
+    const preferences: string[] = req.body.preferences ?? [];
+    const prefStr = preferences.length > 0 ? preferences.join(", ") : "no specific preferences";
+
+    const today = new Date();
+    const days: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      days.push(d.toISOString().split("T")[0]);
+    }
+
+    const prompt = `You are a nutrition coach. Generate a 7-day meal plan for someone with these goals:
+- Daily calorie target: ${calorieGoal} kcal
+- Daily protein target: ${proteinGoal}g
+- Dietary preferences: ${prefStr}
+
+Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
+{
+  "days": [
+    {
+      "date": "YYYY-MM-DD",
+      "meals": [
+        {
+          "name": "string",
+          "description": "string (1 short sentence)",
+          "category": "Breakfast" | "Lunch" | "Dinner" | "Snacks",
+          "calories": number,
+          "proteinG": number,
+          "carbsG": number,
+          "fatG": number
+        }
+      ]
+    }
+  ]
+}
+
+The 7 dates must be: ${days.join(", ")}.
+Each day should have 4 meals (Breakfast, Lunch, Dinner, Snacks).
+The sum of calories per day should be close to ${calorieGoal}.
+Vary the meals across the week — avoid repeating the same meal on consecutive days.
+Return only the JSON object.`;
+
+    const message = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const raw = (message.content[0] as any).text?.trim() ?? "";
+    const jsonStart = raw.indexOf("{");
+    const jsonEnd = raw.lastIndexOf("}");
+    if (jsonStart === -1 || jsonEnd === -1) {
+      res.status(500).json({ error: "Failed to parse weekly meal plan from AI" });
+      return;
+    }
+    const plan = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    res.json(plan);
+  } catch (err) {
+    console.error("generate-week-plan error:", err);
+    res.status(500).json({ error: "Failed to generate weekly meal plan" });
+  }
+});
+
 export default router;

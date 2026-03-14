@@ -31,6 +31,66 @@ import { RecoveryContext } from "@/lib/coachEngine";
 import { GoalInsightsPanel } from "@/components/GoalInsightsPanel";
 import { computeGoalInsights, GoalInsight } from "@/lib/goalInsights";
 
+// ─── Weight Shortcut Card ─────────────────────────────────────────────────────
+
+function WeightShortcutCard({ todayWeight, measurementId, loading, theme }: {
+  todayWeight: number | null;
+  measurementId: number | null;
+  loading: boolean;
+  theme: any;
+}) {
+  const KG_TO_LBS = 2.20462;
+  const lbs = todayWeight != null ? (todayWeight * KG_TO_LBS).toFixed(1) : null;
+
+  if (loading) return null;
+
+  return (
+    <Pressable
+      onPress={() => {
+        if (measurementId) {
+          router.push({ pathname: "/measurements/edit", params: { id: measurementId } } as any);
+        } else {
+          router.push("/measurements/add" as any);
+        }
+      }}
+      style={({ pressed }) => [
+        styles.weightChip,
+        {
+          backgroundColor: todayWeight != null ? theme.primaryDim : theme.cardAlt,
+          borderColor: todayWeight != null ? theme.primary + "40" : theme.border,
+          opacity: pressed ? 0.8 : 1,
+        },
+      ]}
+    >
+      <View style={[styles.weightChipIcon, { backgroundColor: todayWeight != null ? theme.primary + "22" : theme.border + "88" }]}>
+        <Feather name="activity" size={15} color={todayWeight != null ? theme.primary : theme.textMuted} />
+      </View>
+      <View style={{ flex: 1 }}>
+        {todayWeight != null ? (
+          <>
+            <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 14 }}>
+              {lbs} lbs
+            </Text>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+              Weight logged today · tap to edit
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+              Log today's weight
+            </Text>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+              Tap to add a measurement
+            </Text>
+          </>
+        )}
+      </View>
+      <Feather name="chevron-right" size={16} color={theme.textMuted} />
+    </Pressable>
+  );
+}
+
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -471,6 +531,18 @@ export default function HomeScreen() {
     staleTime: 300000,
   });
 
+  const { data: measurementsData, isLoading: measurementLoading, refetch: refetchMeasurement } = useQuery({
+    queryKey: ["measurementsRecent"],
+    queryFn: () => api.getMeasurements(2),
+    staleTime: 120000,
+  });
+
+  const { data: waterData, refetch: refetchWater } = useQuery({
+    queryKey: ["waterToday"],
+    queryFn: api.getWaterToday,
+    staleTime: 60000,
+  });
+
   const [refreshing, setRefreshing] = React.useState(false);
   const [fabOpen, setFabOpen] = React.useState(false);
 
@@ -481,12 +553,23 @@ export default function HomeScreen() {
       refetchProfile(), refetchWorkouts(), refetchStreaks(),
       refetchMeals(), refetchRecovery(), refetchNutrition(),
       refetchSummary(), refetchAchievements(),
+      refetchMeasurement(), refetchWater(),
     ]);
     setRefreshing(false);
   }, []);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  const { todayWeight, todayMeasurementId } = useMemo(() => {
+    const list: any[] = measurementsData?.measurements ?? [];
+    const todayStr = new Date().toDateString();
+    const todayEntry = list.find((m: any) => new Date(m.date).toDateString() === todayStr);
+    return {
+      todayWeight: todayEntry?.weightKg ?? null,
+      todayMeasurementId: todayEntry?.id ?? null,
+    };
+  }, [measurementsData]);
 
   const hasCoachOnboarding = !!profile?.coachOnboardingComplete;
 
@@ -655,6 +738,16 @@ export default function HomeScreen() {
           </ScrollView>
         </Animated.View>
 
+        {/* Weight Shortcut */}
+        <Animated.View entering={FadeInDown.delay(90).duration(400)} style={styles.section}>
+          <WeightShortcutCard
+            todayWeight={todayWeight}
+            measurementId={todayMeasurementId}
+            loading={measurementLoading}
+            theme={theme}
+          />
+        </Animated.View>
+
         {/* Streaks & Achievements */}
         {achievementsData && (
           <Animated.View entering={FadeInDown.delay(110).duration(400)} style={styles.section}>
@@ -671,6 +764,7 @@ export default function HomeScreen() {
             profile={profile}
             workoutsData={workoutsData}
             weeklyData={weeklyData}
+            waterData={waterData}
           />
         </Animated.View>
 
@@ -945,6 +1039,14 @@ const styles = StyleSheet.create({
   coachChatSub: { fontSize: 13, lineHeight: 18 },
   statsScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
   statsRow: { flexDirection: "row", gap: 12, paddingRight: 20 },
+  weightChip: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 14, borderRadius: 14, borderWidth: 1,
+  },
+  weightChipIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+  },
   cardTitle: { fontSize: 15, marginBottom: 2 },
   cardSub: { fontSize: 12, marginBottom: 16 },
   emptyChart: { height: 90, justifyContent: "center", alignItems: "center", gap: 10 },

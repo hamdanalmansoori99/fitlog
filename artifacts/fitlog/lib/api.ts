@@ -75,6 +75,8 @@ export const api = {
     }),
   generateMealPlan: (body: { calorieGoal?: number; proteinGoalG?: number; preferences?: string[] }) =>
     request<any>("/meals/generate-plan", { method: "POST", body: JSON.stringify(body) }),
+  generateWeekPlan: (body: { calorieGoal?: number; proteinGoalG?: number; preferences?: string[] }) =>
+    request<any>("/meals/generate-week-plan", { method: "POST", body: JSON.stringify(body) }),
   getMeals: (date?: string) => {
     const q = date ? `?date=${date}` : "";
     return request<any>(`/meals${q}`);

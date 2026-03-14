@@ -284,12 +284,21 @@ export default function MealsScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Meals</Text>
-        <Pressable
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/meals/add"); }}
-          style={[styles.addBtn, { backgroundColor: theme.primary }]}
-        >
-          <Feather name="plus" size={22} color="#0f0f1a" />
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/meals/weekly-plan" as any); }}
+            style={[styles.weeklyBtn, { backgroundColor: theme.secondaryDim, borderColor: theme.secondary + "40" }]}
+          >
+            <Feather name="calendar" size={15} color={theme.secondary} />
+            <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Week</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/meals/add"); }}
+            style={[styles.addBtn, { backgroundColor: theme.primary }]}
+          >
+            <Feather name="plus" size={22} color="#0f0f1a" />
+          </Pressable>
+        </View>
       </View>
 
       {/* Date picker */}
@@ -639,6 +648,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingBottom: 12 },
   title: { fontSize: 28 },
   addBtn: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  weeklyBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
   datePicker: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     marginHorizontal: 20, marginBottom: 8, borderWidth: 1, borderRadius: 12,
