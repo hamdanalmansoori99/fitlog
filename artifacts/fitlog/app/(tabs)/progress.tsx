@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
 } from "react-native";
+import Svg, { Circle, G } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -17,37 +18,125 @@ import { computeGoalInsights } from "@/lib/goalInsights";
 
 function MiniLineChart({ data, color }: { data: number[]; color: string }) {
   const { theme } = useTheme();
-  if (data.length < 2) return null;
-  const max = Math.max(...data, 1);
-  const min = Math.min(...data, 0);
+
+  if (data.length === 0) return null;
+
+  if (data.length === 1) {
+    return (
+      <View style={{ height: 60, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textAlign: "center" }}>
+          Log more entries to see your trend
+        </Text>
+      </View>
+    );
+  }
+
+  const max = Math.max(...data);
+  const min = Math.min(...data);
   const range = max - min || 1;
-  
+  const padMin = min - range * 0.15;
+  const padMax = max + range * 0.05;
+  const padRange = padMax - padMin || 1;
+  const delta = data[data.length - 1] - data[0];
+
   return (
-    <View style={{ height: 60, flexDirection: "row", alignItems: "flex-end", gap: 2 }}>
-      {data.map((v, i) => {
-        const h = ((v - min) / range) * 50 + 10;
-        return (
-          <View key={i} style={{ flex: 1, height: h, backgroundColor: color + "80", borderRadius: 4 }} />
-        );
-      })}
+    <View>
+      <View style={{ height: 60, flexDirection: "row", alignItems: "flex-end", gap: 2 }}>
+        {data.map((v, i) => {
+          const h = Math.max(((v - padMin) / padRange) * 50 + 8, 4);
+          const isLast = i === data.length - 1;
+          return (
+            <View
+              key={i}
+              style={{
+                flex: 1,
+                height: h,
+                backgroundColor: isLast ? color : color + "55",
+                borderRadius: 3,
+              }}
+            />
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
+        <Feather
+          name={delta < -0.05 ? "trending-down" : delta > 0.05 ? "trending-up" : "minus"}
+          size={13}
+          color={delta < -0.05 ? theme.primary : delta > 0.05 ? theme.danger : theme.textMuted}
+        />
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+          {delta > 0 ? "+" : ""}{delta.toFixed(1)} kg over {data.length} entries
+        </Text>
+      </View>
     </View>
   );
 }
 
-function SimplePieChart({ data }: { data: { label: string; value: number; color: string }[] }) {
+const DONUT_SIZE = 100;
+const DONUT_R = 36;
+const DONUT_SW = 14;
+const DONUT_CIRC = 2 * Math.PI * DONUT_R;
+const DONUT_CX = DONUT_SIZE / 2;
+const DONUT_CY = DONUT_SIZE / 2;
+
+function DonutChart({ data }: { data: { label: string; value: number; color: string }[] }) {
   const { theme } = useTheme();
-  const total = data.reduce((s, d) => s + d.value, 0);
+  const total = data.reduce((s, d) => s + Math.max(d.value, 0), 0);
+
+  if (total === 0) {
+    return (
+      <View style={styles.pieChart}>
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
+          No macro data yet
+        </Text>
+      </View>
+    );
+  }
+
+  let offset = 0;
+  const segments = data.map(d => {
+    const pct = Math.max(d.value, 0) / total;
+    const dash = pct * DONUT_CIRC;
+    const seg = { ...d, dash, offset };
+    offset += dash;
+    return seg;
+  });
+
   return (
-    <View style={styles.pieChart}>
-      {data.map((d, i) => (
-        <View key={i} style={styles.pieRow}>
-          <View style={[styles.pieDot, { backgroundColor: d.color }]} />
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 }}>{d.label}</Text>
-          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-            {total > 0 ? Math.round((d.value / total) * 100) : 0}%
-          </Text>
-        </View>
-      ))}
+    <View style={[styles.pieChart, { flexDirection: "row", alignItems: "center", gap: 16 }]}>
+      <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
+        <G rotation="-90" origin={`${DONUT_CX},${DONUT_CY}`}>
+          <Circle
+            cx={DONUT_CX} cy={DONUT_CY} r={DONUT_R}
+            stroke={theme.border} strokeWidth={DONUT_SW} fill="none"
+          />
+          {segments.map((seg, i) => (
+            <Circle
+              key={i}
+              cx={DONUT_CX} cy={DONUT_CY} r={DONUT_R}
+              stroke={seg.color}
+              strokeWidth={DONUT_SW}
+              fill="none"
+              strokeDasharray={`${seg.dash} ${DONUT_CIRC - seg.dash}`}
+              strokeDashoffset={-seg.offset}
+              strokeLinecap="butt"
+            />
+          ))}
+        </G>
+      </Svg>
+      <View style={{ flex: 1, gap: 7 }}>
+        {data.map((d, i) => (
+          <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: d.color }} />
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 }}>
+              {d.label}
+            </Text>
+            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+              {total > 0 ? Math.round((Math.max(d.value, 0) / total) * 100) : 0}%
+            </Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -232,11 +321,17 @@ export default function ProgressScreen() {
           <Card>
             <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Workouts per Week</Text>
             <WeeklyBarChart
-              data={workoutSummary.weeklyFrequency.map((w: any) => ({
-                dayLabel: w.weekLabel,
-                activeMinutes: w.count * 10,
-                isToday: false,
-              }))}
+              data={workoutSummary.weeklyFrequency.map((w: any, idx: number, arr: any[]) => {
+                const weeksAgo = arr.length - 1 - idx;
+                const dayLabel = weeksAgo === 0 ? "This wk" : `${weeksAgo}w`;
+                return {
+                  dayLabel,
+                  activeMinutes: w.count,
+                  isToday: weeksAgo === 0,
+                  valueLabel: w.count === 0 ? "" : String(w.count),
+                };
+              })}
+              emptyMessage="No workouts logged yet"
             />
           </Card>
         ) : null}
@@ -244,10 +339,10 @@ export default function ProgressScreen() {
         {/* Activity Breakdown */}
         {summaryLoading ? null : workoutSummary?.activityBreakdown?.length > 0 ? (
           <Card>
-            <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Activity Type</Text>
-            <SimplePieChart
+            <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Activity Breakdown</Text>
+            <DonutChart
               data={workoutSummary.activityBreakdown.map((a: any) => ({
-                label: `${a.activityType} (${a.count})`,
+                label: `${a.activityType.charAt(0).toUpperCase() + a.activityType.slice(1)} (${a.count})`,
                 value: a.count,
                 color: activityColors[a.activityType] || theme.textMuted,
               }))}
@@ -383,23 +478,48 @@ export default function ProgressScreen() {
             <View style={styles.statsGrid}>
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: theme.orange, fontFamily: "Inter_700Bold" }]}>
-                  {Math.round(nutritionStats.avg7DayCalories)}
+                  {Math.round(nutritionStats.avg7DayCalories || 0)}
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>7-day avg kcal</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: theme.orange, fontFamily: "Inter_700Bold" }]}>
-                  {Math.round(nutritionStats.avg30DayCalories)}
+                  {Math.round(nutritionStats.avg30DayCalories || 0)}
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>30-day avg kcal</Text>
               </View>
             </View>
-            <SimplePieChart
+            {caloriesData.length >= 2 && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 4 }]}>
+                  Calorie trend (last {caloriesData.length} days)
+                </Text>
+                <View style={{ height: 44, flexDirection: "row", alignItems: "flex-end", gap: 2 }}>
+                  {caloriesData.map((v, i) => {
+                    const max = Math.max(...caloriesData, 1);
+                    const isLast = i === caloriesData.length - 1;
+                    const h = Math.max((v / max) * 38 + 4, 4);
+                    return (
+                      <View
+                        key={i}
+                        style={{
+                          flex: 1,
+                          height: h,
+                          backgroundColor: isLast ? theme.orange : theme.orange + "50",
+                          borderRadius: 3,
+                        }}
+                      />
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+            <DonutChart
               data={[
-                { label: "Protein", value: nutritionStats.macroSplit.proteinPercentage, color: theme.secondary },
-                { label: "Carbs", value: nutritionStats.macroSplit.carbsPercentage, color: theme.warning },
-                { label: "Fat", value: nutritionStats.macroSplit.fatPercentage, color: theme.orange },
+                { label: "Protein", value: nutritionStats.macroSplit?.proteinPercentage || 0, color: theme.secondary },
+                { label: "Carbs", value: nutritionStats.macroSplit?.carbsPercentage || 0, color: theme.warning },
+                { label: "Fat", value: nutritionStats.macroSplit?.fatPercentage || 0, color: theme.orange },
               ]}
             />
           </Card>
@@ -502,8 +622,6 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, marginTop: 2 },
   statDivider: { width: 1, height: 40 },
   pieChart: { gap: 10, marginTop: 8 },
-  pieRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  pieDot: { width: 10, height: 10, borderRadius: 5 },
   measureHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   rangeRow: { flexDirection: "row", gap: 4 },
   rangeBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },

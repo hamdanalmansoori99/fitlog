@@ -763,7 +763,7 @@ export default function HomeScreen() {
                 ))}
               </View>
             ) : weeklyData?.days ? (
-              <WeeklyBarChart data={weeklyData.days} />
+              <WeeklyBarChart data={weeklyData.days} emptyMessage="Log your first workout to see your weekly activity" />
             ) : (
               <View style={styles.emptyChart}>
                 <Feather name="bar-chart-2" size={28} color={theme.border} />

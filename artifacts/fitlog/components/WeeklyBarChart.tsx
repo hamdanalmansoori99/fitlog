@@ -2,21 +2,34 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
 
-interface DayStat {
+export interface DayStat {
   dayLabel: string;
   activeMinutes: number;
   isToday: boolean;
+  valueLabel?: string;
 }
 
 interface WeeklyBarChartProps {
   data: DayStat[];
+  emptyMessage?: string;
 }
 
 const BAR_TRACK_H = 100;
 
-export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
+export function WeeklyBarChart({ data, emptyMessage = "No activity yet" }: WeeklyBarChartProps) {
   const { theme } = useTheme();
+  const allEmpty = data.length === 0 || data.every(d => d.activeMinutes === 0);
   const maxMinutes = Math.max(...data.map(d => d.activeMinutes), 1);
+
+  if (allEmpty) {
+    return (
+      <View style={styles.emptyWrap}>
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
+          {emptyMessage}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -24,15 +37,28 @@ export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
         {data.map((day, i) => {
           const fillH = Math.max((day.activeMinutes / maxMinutes) * BAR_TRACK_H, day.activeMinutes > 0 ? 6 : 0);
           const barColor = day.isToday ? theme.primary : theme.secondary + "80";
+          const displayLabel =
+            day.valueLabel !== undefined
+              ? day.valueLabel
+              : day.activeMinutes > 0
+              ? String(day.activeMinutes)
+              : "";
 
           return (
             <View key={i} style={styles.barWrap}>
               <View style={styles.barContainer}>
-                {day.activeMinutes > 0 && (
-                  <Text style={[styles.barLabel, { color: day.isToday ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-                    {day.activeMinutes}
+                {displayLabel ? (
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    style={[
+                      styles.barLabel,
+                      { color: day.isToday ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium" },
+                    ]}
+                  >
+                    {displayLabel}
                   </Text>
-                )}
+                ) : null}
                 <View style={[styles.barTrack, { backgroundColor: theme.border }]}>
                   <View style={{ flex: 1 }} />
                   <View
@@ -46,6 +72,8 @@ export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
                 </View>
               </View>
               <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
                 style={[
                   styles.dayLabel,
                   {
@@ -79,4 +107,10 @@ const styles = StyleSheet.create({
   },
   barLabel: { fontSize: 10, marginBottom: 2 },
   dayLabel: { fontSize: 11, textAlign: "center" },
+  emptyWrap: {
+    height: 100,
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 4,
+  },
 });
