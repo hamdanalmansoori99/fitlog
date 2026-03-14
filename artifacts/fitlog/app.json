@@ -11,14 +11,29 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0f0f1a"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.fitlog.app"
     },
-    "android": {},
+    "android": {
+      "package": "com.fitlog.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0f0f1a"
+      }
+    },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/icon.png",
+      "bundler": "metro",
+      "name": "FitLog",
+      "shortName": "FitLog",
+      "description": "Your personal AI-powered fitness companion — workouts, nutrition, coaching and progress tracking.",
+      "themeColor": "#00e676",
+      "backgroundColor": "#0f0f1a",
+      "lang": "en",
+      "output": "single"
     },
     "plugins": [
       [

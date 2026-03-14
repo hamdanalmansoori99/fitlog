@@ -19,7 +19,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
-import { Toast } from "@/components/ui/Toast";
+import { useToast } from "@/components/ui/Toast";
 
 const PRESET_TIMES = [
   "06:00","07:00","07:30","08:00","08:30","09:00","10:00","11:00",
@@ -49,7 +49,7 @@ export default function ProfileScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   
   const [tab, setTab] = useState<"profile" | "settings">("profile");
-  const [toast, setToast] = useState<{ visible: boolean; message: string; type: "success" | "error" }>({ visible: false, message: "", type: "success" });
+  const { showToast } = useToast();
   
   // Profile fields
   const [firstName, setFirstName] = useState(user?.firstName || "");
@@ -102,9 +102,9 @@ export default function ProfileScreen() {
     mutationFn: api.updateProfile,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      setToast({ visible: true, message: "Profile updated!", type: "success" });
+      showToast("Profile updated!");
     },
-    onError: () => setToast({ visible: true, message: "Failed to update profile", type: "error" }),
+    onError: () => showToast("Failed to update profile", "error"),
   });
   
   const deleteMutation = useMutation({
@@ -567,12 +567,6 @@ export default function ProfileScreen() {
         )}
       </ScrollView>
       
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        visible={toast.visible}
-        onHide={() => setToast(t => ({ ...t, visible: false }))}
-      />
     </View>
   );
 }

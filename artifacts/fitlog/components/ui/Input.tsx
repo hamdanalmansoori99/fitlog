@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, forwardRef } from "react";
 import { TextInput, View, Text, StyleSheet, TextInputProps, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
@@ -11,11 +11,14 @@ interface InputProps extends TextInputProps {
   secureEntry?: boolean;
 }
 
-export function Input({ label, error, leftIcon, rightIcon, secureEntry, ...props }: InputProps) {
+export const Input = forwardRef<TextInput, InputProps>(function Input(
+  { label, error, leftIcon, rightIcon, secureEntry, onFocus, onBlur, ...props },
+  ref,
+) {
   const { theme } = useTheme();
   const [secure, setSecure] = useState(secureEntry ?? false);
   const [focused, setFocused] = useState(false);
-  
+
   return (
     <View style={styles.wrapper}>
       {label && (
@@ -23,19 +26,28 @@ export function Input({ label, error, leftIcon, rightIcon, secureEntry, ...props
           {label}
         </Text>
       )}
-      <View style={[
-        styles.container,
-        {
-          backgroundColor: theme.card,
-          borderColor: error ? theme.danger : focused ? theme.primary : theme.border,
-        },
-      ]}>
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.card,
+            borderColor: error ? theme.danger : focused ? theme.primary : theme.border,
+          },
+        ]}
+      >
         {leftIcon && <View style={styles.icon}>{leftIcon}</View>}
         <TextInput
+          ref={ref}
           {...props}
           secureTextEntry={secure}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
           style={[
             styles.input,
             { color: theme.text, fontFamily: "Inter_400Regular" },
@@ -44,7 +56,7 @@ export function Input({ label, error, leftIcon, rightIcon, secureEntry, ...props
           placeholderTextColor={theme.textMuted}
         />
         {secureEntry && (
-          <Pressable onPress={() => setSecure(!secure)} style={styles.icon}>
+          <Pressable onPress={() => setSecure(!secure)} style={styles.icon} hitSlop={8}>
             <Feather name={secure ? "eye" : "eye-off"} size={18} color={theme.textMuted} />
           </Pressable>
         )}
@@ -55,7 +67,7 @@ export function Input({ label, error, leftIcon, rightIcon, secureEntry, ...props
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrapper: { gap: 6 },
@@ -66,7 +78,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     paddingHorizontal: 14,
-    minHeight: 48,
+    minHeight: 52,
   },
   icon: { marginRight: 8, justifyContent: "center", alignItems: "center" },
   input: { flex: 1, fontSize: 15, paddingVertical: 12 },

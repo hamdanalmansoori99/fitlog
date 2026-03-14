@@ -1,74 +1,117 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet, Animated } from "react-native";
+import React, { useEffect, createContext, useContext, useState, useCallback } from "react";
+import { View, Text, StyleSheet, Platform } from "react-native";
+import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
 import { Feather } from "@expo/vector-icons";
-import { useTheme } from "@/hooks/useTheme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type ToastType = "success" | "error" | "info";
 
-interface ToastProps {
+interface ToastMessage {
+  id: string;
   message: string;
-  type?: ToastType;
-  visible: boolean;
-  onHide: () => void;
+  type: ToastType;
 }
 
-export function Toast({ message, type = "success", visible, onHide }: ToastProps) {
-  const { theme } = useTheme();
-  const opacity = React.useRef(new Animated.Value(0)).current;
-  
+interface ToastContextValue {
+  showToast: (message: string, type?: ToastType) => void;
+}
+
+const ToastContext = createContext<ToastContextValue>({ showToast: () => {} });
+
+export function useToast() {
+  return useContext(ToastContext);
+}
+
+const ICON: Record<ToastType, keyof typeof Feather.glyphMap> = {
+  success: "check-circle",
+  error: "alert-circle",
+  info: "info",
+};
+
+const BG: Record<ToastType, string> = {
+  success: "#00e676",
+  error: "#ff5252",
+  info: "#448aff",
+};
+
+const TEXT_COLOR: Record<ToastType, string> = {
+  success: "#0f0f1a",
+  error: "#ffffff",
+  info: "#ffffff",
+};
+
+function ToastItem({ toast, onDone }: { toast: ToastMessage; onDone: (id: string) => void }) {
+  const insets = useSafeAreaInsets();
+
   useEffect(() => {
-    if (visible) {
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-        Animated.delay(2500),
-        Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start(() => onHide());
-    }
-  }, [visible]);
-  
-  if (!visible) return null;
-  
-  const colors = {
-    success: theme.success,
-    error: theme.danger,
-    info: theme.secondary,
-  };
-  
-  const icons = {
-    success: "check-circle" as const,
-    error: "x-circle" as const,
-    info: "info" as const,
-  };
-  
+    const t = setTimeout(() => onDone(toast.id), 3200);
+    return () => clearTimeout(t);
+  }, [toast.id]);
+
+  const bottomOffset = Platform.OS === "web" ? 100 : insets.bottom + 72;
+
   return (
-    <Animated.View style={[
-      styles.toast,
-      { backgroundColor: theme.card, borderColor: colors[type], opacity },
-    ]}>
-      <Feather name={icons[type]} size={18} color={colors[type]} />
-      <Text style={[styles.text, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{message}</Text>
+    <Animated.View
+      entering={FadeInDown.duration(280).springify()}
+      exiting={FadeOutDown.duration(200)}
+      style={[styles.toast, { backgroundColor: BG[toast.type], bottom: bottomOffset }]}
+    >
+      <Feather name={ICON[toast.type]} size={16} color={TEXT_COLOR[toast.type]} />
+      <Text style={[styles.toastText, { color: TEXT_COLOR[toast.type], fontFamily: "Inter_500Medium" }]}>
+        {toast.message}
+      </Text>
     </Animated.View>
   );
 }
 
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const showToast = useCallback((message: string, type: ToastType = "success") => {
+    const id = String(Date.now() + Math.random());
+    setToasts(prev => [...prev.slice(-1), { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  return (
+    <ToastContext.Provider value={{ showToast }}>
+      {children}
+      <View style={styles.container} pointerEvents="none">
+        {toasts.map(t => (
+          <ToastItem key={t.id} toast={t} onDone={removeToast} />
+        ))}
+      </View>
+    </ToastContext.Provider>
+  );
+}
+
 const styles = StyleSheet.create({
+  container: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    zIndex: 9999,
+    pointerEvents: "none",
+  } as any,
   toast: {
     position: "absolute",
-    bottom: 100,
-    left: 20,
-    right: 20,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderRadius: 50,
+    maxWidth: 340,
     shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 9999,
+    elevation: 10,
   },
-  text: { flex: 1, fontSize: 14 },
+  toastText: { fontSize: 14 },
 });

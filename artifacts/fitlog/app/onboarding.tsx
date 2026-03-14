@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import Animated, { FadeInRight, FadeOutLeft, FadeIn } from "react-native-reanimated";
+import Animated, { FadeInRight, FadeIn, ZoomIn } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
@@ -154,6 +154,7 @@ export default function OnboardingScreen() {
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
+  const [phase, setPhase] = useState<"welcome" | "steps" | "complete">("welcome");
   const [step, setStep] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -207,7 +208,7 @@ export default function OnboardingScreen() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      router.replace("/(tabs)");
+      setPhase("complete");
     },
   });
 
@@ -545,6 +546,62 @@ export default function OnboardingScreen() {
     }
   };
 
+  // ── Welcome phase ───────────────────────────────────────────────────────────
+  if (phase === "welcome") {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Animated.View entering={FadeIn.duration(500)} style={[styles.welcomeContainer, { paddingTop: topPad + 40, paddingBottom: insets.bottom + 40 }]}>
+          <View style={[styles.welcomeLogo, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "40" }]}>
+            <Feather name="activity" size={42} color={theme.primary} />
+          </View>
+          <Text style={[styles.welcomeTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+            Welcome to FitLog
+          </Text>
+          <Text style={[styles.welcomeSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Let's build your personalised fitness plan. This takes about 2 minutes and unlocks everything — from AI coaching to custom workouts.
+          </Text>
+
+          <View style={styles.welcomeFeatures}>
+            {[
+              { icon: "zap" as const, label: "AI-powered workout plans" },
+              { icon: "pie-chart" as const, label: "Nutrition tracking & coaching" },
+              { icon: "trending-up" as const, label: "Progress insights & goals" },
+            ].map(f => (
+              <View key={f.label} style={styles.welcomeFeatureRow}>
+                <View style={[styles.welcomeFeatureIcon, { backgroundColor: theme.primaryDim }]}>
+                  <Feather name={f.icon} size={16} color={theme.primary} />
+                </View>
+                <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 14, flex: 1 }}>{f.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          <Button title="Let's get started" onPress={() => setPhase("steps")} style={{ marginTop: 8 }} />
+        </Animated.View>
+      </View>
+    );
+  }
+
+  // ── Completion phase ─────────────────────────────────────────────────────────
+  if (phase === "complete") {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Animated.View entering={ZoomIn.duration(500)} style={[styles.welcomeContainer, { paddingTop: topPad + 40, paddingBottom: insets.bottom + 40 }]}>
+          <View style={[styles.completeCircle, { backgroundColor: theme.primaryDim }]}>
+            <Feather name="check" size={48} color={theme.primary} />
+          </View>
+          <Text style={[styles.welcomeTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+            You're all set, {data.firstName || "there"}!
+          </Text>
+          <Text style={[styles.welcomeSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            Your personalised plan is ready. Time to start your fitness journey.
+          </Text>
+          <Button title="Go to my dashboard" onPress={() => router.replace("/(tabs)")} style={{ marginTop: 16 }} />
+        </Animated.View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Top bar */}
@@ -554,7 +611,9 @@ export default function OnboardingScreen() {
             <Feather name="arrow-left" size={22} color={theme.text} />
           </Pressable>
         ) : (
-          <View style={styles.backBtn} />
+          <Pressable onPress={() => setPhase("welcome")} style={styles.backBtn}>
+            <Feather name="arrow-left" size={22} color={theme.text} />
+          </Pressable>
         )}
 
         {/* Progress bar */}
@@ -607,6 +666,32 @@ export default function OnboardingScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
+  // Welcome / Completion shared
+  welcomeContainer: {
+    flex: 1, alignItems: "center", justifyContent: "center",
+    paddingHorizontal: 28, gap: 16,
+  },
+  welcomeLogo: {
+    width: 88, height: 88, borderRadius: 28,
+    borderWidth: 1.5, alignItems: "center", justifyContent: "center", marginBottom: 4,
+  },
+  welcomeTitle: { fontSize: 28, textAlign: "center", lineHeight: 36 },
+  welcomeSub: { fontSize: 15, textAlign: "center", lineHeight: 22, maxWidth: 320 },
+  welcomeFeatures: { gap: 12, width: "100%", marginTop: 8 },
+  welcomeFeatureRow: {
+    flexDirection: "row", alignItems: "center", gap: 14,
+    paddingHorizontal: 4,
+  },
+  welcomeFeatureIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+  },
+  completeCircle: {
+    width: 100, height: 100, borderRadius: 50,
+    alignItems: "center", justifyContent: "center", marginBottom: 4,
+  },
+
   topBar: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 16, paddingBottom: 16, gap: 12,
