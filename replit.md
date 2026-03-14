@@ -171,15 +171,35 @@ Returns: `{ plan, subscription, features, limits, upgradeAvailable, availablePla
 - `getEffectiveLimits(role, planKey)` — returns limit set
 - `isUpgradeAvailable(role, planKey)` — whether upgrade CTA should show
 
-### Frontend
-- `api.getSubscription()` in `lib/api.ts`
-- Settings tab in `profile.tsx` shows a **Plan card** with current plan badge, upgrade CTA ("Coming soon") when on Free plan
+### Frontend hooks & components
+- `hooks/useSubscription.ts` — `useSubscription()` hook; returns `{ isPremium, tier, features, limits, upgradeAvailable, plan, availablePlans }`
+- `components/PremiumGate.tsx` — wraps any content with a translucent lock overlay + "Upgrade to Premium" CTA when the feature is unavailable on current plan. Props: `feature` (key from `SubscriptionFeatures`), `message?`, `compact?`, `minHeight?`
+- `components/PremiumBadge.tsx` — small inline badge for labeling premium-only items. Props: `small` (icon-only), `label?`, `color?`
+- `app/subscription.tsx` — full plan comparison screen. Shows Free vs Premium cards, monthly/yearly billing toggle, pricing, feature list, and upgrade CTA (billing placeholder). Dev-mode plan simulator included (shows only when `__DEV__ === true`)
+
+### API methods (`lib/api.ts`)
+- `api.getSubscription()` — GET /api/subscription
+- `api.requestUpgrade({ plan, billingCycle })` — POST /api/subscription/upgrade (returns 402 billing placeholder)
+- `api.cancelSubscription()` — POST /api/subscription/cancel
+- `api.simulateSubscription(planKey)` — POST /api/subscription/simulate (dev only)
+
+### Feature gates (live)
+- **Meals → Add Meal**: AI photo scan banner wrapped in `<PremiumGate feature="aiPhotoAnalysis">` — free users see lock overlay instead of scan button; API also returns 403
+- **Progress → Activity Breakdown**: `DonutChart` wrapped in `<PremiumGate feature="advancedAnalytics">`
+- **Progress → Weight trend chart**: `MiniLineChart` wrapped in `<PremiumGate feature="advancedAnalytics">`
+- **Progress → Macro DonutChart**: wrapped in `<PremiumGate feature="advancedAnalytics">`
+- **My Templates**: header shows `X / 10 templates` counter for free users; "+" button becomes zap (→ subscription screen) when at limit; limit warning banner appears when at or near limit; API enforces `maxSavedTemplates` server-side too
+- **Profile → Settings tab**: "Upgrade to Premium" row now navigates to `/subscription` (was "Soon" badge)
+
+### API feature gates (backend)
+- `POST /api/meals/analyze-photo` — returns 403 `{ error, feature:"aiPhotoAnalysis", upgradeAvailable:true }` for free users
+- `POST /api/workouts/my-templates` — returns 403 `{ error, feature:"unlimitedTemplates", limit, current, upgradeAvailable:true }` when at template limit
 
 ### Wiring Stripe (when ready)
 1. Add Stripe integration (see integrations skill)
-2. Create a checkout route that creates a Stripe session
-3. Add a webhook route that calls `setSubscriptionPlan(userId, "premium", { externalId, periodEnd })`
-4. Gate premium routes with `requireRole("premium")` or `hasPlanFeature` checks
+2. Replace `POST /api/subscription/upgrade` with a real Stripe Checkout session creator
+3. Add `POST /api/subscription/stripe-webhook` that calls `setSubscriptionPlan(userId, "premium", { externalId, periodEnd })`
+4. Gate any additional premium routes with `requireRole("premium")` or `hasPlanFeature` checks
 
 ## TypeScript & Composite Projects
 

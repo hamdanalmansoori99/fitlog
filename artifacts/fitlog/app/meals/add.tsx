@@ -14,6 +14,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { PremiumGate } from "@/components/PremiumGate";
 
 const CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 const UNITS = ["grams", "oz", "cups", "pieces", "servings", "ml"];
@@ -290,21 +291,23 @@ export default function AddMealScreen() {
       >
         {/* ── AI Scan Banner ── */}
         {!photoUri && !scanning && (
-          <Pressable
-            onPress={showPhotoPicker}
-            style={[styles.scanBanner, { backgroundColor: theme.secondary + "12", borderColor: theme.secondary + "40" }]}
-          >
-            <View style={[styles.scanIconCircle, { backgroundColor: theme.secondary + "20" }]}>
-              <Feather name="camera" size={22} color={theme.secondary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Scan with AI</Text>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-                Photo → instant food detection &amp; nutrition estimates
-              </Text>
-            </View>
-            <Feather name="chevron-right" size={18} color={theme.secondary} />
-          </Pressable>
+          <PremiumGate feature="aiPhotoAnalysis" minHeight={72} compact>
+            <Pressable
+              onPress={showPhotoPicker}
+              style={[styles.scanBanner, { backgroundColor: theme.secondary + "12", borderColor: theme.secondary + "40" }]}
+            >
+              <View style={[styles.scanIconCircle, { backgroundColor: theme.secondary + "20" }]}>
+                <Feather name="camera" size={22} color={theme.secondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Scan with AI</Text>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                  Photo → instant food detection &amp; nutrition estimates
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={theme.secondary} />
+            </Pressable>
+          </PremiumGate>
         )}
 
         {/* ── Scanning ── */}

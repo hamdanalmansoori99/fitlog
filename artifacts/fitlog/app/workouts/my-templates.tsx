@@ -11,6 +11,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
+import { useSubscription } from "@/hooks/useSubscription";
 
 const ACTIVITY_COLORS: Record<string, string> = {
   cycling: "secondary", running: "primary", walking: "cyan",
@@ -36,6 +37,7 @@ export default function MyTemplatesScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const { limits, isPremium } = useSubscription();
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -47,6 +49,8 @@ export default function MyTemplatesScreen() {
   });
 
   const templates: any[] = data?.templates || [];
+  const templateLimit = isPremium ? null : (limits.maxSavedTemplates ?? 10);
+  const atLimit = templateLimit !== null && templates.length >= templateLimit;
   const favorites = templates.filter((t) => t.isFavorite);
   const rest = templates.filter((t) => !t.isFavorite);
 
@@ -118,12 +122,25 @@ export default function MyTemplatesScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
-        <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>My Templates</Text>
+        <View style={{ flex: 1, alignItems: "center" }}>
+          <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>My Templates</Text>
+          {templateLimit !== null && (
+            <Text style={{ color: templates.length >= templateLimit ? theme.danger : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>
+              {templates.length} / {templateLimit} templates
+            </Text>
+          )}
+        </View>
         <Pressable
-          onPress={() => setShowCreate(true)}
-          style={[styles.createBtn, { backgroundColor: theme.primary }]}
+          onPress={() => {
+            if (atLimit) {
+              router.push("/subscription" as any);
+            } else {
+              setShowCreate(true);
+            }
+          }}
+          style={[styles.createBtn, { backgroundColor: atLimit ? "#448aff" : theme.primary }]}
         >
-          <Feather name="plus" size={20} color="#0f0f1a" />
+          <Feather name={atLimit ? "zap" : "plus"} size={20} color="#0f0f1a" />
         </Pressable>
       </View>
 
@@ -131,6 +148,34 @@ export default function MyTemplatesScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40, gap: 16 }}
       >
+        {/* Template limit warning */}
+        {templateLimit !== null && templates.length >= templateLimit - 1 && (
+          <Animated.View entering={FadeInDown.duration(300)}>
+            <Pressable
+              onPress={() => router.push("/subscription" as any)}
+              style={[styles.limitBanner, {
+                backgroundColor: templates.length >= templateLimit ? "#ff525212" : theme.warning + "12",
+                borderColor: templates.length >= templateLimit ? "#ff525244" : theme.warning + "44",
+              }]}
+            >
+              <Feather
+                name="zap"
+                size={16}
+                color={templates.length >= templateLimit ? "#ff5252" : theme.warning}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: templates.length >= templateLimit ? "#ff5252" : theme.warning, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                  {templates.length >= templateLimit ? "Template limit reached" : `Almost at your limit (${templates.length}/${templateLimit})`}
+                </Text>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>
+                  Upgrade to Premium for unlimited saved plans
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={14} color={theme.textMuted} />
+            </Pressable>
+          </Animated.View>
+        )}
+
         {/* Create new template inline form */}
         {showCreate && (
           <Animated.View entering={FadeInDown.duration(300)}>
@@ -247,7 +292,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1,
   },
   backBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  navTitle: { flex: 1, fontSize: 20, marginHorizontal: 8 },
+  navTitle: { fontSize: 20, textAlign: "center" },
+  limitBanner: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    padding: 12, borderRadius: 12, borderWidth: 1,
+  },
   createBtn: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   input: {
     borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,

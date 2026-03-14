@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth, getUser } from "../lib/auth";
-import { getActiveSubscription } from "../services/subscriptionService";
+import { getActiveSubscription, setSubscriptionPlan, cancelSubscription } from "../services/subscriptionService";
 import { PLANS } from "../lib/plans";
 
 const router = Router();
@@ -60,6 +60,59 @@ router.get("/", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Get subscription error:", err);
     res.status(500).json({ error: "Failed to get subscription" });
+  }
+});
+
+/**
+ * POST /api/subscription/upgrade
+ * Billing placeholder — returns instructions for when Stripe is wired in.
+ * Wire this to your Stripe Checkout session creation in production.
+ */
+router.post("/upgrade", requireAuth, async (req, res) => {
+  const { plan = "premium", billingCycle = "monthly" } = req.body as { plan?: string; billingCycle?: string };
+  res.status(402).json({
+    status: "billing_not_configured",
+    message: "Stripe billing will be available soon. No charge has been made.",
+    requestedPlan: plan,
+    billingCycle,
+    hint: "Wire POST /api/subscription/stripe-webhook + createCheckoutSession here.",
+  });
+});
+
+/**
+ * POST /api/subscription/cancel
+ * Cancels the user's subscription at period end.
+ */
+router.post("/cancel", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req) as any;
+    await cancelSubscription(user.id);
+    res.json({ ok: true, message: "Subscription cancelled. Access continues until period end." });
+  } catch (err) {
+    console.error("Cancel subscription error:", err);
+    res.status(500).json({ error: "Failed to cancel subscription" });
+  }
+});
+
+/**
+ * POST /api/subscription/simulate
+ * Dev/testing only — force a plan for the current user.
+ * Disabled in NODE_ENV=production.
+ */
+router.post("/simulate", requireAuth, async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  try {
+    const user = getUser(req) as any;
+    const { planKey = "free" } = req.body as { planKey?: "free" | "premium" };
+    await setSubscriptionPlan(user.id, planKey, { status: "active" });
+    const sub = await getActiveSubscription(user.id, user.role ?? "user");
+    res.json({ ok: true, plan: sub.plan.name, features: sub.plan.features, limits: sub.plan.limits });
+  } catch (err) {
+    console.error("Simulate subscription error:", err);
+    res.status(500).json({ error: "Failed to simulate subscription" });
   }
 });
 

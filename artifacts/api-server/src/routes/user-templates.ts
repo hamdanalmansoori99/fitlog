@@ -26,6 +26,26 @@ router.get("/", requireAuth, async (req, res) => {
 router.post("/", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
+
+    // Enforce plan template limit
+    const { getActiveSubscription } = await import("../services/subscriptionService");
+    const sub = await getActiveSubscription(user.id, (user as any).role ?? "user");
+    const limit = sub.plan.limits.maxSavedTemplates;
+    if (isFinite(limit)) {
+      const existing = await db.select().from(userWorkoutTemplatesTable)
+        .where(eq(userWorkoutTemplatesTable.userId, user.id));
+      if (existing.length >= limit) {
+        res.status(403).json({
+          error: `Template limit reached (${limit} on ${sub.plan.name} plan). Upgrade to save unlimited templates.`,
+          feature: "unlimitedTemplates",
+          limit,
+          current: existing.length,
+          upgradeAvailable: true,
+        });
+        return;
+      }
+    }
+
     const { name, activityType, description, estimatedMinutes, exercises, sourceWorkoutId } = req.body;
 
     let resolvedExercises = exercises ?? [];

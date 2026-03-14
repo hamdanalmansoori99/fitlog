@@ -434,7 +434,10 @@ export default function ProfileScreen() {
               </View>
 
               {subscriptionData?.upgradeAvailable && (
-                <Pressable style={[styles.upgradeRow, { backgroundColor: "#448aff0d", borderColor: "#448aff35" }]}>
+                <Pressable
+                  onPress={() => router.push("/subscription" as any)}
+                  style={[styles.upgradeRow, { backgroundColor: "#448aff0d", borderColor: "#448aff35" }]}
+                >
                   <Feather name="trending-up" size={16} color="#448aff" />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: "#448aff", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Upgrade to Premium</Text>
@@ -442,9 +445,7 @@ export default function ProfileScreen() {
                       Photo analysis · Unlimited plans · Advanced analytics
                     </Text>
                   </View>
-                  <View style={styles.soonBadge}>
-                    <Text style={{ color: "#448aff", fontFamily: "Inter_600SemiBold", fontSize: 10 }}>Soon</Text>
-                  </View>
+                  <Feather name="chevron-right" size={14} color="#448aff" />
                 </Pressable>
               )}
             </Card>

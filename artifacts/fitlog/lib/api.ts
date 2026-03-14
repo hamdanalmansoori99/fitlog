@@ -162,6 +162,11 @@ export const api = {
 
   // Subscription
   getSubscription: () => request<any>("/subscription"),
+  requestUpgrade: (body: { plan?: string; billingCycle?: "monthly" | "yearly" }) =>
+    request<any>("/subscription/upgrade", { method: "POST", body: JSON.stringify(body) }),
+  cancelSubscription: () => request<any>("/subscription/cancel", { method: "POST" }),
+  simulateSubscription: (planKey: "free" | "premium") =>
+    request<any>("/subscription/simulate", { method: "POST", body: JSON.stringify({ planKey }) }),
 
   // Favourite Meals
   getFavoriteMeals: () => request<any>("/meals/favorites"),

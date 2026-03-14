@@ -28,6 +28,18 @@ async function getMealWithFoodItems(mealId: number, userId: number) {
 
 router.post("/analyze-photo", requireAuth, async (req, res) => {
   try {
+    const user = getUser(req) as any;
+    const { getActiveSubscription } = await import("../services/subscriptionService");
+    const sub = await getActiveSubscription(user.id, user.role ?? "user");
+    if (!sub.plan.features.aiPhotoAnalysis) {
+      res.status(403).json({
+        error: "AI meal photo analysis is a Premium feature",
+        feature: "aiPhotoAnalysis",
+        upgradeAvailable: true,
+      });
+      return;
+    }
+
     const { imageBase64, mimeType = "image/jpeg" } = req.body;
     if (!imageBase64) {
       res.status(400).json({ error: "imageBase64 is required" });

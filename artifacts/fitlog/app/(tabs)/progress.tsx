@@ -15,6 +15,8 @@ import { WeeklyBarChart } from "@/components/WeeklyBarChart";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { GoalInsightsPanel } from "@/components/GoalInsightsPanel";
 import { computeGoalInsights } from "@/lib/goalInsights";
+import { PremiumGate } from "@/components/PremiumGate";
+import { PremiumBadge } from "@/components/PremiumBadge";
 
 function MiniLineChart({ data, color }: { data: number[]; color: string }) {
   const { theme } = useTheme();
@@ -158,7 +160,7 @@ export default function ProgressScreen() {
   const [measureDays, setMeasureDays] = useState(30);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
-  
+
   const { data: workoutSummary, isLoading: summaryLoading } = useQuery({ queryKey: ["workoutSummary"], queryFn: api.getWorkoutSummary });
   const { data: nutritionStats, isLoading: nutritionLoading } = useQuery({ queryKey: ["nutritionStats"], queryFn: api.getNutritionStats });
   const { data: streaks, isLoading: streaksLoading } = useQuery({ queryKey: ["streaks"], queryFn: api.getStreaks });
@@ -338,8 +340,12 @@ export default function ProgressScreen() {
         
         {/* Activity Breakdown */}
         {summaryLoading ? null : workoutSummary?.activityBreakdown?.length > 0 ? (
+          <PremiumGate feature="advancedAnalytics" minHeight={180}>
           <Card>
-            <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Activity Breakdown</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+              <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>Activity Breakdown</Text>
+              <PremiumBadge small />
+            </View>
             <DonutChart
               data={workoutSummary.activityBreakdown.map((a: any) => ({
                 label: `${a.activityType.charAt(0).toUpperCase() + a.activityType.slice(1)} (${a.count})`,
@@ -348,6 +354,7 @@ export default function ProgressScreen() {
               }))}
             />
           </Card>
+          </PremiumGate>
         ) : null}
         
         {/* Body Measurements */}
@@ -390,10 +397,14 @@ export default function ProgressScreen() {
             </SkeletonCard>
           ) : weightData.length > 0 ? (
             <>
+              <PremiumGate feature="advancedAnalytics" minHeight={140}>
               <Card>
-                <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Weight over time
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                  <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    Weight over time
+                  </Text>
+                  <PremiumBadge small />
+                </View>
                 <MiniLineChart data={weightData} color={theme.primary} />
                 <View style={styles.weightInfo}>
                   <Text style={[styles.weightCurrent, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
@@ -404,6 +415,7 @@ export default function ProgressScreen() {
                   </Text>
                 </View>
               </Card>
+              </PremiumGate>
               <Card style={{ marginTop: 10 }}>
                 <View style={styles.measureListHeader}>
                   <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
@@ -496,7 +508,7 @@ export default function ProgressScreen() {
                   Calorie trend (last {caloriesData.length} days)
                 </Text>
                 <View style={{ height: 44, flexDirection: "row", alignItems: "flex-end", gap: 2 }}>
-                  {caloriesData.map((v, i) => {
+                  {caloriesData.map((v: number, i: number) => {
                     const max = Math.max(...caloriesData, 1);
                     const isLast = i === caloriesData.length - 1;
                     const h = Math.max((v / max) * 38 + 4, 4);
@@ -515,13 +527,23 @@ export default function ProgressScreen() {
                 </View>
               </View>
             )}
-            <DonutChart
-              data={[
-                { label: "Protein", value: nutritionStats.macroSplit?.proteinPercentage || 0, color: theme.secondary },
-                { label: "Carbs", value: nutritionStats.macroSplit?.carbsPercentage || 0, color: theme.warning },
-                { label: "Fat", value: nutritionStats.macroSplit?.fatPercentage || 0, color: theme.orange },
-              ]}
-            />
+            <PremiumGate feature="advancedAnalytics" minHeight={160}>
+            <View style={{ marginTop: 12 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Macro split (30-day avg)
+                </Text>
+                <PremiumBadge small />
+              </View>
+              <DonutChart
+                data={[
+                  { label: "Protein", value: nutritionStats.macroSplit?.proteinPercentage || 0, color: theme.secondary },
+                  { label: "Carbs", value: nutritionStats.macroSplit?.carbsPercentage || 0, color: theme.warning },
+                  { label: "Fat", value: nutritionStats.macroSplit?.fatPercentage || 0, color: theme.orange },
+                ]}
+              />
+            </View>
+            </PremiumGate>
           </Card>
         ) : (
           <Card>
