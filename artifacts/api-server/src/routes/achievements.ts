@@ -11,6 +11,7 @@ import {
 } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
+import { trackEvent } from "../services/analyticsService";
 
 const router = Router();
 
@@ -189,6 +190,7 @@ router.get("/", requireAuth, async (req, res) => {
       if (c.met && !earnedKeys.has(c.key)) {
         try {
           await db.insert(achievementsTable).values({ userId: user.id, key: c.key, title: c.title });
+          void trackEvent(user.id, "achievement.earned", { key: c.key, title: c.title });
           newlyEarned.push(c.key);
           earnedKeys.add(c.key);
         } catch {}

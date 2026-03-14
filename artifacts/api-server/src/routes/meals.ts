@@ -3,6 +3,7 @@ import { db, mealsTable, mealFoodItemsTable, profilesTable } from "@workspace/db
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { trackEvent } from "../services/analyticsService";
 
 const router = Router();
 
@@ -361,6 +362,13 @@ router.post("/", requireAuth, async (req, res) => {
     }
 
     const fullMeal = await getMealWithFoodItems(meal.id, user.id);
+
+    void trackEvent(user.id, "meal.logged", {
+      category: meal.category,
+      foodItemCount: foodItems?.length ?? 0,
+      hasPhoto: !!meal.photoUrl,
+    });
+
     res.status(201).json(fullMeal);
   } catch (err) {
     console.error("Create meal error:", err);

@@ -11,3 +11,4 @@ export * from "./water";
 export * from "./recovery";
 export * from "./user-templates";
 export * from "./achievements";
+export * from "./events";

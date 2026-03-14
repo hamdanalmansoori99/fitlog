@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, workoutsTable, workoutExercisesTable, workoutSetsTable, mealsTable, mealFoodItemsTable, profilesTable } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
+import { trackEvent } from "../services/analyticsService";
 
 const router = Router();
 
@@ -334,6 +335,14 @@ router.post("/", requireAuth, async (req, res) => {
     }
 
     const fullWorkout = await getWorkoutWithExercises(workout.id, user.id);
+
+    void trackEvent(user.id, "workout.logged", {
+      activityType: workout.activityType,
+      durationMinutes: workout.durationMinutes,
+      caloriesBurned: workout.caloriesBurned,
+      exerciseCount: exercises?.length ?? 0,
+    });
+
     res.status(201).json(fullWorkout);
   } catch (err) {
     console.error("Create workout error:", err);

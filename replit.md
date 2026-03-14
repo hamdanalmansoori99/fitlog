@@ -108,10 +108,40 @@ artifacts-monorepo/
 ### Auth
 - `requireAuth` middleware checks `Authorization: Bearer <token>` header
 - Sessions stored in `sessions` table with 30-day expiry
+- `requireRole(role)` middleware enforces `user → premium → admin` hierarchy (see `src/middleware/requireRole.ts`)
+
+### Service Layer (`src/services/`)
+- `workoutService.ts` — workout CRUD + personal records (extracted from routes)
+- `mealService.ts` — meal CRUD + macro aggregation + recent food names
+- `analyticsService.ts` — fire-and-forget `trackEvent(userId, eventType, properties)` — never throws
+
+### Feature Flags (`src/lib/features.ts`)
+- `hasFeature(role, feature)` — checks access by role
+- `getPlanLimits(role)` — returns `{maxSavedTemplates, maxFavoriteMeals, aiRequestsPerDay, dataRetentionDays}`
+- `getUserTier(role)` — returns `"free" | "premium" | "admin"`
+- All current users default to `"user"` role; `"premium"` and `"admin"` gates exist for future use
 
 ## Database Schema
 
-Tables: `users`, `sessions`, `profiles`, `workouts`, `workout_exercises`, `workout_sets`, `meals`, `meal_food_items`, `equipment`, `body_measurements`, `settings`, `water_logs`, `recovery_logs`
+Tables: `users` (with `role` column), `sessions`, `profiles`, `workouts`, `workout_exercises`, `workout_sets`, `meals`, `meal_food_items`, `equipment`, `body_measurements`, `settings`, `water_logs`, `recovery_logs`, `conversations`, `messages`, `achievements`, `user_workout_templates`, `favorite_meals`, `analytics_events`
+
+### Performance Indexes
+- `workouts`: `(user_id, date)`, `(user_id)`, `(date)`
+- `meals`: `(user_id, date)`, `(user_id)`, `(date)`
+- `workout_exercises`: `(workout_id)`, `(name)`
+- `workout_sets`: `(exercise_id)`, `(weight_kg)`
+- `meal_food_items`: `(meal_id)`, `(name)`
+- `analytics_events`: `(user_id)`, `(event_type)`, `(created_at)`, `(user_id, event_type)`
+- `sessions`: `(user_id)`, `(expires_at)`
+
+### Analytics Events Schema
+`analytics_events(id, user_id, event_type, properties jsonb, platform, app_version, session_id, created_at)`
+Event types tracked: `workout.logged`, `meal.logged`, `achievement.earned`, `template.saved`, `water.logged`, `photo.analyzed`, `ai_coach.queried`, `measurement.logged`, `recovery.logged`
+
+### Admin Readiness
+- `role` column on users (`"user" | "premium" | "admin"`, default `"user"`)
+- `requireRole("admin")` middleware ready to gate any future admin routes
+- `analytics_events` table feeds a future admin dashboard (queries by event_type, date range, user cohort)
 
 ## TypeScript & Composite Projects
 
