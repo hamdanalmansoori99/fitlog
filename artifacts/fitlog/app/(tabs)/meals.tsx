@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert,
+  View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert, ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -100,6 +100,8 @@ export default function MealsScreen() {
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [savingFavId, setSavingFavId] = useState<number | null>(null);
+  const [mealPlan, setMealPlan] = useState<any[] | null>(null);
+  const [planOpen, setPlanOpen] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   const { showToast } = useToast();
@@ -214,6 +216,21 @@ export default function MealsScreen() {
       showToast("Meal logged!", "success");
     },
     onError: () => showToast("Could not log meal. Please try again.", "error"),
+  });
+
+  const generatePlanMutation = useMutation({
+    mutationFn: () => api.generateMealPlan({}),
+    onSuccess: (res: any) => {
+      setMealPlan(res.meals || []);
+      setPlanOpen(true);
+    },
+    onError: (err: any) => {
+      if (err?.message?.includes("Premium")) {
+        showToast("AI meal plans are a Premium feature", "error");
+      } else {
+        showToast("Could not generate meal plan. Please try again.", "error");
+      }
+    },
   });
 
   function handleSaveAsFavorite(meal: any) {
@@ -397,6 +414,85 @@ export default function MealsScreen() {
         ) : data ? (
           <CalorieSummary data={data} />
         ) : null}
+
+        {/* AI Meal Plan Generator */}
+        {isToday && (
+          <Animated.View entering={FadeInDown.delay(80).duration(350)}>
+            {!planOpen ? (
+              <Pressable
+                onPress={() => { if (!generatePlanMutation.isPending) generatePlanMutation.mutate(); }}
+                style={[styles.planBanner, { backgroundColor: theme.secondaryDim, borderColor: theme.secondary + "40" }]}
+              >
+                {generatePlanMutation.isPending ? (
+                  <ActivityIndicator size="small" color={theme.secondary} />
+                ) : (
+                  <View style={[styles.planBannerIcon, { backgroundColor: theme.secondary + "25" }]}>
+                    <Feather name="cpu" size={15} color={theme.secondary} />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                    {generatePlanMutation.isPending ? "Generating your plan…" : "Generate today's meal plan"}
+                  </Text>
+                  <Text style={{ color: theme.secondary + "aa", fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                    AI-tailored to your calorie & macro goals · Premium
+                  </Text>
+                </View>
+                {!generatePlanMutation.isPending && (
+                  <Feather name="chevron-right" size={18} color={theme.secondary} />
+                )}
+              </Pressable>
+            ) : (
+              <View style={[styles.planCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={[styles.planBannerIcon, { backgroundColor: theme.secondaryDim }]}>
+                      <Feather name="cpu" size={15} color={theme.secondary} />
+                    </View>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>AI Meal Plan</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <Pressable onPress={() => generatePlanMutation.mutate()} hitSlop={8}>
+                      <Feather name="refresh-cw" size={16} color={theme.textMuted} />
+                    </Pressable>
+                    <Pressable onPress={() => setPlanOpen(false)} hitSlop={8}>
+                      <Feather name="x" size={16} color={theme.textMuted} />
+                    </Pressable>
+                  </View>
+                </View>
+                {(mealPlan ?? []).map((meal: any, i: number) => (
+                  <View key={i} style={[styles.planMealRow, { borderBottomColor: theme.border }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{meal.name}</Text>
+                      {meal.description ? (
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2, lineHeight: 16 }} numberOfLines={2}>{meal.description}</Text>
+                      ) : null}
+                      <Text style={{ color: theme.warning, fontFamily: "Inter_500Medium", fontSize: 12, marginTop: 4 }}>
+                        {meal.calories} kcal · {meal.proteinG}g P · {meal.carbsG}g C · {meal.fatG}g F
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => router.push({
+                        pathname: "/meals/add",
+                        params: {
+                          prefillName: meal.name,
+                          prefillCalories: meal.calories,
+                          prefillProtein: meal.proteinG,
+                          prefillCarbs: meal.carbsG,
+                          prefillFat: meal.fatG,
+                          category: meal.category ?? "Lunch",
+                        }
+                      })}
+                      style={[styles.planAddBtn, { backgroundColor: theme.primary }]}
+                    >
+                      <Feather name="plus" size={14} color="#0f0f1a" />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Animated.View>
+        )}
 
         {/* First meal empty state */}
         {!mealsLoading && data && meals.length === 0 && isToday && (
@@ -593,4 +689,10 @@ const styles = StyleSheet.create({
   firstMealTitle: { fontSize: 17, textAlign: "center" },
   firstMealSub: { fontSize: 13, lineHeight: 19, textAlign: "center", maxWidth: 280 },
   firstMealBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, marginTop: 4 },
+
+  planBanner: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
+  planBannerIcon: { width: 32, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center" },
+  planCard: { borderRadius: 16, borderWidth: 1, padding: 16 },
+  planMealRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  planAddBtn: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
 });

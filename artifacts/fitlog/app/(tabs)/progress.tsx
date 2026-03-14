@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
+  Modal, Image, Alert,
 } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +18,9 @@ import { GoalInsightsPanel } from "@/components/GoalInsightsPanel";
 import { computeGoalInsights } from "@/lib/goalInsights";
 import { PremiumGate } from "@/components/PremiumGate";
 import { PremiumBadge } from "@/components/PremiumBadge";
+import { WorkoutCalendar } from "@/components/WorkoutCalendar";
+import { usePhotoStore } from "@/store/photoStore";
+import * as ImagePicker from "expo-image-picker";
 
 function MiniLineChart({ data, color }: { data: number[]; color: string }) {
   const { theme } = useTheme();
@@ -158,7 +162,50 @@ export default function ProgressScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [measureDays, setMeasureDays] = useState(30);
+  const [photoViewer, setPhotoViewer] = useState<string | null>(null);
+  const [addPhotoNote, setAddPhotoNote] = useState("");
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const { photos, addPhoto, deletePhoto } = usePhotoStore();
+
+  async function handleAddPhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      const cam = await ImagePicker.requestCameraPermissionsAsync();
+      if (!cam.granted) return;
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
+      if (!result.canceled && result.assets[0]) {
+        addPhoto({ uri: result.assets[0].uri, date: new Date().toISOString().split("T")[0], note: "" });
+      }
+      return;
+    }
+    Alert.alert("Add Progress Photo", "Choose source", [
+      {
+        text: "Camera", onPress: async () => {
+          const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
+          if (!result.canceled && result.assets[0]) {
+            addPhoto({ uri: result.assets[0].uri, date: new Date().toISOString().split("T")[0], note: "" });
+          }
+        }
+      },
+      {
+        text: "Photo Library", onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
+          if (!result.canceled && result.assets[0]) {
+            addPhoto({ uri: result.assets[0].uri, date: new Date().toISOString().split("T")[0], note: "" });
+          }
+        }
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
+  function handleDeletePhoto(id: string) {
+    Alert.alert("Delete Photo?", "This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => deletePhoto(id) },
+    ]);
+  }
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const { data: workoutSummary, isLoading: summaryLoading } = useQuery({ queryKey: ["workoutSummary"], queryFn: api.getWorkoutSummary });
@@ -243,8 +290,14 @@ export default function ProgressScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 16 }}
       >
-        {/* Goal-based insights */}
+        {/* Workout History Calendar */}
         <Animated.View entering={FadeInDown.duration(350)}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Workout History</Text>
+          <WorkoutCalendar />
+        </Animated.View>
+
+        {/* Goal-based insights */}
+        <Animated.View entering={FadeInDown.delay(20).duration(350)}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Goal Insights</Text>
           <GoalInsightsPanel
             insights={goalInsights}
@@ -275,6 +328,93 @@ export default function ProgressScreen() {
           )}
         </Animated.View>
         
+        {/* Progress Photos */}
+        <Animated.View entering={FadeInDown.delay(45).duration(350)}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>Progress Photos</Text>
+            <Pressable
+              onPress={handleAddPhoto}
+              style={[styles.addBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+            >
+              <Feather name="camera" size={14} color={theme.primary} />
+              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Add</Text>
+            </Pressable>
+          </View>
+
+          {photos.length === 0 ? (
+            <View style={[styles.emptyPhotoCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View style={[styles.emptyPhotoIcon, { backgroundColor: theme.cardAlt }]}>
+                <Feather name="camera" size={22} color={theme.textMuted} />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>No photos yet</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", lineHeight: 18, maxWidth: 230 }}>
+                Track your body transformation by adding progress photos over time.
+              </Text>
+              <Pressable
+                onPress={handleAddPhoto}
+                style={[{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, marginTop: 4, borderColor: theme.primary + "50", backgroundColor: theme.primary + "15" }]}
+              >
+                <Feather name="camera" size={14} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Take a photo</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View>
+              {/* Compare strip: oldest vs newest */}
+              {photos.length >= 2 && (
+                <View style={[styles.compareRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>FIRST</Text>
+                    <Pressable onPress={() => setPhotoViewer(photos[0].uri)}>
+                      <Image
+                        source={{ uri: photos[0].uri }}
+                        style={[styles.compareThumb, { borderColor: theme.border }]}
+                        resizeMode="cover"
+                      />
+                    </Pressable>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                      {new Date(photos[0].date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                    </Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: theme.border, marginVertical: 8 }} />
+                  <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>LATEST</Text>
+                    <Pressable onPress={() => setPhotoViewer(photos[photos.length - 1].uri)}>
+                      <Image
+                        source={{ uri: photos[photos.length - 1].uri }}
+                        style={[styles.compareThumb, { borderColor: theme.border }]}
+                        resizeMode="cover"
+                      />
+                    </Pressable>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                      {new Date(photos[photos.length - 1].date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* All photos grid */}
+              <View style={styles.photoGrid}>
+                {[...photos].reverse().map((photo) => (
+                  <Pressable key={photo.id} onPress={() => setPhotoViewer(photo.uri)} style={styles.photoCell}>
+                    <Image source={{ uri: photo.uri }} style={[styles.photoThumb, { borderColor: theme.border }]} resizeMode="cover" />
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4, textAlign: "center" }}>
+                      {new Date(photo.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </Text>
+                    <Pressable
+                      onPress={() => handleDeletePhoto(photo.id)}
+                      style={[styles.photoDeleteBtn, { backgroundColor: theme.danger + "dd" }]}
+                      hitSlop={4}
+                    >
+                      <Feather name="x" size={11} color="#fff" />
+                    </Pressable>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+        </Animated.View>
+
         {/* Workout Stats */}
         <Animated.View entering={FadeInDown.delay(50).duration(350)}>
           {summaryLoading ? (
@@ -636,6 +776,16 @@ export default function ProgressScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Full-screen photo viewer */}
+      <Modal visible={!!photoViewer} transparent animationType="fade" onRequestClose={() => setPhotoViewer(null)}>
+        <Pressable style={{ flex: 1, backgroundColor: "#000000ee", alignItems: "center", justifyContent: "center" }} onPress={() => setPhotoViewer(null)}>
+          {photoViewer && (
+            <Image source={{ uri: photoViewer }} style={{ width: "100%", height: "80%" }} resizeMode="contain" />
+          )}
+          <Text style={{ color: "#ffffff99", fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 16 }}>Tap anywhere to close</Text>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -688,4 +838,12 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  emptyPhotoCard: { borderRadius: 16, borderWidth: 1, padding: 20, alignItems: "center", gap: 10 },
+  emptyPhotoIcon: { width: 56, height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  compareRow: { flexDirection: "row", borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 12, gap: 10 },
+  compareThumb: { width: 100, height: 130, borderRadius: 10, borderWidth: 1 },
+  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  photoCell: { width: "47%", alignItems: "center" },
+  photoThumb: { width: "100%", aspectRatio: 0.75, borderRadius: 10, borderWidth: 1 },
+  photoDeleteBtn: { position: "absolute", top: 6, right: 6, width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center" },
 });

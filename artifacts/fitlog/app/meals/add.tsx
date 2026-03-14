@@ -123,6 +123,18 @@ export default function AddMealScreen() {
     setPrefilled(true);
   }, [existingMeal, prefilled]);
 
+  useEffect(() => {
+    if (isEditing) return;
+    const name = params.prefillName as string | undefined;
+    if (!name) return;
+    setMealName(name);
+    const cal = params.prefillCalories ? String(params.prefillCalories) : "";
+    const prot = params.prefillProtein ? String(params.prefillProtein) : "";
+    const carb = params.prefillCarbs ? String(params.prefillCarbs) : "";
+    const fat = params.prefillFat ? String(params.prefillFat) : "";
+    setFoodItems([{ name, portionSize: "1", unit: "serving", calories: cal, proteinG: prot, carbsG: carb, fatG: fat }]);
+  }, []);
+
   const { data: recentFoodsData } = useQuery({
     queryKey: ["recentFoods"],
     queryFn: () => api.getRecentFoods(25),

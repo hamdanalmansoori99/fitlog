@@ -569,4 +569,60 @@ router.post("/:id/duplicate", requireAuth, async (req, res) => {
   }
 });
 
+router.post("/generate-plan", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+
+    const { getActiveSubscription } = await import("../services/subscriptionService");
+    const sub = await getActiveSubscription(user.id, user.role ?? "user");
+    if (!sub.plan.features.aiPhotoAnalysis) {
+      res.status(403).json({ error: "AI meal plan generation is a Premium feature" });
+      return;
+    }
+
+    const profiles = await db.select().from(profilesTable).where(eq(profilesTable.userId, user.id)).limit(1);
+    const profile = profiles[0] || {};
+
+    const calorieGoal = req.body.calorieGoal ?? profile.dailyCalorieGoal ?? 2000;
+    const proteinGoal = req.body.proteinGoalG ?? profile.dailyProteinGoal ?? 150;
+    const preferences: string[] = req.body.preferences ?? [];
+    const prefStr = preferences.length > 0 ? preferences.join(", ") : "no specific preferences";
+
+    const prompt = `You are a nutrition coach. Generate a one-day meal plan for someone with these goals:
+- Daily calorie target: ${calorieGoal} kcal
+- Daily protein target: ${proteinGoal}g
+- Dietary preferences: ${prefStr}
+
+Return EXACTLY a JSON array (no markdown, no extra text) with 4 to 5 meal objects. Each object must have these fields:
+- name: string (meal name)
+- description: string (1 short sentence describing the meal)
+- category: one of "Breakfast", "Lunch", "Dinner", "Snacks"
+- calories: number (integer)
+- proteinG: number (integer)
+- carbsG: number (integer)
+- fatG: number (integer)
+
+The sum of calories across all meals should be close to ${calorieGoal}. Return only the JSON array.`;
+
+    const message = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const raw = (message.content[0] as any).text?.trim() ?? "";
+    const jsonStart = raw.indexOf("[");
+    const jsonEnd = raw.lastIndexOf("]");
+    if (jsonStart === -1 || jsonEnd === -1) {
+      res.status(500).json({ error: "Failed to parse meal plan from AI" });
+      return;
+    }
+    const meals = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    res.json({ meals });
+  } catch (err) {
+    console.error("generate-plan error:", err);
+    res.status(500).json({ error: "Failed to generate meal plan" });
+  }
+});
+
 export default router;

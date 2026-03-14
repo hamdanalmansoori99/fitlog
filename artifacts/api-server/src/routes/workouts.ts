@@ -219,6 +219,47 @@ router.get("/recent", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/calendar", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const year = parseInt(req.query.year as string) || new Date().getFullYear();
+    const month = parseInt(req.query.month as string) || new Date().getMonth() + 1;
+
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 1);
+
+    const workouts = await db.select({
+      id: workoutsTable.id,
+      name: workoutsTable.name,
+      activityType: workoutsTable.activityType,
+      date: workoutsTable.date,
+      durationMinutes: workoutsTable.durationMinutes,
+    }).from(workoutsTable)
+      .where(and(
+        eq(workoutsTable.userId, user.id),
+        gte(workoutsTable.date, start),
+        lt(workoutsTable.date, end)
+      ))
+      .orderBy(workoutsTable.date);
+
+    const byDate: Record<string, any[]> = {};
+    for (const w of workouts) {
+      const key = new Date(w.date).toISOString().split("T")[0];
+      if (!byDate[key]) byDate[key] = [];
+      byDate[key].push({
+        id: w.id,
+        name: w.name,
+        activityType: w.activityType,
+        durationMinutes: w.durationMinutes,
+      });
+    }
+
+    res.json({ year, month, days: byDate });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to get calendar data" });
+  }
+});
+
 router.get("/", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);

@@ -59,6 +59,8 @@ export const api = {
   getWeeklyStats: () => request<any>("/workouts/stats/weekly"),
   getWorkoutSummary: () => request<any>("/workouts/stats/summary"),
   getRecentActivity: () => request<any>("/workouts/recent"),
+  getWorkoutCalendar: (year: number, month: number) =>
+    request<any>(`/workouts/calendar?year=${year}&month=${month}`),
   
   // Meals
   analyzeMealPhoto: (imageBase64: string, mimeType = "image/jpeg") =>
@@ -71,6 +73,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ barcode }),
     }),
+  generateMealPlan: (body: { calorieGoal?: number; proteinGoalG?: number; preferences?: string[] }) =>
+    request<any>("/meals/generate-plan", { method: "POST", body: JSON.stringify(body) }),
   getMeals: (date?: string) => {
     const q = date ? `?date=${date}` : "";
     return request<any>(`/meals${q}`);
