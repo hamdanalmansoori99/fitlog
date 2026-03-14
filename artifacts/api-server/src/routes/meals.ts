@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, mealsTable, mealFoodItemsTable, profilesTable } from "@workspace/db";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { trackEvent } from "../services/analyticsService";
@@ -212,7 +212,7 @@ router.get("/", requireAuth, async (req, res) => {
       .where(and(
         eq(mealsTable.userId, user.id),
         gte(mealsTable.date, startDate),
-        lte(mealsTable.date, endDate)
+        lt(mealsTable.date, endDate)
       ))
       .orderBy(mealsTable.date);
     
@@ -347,8 +347,8 @@ router.post("/", requireAuth, async (req, res) => {
     }).returning();
 
     if (foodItems && foodItems.length > 0) {
-      for (const item of foodItems) {
-        await db.insert(mealFoodItemsTable).values({
+      await db.insert(mealFoodItemsTable).values(
+        foodItems.map((item: any) => ({
           mealId: meal.id,
           name: item.name,
           portionSize: item.portionSize,
@@ -357,8 +357,8 @@ router.post("/", requireAuth, async (req, res) => {
           proteinG: item.proteinG,
           carbsG: item.carbsG,
           fatG: item.fatG,
-        });
-      }
+        }))
+      );
     }
 
     const fullMeal = await getMealWithFoodItems(meal.id, user.id);
@@ -396,17 +396,19 @@ router.put("/:id", requireAuth, async (req, res) => {
     
     if (foodItems) {
       await db.delete(mealFoodItemsTable).where(eq(mealFoodItemsTable.mealId, mealId));
-      for (const item of foodItems) {
-        await db.insert(mealFoodItemsTable).values({
-          mealId,
-          name: item.name,
-          portionSize: item.portionSize,
-          unit: item.unit,
-          calories: item.calories,
-          proteinG: item.proteinG,
-          carbsG: item.carbsG,
-          fatG: item.fatG,
-        });
+      if (foodItems.length > 0) {
+        await db.insert(mealFoodItemsTable).values(
+          foodItems.map((item: any) => ({
+            mealId,
+            name: item.name,
+            portionSize: item.portionSize,
+            unit: item.unit,
+            calories: item.calories,
+            proteinG: item.proteinG,
+            carbsG: item.carbsG,
+            fatG: item.fatG,
+          }))
+        );
       }
     }
 

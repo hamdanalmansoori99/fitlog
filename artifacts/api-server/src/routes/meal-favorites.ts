@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, favoriteMealsTable, mealsTable, mealFoodItemsTable } from "@workspace/db";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lt, desc } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
 const router = Router();
@@ -25,7 +25,7 @@ router.post("/", requireAuth, async (req, res) => {
     const { name, category, foodItems, sourceMealId } = req.body;
 
     let resolvedName = name;
-    let resolvedCategory = category ?? "snack";
+    let resolvedCategory = category ?? "Snacks";
     let resolvedItems = foodItems ?? [];
 
     if (sourceMealId) {
@@ -149,7 +149,7 @@ router.post("/duplicate-day", requireAuth, async (req, res) => {
       .where(and(
         eq(mealsTable.userId, user.id),
         gte(mealsTable.date, from),
-        lte(mealsTable.date, fromEnd)
+        lt(mealsTable.date, fromEnd)
       ));
 
     if (sourceMeals.length === 0) {

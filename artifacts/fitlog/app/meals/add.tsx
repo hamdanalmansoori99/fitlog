@@ -181,10 +181,10 @@ export default function AddMealScreen() {
       name: food.name,
       portionSize: String(Math.round(food.avgPortion) || 100),
       unit: food.unit || "grams",
-      calories: String(Math.round(food.avgCalories) || ""),
-      proteinG: String(Number(food.avgProteinG) || ""),
-      carbsG: String(Number(food.avgCarbsG) || ""),
-      fatG: String(Number(food.avgFatG) || ""),
+      calories: String(Math.round(food.avgCalories) || 0),
+      proteinG: String(Number(food.avgProteinG) || 0),
+      carbsG: String(Number(food.avgCarbsG) || 0),
+      fatG: String(Number(food.avgFatG) || 0),
     };
     const hasEmpty = foodItems.some(f => !f.name);
     if (hasEmpty) {
