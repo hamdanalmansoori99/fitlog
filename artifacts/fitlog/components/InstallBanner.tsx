@@ -12,7 +12,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 export function InstallBanner() {
-  const theme = useTheme();
+  const { theme } = useTheme();
   const { installState, triggerInstall, dismiss } = useInstallPrompt();
   const slideAnim = useRef(new Animated.Value(-80)).current;
 

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, TextInput, Switch, Alert, Platform,
+  View, Text, StyleSheet, ScrollView, Pressable, TextInput, Switch, Alert, Platform, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -310,9 +310,17 @@ export default function ProfileScreen() {
             {/* Avatar section */}
             <View style={styles.avatarSection}>
               <View style={[styles.avatar, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}>
-                <Text style={[styles.avatarLetter, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
-                  {firstName[0] || user?.firstName?.[0] || "U"}
-                </Text>
+                {profile?.photoUrl ? (
+                  <Image
+                    source={{ uri: profile.photoUrl }}
+                    style={{ width: "100%", height: "100%", borderRadius: 40 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={[styles.avatarLetter, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
+                    {firstName[0]?.toUpperCase() || user?.firstName?.[0]?.toUpperCase() || "U"}
+                  </Text>
+                )}
               </View>
               <Text style={[styles.userName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                 {firstName} {lastName}
@@ -671,7 +679,7 @@ const styles = StyleSheet.create({
   avatarSection: { alignItems: "center", gap: 8, paddingVertical: 8 },
   avatar: {
     width: 80, height: 80, borderRadius: 40, borderWidth: 2,
-    alignItems: "center", justifyContent: "center",
+    alignItems: "center", justifyContent: "center", overflow: "hidden",
   },
   avatarLetter: { fontSize: 32 },
   userName: { fontSize: 20 },

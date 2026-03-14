@@ -205,12 +205,12 @@ function CoachCtaCard({ theme }: { theme: any }) {
           Tell the coach your goals, equipment and schedule — and get a personalised daily workout every time you open the app.
         </Text>
         <Pressable
-          onPress={() => router.push("/(tabs)/workouts")}
+          onPress={() => router.push("/workouts/onboarding" as any)}
           style={[styles.todayCta, { backgroundColor: theme.secondary }]}
         >
-          <Feather name="settings" size={15} color="#0f0f1a" />
+          <Feather name="zap" size={15} color="#0f0f1a" />
           <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>
-            Set Up Coach
+            Set Up AI Coach
           </Text>
         </Pressable>
       </Card>

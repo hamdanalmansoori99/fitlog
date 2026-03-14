@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform,
   ActivityIndicator, Image, Alert, KeyboardAvoidingView,
@@ -71,6 +71,9 @@ export default function AddMealScreen() {
   const queryClient = useQueryClient();
   const params = useLocalSearchParams();
 
+  const editId = params.editId ? Number(params.editId as string) : null;
+  const isEditing = !!editId;
+
   const [mealName, setMealName] = useState("");
   const [category, setCategory] = useState((params.category as string) || "Breakfast");
   const [notes, setNotes] = useState("");
@@ -78,12 +81,40 @@ export default function AddMealScreen() {
   const [foodItems, setFoodItems] = useState<FoodItem[]>([emptyFood()]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanMode, setScanMode] = useState<"form" | "confirm">("form");
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  // Load existing meal when editing
+  const { data: existingMeal, isLoading: existingLoading } = useQuery({
+    queryKey: ["meal", editId],
+    queryFn: () => api.getMeal(editId!),
+    enabled: isEditing && !prefilled,
+  });
+
+  useEffect(() => {
+    if (!existingMeal || prefilled) return;
+    setMealName(existingMeal.name || "");
+    setCategory(existingMeal.category || "Breakfast");
+    setNotes(existingMeal.notes || "");
+    const d = existingMeal.date ? new Date(existingMeal.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+    setDate(d);
+    const items: FoodItem[] = (existingMeal.foodItems || []).map((f: any) => ({
+      name: f.name || "",
+      portionSize: f.portionSize != null ? String(f.portionSize) : "",
+      unit: f.unit || "grams",
+      calories: f.calories != null ? String(f.calories) : "",
+      proteinG: f.proteinG != null ? String(f.proteinG) : "",
+      carbsG: f.carbsG != null ? String(f.carbsG) : "",
+      fatG: f.fatG != null ? String(f.fatG) : "",
+    }));
+    setFoodItems(items.length > 0 ? items : [emptyFood()]);
+    setPrefilled(true);
+  }, [existingMeal, prefilled]);
 
   const { data: recentFoodsData } = useQuery({
     queryKey: ["recentFoods"],
@@ -101,20 +132,29 @@ export default function AddMealScreen() {
   const calorieGoal: number | null = todayData?.calorieGoal ?? null;
   const todayCalories: number = todayData?.dailyTotals?.calories ?? 0;
 
-  const mutation = useMutation({
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["meals"] });
+    queryClient.invalidateQueries({ queryKey: ["mealsToday"] });
+    queryClient.invalidateQueries({ queryKey: ["todayStats"] });
+    queryClient.invalidateQueries({ queryKey: ["nutritionStats"] });
+    queryClient.invalidateQueries({ queryKey: ["streaks"] });
+    queryClient.invalidateQueries({ queryKey: ["achievements"] });
+    if (editId) queryClient.invalidateQueries({ queryKey: ["meal", editId] });
+  };
+
+  const createMutation = useMutation({
     mutationFn: api.createMeal,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["meals"] });
-      queryClient.invalidateQueries({ queryKey: ["mealsToday"] });
-      queryClient.invalidateQueries({ queryKey: ["todayStats"] });
-      queryClient.invalidateQueries({ queryKey: ["nutritionStats"] });
-      queryClient.invalidateQueries({ queryKey: ["streaks"] });
-      queryClient.invalidateQueries({ queryKey: ["achievements"] });
-      setSuccess(true);
-      setTimeout(() => router.back(), 1800);
-    },
+    onSuccess: () => { invalidateAll(); setSuccess(true); setTimeout(() => router.back(), 1800); },
     onError: (err: any) => setError(err.message),
   });
+
+  const updateMutation = useMutation({
+    mutationFn: (body: any) => api.updateMeal(editId!, body),
+    onSuccess: () => { invalidateAll(); setSuccess(true); setTimeout(() => router.back(), 1800); },
+    onError: (err: any) => setError(err.message),
+  });
+
+  const mutation = isEditing ? updateMutation : createMutation;
 
   const totalCalories = foodItems.reduce((s, f) => s + (parseFloat(f.calories) || 0), 0);
   const totalProtein = foodItems.reduce((s, f) => s + (parseFloat(f.proteinG) || 0), 0);
@@ -249,17 +289,30 @@ export default function AddMealScreen() {
     });
   };
 
+  if (isEditing && existingLoading && !prefilled) {
+    return (
+      <View style={[styles.successScreen, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14, marginTop: 12 }}>
+          Loading meal…
+        </Text>
+      </View>
+    );
+  }
+
   if (success) {
     return (
       <View style={[styles.successScreen, { backgroundColor: theme.background }]}>
         <View style={[styles.successCircle, { backgroundColor: theme.primaryDim }]}>
           <Feather name="check" size={48} color={theme.primary} />
         </View>
-        <Text style={[styles.successTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Meal Logged!</Text>
+        <Text style={[styles.successTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+          {isEditing ? "Meal Updated!" : "Meal Logged!"}
+        </Text>
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14 }}>
           {Math.round(totalCalories)} kcal · {Math.round(totalProtein)}g protein
         </Text>
-        {remaining !== null && (
+        {!isEditing && remaining !== null && (
           <Text style={{ color: remaining >= 0 ? theme.primary : theme.danger, fontFamily: "Inter_500Medium", fontSize: 13 }}>
             {remaining >= 0
               ? `${Math.round(remaining)} kcal remaining today`
@@ -276,7 +329,9 @@ export default function AddMealScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
-        <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Log Meal</Text>
+        <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+          {isEditing ? "Edit Meal" : "Log Meal"}
+        </Text>
         <View style={{ width: 44 }} />
       </View>
 
@@ -290,7 +345,7 @@ export default function AddMealScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* ── AI Scan Banner ── */}
-        {!photoUri && !scanning && (
+        {!isEditing && !photoUri && !scanning && (
           <PremiumGate feature="aiPhotoAnalysis" minHeight={72} compact>
             <Pressable
               onPress={showPhotoPicker}
@@ -610,7 +665,7 @@ export default function AddMealScreen() {
 
         {error ? <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13 }}>{error}</Text> : null}
 
-        <Button title="Save Meal" onPress={handleSubmit} loading={mutation.isPending} />
+        <Button title={isEditing ? "Save Changes" : "Save Meal"} onPress={handleSubmit} loading={mutation.isPending} />
       </ScrollView>
       </KeyboardAvoidingView>
     </View>

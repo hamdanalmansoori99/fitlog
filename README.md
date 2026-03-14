@@ -21,6 +21,7 @@ A full-featured mobile fitness tracking app built with Expo React Native. Track 
 - **Calorie & macro tracking** — Protein, carbs, fat vs. personalised goals
 - **Favourite meals** — Star meals for one-tap re-logging
 - **Frequent meals** — Auto-detected and surfaced for quick logging
+- **Meal editing** — Edit any logged meal's name, items, macros, and date
 - **AI meal analysis** — Photo-based nutrition estimation (Claude)
 - **Meal detail view** — Full macro breakdown per meal
 
@@ -48,7 +49,7 @@ A full-featured mobile fitness tracking app built with Expo React Native. Track 
 - **Personalised onboarding** — 9-step wizard: name, age, goals, equipment, schedule, experience
 - **BMR / TDEE calculation** — Mifflin-St Jeor formula, gender-corrected calorie goals
 - **Dark / light mode** — Automatic or manual system override
-- **Unit preferences** — Metric (kg/cm) support
+- **Unit preferences** — Metric (kg/cm) or Imperial (lbs/in); weight charts respect your choice
 - **Subscription tiers** — Free, Pro, and Elite plans with feature gating
 
 ### Technical
@@ -165,6 +166,7 @@ Navigate to the app and tap **Sign up**. Complete the onboarding wizard to set y
 | GET | `/api/meals` | List meals |
 | POST | `/api/meals` | Log meal |
 | GET | `/api/meals/:id` | Get meal detail |
+| PUT | `/api/meals/:id` | Update meal |
 | DELETE | `/api/meals/:id` | Delete meal |
 | GET | `/api/workout-summary` | Weekly stats |
 | GET | `/api/streaks` | Streak data |
@@ -193,6 +195,27 @@ Navigate to the app and tap **Sign up**. Complete the onboarding wizard to set y
 | Danger | `#ff5252` |
 | Warning | `#ffab40` |
 | Font | Inter (400, 500, 600, 700) |
+
+---
+
+## Security
+
+- **Authentication** — JWT-based sessions, `httpOnly` cookies, all routes protected by `requireAuth` middleware
+- **Data isolation** — Every query is scoped to the authenticated user's ID; no cross-user data access
+- **Input validation** — Email format check + lowercase normalisation; password minimum 8 chars; name length limits
+- **Upload limits** — JSON body capped at 1 MB globally; photo upload route capped at 6 MB with MIME-type whitelist
+- **Photo URLs** — Must be HTTPS; validated before storage
+- **Export** — Data export endpoint is Premium-only and strips the internal `userId` field from the response
+- **Account deletion** — Requires a two-step confirmation; all child records cascade-deleted automatically
+
+---
+
+## Known Limitations
+
+- Apple Health and Google Fit integrations are stubbed (not connected to real platform APIs)
+- Payment processing is not wired to a live Stripe account out of the box
+- Push notifications are configured in the schema but delivery is not implemented
+- AI coach memory resets between sessions (no long-term user context stored)
 
 ---
 

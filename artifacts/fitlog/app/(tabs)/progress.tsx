@@ -167,13 +167,18 @@ export default function ProgressScreen() {
   const { data: records, isLoading: recordsLoading } = useQuery({ queryKey: ["records"], queryFn: api.getPersonalRecords });
   const { data: measurements, isLoading: measurementsLoading } = useQuery({ queryKey: ["measurements", measureDays], queryFn: () => api.getMeasurements(measureDays) });
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
+  const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, staleTime: 60000 });
   const { data: workoutsData } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts({ limit: 60 }), staleTime: 120000 });
   const { data: recoveryTodayData } = useQuery({ queryKey: ["recoveryToday"], queryFn: api.getRecoveryToday, staleTime: 60000 });
-  
+
+  const useImperial = settings?.unitSystem === "imperial";
+  const toDisplayWeight = (kg: number) => useImperial ? kg * 2.20462 : kg;
+  const weightUnit = useImperial ? "lbs" : "kg";
+
   const weightData = (measurements?.measurements || [])
     .filter((m: any) => m.weightKg)
     .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .map((m: any) => m.weightKg);
+    .map((m: any) => toDisplayWeight(m.weightKg));
   
   const caloriesData = (nutritionStats?.dailyCalories || [])
     .slice(-30)
@@ -408,7 +413,7 @@ export default function ProgressScreen() {
                 <MiniLineChart data={weightData} color={theme.primary} />
                 <View style={styles.weightInfo}>
                   <Text style={[styles.weightCurrent, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-                    {weightData[weightData.length - 1]?.toFixed(1)} kg
+                    {weightData[weightData.length - 1]?.toFixed(1)} {weightUnit}
                   </Text>
                   <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }]}>
                     Current weight
@@ -430,7 +435,7 @@ export default function ProgressScreen() {
                   >
                     <View style={{ flex: 1 }}>
                       <Text style={[{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }]}>
-                        {m.weightKg != null ? `${m.weightKg} kg` : "—"}
+                        {m.weightKg != null ? `${toDisplayWeight(m.weightKg).toFixed(1)} ${weightUnit}` : "—"}
                         {m.bodyFatPercent != null ? `  ·  ${m.bodyFatPercent}% BF` : ""}
                       </Text>
                       <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }]}>
