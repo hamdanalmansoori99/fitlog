@@ -475,6 +475,89 @@ export const EXERCISE_SUBSTITUTIONS: Record<
       ],
     },
   ],
+
+  // ── Barbell compound aliases (unqualified names used in some templates) ───
+  "Romanian Deadlift": [
+    {
+      needs: "barbell",
+      alternatives: [
+        { name: "Dumbbell Romanian Deadlift", requiresEquipment: "dumbbells" },
+        { name: "Kettlebell Deadlift", requiresEquipment: "kettlebells" },
+        { name: "Single-Leg Hip Hinge (bodyweight)" },
+      ],
+    },
+  ],
+  "Deadlift": [
+    {
+      needs: "barbell",
+      alternatives: [
+        { name: "Dumbbell Romanian Deadlift", requiresEquipment: "dumbbells" },
+        { name: "Kettlebell Deadlift", requiresEquipment: "kettlebells" },
+        { name: "Single-Leg Hip Hinge (bodyweight)" },
+      ],
+    },
+  ],
+  "Shoulder Press": [
+    {
+      needs: "barbell",
+      alternatives: [
+        { name: "Dumbbell Shoulder Press", requiresEquipment: "dumbbells" },
+        { name: "Pike Push-Up" },
+        { name: "Band Shoulder Press", requiresEquipment: "resistance_bands" },
+        { name: "Kettlebell Press", requiresEquipment: "kettlebells" },
+      ],
+    },
+  ],
+  "Lateral Raise": [
+    {
+      needs: "dumbbells",
+      alternatives: [
+        { name: "Band Lateral Raise", requiresEquipment: "resistance_bands" },
+        { name: "Arm Circles (bodyweight warmup)" },
+      ],
+    },
+  ],
+  "Dumbbell Squat": [
+    {
+      needs: "dumbbells",
+      alternatives: [
+        { name: "Bodyweight Squat" },
+        { name: "Resistance Band Squat", requiresEquipment: "resistance_bands" },
+      ],
+    },
+  ],
+  "Dumbbell Curl": [
+    {
+      needs: "dumbbells",
+      alternatives: [
+        { name: "Resistance Band Curl", requiresEquipment: "resistance_bands" },
+        { name: "Chin-Up", requiresEquipment: "pullup_bar" },
+        { name: "Towel Curl (improvised resistance)" },
+      ],
+    },
+  ],
+  "Dumbbell Incline Press": [
+    {
+      needs: "bench",
+      alternatives: [
+        { name: "Dumbbell Floor Press", requiresEquipment: "dumbbells" },
+        { name: "Pike Push-Up" },
+        { name: "Decline Push-Up" },
+      ],
+    },
+  ],
+
+  // ── Cable / dumbbell combo exercise (alias for substitution lookup) ───────
+  "Cable Fly / Dumbbell Fly": [
+    {
+      needs: "cable_machine",
+      alternatives: [
+        { name: "Dumbbell Fly (floor)", requiresEquipment: "dumbbells" },
+        { name: "Band Chest Fly", requiresEquipment: "resistance_bands" },
+        { name: "Push-Up" },
+      ],
+    },
+  ],
 };
 
 // ─── Core equipment filtering functions ───────────────────────────────────────
@@ -716,10 +799,31 @@ export function getRecommendations(
     if (durationDiff <= 10) score += 10;
     else if (durationDiff <= 20) score += 5;
 
-    // ── 6. Recency avoidance ──────────────────────────────────────────────
+    // ── 6. Recency avoidance (muscle-group-aware) ────────────────────────
+    // Collect all muscle groups the user has worked in the last 7 days
+    const recentMuscleGroups = new Set<string>();
+    recentWorkouts
+      .filter((w) => {
+        const days = (Date.now() - new Date(w.date).getTime()) / (1000 * 60 * 60 * 24);
+        return days <= 7;
+      })
+      .forEach((w) => {
+        inferMuscleGroupsFromWorkout(w.name || w.activityType, w.activityType).forEach((g) =>
+          recentMuscleGroups.add(g)
+        );
+      });
+    const templateMuscleGroups = getMuscleGroups(template);
+    // Penalise templates whose specific groups were heavily worked lately
+    // ("full", "cardio", "recovery" are always safe to repeat)
+    const muscleOverlap = templateMuscleGroups.filter(
+      (g) => recentMuscleGroups.has(g) && !["full", "cardio", "recovery"].includes(g)
+    );
+    if (muscleOverlap.length >= 2) score -= 20;
+    else if (muscleOverlap.length === 1) score -= 8;
+    // Still discourage the same activity type day after day (e.g. running every single day)
     const repeatCount = recentTypes.filter((t) => t === template.activityType).length;
-    if (repeatCount >= 2) score -= 15;
-    else if (repeatCount === 1) score -= 5;
+    if (repeatCount >= 4) score -= 15;
+    else if (repeatCount >= 2) score -= 5;
 
     // ── 7. Recovery boost ─────────────────────────────────────────────────
     if (daysSinceLast > 4 && template.difficulty === "Beginner") {
@@ -1349,10 +1453,30 @@ export function generateWeeklyPlan(
 ): { day: string; template: WorkoutTemplate | null; rest: boolean; note: string }[] {
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const weeklyDays = Math.min(profile.weeklyWorkoutDays || 3, 7);
-  const recs = getRecommendations(profile, recentWorkouts, 12);
+
+  // Fetch a large candidate pool so we have plenty to rotate through
+  const recs = getRecommendations(profile, recentWorkouts, 20);
+
+  // ── Detect recent consistency to adapt difficulty ────────────────────────
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const now = Date.now();
+  const last7Count = recentWorkouts.filter(
+    (w) => (now - new Date(w.date).getTime()) / msPerDay <= 7
+  ).length;
+  // User returning after a break: < 2 workouts in last 2 weeks and has history
+  const last14Count = recentWorkouts.filter(
+    (w) => (now - new Date(w.date).getTime()) / msPerDay <= 14
+  ).length;
+  const isReturning = last14Count < 2 && recentWorkouts.length > 0;
+  // User on a consistent run: hit or exceeded weekly target
+  const isConsistent = last7Count >= Math.max(weeklyDays - 1, 2);
 
   const workoutDayIndices = distributeWorkoutDays(weeklyDays);
   const usedTemplates = new Set<string>();
+
+  // Track the two most recent workout slot muscle groups for rotation
+  let prevSlotGroups: string[] = [];
+  let prevPrevSlotGroups: string[] = [];
 
   const REST_NOTES = [
     "Recovery day — muscles rebuild and grow stronger during rest. A 20-min walk keeps blood flowing.",
@@ -1364,33 +1488,85 @@ export function generateWeeklyPlan(
 
   return days.map((day, idx) => {
     if (!workoutDayIndices.includes(idx)) {
+      // On rest days we don't reset the muscle-group tracking — a single rest day
+      // doesn't fully clear soreness, so the rotation still matters across days.
       const note = REST_NOTES[restIdx % REST_NOTES.length];
       restIdx++;
       return { day, template: null, rest: true, note };
     }
-    const nextRec = recs.find((r) => !usedTemplates.has(r.template.id));
-    if (!nextRec) {
+
+    const available = recs.filter((r) => !usedTemplates.has(r.template.id));
+
+    if (available.length === 0) {
       return { day, template: null, rest: true, note: "Active rest — a brisk walk or easy cycling keeps you moving." };
     }
-    usedTemplates.add(nextRec.template.id);
 
-    // Build a muscle-group-aware coaching note
-    const tGroups = getMuscleGroups(nextRec.template);
+    // Score each candidate by muscle-group overlap with the previous two workout
+    // slots, plus difficulty adaptation for returning/consistent users.
+    const GROUP_LABELS: Record<string, string> = {
+      upper: "upper body", lower: "legs & glutes",
+      core: "core", cardio: "cardio", recovery: "mobility",
+    };
+
+    const candidateScores = available.map((rec) => {
+      const tGroups = getMuscleGroups(rec.template);
+      let adjustedScore = rec.score;
+
+      // Heavy penalty for repeating the same muscle groups as the last slot
+      const overlapPrev = tGroups.filter(
+        (g) => prevSlotGroups.includes(g) && !["full", "cardio", "recovery"].includes(g)
+      );
+      if (overlapPrev.length >= 2) adjustedScore -= 50;
+      else if (overlapPrev.length === 1) adjustedScore -= 25;
+
+      // Lighter penalty for repeating groups from two slots ago
+      const overlapPrevPrev = tGroups.filter(
+        (g) => prevPrevSlotGroups.includes(g) && !["full", "cardio", "recovery"].includes(g)
+      );
+      if (overlapPrevPrev.length >= 2) adjustedScore -= 20;
+      else if (overlapPrevPrev.length === 1) adjustedScore -= 8;
+
+      // Difficulty adaptation
+      const level = DIFFICULTY_MAP[rec.template.difficulty] || 1;
+      if (isReturning) {
+        // After a break, ease back in with lighter sessions
+        if (level > 1) adjustedScore -= 25;
+      } else if (isConsistent) {
+        // Consistent user — reward harder challenges
+        if (level === 3) adjustedScore += 15;
+        else if (level === 1) adjustedScore -= 10;
+      }
+
+      return { rec, adjustedScore, tGroups };
+    });
+
+    candidateScores.sort((a, b) => b.adjustedScore - a.adjustedScore);
+    const chosen = candidateScores[0];
+
+    usedTemplates.add(chosen.rec.template.id);
+    prevPrevSlotGroups = prevSlotGroups;
+    prevSlotGroups = chosen.tGroups;
+
+    // Build a clear day-level coaching note
+    const tGroups = chosen.tGroups;
     const groupLabel = tGroups.includes("full")
       ? "full body"
       : tGroups
           .filter((g) => ["upper", "lower", "core", "cardio", "recovery"].includes(g))
-          .map((g) =>
-            ({ upper: "upper body", lower: "legs & glutes", core: "core", cardio: "cardio", recovery: "mobility" }[g])
-          )
+          .map((g) => GROUP_LABELS[g])
           .filter(Boolean)
           .join(" + ");
 
-    const note = groupLabel
-      ? `${groupLabel.charAt(0).toUpperCase() + groupLabel.slice(1)} focus. ${nextRec.whyGoodForYou}`
-      : nextRec.whyGoodForYou;
+    let note = chosen.rec.whyGoodForYou;
+    if (groupLabel) {
+      const capitalised = groupLabel.charAt(0).toUpperCase() + groupLabel.slice(1);
+      note = `${capitalised} focus. ${chosen.rec.whyGoodForYou}`;
+    }
+    if (isReturning && DIFFICULTY_MAP[chosen.rec.template.difficulty] === 1) {
+      note += " Easing back in — a gentler week is smart after time off.";
+    }
 
-    return { day, template: nextRec.template, rest: false, note };
+    return { day, template: chosen.rec.template, rest: false, note };
   });
 }
 

@@ -243,6 +243,43 @@ All mutations that modify state invalidate the full set of affected query keys:
 - Added `getWorkout(id: number)` → `GET /workouts/:id`
 - Added `getMeal(id: number)` → `GET /meals/:id`
 
+## Smart Coach Engine Overhaul (March 2026 — Session 5)
+
+**Template equipment accuracy fixes:**
+- `db-upper-body` — `requiredEquipment` corrected from `["dumbbells"]` to `["dumbbells", "bench"]` (uses Dumbbell Bench Press + Incline Press, both require a bench)
+- `db-hypertrophy` — same fix (uses Dumbbell Bench Press + Incline Dumbbell Fly, both require bench)
+- `push-pull-legs` — exercise name `"Cable Fly / Dumbbell Fly"` corrected to `"Cable / Dumbbell Fly"` to match the substitution DB key (was silently unmatched)
+
+**Missing substitutions added to `EXERCISE_SUBSTITUTIONS`:**
+- `"Romanian Deadlift"` → needs barbell → dumbbell RDL, kettlebell deadlift, bodyweight hip hinge
+- `"Deadlift"` → needs barbell → same alternatives as above
+- `"Shoulder Press"` → needs barbell → dumbbell shoulder press, pike push-up, band shoulder press
+- `"Lateral Raise"` → needs dumbbells → band lateral raise, arm circles
+- `"Dumbbell Squat"` → needs dumbbells → bodyweight squat, band squat
+- `"Dumbbell Curl"` → needs dumbbells → band curl, chin-up
+- `"Dumbbell Incline Press"` → needs bench → floor press, pike push-up
+- `"Cable Fly / Dumbbell Fly"` → alias pointing to cable_machine subs (for templates using that legacy name)
+
+**`getRecommendations` — recency avoidance rewritten:**
+- Was: penalised by raw `activityType` (e.g. any 2 gym sessions = same penalty whether upper/upper or upper/lower)
+- Now: computes actual muscle groups worked in the last 7 days using `inferMuscleGroupsFromWorkout`, then penalises templates that overlap those groups (`-20` for 2+ group overlap, `-8` for 1 group overlap)
+- Activity-type penalty retained but threshold raised (≥4 repeats before heavy penalty) — stops discouraging valid variety like gym upper + gym lower
+
+**`generateWeeklyPlan` — full rewrite with muscle-group rotation:**
+- Candidate pool expanded: 20 recs (was 12) to give the algorithm more to rotate
+- Each workout slot now picks the highest-scored available template that **minimises muscle group overlap with the previous two slots** — prevents consecutive upper/upper or lower/lower days
+- Difficulty adapts to history:
+  - `isReturning`: user did <2 workouts in last 14 days → prefers Beginner templates, notes say "easing back in"
+  - `isConsistent`: user hit weekly target → rewards Intermediate/Advanced templates
+- Rest day notes retained as-is; muscle group context is preserved across rest days (1 rest day ≠ full recovery)
+
+**`plan.tsx` — workout name now included in recentWorkouts:**
+- Was: `{ activityType, date, durationMinutes }` — name was missing
+- Now: `{ name, activityType, date, durationMinutes }` — muscle group inference from workout name now works correctly in the plan screen
+
+**`measurements/edit.tsx` pre-existing import bug fixed:**
+- `@/hooks/useToast` → `@/components/ui/Toast` (correct path)
+
 ## Schema Consistency Audit (March 2026 — Session 4)
 
 **Bug Fixes:**

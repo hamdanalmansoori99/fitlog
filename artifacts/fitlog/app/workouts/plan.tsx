@@ -161,6 +161,7 @@ export default function WeeklyPlanScreen() {
   const { data: workoutsData } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts() });
 
   const recentWorkouts = (workoutsData?.workouts || []).slice(0, 14).map((w: any) => ({
+    name: w.name,
     activityType: w.activityType,
     date: w.date,
     durationMinutes: w.durationMinutes,
