@@ -243,6 +243,22 @@ All mutations that modify state invalidate the full set of affected query keys:
 - Added `getWorkout(id: number)` → `GET /workouts/:id`
 - Added `getMeal(id: number)` → `GET /meals/:id`
 
+## Audit Fixes (March 2026 — Session 3)
+
+**Progress / Streaks:**
+- `calcLongestStreak()` added to `progress.ts` — correctly iterates all historical dates in ascending order to find the true maximum consecutive run (was just returning `currentWorkoutStreak`)
+- `/progress/records` — removed arbitrary `.slice(0, 3)` cap so ALL unique exercises get PR records computed, not just the first three
+
+**Measurements:**
+- `GET /measurements/:id` endpoint added
+- `PUT /measurements/:id` endpoint added (partial update: weightKg, bodyFatPercent, chestCm, waistCm, hipsCm, armsCm)
+- `getMeasurement(id)` and `updateMeasurement(id, body)` added to `lib/api.ts`
+- `app/measurements/edit.tsx` — new edit screen, loads existing values via GET-by-id, saves via PUT
+- Progress tab → "Body Measurements" section now shows a "Recent entries" card (up to 5) with weight + body fat, tapping any row navigates to the edit screen
+
+**Notification Preferences:**
+- Confirmed working correctly — time prefs are device-local (AsyncStorage via Zustand persist `"fitlog-notifications"` key), no server columns needed since notifications are scheduled on-device
+
 ## Key Decisions
 
 - No JWT library — custom SHA-256 + random session tokens

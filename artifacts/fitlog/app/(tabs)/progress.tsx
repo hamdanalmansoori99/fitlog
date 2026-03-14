@@ -270,20 +270,47 @@ export default function ProgressScreen() {
           </View>
           
           {weightData.length > 0 ? (
-            <Card>
-              <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Weight over time
-              </Text>
-              <MiniLineChart data={weightData} color={theme.primary} />
-              <View style={styles.weightInfo}>
-                <Text style={[styles.weightCurrent, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-                  {weightData[weightData.length - 1]?.toFixed(1)} kg
+            <>
+              <Card>
+                <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  Weight over time
                 </Text>
-                <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }]}>
-                  Current weight
-                </Text>
-              </View>
-            </Card>
+                <MiniLineChart data={weightData} color={theme.primary} />
+                <View style={styles.weightInfo}>
+                  <Text style={[styles.weightCurrent, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                    {weightData[weightData.length - 1]?.toFixed(1)} kg
+                  </Text>
+                  <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }]}>
+                    Current weight
+                  </Text>
+                </View>
+              </Card>
+              <Card style={{ marginTop: 10 }}>
+                <View style={styles.measureListHeader}>
+                  <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
+                    Recent entries
+                  </Text>
+                </View>
+                {(measurements?.measurements || []).slice(0, 5).map((m: any) => (
+                  <Pressable
+                    key={m.id}
+                    onPress={() => router.push(`/measurements/edit?id=${m.id}` as any)}
+                    style={[styles.measureRow, { borderBottomColor: theme.border }]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }]}>
+                        {m.weightKg != null ? `${m.weightKg} kg` : "—"}
+                        {m.bodyFatPercent != null ? `  ·  ${m.bodyFatPercent}% BF` : ""}
+                      </Text>
+                      <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }]}>
+                        {new Date(m.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </Text>
+                    </View>
+                    <Feather name="edit-2" size={15} color={theme.textMuted} />
+                  </Pressable>
+                ))}
+              </Card>
+            </>
           ) : (
             <Animated.View entering={ZoomIn.duration(350)}>
               <Card>
@@ -411,4 +438,9 @@ const styles = StyleSheet.create({
   recordLabel: { fontSize: 12 },
   recordValue: { fontSize: 17 },
   recordDate: { fontSize: 12 },
+  measureListHeader: { marginBottom: 10 },
+  measureRow: {
+    flexDirection: "row", alignItems: "center", paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
 });

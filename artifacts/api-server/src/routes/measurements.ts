@@ -44,6 +44,47 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/:id", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const measureId = parseInt(req.params.id);
+    if (isNaN(measureId)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const [measurement] = await db.select().from(bodyMeasurementsTable)
+      .where(and(eq(bodyMeasurementsTable.id, measureId), eq(bodyMeasurementsTable.userId, user.id)))
+      .limit(1);
+    if (!measurement) { res.status(404).json({ error: "Measurement not found" }); return; }
+    res.json(measurement);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to get measurement" });
+  }
+});
+
+router.put("/:id", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const measureId = parseInt(req.params.id);
+    if (isNaN(measureId)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const existing = await db.select().from(bodyMeasurementsTable)
+      .where(and(eq(bodyMeasurementsTable.id, measureId), eq(bodyMeasurementsTable.userId, user.id))).limit(1);
+    if (existing.length === 0) { res.status(404).json({ error: "Measurement not found" }); return; }
+    const { weightKg, bodyFatPercent, chestCm, waistCm, hipsCm, armsCm } = req.body;
+    const [updated] = await db.update(bodyMeasurementsTable)
+      .set({
+        ...(weightKg !== undefined && { weightKg }),
+        ...(bodyFatPercent !== undefined && { bodyFatPercent }),
+        ...(chestCm !== undefined && { chestCm }),
+        ...(waistCm !== undefined && { waistCm }),
+        ...(hipsCm !== undefined && { hipsCm }),
+        ...(armsCm !== undefined && { armsCm }),
+      })
+      .where(eq(bodyMeasurementsTable.id, measureId))
+      .returning();
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update measurement" });
+  }
+});
+
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);

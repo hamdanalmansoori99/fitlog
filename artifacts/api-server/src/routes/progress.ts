@@ -33,6 +33,32 @@ function calcStreak(dates: Date[]): number {
   return streak;
 }
 
+function calcLongestStreak(dates: Date[]): number {
+  if (dates.length === 0) return 0;
+
+  const dateDays = [...new Set(dates.map(d => {
+    const copy = new Date(d);
+    copy.setHours(0, 0, 0, 0);
+    return copy.getTime();
+  }))].sort((a, b) => a - b);
+
+  if (dateDays.length === 0) return 0;
+
+  let longest = 1;
+  let current = 1;
+
+  for (let i = 1; i < dateDays.length; i++) {
+    if (dateDays[i] - dateDays[i - 1] === 86400000) {
+      current++;
+      if (current > longest) longest = current;
+    } else {
+      current = 1;
+    }
+  }
+
+  return longest;
+}
+
 router.get("/streaks", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
@@ -48,9 +74,7 @@ router.get("/streaks", requireAuth, async (req, res) => {
     
     const currentWorkoutStreak = calcStreak(workoutDates);
     const currentMealStreak = calcStreak(mealDates);
-    
-    // Longest workout streak (simplified)
-    let longestWorkoutStreak = currentWorkoutStreak;
+    const longestWorkoutStreak = Math.max(calcLongestStreak(workoutDates), currentWorkoutStreak);
     
     res.json({ currentWorkoutStreak, longestWorkoutStreak, currentMealStreak });
   } catch (err) {
@@ -77,7 +101,7 @@ router.get("/records", requireAuth, async (req, res) => {
     
     const uniqueExercises = [...new Set(exercises.map(e => e.name))];
     
-    for (const exerciseName of uniqueExercises.slice(0, 3)) {
+    for (const exerciseName of uniqueExercises) {
       const exerciseRows = await db.select().from(workoutExercisesTable)
         .innerJoin(workoutsTable, eq(workoutExercisesTable.workoutId, workoutsTable.id))
         .where(and(eq(workoutsTable.userId, user.id), eq(workoutExercisesTable.name, exerciseName)))

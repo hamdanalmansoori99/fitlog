@@ -91,7 +91,9 @@ export const api = {
     const q = days ? `?days=${days}` : "";
     return request<any>(`/measurements${q}`);
   },
+  getMeasurement: (id: number) => request<any>(`/measurements/${id}`),
   createMeasurement: (body: any) => request<any>("/measurements", { method: "POST", body: JSON.stringify(body) }),
+  updateMeasurement: (id: number, body: any) => request<any>(`/measurements/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteMeasurement: (id: number) => request(`/measurements/${id}`, { method: "DELETE" }),
   
   // Progress
