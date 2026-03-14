@@ -7,6 +7,63 @@ import { trackEvent } from "../services/analyticsService";
 
 const router = Router();
 
+router.post("/barcode-lookup", requireAuth, async (req, res) => {
+  try {
+    const { barcode } = req.body;
+    if (!barcode || typeof barcode !== "string" || !/^\d{4,14}$/.test(barcode.trim())) {
+      res.status(400).json({ error: "A valid barcode (4-14 digits) is required" });
+      return;
+    }
+
+    const response = await fetch(
+      `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode.trim())}.json`,
+      {
+        headers: { "User-Agent": "FitLog/1.0 (fitness-tracker-app)" },
+      }
+    );
+
+    if (!response.ok) {
+      res.status(502).json({ error: "Could not reach food database. Try again later." });
+      return;
+    }
+
+    const data: any = await response.json();
+    if (data.status !== 1 || !data.product) {
+      res.status(404).json({ error: "Product not found. Try adding manually or use the photo scanner." });
+      return;
+    }
+
+    const p = data.product;
+    const nutriments = p.nutriments || {};
+    const servingSize = p.serving_size || p.quantity || "100g";
+    const servingG = parseFloat(p.serving_quantity) || 100;
+
+    const hasServingData = nutriments["energy-kcal_serving"] != null;
+    const scale = hasServingData ? 1 : servingG / 100;
+    const kcalRaw = hasServingData ? nutriments["energy-kcal_serving"] : (nutriments["energy-kcal_100g"] ?? 0);
+    const protRaw = hasServingData ? nutriments.proteins_serving : (nutriments.proteins_100g ?? 0);
+    const carbRaw = hasServingData ? nutriments.carbohydrates_serving : (nutriments.carbohydrates_100g ?? 0);
+    const fatRaw = hasServingData ? nutriments.fat_serving : (nutriments.fat_100g ?? 0);
+
+    const food = {
+      name: p.product_name || p.product_name_en || "Unknown product",
+      brand: p.brands || null,
+      servingSize,
+      servingG: Math.round(servingG),
+      calories: Math.round((Number(kcalRaw) || 0) * scale),
+      proteinG: Math.round((Number(protRaw) || 0) * scale),
+      carbsG: Math.round((Number(carbRaw) || 0) * scale),
+      fatG: Math.round((Number(fatRaw) || 0) * scale),
+      imageUrl: p.image_front_small_url || p.image_url || null,
+    };
+
+    res.json({ food });
+  } catch (err: any) {
+    console.error("Barcode lookup error:", err?.message);
+    res.status(500).json({ error: "Failed to look up barcode" });
+  }
+});
+
 async function getMealWithFoodItems(mealId: number, userId: number) {
   const meals = await db.select().from(mealsTable)
     .where(and(eq(mealsTable.id, mealId), eq(mealsTable.userId, userId)))
@@ -76,13 +133,16 @@ Return ONLY valid JSON in this exact structure — no markdown, no explanation:
   ]
 }
 
+If the image clearly does NOT contain food, or the content is unrecognizable as food, return exactly:
+{"mealName": "", "foods": [], "notFood": true}
+Do NOT guess or invent foods that are not visible. Only identify items you can confidently recognize as food.
+
 Rules:
 - Identify each distinct food item separately (e.g. chicken breast, rice, broccoli)
 - Estimate portion sizes visually (common units: grams, oz, cups, pieces, servings, ml)
 - Estimate calories and macros per portion shown
 - All numbers must be integers or decimals, never strings
-- If you cannot identify a food, use your best guess
-- Return at minimum 1 food item`;
+- Return at minimum 1 food item when food is present`;
 
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5",
@@ -113,6 +173,11 @@ Rules:
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
+
+    if (parsed.notFood) {
+      res.json({ notFood: true, mealName: "", foods: [], totals: { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 } });
+      return;
+    }
 
     const foods = (parsed.foods || []).map((f: any) => ({
       name: String(f.name || "Unknown food"),

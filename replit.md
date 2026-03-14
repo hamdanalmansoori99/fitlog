@@ -52,7 +52,7 @@ A flexible subscription system (`src/lib/plans.ts`) defines 'Free' and 'Premium'
 
 ### Data Management
 - **Workouts**: Comprehensive logging for 8 activity types, gym exercise tracker with autocomplete, workout templates, and history.
-- **Meals**: Multi-item food logging with macros, calorie summaries, and nutrition statistics.
+- **Meals**: Multi-item food logging with macros, calorie summaries, nutrition statistics, barcode scanner (via Open Food Facts API), and AI photo analysis with non-food detection.
 - **Progress**: Tracks streaks, activity breakdown, weight charts, PRs, and body measurements.
 - **Goal-Based Insights**: Client-side engine (`lib/goalInsights.ts`) provides personalized insights based on fitness goals (e.g., weight loss, muscle gain, endurance).
 
@@ -89,4 +89,6 @@ The `/api/coach/message` endpoint builds a rich system prompt for the AI coach, 
 - **Orval**: OpenAPI spec code generator for API clients and schemas.
 - **AsyncStorage**: For persisting client-side data (e.g., auth tokens).
 - **expo-crypto**: For cryptographic operations on the client.
+- **expo-camera**: For barcode scanning in meal logging.
+- **Open Food Facts API**: Free product nutrition database for barcode lookups (no API key required).
 - **Stripe**: (Future integration) For subscription billing and payment processing.

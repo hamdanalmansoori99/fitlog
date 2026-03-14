@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform,
-  ActivityIndicator, Image, Alert, KeyboardAvoidingView,
+  ActivityIndicator, Image, Alert, KeyboardAvoidingView, Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,12 +9,14 @@ import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { PremiumGate } from "@/components/PremiumGate";
+import { useToast } from "@/components/ui/Toast";
 
 const CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 const UNITS = ["grams", "oz", "cups", "pieces", "servings", "ml"];
@@ -86,6 +88,11 @@ export default function AddMealScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanMode, setScanMode] = useState<"form" | "confirm">("form");
+  const [barcodeOpen, setBarcodeOpen] = useState(false);
+  const [barcodeLooking, setBarcodeLooking] = useState(false);
+  const barcodeProcessed = useRef(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const { showToast } = useToast();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -164,6 +171,60 @@ export default function AddMealScreen() {
   const projectedTotal = todayCalories + totalCalories;
   const remaining = calorieGoal ? calorieGoal - projectedTotal : null;
 
+  async function openBarcodeScanner() {
+    if (!cameraPermission?.granted) {
+      const perm = await requestCameraPermission();
+      if (!perm.granted) {
+        Alert.alert("Camera access needed", "Allow camera access in settings to scan barcodes.");
+        return;
+      }
+    }
+    barcodeProcessed.current = false;
+    setBarcodeOpen(true);
+  }
+
+  const onBarcodeScanned = useCallback(async (result: BarcodeScanningResult) => {
+    if (barcodeProcessed.current || barcodeLooking) return;
+    barcodeProcessed.current = true;
+    const code = result.data;
+    if (!code) return;
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setBarcodeLooking(true);
+
+    try {
+      const { food } = await api.barcodeLookup(code);
+      setBarcodeOpen(false);
+      const displayName = food.brand ? `${food.name} (${food.brand})` : food.name;
+      const newFood: FoodItem = {
+        name: displayName,
+        portionSize: String(food.servingG || 100),
+        unit: "grams",
+        calories: String(food.calories || 0),
+        proteinG: String(food.proteinG || 0),
+        carbsG: String(food.carbsG || 0),
+        fatG: String(food.fatG || 0),
+      };
+      const hasEmpty = foodItems.some(f => !f.name);
+      if (hasEmpty) {
+        setFoodItems(fi => {
+          const idx = fi.findIndex(f => !f.name);
+          return fi.map((f, i) => i === idx ? newFood : f);
+        });
+      } else {
+        setFoodItems(fi => [...fi, newFood]);
+      }
+      if (!mealName) setMealName(displayName);
+      showToast(`Found: ${displayName}`, "success");
+    } catch (err: any) {
+      setBarcodeOpen(false);
+      const msg = err.message || "Product not found";
+      showToast(msg.includes("not found") ? "Product not found. Try adding manually or use the photo scanner." : msg, "error");
+    } finally {
+      setBarcodeLooking(false);
+    }
+  }, [barcodeLooking, foodItems, mealName]);
+
   async function pickAndScanImage(source: "camera" | "library") {
     try {
       let result;
@@ -187,6 +248,13 @@ export default function AddMealScreen() {
 
       const mimeType = asset.mimeType || "image/jpeg";
       const analysisResult = await api.analyzeMealPhoto(asset.base64, mimeType);
+
+      if (analysisResult.notFood) {
+        setPhotoUri(null);
+        setScanning(false);
+        showToast("Couldn't identify food — try a clearer photo or scan a barcode.", "error");
+        return;
+      }
 
       setMealName(analysisResult.mealName || "");
       setFoodItems(
@@ -344,25 +412,43 @@ export default function AddMealScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 36 }]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── AI Scan Banner ── */}
+        {/* ── Scan Banners ── */}
         {!isEditing && !photoUri && !scanning && (
-          <PremiumGate feature="aiPhotoAnalysis" minHeight={72} compact>
+          <View style={{ gap: 10 }}>
             <Pressable
-              onPress={showPhotoPicker}
-              style={[styles.scanBanner, { backgroundColor: theme.secondary + "12", borderColor: theme.secondary + "40" }]}
+              onPress={openBarcodeScanner}
+              style={[styles.scanBanner, { backgroundColor: theme.primary + "12", borderColor: theme.primary + "40" }]}
             >
-              <View style={[styles.scanIconCircle, { backgroundColor: theme.secondary + "20" }]}>
-                <Feather name="camera" size={22} color={theme.secondary} />
+              <View style={[styles.scanIconCircle, { backgroundColor: theme.primary + "20" }]}>
+                <Feather name="maximize" size={22} color={theme.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Scan with AI</Text>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Scan Barcode</Text>
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-                  Photo → instant food detection &amp; nutrition estimates
+                  Scan a product barcode for exact nutrition info
                 </Text>
               </View>
-              <Feather name="chevron-right" size={18} color={theme.secondary} />
+              <Feather name="chevron-right" size={18} color={theme.primary} />
             </Pressable>
-          </PremiumGate>
+
+            <PremiumGate feature="aiPhotoAnalysis" minHeight={72} compact>
+              <Pressable
+                onPress={showPhotoPicker}
+                style={[styles.scanBanner, { backgroundColor: theme.secondary + "12", borderColor: theme.secondary + "40" }]}
+              >
+                <View style={[styles.scanIconCircle, { backgroundColor: theme.secondary + "20" }]}>
+                  <Feather name="camera" size={22} color={theme.secondary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Scan with AI</Text>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                    Photo → instant food detection &amp; nutrition estimates
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={theme.secondary} />
+              </Pressable>
+            </PremiumGate>
+          </View>
         )}
 
         {/* ── Scanning ── */}
@@ -533,15 +619,11 @@ export default function AddMealScreen() {
                     style={[styles.foodInput, { color: theme.text, borderColor: theme.border, fontFamily: "Inter_400Regular", flex: 1 }]}
                   />
                   <Pressable
-                    onPress={() => Alert.alert(
-                      "Barcode Scanner",
-                      "Barcode lookup is coming in a future update — for now, type the food name and nutrition info.",
-                      [{ text: "Got it" }]
-                    )}
+                    onPress={openBarcodeScanner}
                     style={[styles.barcodeBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
                     hitSlop={4}
                   >
-                    <Feather name="maximize" size={16} color={theme.textMuted} />
+                    <Feather name="maximize" size={16} color={theme.primary} />
                   </Pressable>
                 </View>
 
@@ -668,6 +750,43 @@ export default function AddMealScreen() {
         <Button title={isEditing ? "Save Changes" : "Save Meal"} onPress={handleSubmit} loading={mutation.isPending} />
       </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Barcode Scanner Modal ── */}
+      <Modal visible={barcodeOpen} animationType="slide" presentationStyle="fullScreen">
+        <View style={[styles.barcodeModal, { backgroundColor: "#000" }]}>
+          <View style={[styles.barcodeHeader, { paddingTop: topPad + 8 }]}>
+            <Pressable onPress={() => setBarcodeOpen(false)} style={styles.barcodeCloseBtn}>
+              <Feather name="x" size={24} color="#fff" />
+            </Pressable>
+            <Text style={styles.barcodeTitle}>Scan Barcode</Text>
+            <View style={{ width: 44 }} />
+          </View>
+
+          {barcodeLooking ? (
+            <View style={styles.barcodeLoadingWrap}>
+              <ActivityIndicator size="large" color={theme.primary} />
+              <Text style={styles.barcodeLoadingText}>Looking up product…</Text>
+            </View>
+          ) : (
+            <CameraView
+              style={styles.barcodeCamera}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "code128", "code39"] }}
+              onBarcodeScanned={onBarcodeScanned}
+            >
+              <View style={styles.barcodeOverlay}>
+                <View style={styles.barcodeFrame}>
+                  <View style={[styles.barcodeCorner, styles.cornerTL, { borderColor: theme.primary }]} />
+                  <View style={[styles.barcodeCorner, styles.cornerTR, { borderColor: theme.primary }]} />
+                  <View style={[styles.barcodeCorner, styles.cornerBL, { borderColor: theme.primary }]} />
+                  <View style={[styles.barcodeCorner, styles.cornerBR, { borderColor: theme.primary }]} />
+                </View>
+                <Text style={styles.barcodeHint}>Point camera at a product barcode</Text>
+              </View>
+            </CameraView>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -721,4 +840,20 @@ const styles = StyleSheet.create({
   successScreen: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
   successCircle: { width: 100, height: 100, borderRadius: 50, alignItems: "center", justifyContent: "center" },
   successTitle: { fontSize: 26 },
+
+  barcodeModal: { flex: 1 },
+  barcodeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12, zIndex: 10 },
+  barcodeCloseBtn: { width: 44, height: 44, justifyContent: "center", alignItems: "center" },
+  barcodeTitle: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 17 },
+  barcodeCamera: { flex: 1 },
+  barcodeOverlay: { flex: 1, alignItems: "center", justifyContent: "center" },
+  barcodeFrame: { width: 260, height: 160, position: "relative" },
+  barcodeCorner: { position: "absolute", width: 28, height: 28, borderWidth: 3 },
+  cornerTL: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 8 },
+  cornerTR: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 8 },
+  cornerBL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 8 },
+  cornerBR: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 8 },
+  barcodeHint: { color: "#fff", fontFamily: "Inter_500Medium", fontSize: 14, marginTop: 24, textAlign: "center", textShadowColor: "rgba(0,0,0,0.7)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  barcodeLoadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  barcodeLoadingText: { color: "#fff", fontFamily: "Inter_500Medium", fontSize: 15 },
 });

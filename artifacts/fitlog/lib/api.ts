@@ -66,6 +66,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ imageBase64, mimeType }),
     }),
+  barcodeLookup: (barcode: string) =>
+    request<any>("/meals/barcode-lookup", {
+      method: "POST",
+      body: JSON.stringify({ barcode }),
+    }),
   getMeals: (date?: string) => {
     const q = date ? `?date=${date}` : "";
     return request<any>(`/meals${q}`);
