@@ -37,7 +37,7 @@ function cleanMarkdown(text: string): string {
   out = out.replace(/(^|[\s(])\*([^*\n]+)\*([\s).,!?]|$)/gm, "$1$2$3");
   out = out.replace(/^#{1,6}\s+/gm, "");
   out = out.replace(/`([^`]+)`/g, "$1");
-  out = out.replace(/^\s*[\*]\s+/gm, "• ");
+  out = out.replace(/^\s*[\*\-]\s+/gm, "• ");
   out = out.replace(/\n{3,}/g, "\n\n");
   return out.trim();
 }
