@@ -156,6 +156,9 @@ export const api = {
   markTemplateUsed: (id: number) =>
     request<any>(`/workouts/my-templates/${id}/use`, { method: "POST" }),
 
+  // Subscription
+  getSubscription: () => request<any>("/subscription"),
+
   // Favourite Meals
   getFavoriteMeals: () => request<any>("/meals/favorites"),
   addFavoriteMeal: (body: {

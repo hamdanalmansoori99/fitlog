@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, usersTable, sessionsTable, profilesTable, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { hashPassword, generateSessionId, requireAuth, getUser } from "../lib/auth";
+import { ensureFreeSubscription } from "../services/subscriptionService";
 
 const router = Router();
 
@@ -43,6 +44,9 @@ router.post("/register", async (req, res) => {
     await db.insert(settingsTable).values({
       userId: user.id,
     });
+
+    // Create free subscription
+    await ensureFreeSubscription(user.id);
 
     const sessionId = generateSessionId();
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days

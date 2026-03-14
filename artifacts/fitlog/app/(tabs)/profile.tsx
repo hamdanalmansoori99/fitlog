@@ -68,6 +68,12 @@ export default function ProfileScreen() {
   
   const [profileLoaded, setProfileLoaded] = useState(false);
   
+  const { data: subscriptionData } = useQuery({
+    queryKey: ["subscription"],
+    queryFn: api.getSubscription,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: api.getProfile,
@@ -338,6 +344,48 @@ export default function ProfileScreen() {
           </>
         ) : (
           <>
+            {/* ── Plan ── */}
+            <Card>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: subscriptionData?.upgradeAvailable ? 14 : 0 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View style={[styles.planIcon, { backgroundColor: subscriptionData?.plan?.key === "premium" ? "#448aff20" : theme.primaryDim }]}>
+                    <Feather name="zap" size={18} color={subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary} />
+                  </View>
+                  <View>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Current Plan</Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+                      {subscriptionData?.plan?.name ?? "Free"} · {(subscriptionData?.subscription?.status ?? "active").charAt(0).toUpperCase() + (subscriptionData?.subscription?.status ?? "active").slice(1)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.planBadge, {
+                  backgroundColor: subscriptionData?.plan?.key === "premium" ? "#448aff20" : theme.primaryDim,
+                }]}>
+                  <Text style={{
+                    color: subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary,
+                    fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 0.8,
+                  }}>
+                    {(subscriptionData?.plan?.key ?? "free").toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+
+              {subscriptionData?.upgradeAvailable && (
+                <Pressable style={[styles.upgradeRow, { backgroundColor: "#448aff0d", borderColor: "#448aff35" }]}>
+                  <Feather name="trending-up" size={16} color="#448aff" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#448aff", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Upgrade to Premium</Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                      Photo analysis · Unlimited plans · Advanced analytics
+                    </Text>
+                  </View>
+                  <View style={styles.soonBadge}>
+                    <Text style={{ color: "#448aff", fontFamily: "Inter_600SemiBold", fontSize: 10 }}>Soon</Text>
+                  </View>
+                </Pressable>
+              )}
+            </Card>
+
             {/* ── Achievements ── */}
             <Pressable
               onPress={() => router.push("/achievements" as any)}
@@ -585,5 +633,20 @@ const styles = StyleSheet.create({
   achieveIcon: {
     width: 40, height: 40, borderRadius: 12,
     alignItems: "center", justifyContent: "center",
+  },
+  planIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: "center", justifyContent: "center",
+  },
+  planBadge: {
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+  },
+  upgradeRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    padding: 12, borderRadius: 10, borderWidth: 1,
+  },
+  soonBadge: {
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+    backgroundColor: "#448aff20",
   },
 });

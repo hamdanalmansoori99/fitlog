@@ -14,6 +14,7 @@ import recoveryRouter from "./recovery";
 import userTemplatesRouter from "./user-templates";
 import mealFavoritesRouter from "./meal-favorites";
 import achievementsRouter from "./achievements";
+import subscriptionRouter from "./subscription";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use("/coach", coachRouter);
 router.use("/water", waterRouter);
 router.use("/recovery", recoveryRouter);
 router.use("/achievements", achievementsRouter);
+router.use("/subscription", subscriptionRouter);
 
 export default router;

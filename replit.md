@@ -143,6 +143,42 @@ Event types tracked: `workout.logged`, `meal.logged`, `achievement.earned`, `tem
 - `requireRole("admin")` middleware ready to gate any future admin routes
 - `analytics_events` table feeds a future admin dashboard (queries by event_type, date range, user cohort)
 
+## Subscription / Plan System
+
+### Plan catalog — `artifacts/api-server/src/lib/plans.ts`
+Single source of truth for plan definitions. Two plans defined:
+- **Free** — AI coach, 25+ templates, 10 saved plans, 20 favourite meals, 50 AI req/day
+- **Premium** — Everything + AI photo analysis, advanced analytics, advanced nutrition, smart progression, deeper recovery, unlimited templates/favourites, data export, barcode scanner, priority support
+
+`PLANS`, `getPlan(key)`, `hasFeatureForPlan(key, feature)`, `getLimitsForPlan(key)`, `getEffectivePlanKey(role, planKey)` — all exported.
+
+### DB — `user_subscriptions` table
+One row per user. Columns: `plan_key`, `status` (active/trialing/cancelled/expired), `trial_ends_at`, `period_start`, `period_end`, `cancelled_at`, `external_id` (Stripe sub ID), `external_customer_id` (Stripe customer ID). All existing users backfilled to `free/active`.
+
+### Subscription service — `src/services/subscriptionService.ts`
+- `getActiveSubscription(userId, role)` — returns plan + features + limits + upgrade flag
+- `ensureFreeSubscription(userId)` — idempotent, called on register
+- `setSubscriptionPlan(userId, planKey, opts)` — upserts on conflict; call from Stripe webhook
+- `cancelSubscription(userId)` — marks cancelled at period end
+
+### API endpoint — `GET /api/subscription`
+Returns: `{ plan, subscription, features, limits, upgradeAvailable, availablePlans }`. All `Infinity` limits serialized as `null` for JSON safety.
+
+### Feature flags — `src/lib/features.ts`
+- `hasPlanFeature(role, planKey, feature)` — combines role override + plan lookup
+- `getEffectiveLimits(role, planKey)` — returns limit set
+- `isUpgradeAvailable(role, planKey)` — whether upgrade CTA should show
+
+### Frontend
+- `api.getSubscription()` in `lib/api.ts`
+- Settings tab in `profile.tsx` shows a **Plan card** with current plan badge, upgrade CTA ("Coming soon") when on Free plan
+
+### Wiring Stripe (when ready)
+1. Add Stripe integration (see integrations skill)
+2. Create a checkout route that creates a Stripe session
+3. Add a webhook route that calls `setSubscriptionPlan(userId, "premium", { externalId, periodEnd })`
+4. Gate premium routes with `requireRole("premium")` or `hasPlanFeature` checks
+
 ## TypeScript & Composite Projects
 
 Every package extends `tsconfig.base.json` with `composite: true`. Always typecheck from root with `pnpm run typecheck`.
