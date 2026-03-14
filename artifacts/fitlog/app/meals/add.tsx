@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform,
-  ActivityIndicator, Image, Alert,
+  ActivityIndicator, Image, Alert, KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -256,9 +256,13 @@ export default function AddMealScreen() {
         <View style={{ width: 44 }} />
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 36 }]}
         keyboardShouldPersistTaps="handled"
       >
         {/* ── AI Scan Banner ── */}
@@ -582,6 +586,7 @@ export default function AddMealScreen() {
 
         <Button title="Save Meal" onPress={handleSubmit} loading={mutation.isPending} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -592,7 +597,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 44, height: 44, justifyContent: "center" },
   navTitle: { fontSize: 17 },
   content: { padding: 20, gap: 16 },
-  fieldLabel: { fontSize: 13, marginBottom: 6 },
+  fieldLabel: { fontSize: 13, marginBottom: 8 },
 
   scanBanner: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 16, borderWidth: 1.5 },
   scanIconCircle: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
@@ -600,36 +605,36 @@ const styles = StyleSheet.create({
   photoPreview: { width: "100%", height: 180 },
   aiBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: "flex-start" },
 
-  macroBar: { borderRadius: 14, borderWidth: 1, padding: 12, gap: 8 },
+  macroBar: { borderRadius: 16, borderWidth: 1, padding: 12, gap: 8 },
   macroPills: { flexDirection: "row", gap: 8 },
   macroPill: { flex: 1, minWidth: 56, alignItems: "center", paddingVertical: 8, paddingHorizontal: 6, borderRadius: 10, borderWidth: 1 },
   goalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   remainText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
 
   categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  catChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5 },
+  catChip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderWidth: 1.5, minHeight: 44, justifyContent: "center" },
 
   sectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   rescanBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
 
   recentChip: { borderRadius: 12, borderWidth: 1, padding: 10, minWidth: 90, maxWidth: 130 },
 
-  foodCard: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 8, gap: 10 },
+  foodCard: { borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 8, gap: 10 },
   foodHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   foodNum: { fontSize: 13 },
-  foodInput: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 14 },
+  foodInput: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15, minHeight: 46 },
   barcodeBtn: { width: 40, height: 40, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  servingChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
+  servingChip: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
   portionRow: { flexDirection: "row", gap: 10, alignItems: "flex-end" },
   miniLabel: { fontSize: 11, marginBottom: 4, fontFamily: "Inter_500Medium" },
-  smallInput: { borderWidth: 1, borderRadius: 8, padding: 8, fontSize: 14, textAlign: "center" },
-  unitChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1 },
+  smallInput: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 14, textAlign: "center", minHeight: 44 },
+  unitChip: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 6, borderWidth: 1 },
   nutritionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   nutritionField: { width: "46%" },
   foodFooter: { flexDirection: "row", justifyContent: "flex-end", paddingTop: 8, borderTopWidth: 1, marginTop: 2 },
   footerBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 4, paddingHorizontal: 8 },
 
-  addFoodBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 12, borderRadius: 10, borderWidth: 1, borderStyle: "dashed" },
+  addFoodBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderStyle: "dashed", minHeight: 52 },
   notesInput: { borderWidth: 1.5, borderRadius: 12, padding: 12, minHeight: 70, textAlignVertical: "top", fontSize: 15 },
 
   successScreen: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },

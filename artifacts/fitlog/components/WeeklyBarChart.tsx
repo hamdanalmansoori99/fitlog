@@ -77,6 +77,6 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     justifyContent: "flex-end",
   },
-  barLabel: { fontSize: 9, marginBottom: 2 },
+  barLabel: { fontSize: 10, marginBottom: 2 },
   dayLabel: { fontSize: 11, textAlign: "center" },
 });

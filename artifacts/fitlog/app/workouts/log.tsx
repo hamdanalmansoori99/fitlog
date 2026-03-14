@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform,
-  Alert,
+  Alert, KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -339,9 +339,13 @@ export default function LogWorkoutScreen() {
         <View style={{ width: 44 }} />
       </View>
       
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
       >
         {step === "select" ? (
@@ -477,7 +481,10 @@ export default function LogWorkoutScreen() {
                         Exercise {exIdx + 1}
                       </Text>
                       {exercises.length > 1 && (
-                        <Pressable onPress={() => {
+                        <Pressable
+                          hitSlop={10}
+                          style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+                          onPress={() => {
                           const newEx = [...exercises];
                           newEx.splice(exIdx, 1);
                           setExercises(newEx);
@@ -579,7 +586,10 @@ export default function LogWorkoutScreen() {
                           placeholderTextColor={theme.textMuted}
                           style={[styles.setInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background, fontFamily: "Inter_400Regular", flex: 2 }]}
                         />
-                        <Pressable onPress={() => {
+                        <Pressable
+                          hitSlop={10}
+                          style={{ width: 32, height: 44, alignItems: "center", justifyContent: "center" }}
+                          onPress={() => {
                           if (ex.sets.length > 1) {
                             const newEx = [...exercises];
                             newEx[exIdx].sets.splice(setIdx, 1);
@@ -700,6 +710,7 @@ export default function LogWorkoutScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -754,14 +765,14 @@ const styles = StyleSheet.create({
   actIcon: { width: 52, height: 52, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   actLabel: { fontSize: 14 },
   form: { gap: 16 },
-  fieldLabel: { fontSize: 13, marginBottom: 6 },
+  fieldLabel: { fontSize: 13, marginBottom: 8 },
   durationRow: { flexDirection: "row", gap: 12 },
   durationUnit: { fontSize: 11, marginTop: 4, textAlign: "center" },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5 },
+  chip: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 20, borderWidth: 1.5, minHeight: 44, justifyContent: "center" },
   moodRow: { flexDirection: "row", gap: 8 },
   moodChip: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1.5,
-    alignItems: "center", gap: 4,
+    paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5,
+    alignItems: "center", gap: 4, minHeight: 52,
   },
   moodLabel: { fontSize: 11 },
   notesInput: {
@@ -773,20 +784,20 @@ const styles = StyleSheet.create({
   exerciseHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   exerciseNum: { fontSize: 14 },
   exerciseInput: {
-    borderWidth: 1.5, borderRadius: 10, padding: 10, fontSize: 14,
+    borderWidth: 1.5, borderRadius: 12, padding: 12, fontSize: 15, minHeight: 48,
   },
   suggestions: { marginTop: 4 },
-  suggestion: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, marginRight: 6 },
+  suggestion: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 8, borderWidth: 1, marginRight: 6 },
   setsHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   setLabel: { fontSize: 12 },
   setRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   setNum: { fontSize: 14, textAlign: "center" },
   setInput: {
-    borderWidth: 1, borderRadius: 8, padding: 8, fontSize: 14, textAlign: "center",
+    borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 15, textAlign: "center", minHeight: 44,
   },
   addSetBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    padding: 10, borderRadius: 10, borderWidth: 1.5, borderStyle: "dashed",
+    paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, borderWidth: 1.5, borderStyle: "dashed", minHeight: 44,
   },
   addExBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
@@ -819,11 +830,13 @@ const styles = StyleSheet.create({
   progressionBadgeTarget: { fontSize: 12 },
   rpeChip: {
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: 10,
     paddingHorizontal: 4,
     borderRadius: 8,
     borderWidth: 1,
     gap: 3,
+    minHeight: 52,
+    justifyContent: "center",
   },
   successCircle: { width: 100, height: 100, borderRadius: 50, alignItems: "center", justifyContent: "center" },
   successTitle: { fontSize: 26 },

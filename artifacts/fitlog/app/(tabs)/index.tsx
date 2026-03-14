@@ -442,6 +442,7 @@ export default function HomeScreen() {
   });
 
   const [refreshing, setRefreshing] = React.useState(false);
+  const [fabOpen, setFabOpen] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -826,30 +827,36 @@ export default function HomeScreen() {
         </Animated.View>
       </ScrollView>
 
+      {/* FAB backdrop — dismisses menu on outside tap */}
+      {fabOpen && (
+        <Pressable
+          style={[StyleSheet.absoluteFill, { zIndex: 10 }]}
+          onPress={() => setFabOpen(false)}
+        />
+      )}
+
       {/* FAB */}
-      <View style={[styles.fabWrap, { bottom: 90 + bottomPad }]}>
-        <FABMenu theme={theme} />
+      <View style={[styles.fabWrap, { bottom: 90 + bottomPad, zIndex: 20 }]}>
+        <FABMenu theme={theme} open={fabOpen} onToggle={() => setFabOpen(o => !o)} />
       </View>
     </View>
   );
 }
 
-function FABMenu({ theme }: { theme: any }) {
-  const [open, setOpen] = React.useState(false);
-
+function FABMenu({ theme, open, onToggle }: { theme: any; open: boolean; onToggle: () => void }) {
   return (
     <View style={styles.fab}>
       {open && (
         <>
           <Pressable
-            onPress={() => { setOpen(false); router.push("/meals/add"); }}
+            onPress={() => { onToggle(); router.push("/meals/add"); }}
             style={[styles.fabOption, { backgroundColor: theme.card, borderColor: theme.border }]}
           >
             <Feather name="coffee" size={18} color={theme.pink} />
             <Text style={[styles.fabOptionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>Log Meal</Text>
           </Pressable>
           <Pressable
-            onPress={() => { setOpen(false); router.push("/workouts/log"); }}
+            onPress={() => { onToggle(); router.push("/workouts/log"); }}
             style={[styles.fabOption, { backgroundColor: theme.card, borderColor: theme.border }]}
           >
             <Feather name="activity" size={18} color={theme.primary} />
@@ -858,7 +865,7 @@ function FABMenu({ theme }: { theme: any }) {
         </>
       )}
       <Pressable
-        onPress={() => setOpen(!open)}
+        onPress={onToggle}
         style={[styles.fabMain, { backgroundColor: theme.primary }]}
       >
         <Feather name={open ? "x" : "plus"} size={26} color="#0f0f1a" />
