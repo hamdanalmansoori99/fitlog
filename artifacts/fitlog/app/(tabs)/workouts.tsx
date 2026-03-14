@@ -644,14 +644,14 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 5,
     paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1,
   },
-  addBtn: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  planBanner: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
+  addBtn: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  planBanner: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, borderWidth: 1 },
   planBannerIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   planBannerTitle: { fontSize: 14 },
   planBannerSub: { fontSize: 12, marginTop: 2 },
   section: { paddingHorizontal: 20, marginBottom: 20 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  sectionTitle: { fontSize: 17 },
+  sectionTitle: { fontSize: 16 },
   editPrefs: { fontSize: 13 },
   // Onboarding
   onboardingCard: {
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
   recScroll: { marginHorizontal: -20 },
   recRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 },
   recCardWrap: { width: 270 },
-  recCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
+  recCard: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 8 },
   recHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   recIcon: { width: 40, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   recName: { fontSize: 14 },
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
   quickLabel: { fontSize: 12 },
   // Templates
   templateRow: { flexDirection: "row", gap: 10, paddingRight: 8 },
-  templateCard: { width: 150, borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
+  templateCard: { width: 150, borderRadius: 16, borderWidth: 1, padding: 14, gap: 8 },
   templateIcon: { width: 40, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   templateName: { fontSize: 13, lineHeight: 18 },
   templateMeta: { marginTop: 2 },
@@ -726,10 +726,10 @@ const styles = StyleSheet.create({
   // My Templates
   createTemplateCard: {
     flexDirection: "row", alignItems: "center", gap: 12, padding: 14,
-    borderRadius: 14, borderWidth: 1,
+    borderRadius: 16, borderWidth: 1,
   },
   createTemplateIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  myTmplCard: { width: 140, borderRadius: 14, borderWidth: 1, padding: 12 },
+  myTmplCard: { width: 140, borderRadius: 16, borderWidth: 1, padding: 12 },
   myTmplIcon: { width: 32, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   // Empty
   empty: { alignItems: "center", gap: 10, paddingVertical: 28 },

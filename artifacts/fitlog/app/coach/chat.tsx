@@ -212,7 +212,7 @@ export default function CoachChatScreen() {
         ]}
       >
         {!isUser && (
-          <View style={[styles.avatar, { backgroundColor: "#00e676" + "22" }]}>
+          <View style={[styles.avatar, { backgroundColor: theme.primaryDim }]}>
             <Text style={{ fontSize: 14 }}>🤖</Text>
           </View>
         )}
@@ -220,7 +220,7 @@ export default function CoachChatScreen() {
           style={[
             styles.bubble,
             isUser
-              ? [styles.bubbleUser, { backgroundColor: "#00e676" }]
+              ? [styles.bubbleUser, { backgroundColor: theme.primary }]
               : [styles.bubbleAssistant, { backgroundColor: theme.card }],
           ]}
         >
@@ -266,7 +266,7 @@ export default function CoachChatScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#00e676" size="large" />
+          <ActivityIndicator color={theme.primary} size="large" />
           <Text style={[styles.loadingText, { color: theme.textMuted }]}>
             Loading your conversation...
           </Text>
@@ -343,7 +343,7 @@ export default function CoachChatScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.sendBtn,
-                { backgroundColor: input.trim() && !sending ? "#00e676" : theme.border },
+                { backgroundColor: input.trim() && !sending ? theme.primary : theme.border },
                 pressed && { opacity: 0.8 },
               ]}
               onPress={() => sendMessage(input)}
@@ -417,7 +417,7 @@ function makeStyles(theme: any, isWeb: boolean, webTop: number, webBottom: numbe
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: "#00e676",
+      backgroundColor: theme.primary,
     },
     headerTitle: {
       fontFamily: "Inter_700Bold",

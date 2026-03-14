@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 18 },
   section: { paddingHorizontal: 20, marginBottom: 20 },
   sectionHeaderRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
-  sectionTitle: { fontSize: 17 },
+  sectionTitle: { fontSize: 16 },
   aiPill: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,

@@ -17,7 +17,7 @@ const STROKE = 11;
 const R = (RING - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
 
-function ProgressRing({ pct, totalMl, goalMl, color }: { pct: number; totalMl: number; goalMl: number; color: string }) {
+function ProgressRing({ pct, totalMl, goalMl, color, successColor }: { pct: number; totalMl: number; goalMl: number; color: string; successColor: string }) {
   const dash = Math.max(0, Math.min(1, pct / 100)) * CIRC;
   const gap = CIRC - dash;
   return (
@@ -29,7 +29,7 @@ function ProgressRing({ pct, totalMl, goalMl, color }: { pct: number; totalMl: n
           {/* Progress */}
           <Circle
             cx={RING / 2} cy={RING / 2} r={R}
-            stroke={pct >= 100 ? "#00e676" : color}
+            stroke={pct >= 100 ? successColor : color}
             strokeWidth={STROKE}
             strokeDasharray={`${dash} ${gap}`}
             strokeLinecap="round"
@@ -166,13 +166,13 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
             <View style={[styles.ringPlaceholder, { backgroundColor: theme.border }]} />
           ) : (
             <Animated.View entering={ZoomIn.duration(500)}>
-              <ProgressRing pct={pct} totalMl={totalMl} goalMl={goalMl} color={WATER_BLUE} />
+              <ProgressRing pct={pct} totalMl={totalMl} goalMl={goalMl} color={WATER_BLUE} successColor={theme.primary} />
             </Animated.View>
           )}
 
           <View style={styles.insightBox}>
             <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
-              <Feather name={insight.icon as any} size={13} color={pct >= 100 ? "#00e676" : pct < 30 ? theme.orange : WATER_BLUE} style={{ marginTop: 1 }} />
+              <Feather name={insight.icon as any} size={13} color={pct >= 100 ? theme.primary : pct < 30 ? theme.orange : WATER_BLUE} style={{ marginTop: 1 }} />
               <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18, flex: 1 }}>
                 {insight.text}
               </Text>

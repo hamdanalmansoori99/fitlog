@@ -56,7 +56,7 @@ function ClassicTabLayout() {
         },
         tabBarLabelStyle: {
           fontFamily: "Inter_500Medium",
-          fontSize: 10,
+          fontSize: 11,
         },
         tabBarBackground: () =>
           isIOS ? (

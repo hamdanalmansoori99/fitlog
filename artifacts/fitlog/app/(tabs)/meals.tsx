@@ -22,10 +22,11 @@ const CAT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
 };
 
 function MacroBadge({ label, value, color }: { label: string; value: number; color: string }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.macroBadge}>
       <Text style={[styles.macroVal, { color, fontFamily: "Inter_600SemiBold" }]}>{Math.round(value)}g</Text>
-      <Text style={[styles.macroLabel, { color: "#9e9e9e", fontFamily: "Inter_400Regular" }]}>{label}</Text>
+      <Text style={[styles.macroLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{label}</Text>
     </View>
   );
 }
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
   quickLogHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   quickLogTitle: { fontSize: 16 },
   quickLogSub: { fontSize: 12 },
-  favCard: { width: 155, borderRadius: 14, borderWidth: 1, padding: 12 },
+  favCard: { width: 155, borderRadius: 16, borderWidth: 1, padding: 12 },
   favIcon: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   logNowBtn: { marginTop: 10, paddingVertical: 7, borderRadius: 8, alignItems: "center" },
 

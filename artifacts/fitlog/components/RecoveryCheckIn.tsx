@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   TextInput,
   ActivityIndicator,
@@ -155,9 +155,9 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
               <Text style={s.doneBadgeText}>✓ Logged</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={() => setExpanded(true)} hitSlop={8}>
+          <Pressable onPress={() => setExpanded(true)} hitSlop={8}>
             <Text style={s.editLink}>Edit</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <View style={s.summaryRow}>
@@ -228,7 +228,10 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
   // ── Check-in prompt (not yet logged) ───────────────────────────────────────
   if (!todayLog && !expanded) {
     return (
-      <TouchableOpacity style={s.promptCard} onPress={() => setExpanded(true)} activeOpacity={0.85}>
+      <Pressable
+        style={({ pressed }) => [s.promptCard, { opacity: pressed ? 0.85 : 1 }]}
+        onPress={() => setExpanded(true)}
+      >
         <View style={s.promptLeft}>
           <View style={s.iconBadge}>
             <Feather name="activity" size={14} color={theme.primary} />
@@ -242,7 +245,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
           <Text style={s.promptCtaText}>Check In</Text>
           <Feather name="chevron-right" size={14} color={theme.primary} />
         </View>
-      </TouchableOpacity>
+      </Pressable>
     );
   }
 
@@ -256,9 +259,9 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
           </View>
           <Text style={s.cardTitle}>Recovery Check-In</Text>
         </View>
-        <TouchableOpacity onPress={() => setExpanded(false)} hitSlop={8}>
+        <Pressable onPress={() => setExpanded(false)} hitSlop={8}>
           <Feather name="x" size={18} color={theme.textMuted} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* Sleep hours */}
@@ -266,7 +269,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
         <View style={s.chipRow}>
           {SLEEP_HOURS.map((h) => (
-            <TouchableOpacity
+            <Pressable
               key={h}
               style={[s.valueChip, !sleepCustom && sleepHours === h && s.valueChipActive]}
               onPress={() => { setSleepHours(h); setSleepCustom(false); }}
@@ -274,14 +277,14 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
               <Text style={[s.valueChipText, !sleepCustom && sleepHours === h && s.valueChipTextActive]}>
                 {h}h
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           ))}
-          <TouchableOpacity
+          <Pressable
             style={[s.valueChip, sleepCustom && s.valueChipActive]}
             onPress={() => setSleepCustom(true)}
           >
             <Text style={[s.valueChipText, sleepCustom && s.valueChipTextActive]}>Other</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </ScrollView>
       {sleepCustom && (
@@ -299,14 +302,14 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
       <Text style={s.sectionLabel}>Sleep quality</Text>
       <View style={s.emojiRow}>
         {SLEEP_QUALITY_OPTIONS.map((opt) => (
-          <TouchableOpacity
+          <Pressable
             key={opt.value}
             style={[s.emojiChip, sleepQuality === opt.value && s.emojiChipActive]}
             onPress={() => setSleepQuality(opt.value)}
           >
             <Text style={s.emojiLabel}>{opt.label}</Text>
             <Text style={[s.emojiDesc, sleepQuality === opt.value && s.emojiDescActive]}>{opt.desc}</Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
 
@@ -314,14 +317,14 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
       <Text style={s.sectionLabel}>Energy level</Text>
       <View style={s.emojiRow}>
         {ENERGY_OPTIONS.map((opt) => (
-          <TouchableOpacity
+          <Pressable
             key={opt.value}
             style={[s.emojiChip, energyLevel === opt.value && s.emojiChipActive]}
             onPress={() => setEnergyLevel(opt.value)}
           >
             <Text style={s.emojiLabel}>{opt.label}</Text>
             <Text style={[s.emojiDesc, energyLevel === opt.value && s.emojiDescActive]}>{opt.desc}</Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
 
@@ -329,14 +332,14 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
       <Text style={s.sectionLabel}>Stress level</Text>
       <View style={s.emojiRow}>
         {STRESS_OPTIONS.map((opt) => (
-          <TouchableOpacity
+          <Pressable
             key={opt.value}
             style={[s.emojiChip, stressLevel === opt.value && s.emojiChipActive]}
             onPress={() => setStressLevel(opt.value)}
           >
             <Text style={s.emojiLabel}>{opt.label}</Text>
             <Text style={[s.emojiDesc, stressLevel === opt.value && s.emojiDescActive]}>{opt.desc}</Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
 
@@ -347,7 +350,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
           const level = soreness[part.key] ?? 0;
           const col = sorenessColor(level);
           return (
-            <TouchableOpacity
+            <Pressable
               key={part.key}
               style={[
                 s.sorenessCell,
@@ -363,26 +366,26 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
               <Text style={[s.sorenessCellLevel, col ? { color: col } : { color: theme.textMuted }]}>
                 {sorenessLabel(level)}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
 
       {/* Save button */}
-      <TouchableOpacity
-        style={[s.saveBtn, mutation.isPending && s.saveBtnDisabled]}
+      <Pressable
+        style={({ pressed }) => [s.saveBtn, mutation.isPending && s.saveBtnDisabled, { opacity: pressed ? 0.85 : 1 }]}
         onPress={() => mutation.mutate()}
         disabled={mutation.isPending}
       >
         {mutation.isPending ? (
-          <ActivityIndicator size="small" color="#000" />
+          <ActivityIndicator size="small" color="#0f0f1a" />
         ) : (
           <>
-            <Feather name="check" size={15} color="#000" />
+            <Feather name="check" size={15} color="#0f0f1a" />
             <Text style={s.saveBtnText}>Save Check-In</Text>
           </>
         )}
-      </TouchableOpacity>
+      </Pressable>
 
       {mutation.isError && (
         <Text style={s.errorText}>Failed to save — please try again.</Text>
@@ -414,12 +417,16 @@ function styles(theme: any) {
     card: {
       backgroundColor: theme.card,
       borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
       padding: 16,
       marginBottom: 16,
     },
     promptCard: {
       backgroundColor: theme.card,
       borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
       padding: 16,
       marginBottom: 16,
       flexDirection: "row",
@@ -434,6 +441,7 @@ function styles(theme: any) {
     },
     promptSub: {
       color: theme.textMuted,
+      fontFamily: "Inter_400Regular",
       fontSize: 12,
       marginTop: 2,
       lineHeight: 16,
@@ -450,8 +458,8 @@ function styles(theme: any) {
     },
     promptCtaText: {
       color: theme.primary,
+      fontFamily: "Inter_600SemiBold",
       fontSize: 13,
-      fontWeight: "600",
     },
     headerRow: {
       flexDirection: "row",
@@ -474,8 +482,8 @@ function styles(theme: any) {
     },
     cardTitle: {
       color: theme.text,
+      fontFamily: "Inter_700Bold",
       fontSize: 15,
-      fontWeight: "700",
     },
     doneBadge: {
       backgroundColor: theme.primary + "22",
@@ -485,13 +493,13 @@ function styles(theme: any) {
     },
     doneBadgeText: {
       color: theme.primary,
+      fontFamily: "Inter_600SemiBold",
       fontSize: 11,
-      fontWeight: "600",
     },
     editLink: {
       color: theme.primary,
+      fontFamily: "Inter_600SemiBold",
       fontSize: 13,
-      fontWeight: "600",
     },
     summaryRow: {
       flexDirection: "row",
@@ -503,7 +511,7 @@ function styles(theme: any) {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
-      backgroundColor: theme.surface,
+      backgroundColor: theme.cardAlt,
       borderRadius: 10,
       paddingHorizontal: 10,
       paddingVertical: 5,
@@ -515,8 +523,8 @@ function styles(theme: any) {
     },
     summaryChipText: {
       color: theme.text,
+      fontFamily: "Inter_500Medium",
       fontSize: 12,
-      fontWeight: "500",
     },
     soreSummaryRow: {
       flexDirection: "row",
@@ -534,8 +542,8 @@ function styles(theme: any) {
     },
     soreChipText: {
       color: theme.textMuted,
+      fontFamily: "Inter_500Medium",
       fontSize: 11,
-      fontWeight: "500",
     },
     influenceBanner: {
       flexDirection: "row",
@@ -549,22 +557,22 @@ function styles(theme: any) {
     },
     influenceText: {
       color: theme.primary,
+      fontFamily: "Inter_500Medium",
       fontSize: 12,
-      fontWeight: "500",
       flex: 1,
     },
     sectionLabel: {
       color: theme.textMuted,
+      fontFamily: "Inter_600SemiBold",
       fontSize: 12,
-      fontWeight: "600",
       textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 8,
     },
     tapHint: {
       color: theme.textMuted,
+      fontFamily: "Inter_400Regular",
       fontSize: 11,
-      fontWeight: "400",
       textTransform: "none",
       letterSpacing: 0,
     },
@@ -579,7 +587,7 @@ function styles(theme: any) {
       borderRadius: 10,
       borderWidth: 1,
       borderColor: theme.border,
-      backgroundColor: theme.surface,
+      backgroundColor: theme.cardAlt,
     },
     valueChipActive: {
       borderColor: theme.primary,
@@ -587,8 +595,8 @@ function styles(theme: any) {
     },
     valueChipText: {
       color: theme.textMuted,
+      fontFamily: "Inter_600SemiBold",
       fontSize: 14,
-      fontWeight: "600",
     },
     valueChipTextActive: {
       color: theme.primary,
@@ -599,9 +607,10 @@ function styles(theme: any) {
       borderRadius: 10,
       padding: 10,
       color: theme.text,
+      fontFamily: "Inter_400Regular",
       fontSize: 14,
       marginBottom: 12,
-      backgroundColor: theme.surface,
+      backgroundColor: theme.cardAlt,
     },
     emojiRow: {
       flexDirection: "row",
@@ -615,7 +624,7 @@ function styles(theme: any) {
       borderRadius: 10,
       borderWidth: 1,
       borderColor: theme.border,
-      backgroundColor: theme.surface,
+      backgroundColor: theme.cardAlt,
     },
     emojiChipActive: {
       borderColor: theme.primary,
@@ -627,8 +636,8 @@ function styles(theme: any) {
     },
     emojiDesc: {
       color: theme.textMuted,
+      fontFamily: "Inter_500Medium",
       fontSize: 9,
-      fontWeight: "500",
     },
     emojiDescActive: {
       color: theme.primary,
@@ -648,13 +657,13 @@ function styles(theme: any) {
       alignItems: "center",
     },
     sorenessCellLabel: {
+      fontFamily: "Inter_700Bold",
       fontSize: 12,
-      fontWeight: "700",
       marginBottom: 2,
     },
     sorenessCellLevel: {
+      fontFamily: "Inter_500Medium",
       fontSize: 10,
-      fontWeight: "500",
     },
     saveBtn: {
       backgroundColor: theme.primary,
@@ -669,12 +678,13 @@ function styles(theme: any) {
       opacity: 0.6,
     },
     saveBtnText: {
-      color: "#000",
+      color: "#0f0f1a",
+      fontFamily: "Inter_700Bold",
       fontSize: 15,
-      fontWeight: "700",
     },
     errorText: {
       color: "#ef5350",
+      fontFamily: "Inter_400Regular",
       fontSize: 12,
       textAlign: "center",
       marginTop: 6,

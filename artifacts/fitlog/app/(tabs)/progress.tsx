@@ -35,14 +35,15 @@ function MiniLineChart({ data, color }: { data: number[]; color: string }) {
 }
 
 function SimplePieChart({ data }: { data: { label: string; value: number; color: string }[] }) {
+  const { theme } = useTheme();
   const total = data.reduce((s, d) => s + d.value, 0);
   return (
     <View style={styles.pieChart}>
       {data.map((d, i) => (
         <View key={i} style={styles.pieRow}>
           <View style={[styles.pieDot, { backgroundColor: d.color }]} />
-          <Text style={{ color: "#9e9e9e", fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 }}>{d.label}</Text>
-          <Text style={{ color: "#f5f5f5", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 }}>{d.label}</Text>
+          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
             {total > 0 ? Math.round((d.value / total) * 100) : 0}%
           </Text>
         </View>
@@ -52,11 +53,12 @@ function SimplePieChart({ data }: { data: { label: string; value: number; color:
 }
 
 function StreakCard({ icon, value, label, color }: { icon: keyof typeof Feather.glyphMap; value: number; label: string; color: string }) {
+  const { theme } = useTheme();
   return (
     <View style={[styles.streakCard, { backgroundColor: color + "15", borderColor: color + "40" }]}>
       <Feather name={icon} size={22} color={color} />
       <Text style={{ color, fontFamily: "Inter_700Bold", fontSize: 28 }}>{value}</Text>
-      <Text style={{ color: "#9e9e9e", fontFamily: "Inter_400Regular", fontSize: 11, textAlign: "center" }}>{label}</Text>
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, textAlign: "center" }}>{label}</Text>
     </View>
   );
 }
@@ -404,12 +406,12 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1,
   },
-  sectionTitle: { fontSize: 17, marginBottom: 12 },
+  sectionTitle: { fontSize: 16, marginBottom: 12 },
   cardTitle: { fontSize: 15, marginBottom: 12 },
   cardSub: { fontSize: 12, marginBottom: 8 },
   streaksRow: { flexDirection: "row", gap: 10 },
   streakCard: {
-    flex: 1, alignItems: "center", gap: 4, padding: 14, borderRadius: 14, borderWidth: 1,
+    flex: 1, alignItems: "center", gap: 4, padding: 14, borderRadius: 16, borderWidth: 1,
   },
   statsGrid: { flexDirection: "row", alignItems: "center" },
   statItem: { flex: 1, alignItems: "center", paddingVertical: 8 },
