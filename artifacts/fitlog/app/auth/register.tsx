@@ -31,8 +31,12 @@ export default function RegisterScreen() {
   const passwordRef = useRef<TextInput>(null);
 
   const handleRegister = async () => {
-    if (!firstName || !lastName || !email || !password) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
       setError("Please fill in all fields");
+      return;
+    }
+    if (!email.includes("@") || email.indexOf(".") < email.indexOf("@")) {
+      setError("Enter a valid email address");
       return;
     }
     if (password.length < 6) {

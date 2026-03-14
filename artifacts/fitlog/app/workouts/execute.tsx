@@ -191,6 +191,7 @@ export default function ExecuteWorkoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["achievements"] });
       router.replace("/(tabs)" as any);
     },
+    onError: (err: any) => Alert.alert("Error", err.message || "Failed to save workout. Please try again."),
   });
 
   const saveTemplateMutation = useMutation({
@@ -217,6 +218,7 @@ export default function ExecuteWorkoutScreen() {
       setTemplateSaved(true);
       setSaveAsTemplate(false);
     },
+    onError: () => Alert.alert("Error", "Failed to save template. Please try again."),
   });
 
   // ── Event handlers ─────────────────────────────────────────────────────────

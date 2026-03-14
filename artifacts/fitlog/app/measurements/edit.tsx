@@ -28,6 +28,7 @@ export default function EditMeasurementScreen() {
   const [waist, setWaist] = useState("");
   const [hips, setHips] = useState("");
   const [arms, setArms] = useState("");
+  const [validationError, setValidationError] = useState("");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["measurement", measureId],
@@ -60,6 +61,31 @@ export default function EditMeasurementScreen() {
   });
 
   const handleSave = () => {
+    setValidationError("");
+    if (weightKg) {
+      const w = parseFloat(weightKg);
+      if (isNaN(w) || w < 10 || w > 500) { setValidationError("Weight must be between 10 and 500 kg."); return; }
+    }
+    if (bodyFat) {
+      const bf = parseFloat(bodyFat);
+      if (isNaN(bf) || bf < 1 || bf > 70) { setValidationError("Body fat must be between 1% and 70%."); return; }
+    }
+    if (chest) {
+      const v = parseFloat(chest);
+      if (isNaN(v) || v < 30 || v > 300) { setValidationError("Chest must be between 30 and 300 cm."); return; }
+    }
+    if (waist) {
+      const v = parseFloat(waist);
+      if (isNaN(v) || v < 30 || v > 300) { setValidationError("Waist must be between 30 and 300 cm."); return; }
+    }
+    if (hips) {
+      const v = parseFloat(hips);
+      if (isNaN(v) || v < 30 || v > 300) { setValidationError("Hips must be between 30 and 300 cm."); return; }
+    }
+    if (arms) {
+      const v = parseFloat(arms);
+      if (isNaN(v) || v < 10 || v > 100) { setValidationError("Arms must be between 10 and 100 cm."); return; }
+    }
     mutation.mutate({
       weightKg: weightKg ? parseFloat(weightKg) : undefined,
       bodyFatPercent: bodyFat ? parseFloat(bodyFat) : undefined,
@@ -140,6 +166,11 @@ export default function EditMeasurementScreen() {
           </View>
         </View>
 
+        {validationError ? (
+          <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
+            {validationError}
+          </Text>
+        ) : null}
         <Button title="Save Changes" onPress={handleSave} loading={mutation.isPending} />
       </ScrollView>
     </View>

@@ -27,8 +27,12 @@ export default function LoginScreen() {
   const passwordRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       setError("Please fill in all fields");
+      return;
+    }
+    if (!email.includes("@") || email.indexOf(".") < email.indexOf("@")) {
+      setError("Enter a valid email address");
       return;
     }
     setError("");

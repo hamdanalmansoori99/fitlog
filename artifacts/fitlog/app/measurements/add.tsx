@@ -24,6 +24,7 @@ export default function AddMeasurementScreen() {
   const [hips, setHips] = useState("");
   const [arms, setArms] = useState("");
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
   
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   
@@ -34,9 +35,40 @@ export default function AddMeasurementScreen() {
       setSuccess(true);
       setTimeout(() => router.back(), 1000);
     },
+    onError: (err: any) => setError(err.message || "Failed to save measurement. Please try again."),
   });
   
   const handleSave = () => {
+    setError("");
+    const hasAny = weightKg || bodyFat || chest || waist || hips || arms;
+    if (!hasAny) {
+      setError("Enter at least one measurement to save.");
+      return;
+    }
+    if (weightKg) {
+      const w = parseFloat(weightKg);
+      if (isNaN(w) || w < 10 || w > 500) { setError("Weight must be between 10 and 500 kg."); return; }
+    }
+    if (bodyFat) {
+      const bf = parseFloat(bodyFat);
+      if (isNaN(bf) || bf < 1 || bf > 70) { setError("Body fat must be between 1% and 70%."); return; }
+    }
+    if (chest) {
+      const v = parseFloat(chest);
+      if (isNaN(v) || v < 30 || v > 300) { setError("Chest must be between 30 and 300 cm."); return; }
+    }
+    if (waist) {
+      const v = parseFloat(waist);
+      if (isNaN(v) || v < 30 || v > 300) { setError("Waist must be between 30 and 300 cm."); return; }
+    }
+    if (hips) {
+      const v = parseFloat(hips);
+      if (isNaN(v) || v < 30 || v > 300) { setError("Hips must be between 30 and 300 cm."); return; }
+    }
+    if (arms) {
+      const v = parseFloat(arms);
+      if (isNaN(v) || v < 10 || v > 100) { setError("Arms must be between 10 and 100 cm."); return; }
+    }
     mutation.mutate({
       date: new Date(date).toISOString(),
       weightKg: weightKg ? parseFloat(weightKg) : undefined,
@@ -84,6 +116,11 @@ export default function AddMeasurementScreen() {
           <View style={{ flex: 1 }}><Input label="Arms" value={arms} onChangeText={setArms} placeholder="35" keyboardType="decimal-pad" /></View>
         </View>
         
+        {error ? (
+          <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
+            {error}
+          </Text>
+        ) : null}
         <Button title="Save Measurement" onPress={handleSave} loading={mutation.isPending} />
       </ScrollView>
     </View>

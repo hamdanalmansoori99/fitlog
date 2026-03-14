@@ -151,6 +151,64 @@ export default function ProfileScreen() {
   }, [globalEnabled, prefs, setTime]);
 
   const handleSave = () => {
+    // ── Validation ─────────────────────────────────────────────────────────
+    if (age) {
+      const a = parseInt(age);
+      if (isNaN(a) || a < 10 || a > 120) {
+        showToast("Age must be between 10 and 120.", "error");
+        return;
+      }
+    }
+    if (heightCm) {
+      const h = parseFloat(heightCm);
+      if (isNaN(h) || h < 50 || h > 300) {
+        showToast("Height must be between 50 and 300 cm.", "error");
+        return;
+      }
+    }
+    if (weightKg) {
+      const w = parseFloat(weightKg);
+      if (isNaN(w) || w < 20 || w > 500) {
+        showToast("Weight must be between 20 and 500 kg.", "error");
+        return;
+      }
+    }
+    if (calorieGoal) {
+      const c = parseInt(calorieGoal);
+      if (isNaN(c) || c < 500 || c > 10000) {
+        showToast("Calorie goal must be between 500 and 10,000.", "error");
+        return;
+      }
+    }
+    if (proteinGoal) {
+      const p = parseInt(proteinGoal);
+      if (isNaN(p) || p < 0 || p > 600) {
+        showToast("Protein goal must be between 0 and 600 g.", "error");
+        return;
+      }
+    }
+    if (carbsGoal) {
+      const c = parseInt(carbsGoal);
+      if (isNaN(c) || c < 0 || c > 1500) {
+        showToast("Carbs goal must be between 0 and 1,500 g.", "error");
+        return;
+      }
+    }
+    if (fatGoal) {
+      const f = parseInt(fatGoal);
+      if (isNaN(f) || f < 0 || f > 500) {
+        showToast("Fat goal must be between 0 and 500 g.", "error");
+        return;
+      }
+    }
+    if (waterGoalMl) {
+      const wml = parseInt(waterGoalMl);
+      if (isNaN(wml) || wml < 500 || wml > 10000) {
+        showToast("Water goal must be between 500 and 10,000 ml.", "error");
+        return;
+      }
+    }
+
     // Auto-calculate calorie goal if height/weight/age set
     let calculatedGoal = calorieGoal ? parseInt(calorieGoal) : undefined;
     if (!calculatedGoal && heightCm && weightKg && age) {

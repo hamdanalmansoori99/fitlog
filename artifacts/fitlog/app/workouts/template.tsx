@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Platform,
+  View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
@@ -193,6 +193,7 @@ export default function WorkoutTemplateScreen() {
       setSuccess(true);
       setTimeout(() => router.replace("/(tabs)/workouts" as any), 2000);
     },
+    onError: (err: any) => Alert.alert("Error", err.message || "Failed to log workout. Please try again."),
   });
 
   if (!template) {

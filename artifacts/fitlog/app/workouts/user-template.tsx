@@ -48,6 +48,7 @@ export default function UserTemplateScreen() {
       queryClient.invalidateQueries({ queryKey: ["userTemplates"] });
       setEditing(false);
     },
+    onError: () => Alert.alert("Error", "Failed to update template. Please try again."),
   });
 
   const deleteMutation = useMutation({
@@ -56,11 +57,13 @@ export default function UserTemplateScreen() {
       queryClient.invalidateQueries({ queryKey: ["userTemplates"] });
       router.back();
     },
+    onError: () => Alert.alert("Error", "Failed to delete template. Please try again."),
   });
 
   const toggleFavMutation = useMutation({
     mutationFn: () => api.toggleTemplateFavorite(Number(params.id)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userTemplates"] }),
+    onError: () => Alert.alert("Error", "Failed to update favourite. Please try again."),
   });
 
   const useMutation2 = useMutation({

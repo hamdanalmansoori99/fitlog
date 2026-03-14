@@ -154,6 +154,7 @@ export default function LogWorkoutScreen() {
       setTemplateSaved(true);
       setShowSaveTemplate(false);
     },
+    onError: (err: any) => setError(err.message || "Failed to save template. Please try again."),
   });
 
   useEffect(() => {
@@ -182,7 +183,45 @@ export default function LogWorkoutScreen() {
   }, []);
   
   const handleSubmit = () => {
-    const durationMinutes = parseInt(durationH) * 60 + parseInt(durationM || "0");
+    setError("");
+    const durationMinutes = (parseInt(durationH) || 0) * 60 + (parseInt(durationM || "0") || 0);
+
+    // ── Validation ──────────────────────────────────────────────────────────
+    if (activityType === "gym") {
+      const namedExercises = exercises.filter(e => e.name.trim());
+      if (namedExercises.length === 0) {
+        setError("Add at least one exercise before saving.");
+        return;
+      }
+    } else {
+      const parsedDist = distanceKm ? parseFloat(distanceKm) : 0;
+      if (durationMinutes === 0 && parsedDist <= 0) {
+        setError("Enter a duration or distance for your workout.");
+        return;
+      }
+    }
+
+    if (distanceKm) {
+      const d = parseFloat(distanceKm);
+      if (isNaN(d) || d <= 0 || d > 2000) {
+        setError("Distance must be between 0.1 and 2000 km.");
+        return;
+      }
+    }
+
+    if (caloriesBurned) {
+      const c = parseInt(caloriesBurned);
+      if (isNaN(c) || c < 0 || c > 10000) {
+        setError("Calories burned must be between 0 and 10,000.");
+        return;
+      }
+    }
+
+    if (durationM && (parseInt(durationM) < 0 || parseInt(durationM) > 59)) {
+      setError("Minutes must be between 0 and 59.");
+      return;
+    }
+
     const metadata: any = {};
     
     if (routeType) metadata.routeType = routeType;

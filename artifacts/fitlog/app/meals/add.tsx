@@ -205,8 +205,31 @@ export default function AddMealScreen() {
 
   const handleSubmit = () => {
     if (!mealName.trim()) { setError("Meal name required"); return; }
-    const valid = foodItems.filter(f => f.name);
+    const valid = foodItems.filter(f => f.name.trim());
     if (valid.length === 0) { setError("Add at least one food item"); return; }
+
+    for (const f of valid) {
+      if (f.calories) {
+        const c = parseFloat(f.calories);
+        if (isNaN(c) || c < 0 || c > 5000) { setError(`Calories for "${f.name}" must be between 0 and 5,000.`); return; }
+      }
+      if (f.proteinG) {
+        const p = parseFloat(f.proteinG);
+        if (isNaN(p) || p < 0 || p > 500) { setError(`Protein for "${f.name}" must be between 0 and 500 g.`); return; }
+      }
+      if (f.carbsG) {
+        const c = parseFloat(f.carbsG);
+        if (isNaN(c) || c < 0 || c > 500) { setError(`Carbs for "${f.name}" must be between 0 and 500 g.`); return; }
+      }
+      if (f.fatG) {
+        const fa = parseFloat(f.fatG);
+        if (isNaN(fa) || fa < 0 || fa > 300) { setError(`Fat for "${f.name}" must be between 0 and 300 g.`); return; }
+      }
+      if (f.portionSize) {
+        const ps = parseFloat(f.portionSize);
+        if (isNaN(ps) || ps <= 0 || ps > 5000) { setError(`Portion size for "${f.name}" must be between 1 and 5,000.`); return; }
+      }
+    }
 
     mutation.mutate({
       name: mealName,

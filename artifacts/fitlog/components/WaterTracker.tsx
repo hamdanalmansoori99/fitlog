@@ -96,11 +96,13 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
   const logMutation = useMutation({
     mutationFn: api.logWater,
     onSuccess: invalidate,
+    onError: () => Alert.alert("Error", "Failed to log water. Please try again."),
   });
 
   const deleteMutation = useMutation({
     mutationFn: api.deleteWaterLog,
     onSuccess: invalidate,
+    onError: () => Alert.alert("Error", "Failed to remove water log. Please try again."),
   });
 
   const handleQuickAdd = (ml: number) => {

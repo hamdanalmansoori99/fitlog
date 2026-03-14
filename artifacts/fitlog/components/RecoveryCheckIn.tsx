@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
@@ -125,6 +126,14 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
       const hrs = sleepCustom
         ? parseFloat(sleepCustomVal) || sleepHours
         : sleepHours;
+
+      if (sleepCustom && sleepCustomVal) {
+        const parsed = parseFloat(sleepCustomVal);
+        if (isNaN(parsed) || parsed < 0 || parsed > 24) {
+          return Promise.reject(new Error("Sleep hours must be between 0 and 24."));
+        }
+      }
+
       return api.logRecovery({
         sleepHours: hrs,
         sleepQuality,
@@ -137,6 +146,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
       queryClient.invalidateQueries({ queryKey: ["recoveryToday"] });
       setExpanded(false);
     },
+    onError: (err: any) => Alert.alert("Error", err?.message || "Failed to save recovery log. Please try again."),
   });
 
   const s = styles(theme);

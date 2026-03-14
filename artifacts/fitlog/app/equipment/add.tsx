@@ -8,6 +8,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 
 const EQUIPMENT_OPTIONS = [
   { id: "dumbbells", label: "Dumbbells", icon: "zap" as const },
@@ -32,6 +33,7 @@ export default function AddEquipmentScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [notes, setNotes] = useState("");
@@ -51,8 +53,10 @@ export default function AddEquipmentScreen() {
         queryClient.invalidateQueries({ queryKey: ["profile"] });
       }
       queryClient.invalidateQueries({ queryKey: ["equipment"] });
+      showToast("Equipment added!", "success");
       router.back();
     },
+    onError: () => showToast("Failed to add equipment. Please try again.", "error"),
   });
 
   const selectedOption = EQUIPMENT_OPTIONS.find(o => o.id === category);
