@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  RefreshControl, Platform, Alert,
+  RefreshControl, Platform, Alert, TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -254,6 +254,7 @@ export default function WorkoutsScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [refreshing, setRefreshing] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState("");
   const { showToast } = useToast();
 
   const { data: profileData, refetch: refetchProfile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
@@ -567,29 +568,103 @@ export default function WorkoutsScreen() {
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Browse templates</Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.templateRow}>
-              {WORKOUT_TEMPLATES.slice(0, 8).map((tmpl) => (
+          {/* Search bar */}
+          <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Feather name="search" size={15} color={theme.textMuted} />
+            <TextInput
+              value={templateSearch}
+              onChangeText={setTemplateSearch}
+              placeholder="Search templates…"
+              placeholderTextColor={theme.textMuted}
+              style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 14, paddingVertical: 0 }}
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+            />
+            {templateSearch.length > 0 && (
+              <Pressable onPress={() => setTemplateSearch("")} hitSlop={8}>
+                <Feather name="x" size={14} color={theme.textMuted} />
+              </Pressable>
+            )}
+          </View>
+          {(() => {
+            const q = templateSearch.toLowerCase().trim();
+            const filtered = q
+              ? WORKOUT_TEMPLATES.filter(t =>
+                  t.name.toLowerCase().includes(q) ||
+                  t.activityType.toLowerCase().includes(q) ||
+                  t.difficulty.toLowerCase().includes(q) ||
+                  t.goals.some((g: string) => g.toLowerCase().includes(q))
+                )
+              : WORKOUT_TEMPLATES.slice(0, 8);
+            if (filtered.length === 0) {
+              return (
+                <View style={{ paddingVertical: 20, alignItems: "center", gap: 6 }}>
+                  <Feather name="search" size={24} color={theme.textMuted} />
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>No templates match "{templateSearch}"</Text>
+                </View>
+              );
+            }
+            if (q) {
+              return (
+                <View style={{ gap: 8, marginTop: 4 }}>
+                  {filtered.map((tmpl) => {
+                    const tColor = getActivityColor(tmpl.activityType, theme);
+                    return (
+                      <Pressable
+                        key={tmpl.id}
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: "/workouts/template" as any, params: { id: tmpl.id } }); }}
+                        style={[styles.templateListRow, { backgroundColor: theme.card, borderColor: theme.border }]}
+                      >
+                        <View style={[{ width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" }, { backgroundColor: tColor + "20" }]}>
+                          <Feather name={getActivityIcon(tmpl.activityType)} size={17} color={tColor} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>{tmpl.name}</Text>
+                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{tmpl.durationMinutes}min · {tmpl.difficulty}</Text>
+                        </View>
+                        <Feather name="chevron-right" size={16} color={theme.textMuted} />
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              );
+            }
+            return (
+              <>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.templateRow}>
+                    {filtered.map((tmpl) => (
+                      <Pressable
+                        key={tmpl.id}
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: "/workouts/template" as any, params: { id: tmpl.id } }); }}
+                        style={[styles.templateCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+                      >
+                        <View style={[styles.templateIcon, { backgroundColor: getActivityColor(tmpl.activityType, theme) + "20" }]}>
+                          <Feather name={getActivityIcon(tmpl.activityType)} size={20} color={getActivityColor(tmpl.activityType, theme)} />
+                        </View>
+                        <Text style={[styles.templateName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
+                          {tmpl.name}
+                        </Text>
+                        <View style={styles.templateMeta}>
+                          <Text style={[styles.templateMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                            {tmpl.durationMinutes}min · {tmpl.difficulty}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
                 <Pressable
-                  key={tmpl.id}
-                  onPress={() => router.push({ pathname: "/workouts/template" as any, params: { id: tmpl.id } })}
-                  style={[styles.templateCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+                  onPress={() => setTemplateSearch(" ")}
+                  style={{ alignItems: "center", paddingTop: 8 }}
                 >
-                  <View style={[styles.templateIcon, { backgroundColor: getActivityColor(tmpl.activityType, theme) + "20" }]}>
-                    <Feather name={getActivityIcon(tmpl.activityType)} size={20} color={getActivityColor(tmpl.activityType, theme)} />
-                  </View>
-                  <Text style={[styles.templateName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
-                    {tmpl.name}
+                  <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                    See all {WORKOUT_TEMPLATES.length} templates
                   </Text>
-                  <View style={styles.templateMeta}>
-                    <Text style={[styles.templateMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {tmpl.durationMinutes}min · {tmpl.difficulty}
-                    </Text>
-                  </View>
                 </Pressable>
-              ))}
-            </View>
-          </ScrollView>
+              </>
+            );
+          })()}
         </Animated.View>
 
         {/* ── WORKOUT HISTORY ── */}
@@ -753,6 +828,14 @@ const styles = StyleSheet.create({
   templateName: { fontSize: 13, lineHeight: 18 },
   templateMeta: { marginTop: 2 },
   templateMetaText: { fontSize: 11 },
+  searchBar: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10,
+  },
+  templateListRow: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    borderWidth: 1, borderRadius: 12, padding: 12,
+  },
   // History
   historyCard: { gap: 8, paddingVertical: 12 },
   historyHeader: { flexDirection: "row", alignItems: "center", gap: 10 },

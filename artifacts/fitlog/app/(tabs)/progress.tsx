@@ -589,14 +589,28 @@ export default function ProgressScreen() {
             </View>
           ) : records?.records?.length > 0 ? (
             <>
-              {records.records.map((r: any, i: number) => (
+              {records.records.map((r: any, i: number) => {
+                let displayValue = r.value;
+                if (useImperial) {
+                  if (r.rawKg != null) {
+                    displayValue = `${(r.rawKg * 2.20462).toFixed(1)} lbs`;
+                  } else if (r.rawKm != null) {
+                    displayValue = `${(r.rawKm * 0.621371).toFixed(1)} mi`;
+                  } else if (r.rawPaceMinPerKm != null) {
+                    const pacePerMi = r.rawPaceMinPerKm * 1.60934;
+                    const m = Math.floor(pacePerMi);
+                    const s = Math.round((pacePerMi - m) * 60);
+                    displayValue = `${m}:${s.toString().padStart(2, "0")} /mi`;
+                  }
+                }
+                return (
                 <Card key={i} style={styles.recordCard}>
                   <View style={[styles.recordIcon, { backgroundColor: theme.primary + "20" }]}>
                     <Feather name="award" size={18} color={theme.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.recordLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
-                    <Text style={[styles.recordValue, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{r.value}</Text>
+                    <Text style={[styles.recordValue, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{displayValue}</Text>
                   </View>
                   {r.date && (
                     <Text style={[styles.recordDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -604,7 +618,8 @@ export default function ProgressScreen() {
                     </Text>
                   )}
                 </Card>
-              ))}
+                );
+              })}
             </>
           ) : (
             <Card>

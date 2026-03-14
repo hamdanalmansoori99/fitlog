@@ -125,6 +125,7 @@ router.get("/records", requireAuth, async (req, res) => {
         records.push({
           label: `Best ${exerciseName}`,
           value: `${maxWeight} kg`,
+          rawKg: maxWeight,
           date: maxDate?.toISOString() || null,
           activityType: "gym",
         });
@@ -138,6 +139,7 @@ router.get("/records", requireAuth, async (req, res) => {
       records.push({
         label: "Longest Run",
         value: `${longestRun.distanceKm?.toFixed(1)} km`,
+        rawKm: longestRun.distanceKm,
         date: longestRun.date.toISOString(),
         activityType: "running",
       });
@@ -157,6 +159,7 @@ router.get("/records", requireAuth, async (req, res) => {
       records.push({
         label: "Fastest Pace",
         value: `${paceMin}:${paceSec.toString().padStart(2, "0")} /km`,
+        rawPaceMinPerKm: paceVal,
         date: fastest.date.toISOString(),
         activityType: "running",
       });
@@ -169,6 +172,7 @@ router.get("/records", requireAuth, async (req, res) => {
       records.push({
         label: "Longest Ride",
         value: `${longestRide.distanceKm?.toFixed(1)} km`,
+        rawKm: longestRide.distanceKm,
         date: longestRide.date.toISOString(),
         activityType: "cycling",
       });

@@ -17,9 +17,14 @@ const STROKE = 11;
 const R = (RING - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
 
-function ProgressRing({ pct, totalMl, goalMl, color, successColor }: { pct: number; totalMl: number; goalMl: number; color: string; successColor: string }) {
+const ML_PER_OZ = 29.5735;
+
+function ProgressRing({ pct, totalMl, goalMl, color, successColor, useImperial }: { pct: number; totalMl: number; goalMl: number; color: string; successColor: string; useImperial: boolean }) {
   const dash = Math.max(0, Math.min(1, pct / 100)) * CIRC;
   const gap = CIRC - dash;
+  const centerLabel = useImperial
+    ? `${(totalMl / ML_PER_OZ).toFixed(1)} oz`
+    : totalMl >= 1000 ? `${(totalMl / 1000).toFixed(1)}L` : `${totalMl}ml`;
   return (
     <View style={{ width: RING, height: RING, alignItems: "center", justifyContent: "center" }}>
       <Svg width={RING} height={RING} style={{ position: "absolute" }}>
@@ -42,7 +47,7 @@ function ProgressRing({ pct, totalMl, goalMl, color, successColor }: { pct: numb
           {pct >= 100 ? "✓" : `${pct}%`}
         </Text>
         <Text style={{ color, fontFamily: "Inter_400Regular", fontSize: 10, opacity: 0.8, marginTop: 1 }}>
-          {totalMl >= 1000 ? `${(totalMl / 1000).toFixed(1)}L` : `${totalMl}ml`}
+          {centerLabel}
         </Text>
       </View>
     </View>
@@ -51,17 +56,18 @@ function ProgressRing({ pct, totalMl, goalMl, color, successColor }: { pct: numb
 
 // ─── Insight text ─────────────────────────────────────────────────────────────
 
-function waterInsight(pct: number, totalMl: number, goalMl: number, workedOutToday: boolean): { text: string; icon: string } {
+function waterInsight(pct: number, totalMl: number, goalMl: number, workedOutToday: boolean, useImperial: boolean): { text: string; icon: string } {
   const remaining = Math.max(0, goalMl - totalMl);
   const glasses = Math.ceil(remaining / 250);
+  const remainingDisplay = useImperial ? `${(remaining / ML_PER_OZ).toFixed(0)} oz` : `${remaining}ml`;
 
-  if (pct >= 100) return { text: "Hydration goal reached — great job staying on top of it! 💧", icon: "award" };
+  if (pct >= 100) return { text: "Hydration goal reached — great job staying on top of it!", icon: "award" };
   if (pct === 0 && workedOutToday) return { text: "Hydration is especially important after today's workout — start sipping!", icon: "alert-circle" };
-  if (pct === 0) return { text: "You haven't logged any water today — aim for 2–3 litres.", icon: "droplet" };
+  if (pct === 0) return { text: useImperial ? "You haven't logged any water today — aim for 64–100 oz." : "You haven't logged any water today — aim for 2–3 litres.", icon: "droplet" };
   if (pct < 25) return { text: `You're only at ${pct}% of your water goal — ${glasses} more glass${glasses > 1 ? "es" : ""} would make a big difference.`, icon: "alert-circle" };
   if (pct < 50) return { text: `Drink ${glasses} more glass${glasses > 1 ? "es" : ""} to hit your target — you're getting there.`, icon: "droplet" };
-  if (pct < 80) return { text: `Good progress — ${remaining}ml left to reach your goal today.`, icon: "check-circle" };
-  if (pct < 100) return { text: `Almost there! Just ${remaining}ml away from today's water goal.`, icon: "check-circle" };
+  if (pct < 80) return { text: `Good progress — ${remainingDisplay} left to reach your goal today.`, icon: "check-circle" };
+  if (pct < 100) return { text: `Almost there! Just ${remainingDisplay} away from today's water goal.`, icon: "check-circle" };
   return { text: "Keep it up — staying hydrated supports your performance and recovery.", icon: "droplet" };
 }
 
@@ -70,16 +76,12 @@ function fmtTime(date: string | Date) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-// ─── Quick-add amounts ────────────────────────────────────────────────────────
-
-const QUICK_AMOUNTS = [150, 250, 500, 750];
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function WaterTracker({ workedOutToday = false }: { workedOutToday?: boolean }) {
   const { theme } = useTheme();
   const qc = useQueryClient();
-  const [customMl, setCustomMl] = useState("");
+  const [customVal, setCustomVal] = useState("");
   const [showLog, setShowLog] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -87,6 +89,12 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
     queryFn: api.getWaterToday,
     staleTime: 30000,
   });
+
+  const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, staleTime: 60000 });
+  const useImperial = settings?.unitSystem === "imperial";
+  const QUICK_OZ = [5, 8, 17, 25];
+  const QUICK_AMOUNTS_ML = [150, 250, 500, 750];
+  const quickAmounts = useImperial ? QUICK_OZ : QUICK_AMOUNTS_ML;
 
   const invalidate = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["waterToday"] });
@@ -105,20 +113,26 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
     onError: () => Alert.alert("Error", "Failed to remove water log. Please try again."),
   });
 
-  const handleQuickAdd = (ml: number) => {
+  const handleQuickAdd = (amount: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const ml = useImperial ? Math.round(amount * ML_PER_OZ) : amount;
     logMutation.mutate(ml);
   };
 
   const handleCustomAdd = () => {
-    const ml = parseInt(customMl);
-    if (!ml || ml <= 0 || ml > 5000) {
-      Alert.alert("Invalid amount", "Enter a value between 1 and 5000ml.");
+    const val = parseFloat(customVal);
+    if (!val || val <= 0) {
+      Alert.alert("Invalid amount", useImperial ? "Enter a value in fl oz." : "Enter a value between 1 and 5000ml.");
+      return;
+    }
+    const ml = useImperial ? Math.round(val * ML_PER_OZ) : Math.round(val);
+    if (ml <= 0 || ml > 5000) {
+      Alert.alert("Invalid amount", useImperial ? "Enter a value in fl oz." : "Enter a value between 1 and 5000ml.");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     logMutation.mutate(ml);
-    setCustomMl("");
+    setCustomVal("");
   };
 
   const handleDelete = (id: number) => {
@@ -132,7 +146,10 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
   const goalMl: number = data?.goalMl ?? 2000;
   const pct: number = data?.percentage ?? 0;
   const logs: any[] = data?.logs ?? [];
-  const insight = waterInsight(pct, totalMl, goalMl, workedOutToday);
+  const insight = waterInsight(pct, totalMl, goalMl, workedOutToday, useImperial);
+  const goalDisplay = useImperial
+    ? `${(goalMl / ML_PER_OZ).toFixed(0)} oz`
+    : goalMl >= 1000 ? `${(goalMl / 1000).toFixed(1)}L` : `${goalMl}ml`;
 
   const WATER_BLUE = "#448aff";
 
@@ -149,7 +166,7 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
             <View>
               <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>Hydration</Text>
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                Goal: {goalMl >= 1000 ? `${(goalMl / 1000).toFixed(1)}L` : `${goalMl}ml`}
+                Goal: {goalDisplay}
               </Text>
             </View>
           </View>
@@ -168,7 +185,7 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
             <View style={[styles.ringPlaceholder, { backgroundColor: theme.border }]} />
           ) : (
             <Animated.View entering={ZoomIn.duration(500)}>
-              <ProgressRing pct={pct} totalMl={totalMl} goalMl={goalMl} color={WATER_BLUE} successColor={theme.primary} />
+              <ProgressRing pct={pct} totalMl={totalMl} goalMl={goalMl} color={WATER_BLUE} successColor={theme.primary} useImperial={useImperial} />
             </Animated.View>
           )}
 
@@ -184,18 +201,18 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
 
         {/* Quick-add buttons */}
         <View style={styles.quickRow}>
-          {QUICK_AMOUNTS.map((ml) => (
+          {quickAmounts.map((amount) => (
             <Pressable
-              key={ml}
-              onPress={() => handleQuickAdd(ml)}
+              key={amount}
+              onPress={() => handleQuickAdd(amount)}
               disabled={logMutation.isPending}
               style={({ pressed }) => [
                 styles.quickBtn,
                 { backgroundColor: pressed ? WATER_BLUE + "25" : WATER_BLUE + "14", borderColor: WATER_BLUE + "40" },
               ]}
             >
-              <Text style={{ color: WATER_BLUE, fontFamily: "Inter_700Bold", fontSize: 13 }}>+{ml}</Text>
-              <Text style={{ color: WATER_BLUE, fontFamily: "Inter_400Regular", fontSize: 10, opacity: 0.8 }}>ml</Text>
+              <Text style={{ color: WATER_BLUE, fontFamily: "Inter_700Bold", fontSize: 13 }}>+{amount}</Text>
+              <Text style={{ color: WATER_BLUE, fontFamily: "Inter_400Regular", fontSize: 10, opacity: 0.8 }}>{useImperial ? "oz" : "ml"}</Text>
             </Pressable>
           ))}
         </View>
@@ -203,10 +220,10 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
         {/* Custom amount */}
         <View style={styles.customRow}>
           <TextInput
-            value={customMl}
-            onChangeText={setCustomMl}
+            value={customVal}
+            onChangeText={setCustomVal}
             keyboardType="numeric"
-            placeholder="Custom ml…"
+            placeholder={useImperial ? "Custom oz…" : "Custom ml…"}
             placeholderTextColor={theme.textMuted}
             style={[styles.customInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
             returnKeyType="done"
@@ -214,13 +231,13 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
           />
           <Pressable
             onPress={handleCustomAdd}
-            disabled={!customMl || logMutation.isPending}
+            disabled={!customVal || logMutation.isPending}
             style={[
               styles.addBtn,
-              { backgroundColor: customMl ? WATER_BLUE : theme.border },
+              { backgroundColor: customVal ? WATER_BLUE : theme.border },
             ]}
           >
-            <Feather name="plus" size={18} color={customMl ? "#fff" : theme.textMuted} />
+            <Feather name="plus" size={18} color={customVal ? "#fff" : theme.textMuted} />
           </Pressable>
         </View>
 
@@ -236,7 +253,7 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
                   <Feather name="droplet" size={11} color={WATER_BLUE} />
                 </View>
                 <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 13, flex: 1 }}>
-                  {log.amountMl}ml
+                  {useImperial ? `${(log.amountMl / ML_PER_OZ).toFixed(1)} oz` : `${log.amountMl}ml`}
                 </Text>
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginRight: 10 }}>
                   {fmtTime(log.loggedAt)}

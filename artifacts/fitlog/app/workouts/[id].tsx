@@ -43,15 +43,25 @@ function StatPill({ icon, label, value, color, theme }: {
   );
 }
 
-function SetRow({ set, idx, theme }: { set: any; idx: number; theme: any }) {
+function SetRow({ set, idx, theme, useImperial }: { set: any; idx: number; theme: any; useImperial: boolean }) {
+  const weightDisplay = set.weightKg != null
+    ? useImperial
+      ? `${(set.weightKg * 2.20462).toFixed(1)} lbs`
+      : `${set.weightKg} kg`
+    : null;
+  const distDisplay = set.distanceM != null
+    ? useImperial
+      ? `${(set.distanceM / 1609.34).toFixed(2)} mi`
+      : `${(set.distanceM / 1000).toFixed(2)} km`
+    : null;
   return (
     <View style={[styles.setRow, { borderBottomColor: theme.border }]}>
       <Text style={[styles.setNum, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
         {idx + 1}
       </Text>
-      {set.weightKg != null && (
+      {weightDisplay != null && (
         <Text style={[styles.setValue, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          {set.weightKg} kg
+          {weightDisplay}
         </Text>
       )}
       {set.reps != null && (
@@ -64,9 +74,9 @@ function SetRow({ set, idx, theme }: { set: any; idx: number; theme: any }) {
           {Math.floor(set.durationSeconds / 60)}:{String(set.durationSeconds % 60).padStart(2, "0")}
         </Text>
       )}
-      {set.distanceM != null && (
+      {distDisplay != null && (
         <Text style={[styles.setValue, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-          {(set.distanceM / 1000).toFixed(2)} km
+          {distDisplay}
         </Text>
       )}
       {set.rpe != null && (
@@ -94,6 +104,9 @@ export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, staleTime: 60000 });
+  const useImperial = settings?.unitSystem === "imperial";
 
   const { data: workout, isLoading, isError } = useQuery({
     queryKey: ["workout", id],
@@ -208,7 +221,13 @@ export default function WorkoutDetailScreen() {
                 <StatPill icon="clock" label="Duration" value={`${workout.durationMinutes} min`} color={color} theme={theme} />
               )}
               {workout.distanceKm != null && (
-                <StatPill icon="map-pin" label="Distance" value={`${workout.distanceKm.toFixed(1)} km`} color={theme.secondary} theme={theme} />
+                <StatPill
+                  icon="map-pin"
+                  label="Distance"
+                  value={useImperial ? `${(workout.distanceKm * 0.621371).toFixed(1)} mi` : `${workout.distanceKm.toFixed(1)} km`}
+                  color={theme.secondary}
+                  theme={theme}
+                />
               )}
               {workout.caloriesBurned != null && (
                 <StatPill icon="zap" label="Calories" value={`${workout.caloriesBurned} kcal`} color={theme.warning} theme={theme} />
@@ -268,7 +287,7 @@ export default function WorkoutDetailScreen() {
                         <Text style={[styles.setsHeaderText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>✓</Text>
                       </View>
                       {(ex.sets ?? []).map((s: any, sIdx: number) => (
-                        <SetRow key={s.id ?? sIdx} set={s} idx={sIdx} theme={theme} />
+                        <SetRow key={s.id ?? sIdx} set={s} idx={sIdx} theme={theme} useImperial={useImperial} />
                       ))}
                     </View>
                   )}
