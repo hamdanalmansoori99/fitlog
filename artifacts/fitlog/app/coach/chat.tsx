@@ -26,6 +26,22 @@ interface ChatMessage {
   streaming?: boolean;
 }
 
+function cleanMarkdown(text: string): string {
+  let out = text;
+  out = out.replace(/```[\s\S]*?```/g, (m) => {
+    const inner = m.replace(/^```[^\n]*\n?/, "").replace(/\n?```$/, "");
+    return inner;
+  });
+  out = out.replace(/^\s*\*{3,}\s*$/gm, "");
+  out = out.replace(/\*\*(.+?)\*\*/g, "$1");
+  out = out.replace(/(^|[\s(])\*([^*\n]+)\*([\s).,!?]|$)/gm, "$1$2$3");
+  out = out.replace(/^#{1,6}\s+/gm, "");
+  out = out.replace(/`([^`]+)`/g, "$1");
+  out = out.replace(/^\s*[\*]\s+/gm, "• ");
+  out = out.replace(/\n{3,}/g, "\n\n");
+  return out.trim();
+}
+
 const SUGGESTIONS = [
   "What should I train today?",
   "I only have 20 minutes — what workout?",
@@ -230,7 +246,7 @@ export default function CoachChatScreen() {
               { color: isUser ? "#000" : theme.text },
             ]}
           >
-            {item.content}
+            {isUser ? item.content : cleanMarkdown(item.content)}
             {item.streaming && !item.content && (
               <Text style={{ color: theme.textMuted }}>▍</Text>
             )}
