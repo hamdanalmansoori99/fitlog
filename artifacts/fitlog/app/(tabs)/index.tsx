@@ -182,6 +182,36 @@ function TodayWorkoutCard({
   );
 }
 
+// ─── Rest Day Card (onboarding done, no recommendation needed today) ──────────
+
+function RestDayCard({ theme }: { theme: any }) {
+  return (
+    <Animated.View entering={FadeIn.duration(400)}>
+      <Card style={{ borderColor: theme.primary + "20" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 }}>
+          <View style={[{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" }, { backgroundColor: theme.primaryDim }]}>
+            <Feather name="moon" size={18} color={theme.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>AI Coach</Text>
+            <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>Rest & Recover Today</Text>
+          </View>
+        </View>
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
+          Your coach has analysed your recent training and recommends rest today. Recovery is where gains happen — stay hydrated and get good sleep.
+        </Text>
+        <Pressable
+          onPress={() => router.push("/(tabs)/workouts" as any)}
+          style={[{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 12, marginTop: 14 }, { backgroundColor: theme.primaryDim }]}
+        >
+          <Feather name="activity" size={15} color={theme.primary} />
+          <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Log a Workout Anyway</Text>
+        </Pressable>
+      </Card>
+    </Animated.View>
+  );
+}
+
 // ─── Coach CTA (no onboarding) ────────────────────────────────────────────────
 
 function CoachCtaCard({ theme }: { theme: any }) {
@@ -673,6 +703,8 @@ export default function HomeScreen() {
             </SkeletonCard>
           ) : hasCoachOnboarding && todayRecommendation ? (
             <TodayWorkoutCard todayRec={todayRecommendation} theme={theme} />
+          ) : hasCoachOnboarding ? (
+            <RestDayCard theme={theme} />
           ) : (
             <CoachCtaCard theme={theme} />
           )}

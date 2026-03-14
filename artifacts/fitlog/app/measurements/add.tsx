@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
@@ -17,7 +17,7 @@ export default function AddMeasurementScreen() {
   const queryClient = useQueryClient();
   
   const [date] = useState(new Date().toISOString().split("T")[0]);
-  const [weightKg, setWeightKg] = useState("");
+  const [weightInput, setWeightInput] = useState("");
   const [bodyFat, setBodyFat] = useState("");
   const [chest, setChest] = useState("");
   const [waist, setWaist] = useState("");
@@ -27,6 +27,13 @@ export default function AddMeasurementScreen() {
   const [error, setError] = useState("");
   
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: api.getSettings,
+    staleTime: 60000,
+  });
+  const useImperial = settings?.unitSystem === "imperial";
   
   const mutation = useMutation({
     mutationFn: api.createMeasurement,
@@ -40,14 +47,19 @@ export default function AddMeasurementScreen() {
   
   const handleSave = () => {
     setError("");
-    const hasAny = weightKg || bodyFat || chest || waist || hips || arms;
-    if (!hasAny) {
-      setError("Enter at least one measurement to save.");
-      return;
-    }
-    if (weightKg) {
-      const w = parseFloat(weightKg);
-      if (isNaN(w) || w < 10 || w > 500) { setError("Weight must be between 10 and 500 kg."); return; }
+    const hasAny = weightInput || bodyFat || chest || waist || hips || arms;
+    if (!hasAny) { setError("Enter at least one measurement to save."); return; }
+
+    let resolvedWeightKg: number | undefined;
+    if (weightInput) {
+      const v = parseFloat(weightInput);
+      if (useImperial) {
+        if (isNaN(v) || v < 22 || v > 1100) { setError("Weight must be between 22 and 1,100 lbs."); return; }
+        resolvedWeightKg = parseFloat((v / 2.20462).toFixed(2));
+      } else {
+        if (isNaN(v) || v < 10 || v > 500) { setError("Weight must be between 10 and 500 kg."); return; }
+        resolvedWeightKg = v;
+      }
     }
     if (bodyFat) {
       const bf = parseFloat(bodyFat);
@@ -71,7 +83,7 @@ export default function AddMeasurementScreen() {
     }
     mutation.mutate({
       date: new Date(date).toISOString(),
-      weightKg: weightKg ? parseFloat(weightKg) : undefined,
+      weightKg: resolvedWeightKg,
       bodyFatPercent: bodyFat ? parseFloat(bodyFat) : undefined,
       chestCm: chest ? parseFloat(chest) : undefined,
       waistCm: waist ? parseFloat(waist) : undefined,
@@ -102,7 +114,13 @@ export default function AddMeasurementScreen() {
       </View>
       
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]} keyboardShouldPersistTaps="handled">
-        <Input label="Weight (kg)" value={weightKg} onChangeText={setWeightKg} placeholder="75.0" keyboardType="decimal-pad" />
+        <Input
+          label={useImperial ? "Weight (lbs)" : "Weight (kg)"}
+          value={weightInput}
+          onChangeText={setWeightInput}
+          placeholder={useImperial ? "165.0" : "75.0"}
+          keyboardType="decimal-pad"
+        />
         <Input label="Body Fat %" value={bodyFat} onChangeText={setBodyFat} placeholder="18.5" keyboardType="decimal-pad" />
         
         <Text style={[styles.sectionTitle, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Circumference (cm)</Text>

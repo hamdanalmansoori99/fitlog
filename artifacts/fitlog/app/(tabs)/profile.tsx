@@ -56,8 +56,13 @@ export default function ProfileScreen() {
   const [lastName, setLastName] = useState(user?.lastName || "");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
+  // Height: either cm (metric) or ft+in (imperial)
   const [heightCm, setHeightCm] = useState("");
+  const [heightFt, setHeightFt] = useState("");
+  const [heightIn, setHeightIn] = useState("");
+  // Weight: either kg (metric) or lbs (imperial)
   const [weightKg, setWeightKg] = useState("");
+  const [weightLbs, setWeightLbs] = useState("");
   const [fitnessGoals, setFitnessGoals] = useState<string[]>([]);
   const [activityLevel, setActivityLevel] = useState("");
   const [calorieGoal, setCalorieGoal] = useState("");
@@ -85,8 +90,22 @@ export default function ProfileScreen() {
       setLastName(profile.lastName || "");
       setAge(profile.age?.toString() || "");
       setGender(profile.gender || "");
-      setHeightCm(profile.heightCm?.toString() || "");
-      setWeightKg(profile.weightKg?.toString() || "");
+      if (profile.heightCm != null) {
+        if (unitSystem === "imperial") {
+          const totalIn = profile.heightCm / 2.54;
+          setHeightFt(String(Math.floor(totalIn / 12)));
+          setHeightIn(String(Math.round(totalIn % 12)));
+        } else {
+          setHeightCm(profile.heightCm.toString());
+        }
+      }
+      if (profile.weightKg != null) {
+        if (unitSystem === "imperial") {
+          setWeightLbs((profile.weightKg * 2.20462).toFixed(1));
+        } else {
+          setWeightKg(profile.weightKg.toString());
+        }
+      }
       setFitnessGoals(profile.fitnessGoals || []);
       setActivityLevel(profile.activityLevel || "");
       setCalorieGoal(profile.dailyCalorieGoal?.toString() || "");
@@ -159,18 +178,32 @@ export default function ProfileScreen() {
         return;
       }
     }
-    if (heightCm) {
-      const h = parseFloat(heightCm);
-      if (isNaN(h) || h < 50 || h > 300) {
-        showToast("Height must be between 50 and 300 cm.", "error");
-        return;
+    // Resolve height and weight to metric for storage
+    let resolvedHeightCm: number | undefined;
+    let resolvedWeightKg: number | undefined;
+    if (unitSystem === "imperial") {
+      const ft = parseFloat(heightFt);
+      const inVal = parseFloat(heightIn || "0");
+      if (heightFt) {
+        if (isNaN(ft) || ft < 1 || ft > 9) { showToast("Height feet must be between 1 and 9.", "error"); return; }
+        if (heightIn && (isNaN(inVal) || inVal < 0 || inVal > 11)) { showToast("Inches must be between 0 and 11.", "error"); return; }
+        resolvedHeightCm = Math.round((ft * 12 + inVal) * 2.54);
       }
-    }
-    if (weightKg) {
-      const w = parseFloat(weightKg);
-      if (isNaN(w) || w < 20 || w > 500) {
-        showToast("Weight must be between 20 and 500 kg.", "error");
-        return;
+      if (weightLbs) {
+        const lbs = parseFloat(weightLbs);
+        if (isNaN(lbs) || lbs < 44 || lbs > 1100) { showToast("Weight must be between 44 and 1,100 lbs.", "error"); return; }
+        resolvedWeightKg = parseFloat((lbs / 2.20462).toFixed(2));
+      }
+    } else {
+      if (heightCm) {
+        const h = parseFloat(heightCm);
+        if (isNaN(h) || h < 50 || h > 300) { showToast("Height must be between 50 and 300 cm.", "error"); return; }
+        resolvedHeightCm = h;
+      }
+      if (weightKg) {
+        const w = parseFloat(weightKg);
+        if (isNaN(w) || w < 20 || w > 500) { showToast("Weight must be between 20 and 500 kg.", "error"); return; }
+        resolvedWeightKg = w;
       }
     }
     if (calorieGoal) {
@@ -211,8 +244,8 @@ export default function ProfileScreen() {
 
     // Auto-calculate calorie goal if height/weight/age set
     let calculatedGoal = calorieGoal ? parseInt(calorieGoal) : undefined;
-    if (!calculatedGoal && heightCm && weightKg && age) {
-      const h = parseFloat(heightCm), w = parseFloat(weightKg), a = parseInt(age);
+    if (!calculatedGoal && resolvedHeightCm && resolvedWeightKg && age) {
+      const h = resolvedHeightCm, w = resolvedWeightKg, a = parseInt(age);
       // Mifflin-St Jeor: male +5, female -161, other defaults to male
       const genderOffset = gender === "Female" ? -161 : 5;
       const bmr = 10 * w + 6.25 * h - 5 * a + genderOffset;
@@ -228,8 +261,8 @@ export default function ProfileScreen() {
       firstName, lastName,
       age: age ? parseInt(age) : undefined,
       gender: gender || undefined,
-      heightCm: heightCm ? parseFloat(heightCm) : undefined,
-      weightKg: weightKg ? parseFloat(weightKg) : undefined,
+      heightCm: resolvedHeightCm,
+      weightKg: resolvedWeightKg,
       fitnessGoals,
       activityLevel: activityLevel || undefined,
       dailyCalorieGoal: calculatedGoal,
@@ -357,14 +390,28 @@ export default function ProfileScreen() {
                     ))}
                   </View>
                 </View>
-                <View style={styles.row}>
-                  <View style={{ flex: 1 }}>
-                    <Input label="Height (cm)" value={heightCm} onChangeText={setHeightCm} placeholder="175" keyboardType="numeric" />
+                {unitSystem === "imperial" ? (
+                  <View style={styles.row}>
+                    <View style={{ flex: 1 }}>
+                      <Input label="Height (ft)" value={heightFt} onChangeText={setHeightFt} placeholder="5" keyboardType="decimal-pad" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Input label="Height (in)" value={heightIn} onChangeText={setHeightIn} placeholder="10" keyboardType="decimal-pad" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Input label="Weight (lbs)" value={weightLbs} onChangeText={setWeightLbs} placeholder="165" keyboardType="decimal-pad" />
+                    </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Input label="Weight (kg)" value={weightKg} onChangeText={setWeightKg} placeholder="75" keyboardType="numeric" />
+                ) : (
+                  <View style={styles.row}>
+                    <View style={{ flex: 1 }}>
+                      <Input label="Height (cm)" value={heightCm} onChangeText={setHeightCm} placeholder="175" keyboardType="numeric" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Input label="Weight (kg)" value={weightKg} onChangeText={setWeightKg} placeholder="75" keyboardType="numeric" />
+                    </View>
                   </View>
-                </View>
+                )}
               </View>
             </Card>
             

@@ -22,13 +22,21 @@ export default function EditMeasurementScreen() {
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const [weightKg, setWeightKg] = useState("");
+  const [weightInput, setWeightInput] = useState("");
   const [bodyFat, setBodyFat] = useState("");
   const [chest, setChest] = useState("");
   const [waist, setWaist] = useState("");
   const [hips, setHips] = useState("");
   const [arms, setArms] = useState("");
   const [validationError, setValidationError] = useState("");
+  const [prefilled, setPrefilled] = useState(false);
+
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: api.getSettings,
+    staleTime: 60000,
+  });
+  const useImperial = settings?.unitSystem === "imperial";
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["measurement", measureId],
@@ -37,15 +45,20 @@ export default function EditMeasurementScreen() {
   });
 
   useEffect(() => {
-    if (data) {
-      setWeightKg(data.weightKg != null ? String(data.weightKg) : "");
+    if (data && !prefilled) {
+      if (data.weightKg != null) {
+        setWeightInput(useImperial
+          ? (data.weightKg * 2.20462).toFixed(1)
+          : String(data.weightKg));
+      }
       setBodyFat(data.bodyFatPercent != null ? String(data.bodyFatPercent) : "");
       setChest(data.chestCm != null ? String(data.chestCm) : "");
       setWaist(data.waistCm != null ? String(data.waistCm) : "");
       setHips(data.hipsCm != null ? String(data.hipsCm) : "");
       setArms(data.armsCm != null ? String(data.armsCm) : "");
+      setPrefilled(true);
     }
-  }, [data]);
+  }, [data, useImperial]);
 
   const mutation = useMutation({
     mutationFn: (body: any) => api.updateMeasurement(measureId, body),
@@ -62,9 +75,17 @@ export default function EditMeasurementScreen() {
 
   const handleSave = () => {
     setValidationError("");
-    if (weightKg) {
-      const w = parseFloat(weightKg);
-      if (isNaN(w) || w < 10 || w > 500) { setValidationError("Weight must be between 10 and 500 kg."); return; }
+
+    let resolvedWeightKg: number | undefined;
+    if (weightInput) {
+      const v = parseFloat(weightInput);
+      if (useImperial) {
+        if (isNaN(v) || v < 22 || v > 1100) { setValidationError("Weight must be between 22 and 1,100 lbs."); return; }
+        resolvedWeightKg = parseFloat((v / 2.20462).toFixed(2));
+      } else {
+        if (isNaN(v) || v < 10 || v > 500) { setValidationError("Weight must be between 10 and 500 kg."); return; }
+        resolvedWeightKg = v;
+      }
     }
     if (bodyFat) {
       const bf = parseFloat(bodyFat);
@@ -87,7 +108,7 @@ export default function EditMeasurementScreen() {
       if (isNaN(v) || v < 10 || v > 100) { setValidationError("Arms must be between 10 and 100 cm."); return; }
     }
     mutation.mutate({
-      weightKg: weightKg ? parseFloat(weightKg) : undefined,
+      weightKg: resolvedWeightKg,
       bodyFatPercent: bodyFat ? parseFloat(bodyFat) : undefined,
       chestCm: chest ? parseFloat(chest) : undefined,
       waistCm: waist ? parseFloat(waist) : undefined,
@@ -131,10 +152,10 @@ export default function EditMeasurementScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Input
-          label="Weight (kg)"
-          value={weightKg}
-          onChangeText={setWeightKg}
-          placeholder="75.0"
+          label={useImperial ? "Weight (lbs)" : "Weight (kg)"}
+          value={weightInput}
+          onChangeText={setWeightInput}
+          placeholder={useImperial ? "165.0" : "75.0"}
           keyboardType="decimal-pad"
         />
         <Input

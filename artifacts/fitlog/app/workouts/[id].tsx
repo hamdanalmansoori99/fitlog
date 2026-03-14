@@ -167,9 +167,18 @@ export default function WorkoutDetailScreen() {
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
           Workout Detail
         </Text>
-        <Pressable onPress={handleDelete} style={styles.deleteBtn} hitSlop={8} disabled={deleteMutation.isPending}>
-          <Feather name="trash-2" size={20} color={theme.danger} />
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Pressable
+            onPress={() => router.push({ pathname: "/workouts/edit" as any, params: { id } })}
+            style={styles.editBtn}
+            hitSlop={8}
+          >
+            <Feather name="edit-2" size={18} color={theme.primary} />
+          </Pressable>
+          <Pressable onPress={handleDelete} style={styles.deleteBtn} hitSlop={8} disabled={deleteMutation.isPending}>
+            <Feather name="trash-2" size={20} color={theme.danger} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -297,7 +306,8 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   navTitle: { flex: 1, fontSize: 17, textAlign: "center" },
-  deleteBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  editBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  deleteBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
 
   workoutHeader: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 },
   iconWrap: { width: 56, height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
