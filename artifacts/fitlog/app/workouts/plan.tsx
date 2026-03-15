@@ -68,6 +68,7 @@ function SwapModal({
   onClose: () => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const recs = getRecommendations(profile, recentWorkouts, 12).filter(
     (r) => r.template.id !== currentTemplateId
   );
@@ -77,7 +78,7 @@ function SwapModal({
       <View style={[swap.container, { backgroundColor: theme.background }]}>
         <View style={[swap.header, { borderBottomColor: theme.border }]}>
           <Text style={[swap.title, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            Choose workout for {dayLabel}
+            {t("workouts.plan.chooseWorkoutFor", { day: dayLabel })}
           </Text>
           <Pressable onPress={onClose} style={swap.closeBtn} hitSlop={12}>
             <Feather name="x" size={22} color={theme.textMuted} />
@@ -93,7 +94,7 @@ function SwapModal({
             <Feather name="moon" size={18} color={theme.textMuted} />
           </View>
           <Text style={[swap.restLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Set as rest day
+            {t("workouts.plan.setAsRestDay")}
           </Text>
         </Pressable>
 
@@ -126,10 +127,10 @@ function SwapModal({
                   <View style={swap.recMeta}>
                     <Feather name="clock" size={10} color={theme.textMuted} />
                     <Text style={[swap.recMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {rec.template.durationMinutes} min
+                      {rec.template.durationMinutes} {t("common.min")}
                     </Text>
                     <Text style={{ color: diffColor(rec.template.difficulty, theme), fontFamily: "Inter_500Medium", fontSize: 10 }}>
-                      · {rec.template.difficulty}
+                      · {t(`workouts.plan.difficulty.${rec.template.difficulty}`)}
                     </Text>
                   </View>
                 </View>
@@ -142,7 +143,7 @@ function SwapModal({
           )}
           ListEmptyComponent={
             <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 40, fontSize: 14 }]}>
-              No alternatives found for your equipment profile.
+              {t("workouts.plan.noAlternatives")}
             </Text>
           }
         />
@@ -258,7 +259,7 @@ export default function WeeklyPlanScreen() {
       const next = [...prev];
       if (rec.template === null) {
         // Set as rest day
-        next[idx] = { day: prev[idx].day, template: null, rest: true, note: "Rest day", completed: false };
+        next[idx] = { day: prev[idx].day, template: null, rest: true, note: t("workouts.plan.restDay"), completed: false };
       } else {
         next[idx] = { day: prev[idx].day, template: rec.template, rest: false, note: rec.whyGoodForYou, completed: false };
       }
@@ -275,7 +276,7 @@ export default function WeeklyPlanScreen() {
       <View style={[styles.container, { backgroundColor: theme.background, justifyContent: "center", alignItems: "center" }]}>
         <ActivityIndicator color={theme.primary} size="large" />
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 12 }}>
-          Building your plan…
+          {t("workouts.plan.buildingPlan")}
         </Text>
       </View>
     );
@@ -294,7 +295,7 @@ export default function WeeklyPlanScreen() {
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          Weekly Plan
+          {t("workouts.plan.weeklyPlan")}
         </Text>
         <Pressable onPress={regenerate} style={styles.refreshBtn} hitSlop={8}>
           <Feather name="refresh-cw" size={18} color={theme.primary} />
@@ -313,7 +314,7 @@ export default function WeeklyPlanScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.summaryTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {workoutDays.length} workouts · {totalMinutes} min total
+                {t("workouts.plan.summaryTitle", { count: workoutDays.length, minutes: totalMinutes })}
               </Text>
               <Text style={[styles.summarySub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                 {userProfile.experienceLevel} · {userProfile.preferredWorkoutDuration}
@@ -322,7 +323,7 @@ export default function WeeklyPlanScreen() {
             {saved && (
               <Animated.View entering={FadeIn} style={[styles.savedPill, { backgroundColor: theme.primaryDim }]}>
                 <Feather name="check" size={12} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Saved</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("workouts.plan.saved")}</Text>
               </Animated.View>
             )}
           </View>
@@ -332,7 +333,7 @@ export default function WeeklyPlanScreen() {
             <View style={styles.progressBlock}>
               <View style={styles.progressLabelRow}>
                 <Text style={[styles.progressLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Progress this week
+                  {t("workouts.plan.progressThisWeek")}
                 </Text>
                 <Text style={[styles.progressLabel, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
                   {completedCount}/{workoutDays.length}
@@ -378,7 +379,7 @@ export default function WeeklyPlanScreen() {
                     styles.dayName,
                     { fontFamily: isToday ? "Inter_700Bold" : "Inter_500Medium", color: isToday && !isDone ? theme.primary : theme.textMuted },
                   ]}>
-                    {day.day}{isToday ? " — Today" : ""}
+                    {day.day}{isToday ? ` — ${t("workouts.plan.today")}` : ""}
                   </Text>
                   <View style={styles.dayActions}>
                     {/* Edit/swap button */}
@@ -398,7 +399,7 @@ export default function WeeklyPlanScreen() {
                           borderColor: isDone ? theme.primary : theme.border,
                         }]}
                         hitSlop={12}
-                        accessibilityLabel={isDone ? "Mark incomplete" : "Mark complete"}
+                        accessibilityLabel={isDone ? t("workouts.plan.markIncomplete") : t("workouts.plan.markComplete")}
                         accessibilityRole="checkbox"
                       >
                         <Feather name="check" size={14} color={isDone ? "#0f0f1a" : theme.border} />
@@ -437,18 +438,18 @@ export default function WeeklyPlanScreen() {
                         {isDone && (
                           <View style={[styles.donePill, { backgroundColor: theme.primary + "25" }]}>
                             <Feather name="check-circle" size={11} color={theme.primary} />
-                            <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 10 }}>Done</Text>
+                            <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 10 }}>{t("workouts.plan.done")}</Text>
                           </View>
                         )}
                       </View>
                       <View style={styles.workoutMeta}>
                         <Feather name="clock" size={10} color={theme.textMuted} />
                         <Text style={[styles.metaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                          {day.template?.durationMinutes} min
+                          {day.template?.durationMinutes} {t("common.min")}
                         </Text>
                         <View style={[styles.diffBadge, { backgroundColor: diffColor(day.template?.difficulty, theme) + "20" }]}>
                           <Text style={{ color: diffColor(day.template?.difficulty, theme), fontFamily: "Inter_400Regular", fontSize: 10 }}>
-                            {day.template?.difficulty}
+                            {t(`workouts.plan.difficulty.${day.template?.difficulty}`)}
                           </Text>
                         </View>
                       </View>
@@ -468,13 +469,13 @@ export default function WeeklyPlanScreen() {
       {/* Save footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: theme.border, backgroundColor: theme.background }]}>
         <Button
-          title={saved ? "Plan Saved" : "Save This Plan"}
+          title={saved ? t("workouts.plan.planSaved") : t("workouts.plan.saveThisPlan")}
           onPress={() => saveMutation.mutate()}
           loading={saveMutation.isPending}
           disabled={saved}
         />
         <Button
-          title="Regenerate Plan"
+          title={t("workouts.plan.regeneratePlan")}
           onPress={regenerate}
           variant="outline"
         />

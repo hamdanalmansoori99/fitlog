@@ -235,11 +235,11 @@ export default function AddMealScreen() {
         setFoodItems(fi => [...fi, newFood]);
       }
       if (!mealName) setMealName(displayName);
-      showToast(`Found: ${displayName}`, "success");
+      showToast(t("meals.foundFood", { name: displayName }), "success");
     } catch (err: any) {
       setBarcodeOpen(false);
-      const msg = err.message || "Product not found";
-      showToast(msg.includes("not found") ? "Product not found. Try adding manually or use the photo scanner." : msg, "error");
+      const msg = err.message || t("meals.productNotFound");
+      showToast(msg.includes("not found") ? t("meals.productNotFound") : msg, "error");
     } finally {
       setBarcodeLooking(false);
     }
@@ -250,17 +250,17 @@ export default function AddMealScreen() {
       let result;
       if (source === "camera") {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
-        if (!perm.granted) { Alert.alert("Camera access needed", "Allow camera access in settings."); return; }
+        if (!perm.granted) { Alert.alert(t("meals.cameraAccessNeeded"), t("meals.allowCameraSettings")); return; }
         result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7, mediaTypes: "images" });
       } else {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm.granted) { Alert.alert("Photo library access needed", "Allow photo access in settings."); return; }
+        if (!perm.granted) { Alert.alert(t("meals.photoLibraryAccessNeeded"), t("meals.allowPhotoAccess")); return; }
         result = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.7, mediaTypes: "images" });
       }
 
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
-      if (!asset.base64) { setError("Could not read image data. Try again."); return; }
+      if (!asset.base64) { setError(t("meals.couldNotReadImage")); return; }
 
       setPhotoUri(asset.uri);
       setScanning(true);
@@ -272,7 +272,7 @@ export default function AddMealScreen() {
       if (analysisResult.notFood) {
         setPhotoUri(null);
         setScanning(false);
-        showToast("Couldn't identify food — try a clearer photo or scan a barcode.", "error");
+        showToast(t("meals.couldNotIdentifyFood"), "error");
         return;
       }
 
@@ -290,17 +290,17 @@ export default function AddMealScreen() {
       );
       setScanMode("confirm");
     } catch (err: any) {
-      setError(err.message || "Failed to analyze photo. Please try again.");
+      setError(err.message || t("meals.failedToAnalyzePhoto"));
     } finally {
       setScanning(false);
     }
   }
 
   function showPhotoPicker() {
-    Alert.alert("Scan Meal", "Take a photo or choose from your library", [
-      { text: "Take Photo", onPress: () => pickAndScanImage("camera") },
-      { text: "Choose from Library", onPress: () => pickAndScanImage("library") },
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("meals.scanMeal"), t("meals.takePhotoOrChoose"), [
+      { text: t("meals.takePhoto"), onPress: () => pickAndScanImage("camera") },
+      { text: t("meals.chooseFromLibrary"), onPress: () => pickAndScanImage("library") },
+      { text: t("common.cancel"), style: "cancel" },
     ]);
   }
 
@@ -363,7 +363,7 @@ export default function AddMealScreen() {
     setSearchQuery("");
     setSearchResults([]);
     setShowSearchResults(false);
-    showToast(`Added: ${displayName}`, "success");
+    showToast(t("meals.addedFood", { name: displayName }), "success");
   }
 
   function addRecentFood(food: any) {
@@ -395,30 +395,30 @@ export default function AddMealScreen() {
   }
 
   const handleSubmit = () => {
-    if (!mealName.trim()) { setError("Meal name required"); return; }
+    if (!mealName.trim()) { setError(t("meals.mealNameRequired")); return; }
     const valid = foodItems.filter(f => f.name.trim());
-    if (valid.length === 0) { setError("Add at least one food item"); return; }
+    if (valid.length === 0) { setError(t("meals.addAtLeastOneFood")); return; }
 
     for (const f of valid) {
       if (f.calories) {
         const c = parseFloat(f.calories);
-        if (isNaN(c) || c < 0 || c > 5000) { setError(`Calories for "${f.name}" must be between 0 and 5,000.`); return; }
+        if (isNaN(c) || c < 0 || c > 5000) { setError(t("meals.caloriesRange", { name: f.name })); return; }
       }
       if (f.proteinG) {
         const p = parseFloat(f.proteinG);
-        if (isNaN(p) || p < 0 || p > 500) { setError(`Protein for "${f.name}" must be between 0 and 500 g.`); return; }
+        if (isNaN(p) || p < 0 || p > 500) { setError(t("meals.proteinRange", { name: f.name })); return; }
       }
       if (f.carbsG) {
         const c = parseFloat(f.carbsG);
-        if (isNaN(c) || c < 0 || c > 500) { setError(`Carbs for "${f.name}" must be between 0 and 500 g.`); return; }
+        if (isNaN(c) || c < 0 || c > 500) { setError(t("meals.carbsRange", { name: f.name })); return; }
       }
       if (f.fatG) {
         const fa = parseFloat(f.fatG);
-        if (isNaN(fa) || fa < 0 || fa > 300) { setError(`Fat for "${f.name}" must be between 0 and 300 g.`); return; }
+        if (isNaN(fa) || fa < 0 || fa > 300) { setError(t("meals.fatRange", { name: f.name })); return; }
       }
       if (f.portionSize) {
         const ps = parseFloat(f.portionSize);
-        if (isNaN(ps) || ps <= 0 || ps > 5000) { setError(`Portion size for "${f.name}" must be between 1 and 5,000.`); return; }
+        if (isNaN(ps) || ps <= 0 || ps > 5000) { setError(t("meals.portionRange", { name: f.name })); return; }
       }
     }
 
@@ -444,7 +444,7 @@ export default function AddMealScreen() {
       <View style={[styles.successScreen, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14, marginTop: 12 }}>
-          Loading meal…
+          {t("meals.loadingMeal")}
         </Text>
       </View>
     );
@@ -457,16 +457,16 @@ export default function AddMealScreen() {
           <Feather name="check" size={48} color={theme.primary} />
         </View>
         <Text style={[styles.successTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-          {isEditing ? "Meal Updated!" : "Meal Logged!"}
+          {isEditing ? t("meals.mealUpdated") : t("meals.mealLogged")}
         </Text>
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14 }}>
-          {Math.round(totalCalories)} kcal · {Math.round(totalProtein)}g protein
+          {t("meals.kcalProteinSummary", { calories: Math.round(totalCalories), protein: Math.round(totalProtein) })}
         </Text>
         {!isEditing && remaining !== null && (
           <Text style={{ color: remaining >= 0 ? theme.primary : theme.danger, fontFamily: "Inter_500Medium", fontSize: 13 }}>
             {remaining >= 0
-              ? `${Math.round(remaining)} kcal remaining today`
-              : `${Math.round(-remaining)} kcal over goal`}
+              ? t("meals.kcalRemainingToday", { amount: Math.round(remaining) })
+              : t("meals.kcalOverGoalToday", { amount: Math.round(-remaining) })}
           </Text>
         )}
       </View>
@@ -480,7 +480,7 @@ export default function AddMealScreen() {
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          {isEditing ? "Edit Meal" : "Log Meal"}
+          {isEditing ? t("meals.editMeal") : t("meals.logMealTitle")}
         </Text>
         <View style={{ width: 44 }} />
       </View>
@@ -505,9 +505,9 @@ export default function AddMealScreen() {
                 <Feather name="maximize" size={22} color={theme.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Scan Barcode</Text>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("meals.scanBarcode")}</Text>
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-                  Scan a product barcode for exact nutrition info
+                  {t("meals.scanBarcodeDesc")}
                 </Text>
               </View>
               <Feather name="chevron-right" size={18} color={theme.primary} />
@@ -522,9 +522,9 @@ export default function AddMealScreen() {
                   <Feather name="camera" size={22} color={theme.secondary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Scan with AI</Text>
+                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("meals.scanWithAI")}</Text>
                   <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-                    Photo → instant food detection &amp; nutrition estimates
+                    {t("meals.scanWithAIDesc")}
                   </Text>
                 </View>
                 <Feather name="chevron-right" size={18} color={theme.secondary} />
@@ -539,9 +539,9 @@ export default function AddMealScreen() {
             {photoUri && <Image source={{ uri: photoUri }} style={styles.photoThumb} resizeMode="cover" />}
             <View style={{ alignItems: "center", padding: 24, gap: 8 }}>
               <ActivityIndicator size="large" color={theme.secondary} />
-              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Analysing your meal…</Text>
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("meals.analysingMeal")}</Text>
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
-                AI is detecting food items and estimating portions
+                {t("meals.aiDetecting")}
               </Text>
             </View>
           </Card>
@@ -554,14 +554,14 @@ export default function AddMealScreen() {
             <View style={{ padding: 14, gap: 6 }}>
               <View style={[styles.aiBadge, { backgroundColor: theme.primary + "18" }]}>
                 <Feather name="cpu" size={11} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>AI ANALYSIS COMPLETE</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>{t("meals.aiAnalysisComplete")}</Text>
               </View>
               <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                {foodItems.length} item{foodItems.length !== 1 ? "s" : ""} detected — review below
+                {t("meals.itemsDetected", { count: foodItems.length })}
               </Text>
               <Pressable onPress={showPhotoPicker} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                 <Feather name="refresh-cw" size={12} color={theme.secondary} />
-                <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Re-scan</Text>
+                <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("meals.reScan")}</Text>
               </Pressable>
             </View>
           </Card>
@@ -575,7 +575,7 @@ export default function AddMealScreen() {
               <TextInput
                 value={searchQuery}
                 onChangeText={handleSearchChange}
-                placeholder="Search foods…"
+                placeholder={t("meals.searchFoods")}
                 placeholderTextColor={theme.textMuted}
                 style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 15, paddingVertical: 0 }}
                 returnKeyType="search"
@@ -592,13 +592,13 @@ export default function AddMealScreen() {
                 {searching && searchResults.length === 0 && (
                   <View style={{ padding: 16, alignItems: "center" }}>
                     <ActivityIndicator size="small" color={theme.primary} />
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 6 }}>Searching…</Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 6 }}>{t("meals.searchingEllipsis")}</Text>
                   </View>
                 )}
                 {!searching && searchResults.length === 0 && searchQuery.length >= 2 && (
                   <View style={{ padding: 16, alignItems: "center" }}>
                     <Feather name="info" size={18} color={theme.textMuted} />
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 6 }}>No results — fill in manually</Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 6 }}>{t("meals.noResultsManual")}</Text>
                   </View>
                 )}
                 {searchResults.map((result: any, idx: number) => (
@@ -618,11 +618,11 @@ export default function AddMealScreen() {
                       )}
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ color: theme.orange, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{result.calories} kcal</Text>
+                      <Text style={{ color: theme.orange, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{result.calories} {t("common.kcal")}</Text>
                       <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
-                        P {result.proteinG}g · C {result.carbsG}g · F {result.fatG}g
+                        {t("meals.macroShort", { protein: result.proteinG, carbs: result.carbsG, fat: result.fatG })}
                       </Text>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 9 }}>per 100g</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 9 }}>{t("meals.per100g")}</Text>
                     </View>
                   </Pressable>
                 ))}
@@ -635,10 +635,10 @@ export default function AddMealScreen() {
         <View style={[styles.macroBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <View style={styles.macroPills}>
             {[
-              { label: "kcal", value: Math.round(totalCalories), color: theme.orange },
-              { label: "protein", value: Math.round(totalProtein), color: theme.primary },
-              { label: "carbs", value: Math.round(totalCarbs), color: theme.secondary },
-              { label: "fat", value: Math.round(totalFat), color: theme.warning },
+              { label: t("common.kcal"), value: Math.round(totalCalories), color: theme.orange },
+              { label: t("common.protein"), value: Math.round(totalProtein), color: theme.primary },
+              { label: t("common.carbs"), value: Math.round(totalCarbs), color: theme.secondary },
+              { label: t("common.fat"), value: Math.round(totalFat), color: theme.warning },
             ].map(m => (
               <View key={m.label} style={[styles.macroPill, { backgroundColor: m.color + "15", borderColor: m.color + "40" }]}>
                 <Text style={{ color: m.color, fontFamily: "Inter_700Bold", fontSize: 14 }}>{m.value}</Text>
@@ -649,11 +649,11 @@ export default function AddMealScreen() {
           {calorieGoal && totalCalories > 0 && (
             <View style={styles.goalRow}>
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                Today: {Math.round(projectedTotal)} / {calorieGoal} kcal
+                {t("meals.todayCalorieProgress", { consumed: Math.round(projectedTotal), goal: calorieGoal })}
               </Text>
               <Text style={[styles.remainText, { color: remaining !== null && remaining >= 0 ? theme.primary : theme.danger }]}>
                 {remaining !== null
-                  ? remaining >= 0 ? `${Math.round(remaining)} left` : `${Math.round(-remaining)} over`
+                  ? remaining >= 0 ? t("meals.leftAmount", { amount: Math.round(remaining) }) : t("meals.overAmount", { amount: Math.round(-remaining) })
                   : ""}
               </Text>
             </View>
@@ -661,7 +661,7 @@ export default function AddMealScreen() {
         </View>
 
         {/* ── Meal Details ── */}
-        <Input label={t("meals.mealName")} value={mealName} onChangeText={setMealName} placeholder="e.g. Chicken & Rice" />
+        <Input label={t("meals.mealName")} value={mealName} onChangeText={setMealName} placeholder={t("meals.mealNamePlaceholder")} />
         <Input label={t("workouts.date")} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
 
         <View>
@@ -725,14 +725,14 @@ export default function AddMealScreen() {
         {/* ── Food Items ── */}
         <View>
           <View style={styles.sectionRow}>
-            <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium", marginBottom: 0 }]}>Food Items</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium", marginBottom: 0 }]}>{t("meals.foodItems")}</Text>
             {photoUri && !scanning && (
               <Pressable
                 onPress={showPhotoPicker}
                 style={[styles.rescanBtn, { backgroundColor: theme.secondary + "12", borderColor: theme.secondary + "30" }]}
               >
                 <Feather name="camera" size={12} color={theme.secondary} />
-                <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 11 }}>Re-scan</Text>
+                <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 11 }}>{t("meals.reScan")}</Text>
               </Pressable>
             )}
           </View>
@@ -750,7 +750,7 @@ export default function AddMealScreen() {
             return (
               <View key={idx} style={[styles.foodCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <View style={styles.foodHeader}>
-                  <Text style={[styles.foodNum, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>Item {idx + 1}</Text>
+                  <Text style={[styles.foodNum, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>{t("meals.itemNumber", { number: idx + 1 })}</Text>
                   {foodItems.length > 1 && (
                     <Pressable onPress={() => setFoodItems(foodItems.filter((_, i) => i !== idx))} hitSlop={8}>
                       <Feather name="x" size={18} color={theme.danger} />
@@ -763,7 +763,7 @@ export default function AddMealScreen() {
                   <TextInput
                     value={item.name}
                     onChangeText={t => setFoodItems(fi => fi.map((f, i) => i === idx ? { ...f, name: t } : f))}
-                    placeholder="Food name"
+                    placeholder={t("meals.foodNamePlaceholder")}
                     placeholderTextColor={theme.textMuted}
                     style={[styles.foodInput, { color: theme.text, borderColor: theme.border, fontFamily: "Inter_400Regular", flex: 1 }]}
                   />
@@ -808,7 +808,7 @@ export default function AddMealScreen() {
                 {/* Portion + Unit */}
                 <View style={styles.portionRow}>
                   <View style={{ flex: 2 }}>
-                    <Text style={[styles.miniLabel, { color: theme.textMuted }]}>Portion</Text>
+                    <Text style={[styles.miniLabel, { color: theme.textMuted }]}>{t("meals.portion")}</Text>
                     <TextInput
                       value={item.portionSize}
                       onChangeText={t => setFoodItems(fi => fi.map((f, i) => i === idx ? { ...f, portionSize: t } : f))}
@@ -819,7 +819,7 @@ export default function AddMealScreen() {
                     />
                   </View>
                   <View style={{ flex: 3 }}>
-                    <Text style={[styles.miniLabel, { color: theme.textMuted }]}>Unit</Text>
+                    <Text style={[styles.miniLabel, { color: theme.textMuted }]}>{t("meals.unit")}</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                       <View style={{ flexDirection: "row", gap: 4 }}>
                         {UNITS.map(u => (
@@ -828,7 +828,7 @@ export default function AddMealScreen() {
                             onPress={() => setFoodItems(fi => fi.map((f, i) => i === idx ? { ...f, unit: u } : f))}
                             style={[styles.unitChip, { backgroundColor: item.unit === u ? theme.primaryDim : theme.background, borderColor: item.unit === u ? theme.primary : theme.border }]}
                           >
-                            <Text style={{ color: item.unit === u ? theme.primary : theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>{u}</Text>
+                            <Text style={{ color: item.unit === u ? theme.primary : theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>{t(`meals.units.${u}`)}</Text>
                           </Pressable>
                         ))}
                       </View>
@@ -839,10 +839,10 @@ export default function AddMealScreen() {
                 {/* Nutrition grid */}
                 <View style={styles.nutritionGrid}>
                   {[
-                    { key: "calories", label: "Calories", placeholder: "200", color: theme.orange },
-                    { key: "proteinG", label: "Protein (g)", placeholder: "20", color: theme.primary },
-                    { key: "carbsG", label: "Carbs (g)", placeholder: "25", color: theme.secondary },
-                    { key: "fatG", label: "Fat (g)", placeholder: "8", color: theme.warning },
+                    { key: "calories", label: t("meals.caloriesLabel"), placeholder: "200", color: theme.orange },
+                    { key: "proteinG", label: t("meals.proteinGLabel"), placeholder: "20", color: theme.primary },
+                    { key: "carbsG", label: t("meals.carbsGLabel"), placeholder: "25", color: theme.secondary },
+                    { key: "fatG", label: t("meals.fatGLabel"), placeholder: "8", color: theme.warning },
                   ].map(field => (
                     <View key={field.key} style={styles.nutritionField}>
                       <Text style={[styles.miniLabel, { color: field.color }]}>{field.label}</Text>
@@ -865,7 +865,7 @@ export default function AddMealScreen() {
                     style={styles.footerBtn}
                   >
                     <Feather name="copy" size={13} color={theme.secondary} />
-                    <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Duplicate</Text>
+                    <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("meals.duplicateItem")}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -877,17 +877,17 @@ export default function AddMealScreen() {
             style={[styles.addFoodBtn, { borderColor: theme.border }]}
           >
             <Feather name="plus" size={16} color={theme.primary} />
-            <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>Add Food Item</Text>
+            <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("meals.addFoodItem")}</Text>
           </Pressable>
         </View>
 
         {/* Notes */}
         <View>
-          <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Notes (optional)</Text>
+          <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("meals.notesOptional")}</Text>
           <TextInput
             value={notes}
             onChangeText={setNotes}
-            placeholder="Any notes…"
+            placeholder={t("meals.notesPlaceholder")}
             placeholderTextColor={theme.textMuted}
             multiline
             style={[styles.notesInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card, fontFamily: "Inter_400Regular" }]}
@@ -896,7 +896,7 @@ export default function AddMealScreen() {
 
         {error ? <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13 }}>{error}</Text> : null}
 
-        <Button title={isEditing ? "Save Changes" : "Save Meal"} onPress={handleSubmit} loading={mutation.isPending} />
+        <Button title={isEditing ? t("meals.saveChanges") : t("meals.saveMeal")} onPress={handleSubmit} loading={mutation.isPending} />
       </ScrollView>
       </KeyboardAvoidingView>
 
@@ -907,14 +907,14 @@ export default function AddMealScreen() {
             <Pressable onPress={() => setBarcodeOpen(false)} style={styles.barcodeCloseBtn}>
               <Feather name="x" size={24} color="#fff" />
             </Pressable>
-            <Text style={styles.barcodeTitle}>Scan Barcode</Text>
+            <Text style={styles.barcodeTitle}>{t("meals.scanBarcode")}</Text>
             <View style={{ width: 44 }} />
           </View>
 
           {barcodeLooking ? (
             <View style={styles.barcodeLoadingWrap}>
               <ActivityIndicator size="large" color={theme.primary} />
-              <Text style={styles.barcodeLoadingText}>Looking up product…</Text>
+              <Text style={styles.barcodeLoadingText}>{t("meals.lookingUpProduct")}</Text>
             </View>
           ) : (
             <CameraView
@@ -930,7 +930,7 @@ export default function AddMealScreen() {
                   <View style={[styles.barcodeCorner, styles.cornerBL, { borderColor: theme.primary }]} />
                   <View style={[styles.barcodeCorner, styles.cornerBR, { borderColor: theme.primary }]} />
                 </View>
-                <Text style={styles.barcodeHint}>Point camera at a product barcode</Text>
+                <Text style={styles.barcodeHint}>{t("meals.pointCameraBarcode")}</Text>
               </View>
             </CameraView>
           )}

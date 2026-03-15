@@ -12,6 +12,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 export type ErrorFallbackProps = {
   error: Error;
@@ -19,6 +20,7 @@ export type ErrorFallbackProps = {
 };
 
 export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const insets = useSafeAreaInsets();
@@ -44,9 +46,9 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
   };
 
   const formatErrorDetails = (): string => {
-    let details = `Error: ${error.message}\n\n`;
+    let details = `${t("components.errorFallback.errorLabel")}: ${error.message}\n\n`;
     if (error.stack) {
-      details += `Stack Trace:\n${error.stack}`;
+      details += `${t("components.errorFallback.stackTrace")}:\n${error.stack}`;
     }
     return details;
   };
@@ -62,7 +64,7 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
       {__DEV__ ? (
         <Pressable
           onPress={() => setIsModalVisible(true)}
-          accessibilityLabel="View error details"
+          accessibilityLabel={t("components.errorFallback.viewErrorDetails")}
           accessibilityRole="button"
           style={({ pressed }) => [
             styles.topButton,
@@ -79,11 +81,11 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
 
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.text }]}>
-          Something went wrong
+          {t("components.errorFallback.somethingWentWrong")}
         </Text>
 
         <Text style={[styles.message, { color: theme.textSecondary }]}>
-          Please reload the app to continue.
+          {t("components.errorFallback.pleaseReload")}
         </Text>
 
         <Pressable
@@ -98,7 +100,7 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
           ]}
         >
           <Text style={[styles.buttonText, { color: theme.buttonText }]}>
-            Try Again
+            {t("components.errorFallback.tryAgain")}
           </Text>
         </Pressable>
       </View>
@@ -128,11 +130,11 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
                 ]}
               >
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
-                  Error Details
+                  {t("components.errorFallback.errorDetails")}
                 </Text>
                 <Pressable
                   onPress={() => setIsModalVisible(false)}
-                  accessibilityLabel="Close error details"
+                  accessibilityLabel={t("components.errorFallback.closeErrorDetails")}
                   accessibilityRole="button"
                   style={({ pressed }) => [
                     styles.closeButton,

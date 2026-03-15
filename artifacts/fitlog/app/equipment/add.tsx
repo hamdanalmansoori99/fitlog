@@ -9,28 +9,30 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
+import { useTranslation } from "react-i18next";
 
-const EQUIPMENT_OPTIONS = [
-  { id: "dumbbells", label: "Dumbbells", icon: "zap" as const },
-  { id: "barbell", label: "Barbell", icon: "minus" as const },
-  { id: "bench", label: "Bench", icon: "layout" as const },
-  { id: "pullup_bar", label: "Pull-up bar", icon: "chevrons-up" as const },
-  { id: "resistance_bands", label: "Resistance bands", icon: "link" as const },
-  { id: "kettlebells", label: "Kettlebells", icon: "disc" as const },
-  { id: "cable_machine", label: "Cable machine", icon: "anchor" as const },
-  { id: "smith_machine", label: "Smith machine", icon: "sliders" as const },
-  { id: "leg_press", label: "Leg press", icon: "chevron-down" as const },
-  { id: "treadmill", label: "Treadmill", icon: "activity" as const },
-  { id: "stationary_bike", label: "Stationary bike", icon: "wind" as const },
-  { id: "rowing_machine", label: "Rowing machine", icon: "navigation" as const },
-  { id: "yoga_mat", label: "Yoga mat", icon: "heart" as const },
-  { id: "jump_rope", label: "Jump rope", icon: "repeat" as const },
-  { id: "tennis_racket", label: "Tennis racket", icon: "circle" as const },
-  { id: "swimming_pool", label: "Swimming pool", icon: "droplet" as const },
+const EQUIPMENT_IDS = [
+  { id: "dumbbells", labelKey: "equipment.dumbbells", icon: "zap" as const },
+  { id: "barbell", labelKey: "equipment.barbell", icon: "minus" as const },
+  { id: "bench", labelKey: "equipment.bench", icon: "layout" as const },
+  { id: "pullup_bar", labelKey: "equipment.pullupBar", icon: "chevrons-up" as const },
+  { id: "resistance_bands", labelKey: "equipment.resistanceBands", icon: "link" as const },
+  { id: "kettlebells", labelKey: "equipment.kettlebells", icon: "disc" as const },
+  { id: "cable_machine", labelKey: "equipment.cableMachine", icon: "anchor" as const },
+  { id: "smith_machine", labelKey: "equipment.smithMachine", icon: "sliders" as const },
+  { id: "leg_press", labelKey: "equipment.legPress", icon: "chevron-down" as const },
+  { id: "treadmill", labelKey: "equipment.treadmill", icon: "activity" as const },
+  { id: "stationary_bike", labelKey: "equipment.stationaryBike", icon: "wind" as const },
+  { id: "rowing_machine", labelKey: "equipment.rowingMachine", icon: "navigation" as const },
+  { id: "yoga_mat", labelKey: "equipment.yogaMat", icon: "heart" as const },
+  { id: "jump_rope", labelKey: "equipment.jumpRope", icon: "repeat" as const },
+  { id: "tennis_racket", labelKey: "equipment.tennisRacket", icon: "circle" as const },
+  { id: "swimming_pool", labelKey: "equipment.swimmingPool", icon: "droplet" as const },
 ];
 
 export default function AddEquipmentScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -53,13 +55,13 @@ export default function AddEquipmentScreen() {
         queryClient.invalidateQueries({ queryKey: ["profile"] });
       }
       queryClient.invalidateQueries({ queryKey: ["equipment"] });
-      showToast("Equipment added!", "success");
+      showToast(t("equipment.equipmentAdded"), "success");
       router.back();
     },
-    onError: () => showToast("Failed to add equipment. Please try again.", "error"),
+    onError: () => showToast(t("equipment.failedToAdd"), "error"),
   });
 
-  const selectedOption = EQUIPMENT_OPTIONS.find(o => o.id === category);
+  const selectedOption = EQUIPMENT_IDS.find(o => o.id === category);
 
   return (
     <View style={[{ flex: 1, backgroundColor: theme.background }]}>
@@ -67,18 +69,18 @@ export default function AddEquipmentScreen() {
         <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, justifyContent: "center" }}>
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
-        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 17 }}>Add Equipment</Text>
+        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 17 }}>{t("equipment.addEquipment")}</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }} showsVerticalScrollIndicator={false}>
-        <Input label="Custom name (optional)" value={name} onChangeText={setName} placeholder="e.g. My Rogue Barbell" />
+        <Input label={t("equipment.customName")} value={name} onChangeText={setName} placeholder={t("equipment.customNamePlaceholder")} />
 
         <View>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, marginBottom: 10 }}>
-            Equipment type *
+            {t("equipment.equipmentType")}
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {EQUIPMENT_OPTIONS.map(opt => {
+            {EQUIPMENT_IDS.map(opt => {
               const selected = category === opt.id;
               return (
                 <Pressable
@@ -94,7 +96,7 @@ export default function AddEquipmentScreen() {
                 >
                   <Feather name={opt.icon} size={13} color={selected ? theme.primary : theme.textMuted} />
                   <Text style={{ color: selected ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </Text>
                 </Pressable>
               );
@@ -102,14 +104,14 @@ export default function AddEquipmentScreen() {
           </View>
         </View>
 
-        <Input label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="Purchase date, condition..." />
+        <Input label={t("equipment.notesOptional")} value={notes} onChangeText={setNotes} placeholder={t("equipment.notesPlaceholder")} />
 
         <Button
-          title="Add Equipment"
+          title={t("equipment.addEquipment")}
           onPress={() => {
             if (!category) return;
             mutation.mutate({
-              name: name.trim() || selectedOption?.label || category,
+              name: name.trim() || (selectedOption ? t(selectedOption.labelKey) : category),
               category,
               notes: notes || undefined,
             });

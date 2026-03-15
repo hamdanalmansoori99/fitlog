@@ -20,66 +20,64 @@ import { ProgressionCard } from "@/components/ProgressionCard";
 
 function DifficultyBadge({ difficulty }: { difficulty: string }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const colors: Record<string, string> = {
     Beginner: theme.primary,
     Intermediate: theme.secondary,
     Advanced: theme.danger,
   };
   const color = colors[difficulty] || theme.primary;
+  const label = t(`workouts.plan.difficulty.${difficulty}`, { defaultValue: difficulty });
   return (
     <View style={[styles.badge, { backgroundColor: color + "20", borderColor: color }]}>
-      <Text style={[styles.badgeText, { color, fontFamily: "Inter_500Medium" }]}>{difficulty}</Text>
+      <Text style={[styles.badgeText, { color, fontFamily: "Inter_500Medium" }]}>{label}</Text>
     </View>
   );
 }
 
+const BENEFIT_KEYS: Record<string, string> = {
+  "Builds foundational strength": "buildsFoundationalStrength",
+  "Improves coordination and balance": "improvesCoordinationBalance",
+  "No equipment required": "noEquipmentRequired",
+  "Scalable as you progress": "scalableAsYouProgress",
+  "Builds strength and muscle": "buildsStrengthMuscle",
+  "Improves bone density": "improvesBoneDensity",
+  "Boosts resting metabolism": "boostsRestingMetabolism",
+  "Supports long-term body composition": "supportsBodyComposition",
+  "Builds cardiovascular endurance": "buildsCardioEndurance",
+  "Burns significant calories": "burnsSignificantCalories",
+  "Strengthens the heart and lungs": "strengthensHeartLungs",
+  "Improves mental health and mood": "improvesMentalHealth",
+  "Improves flexibility and range of motion": "improvesFlexibility",
+  "Supports muscle recovery": "supportsMuscleRecovery",
+  "Reduces stress and improves sleep": "reducesStress",
+  "Improves mobility and balance": "improvesMobilityBalance",
+  "Full-body conditioning": "fullBodyConditioning",
+  "Zero joint impact": "zeroJointImpact",
+  "Builds lung capacity": "buildsLungCapacity",
+  "Excellent for recovery": "excellentForRecovery",
+  "Effective cardiovascular workout": "effectiveCardioWorkout",
+  "Lower joint impact than running": "lowerJointImpact",
+  "Improves leg endurance and power": "improvesLegEndurance",
+  "Great calorie burner": "greatCalorieBurner",
+  "Improves agility and reaction speed": "improvesAgility",
+  "Great aerobic workout": "greatAerobicWorkout",
+  "Develops hand-eye coordination": "handEyeCoordination",
+  "Fun and social": "funAndSocial",
+  "Improves cardiovascular health": "improvesCardioHealth",
+  "Supports sustainable fat loss": "supportsFatLoss",
+  "Low impact — easy on joints": "lowImpactEasyOnJoints",
+  "Great for active recovery": "greatForActiveRecovery",
+};
+
 function BenefitRow({ benefit, index }: { benefit: string; index: number }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
-  const tips: Record<string, string> = {
-    // Strength / bodyweight
-    "Builds foundational strength": "Strengthening muscles early protects your joints and improves posture for life. Compound movements like squats and push-ups recruit dozens of muscles at once.",
-    "Improves coordination and balance": "Better neuromuscular control reduces injury risk in everyday activities and sports. Balance training also activates deep core stabilisers.",
-    "No equipment required": "Consistency beats equipment every time. Bodyweight training uses your own mass as resistance and can be scaled infinitely as you get stronger.",
-    "Scalable as you progress": "Start with easier variations, then add reps, sets, tempo, or harder progressions. Linear progression means you'll always have a next level.",
-    "Builds strength and muscle": "Progressive overload — gradually increasing the challenge — is the proven driver of muscle growth. Even 1–2 reps more per week compounds over months.",
-    "Improves bone density": "Weight-bearing exercise stresses bones enough to stimulate remodelling. This is one of the best long-term defences against osteoporosis.",
-    "Boosts resting metabolism": "Each kilogram of muscle burns roughly 13 kcal/day at rest. More muscle means passive calorie burn — even while you sleep.",
-    "Supports long-term body composition": "Muscle is denser than fat. Gaining muscle while losing fat can make you leaner and stronger even if the scale barely moves.",
-    // Cardio / running
-    "Builds cardiovascular endurance": "A stronger heart pumps more blood per beat — this is called stroke volume. Over time, your resting heart rate drops and all activities feel easier.",
-    "Burns significant calories": "Running burns roughly 60–80 kcal per kilometre regardless of speed. An hour of running can torch 500–700 kcal depending on your bodyweight.",
-    "Strengthens the heart and lungs": "Regular aerobic training enlarges the heart's left ventricle and increases lung capacity — adaptations that protect you for decades.",
-    "Improves mental health and mood": "Aerobic exercise triggers endorphin release and long-term increases in BDNF — a brain protein linked to memory, learning, and mood regulation.",
-    // Flexibility / yoga
-    "Improves flexibility and range of motion": "Greater range of motion reduces injury risk and allows more effective exercise technique. Flexible muscles also recover faster after hard sessions.",
-    "Supports muscle recovery": "Mobility work and yoga increase blood flow to fatigued muscles, accelerating waste removal and nutrient delivery — the two keys to repair.",
-    "Reduces stress and improves sleep": "Just 20 minutes of yoga lowers cortisol measurably. Better sleep then accelerates every other fitness adaptation — it's the force multiplier.",
-    "Improves mobility and balance": "Mobility training targets the joints themselves — not just the muscles. Better joint health means pain-free movement at any age.",
-    // Swimming / low impact
-    "Full-body conditioning": "Water provides resistance in all directions, so every stroke works both agonist and antagonist muscles simultaneously — more muscles, less time.",
-    "Zero joint impact": "Buoyancy offloads up to 90% of your bodyweight, making swimming ideal when joints are sore, injured, or when you need active recovery.",
-    "Builds lung capacity": "Controlled breathing patterns in swimming train your respiratory muscles and increase the efficiency with which your body uses oxygen.",
-    "Excellent for recovery": "The hydrostatic pressure of water acts like a full-body compression garment, reducing inflammation and muscle soreness after hard training days.",
-    // Cycling
-    "Effective cardiovascular workout": "Steady-state cycling at 65–75% max heart rate is the most efficient zone for fat burning while sparing muscle tissue.",
-    "Lower joint impact than running": "Cycling is non-weight-bearing, so your knees, hips, and ankles experience a fraction of the stress compared to running at the same intensity.",
-    "Improves leg endurance and power": "High cadence cycling builds muscular endurance; low cadence with resistance builds raw leg power — both transfer to running, sports, and life.",
-    "Great calorie burner": "A 45-minute moderate cycling session burns 300–500 kcal. Combine with strength work for optimal body composition changes.",
-    // Tennis / sport
-    "Improves agility and reaction speed": "The multidirectional movements in tennis train your nervous system to change direction faster — a skill that transfers to almost every other sport.",
-    "Great aerobic workout": "Tennis players average a heart rate of 60–80% max during a match, qualifying it as genuine cardiovascular training with the added fun of competition.",
-    "Develops hand-eye coordination": "Tracking a moving ball and timing your swing trains the visual-motor system — coordination that improves across all sport and daily activities.",
-    "Fun and social": "Enjoyment is the most powerful predictor of long-term exercise adherence. If you love it, you'll stick with it.",
-    // Walking
-    "Improves cardiovascular health": "Even 7,000–8,000 daily steps significantly reduce cardiovascular disease risk. Walking is one of the most evidence-backed forms of exercise.",
-    "Supports sustainable fat loss": "Walking at a moderate pace uses fat as its primary fuel source. It's sustainable enough to do daily without impacting recovery.",
-    "Low impact — easy on joints": "Walking generates only 1–1.5× your bodyweight in ground reaction force vs 3–5× for running. Perfect for active recovery or injury prevention.",
-    "Great for active recovery": "Low-intensity movement on rest days increases blood flow to sore muscles without adding training stress — accelerating recovery between sessions.",
-  };
-
-  const tip = tips[benefit];
+  const key = BENEFIT_KEYS[benefit];
+  const label = key ? t(`workouts.template.benefits.${key}`) : benefit;
+  const tip = key ? t(`workouts.template.tips.${key}`, { defaultValue: "" }) : "";
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
@@ -89,7 +87,7 @@ function BenefitRow({ benefit, index }: { benefit: string; index: number }) {
       >
         <View style={[styles.benefitDot, { backgroundColor: theme.primary }]} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.benefitText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{benefit}</Text>
+          <Text style={[styles.benefitText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{label}</Text>
           {expanded && tip && (
             <Animated.Text
               entering={FadeIn.duration(250)}
@@ -178,12 +176,12 @@ export default function WorkoutTemplateScreen() {
     const match = byName || byType;
     if (!match) return null;
     const daysAgo = (Date.now() - new Date(match.date).getTime()) / (1000 * 60 * 60 * 24);
-    if (daysAgo < 1) return { label: "Done today", sub: "Rest up after completing this!", icon: "check-circle" as const, color: theme.primary };
-    if (daysAgo < 2) return { label: "Done yesterday", sub: "Consider targeting different muscle groups today.", icon: "clock" as const, color: theme.warning || "#ff9800" };
+    if (daysAgo < 1) return { label: t("workouts.template.doneToday"), sub: t("workouts.template.restUpAfter"), icon: "check-circle" as const, color: theme.primary };
+    if (daysAgo < 2) return { label: t("workouts.template.doneYesterday"), sub: t("workouts.template.considerDifferentMuscles"), icon: "clock" as const, color: theme.warning || "#ff9800" };
     const d = Math.round(daysAgo);
-    if (d <= 3) return { label: `Last done ${d} days ago`, sub: "Your muscles have had time to recover — good timing.", icon: "clock" as const, color: theme.primary };
-    if (d <= 7) return { label: `Last done ${d} days ago`, sub: "Fully recovered and ready to push harder today.", icon: "clock" as const, color: theme.primary };
-    return { label: `Last done ${d} days ago`, sub: "It's been a while — ease back in and listen to your body.", icon: "clock" as const, color: theme.textMuted };
+    if (d <= 3) return { label: t("workouts.template.lastDoneDaysAgo", { days: d }), sub: t("workouts.template.musclesRecovered"), icon: "clock" as const, color: theme.primary };
+    if (d <= 7) return { label: t("workouts.template.lastDoneDaysAgo", { days: d }), sub: t("workouts.template.fullyRecovered"), icon: "clock" as const, color: theme.primary };
+    return { label: t("workouts.template.lastDoneDaysAgo", { days: d }), sub: t("workouts.template.beenAWhile"), icon: "clock" as const, color: theme.textMuted };
   }, [template, workoutsData]);
 
   const logMutation = useMutation({
@@ -257,7 +255,7 @@ export default function WorkoutTemplateScreen() {
           <View style={styles.statsRow}>
             <Animated.View entering={SlideInRight.delay(150).duration(300)} style={[styles.statChip, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <Feather name="clock" size={14} color={theme.secondary} />
-              <Text style={[styles.statText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{template.durationMinutes} min</Text>
+              <Text style={[styles.statText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{template.durationMinutes} {t("common.min")}</Text>
             </Animated.View>
             <Animated.View entering={SlideInRight.delay(200).duration(300)}>
               <DifficultyBadge difficulty={template.difficulty} />
@@ -355,9 +353,9 @@ export default function WorkoutTemplateScreen() {
         <Animated.View entering={FadeInDown.delay(200).duration(350)}>
           <Card>
             <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Benefits</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.template.benefitsTitle")}</Text>
               <Text style={[styles.tapHint, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Tap for details
+                {t("workouts.template.tapForDetails")}
               </Text>
             </View>
             {benefits.map((b, i) => (
@@ -371,12 +369,12 @@ export default function WorkoutTemplateScreen() {
           <Card>
             <View style={styles.sectionHeaderRow}>
               <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {filteredExercises.length} Exercises
+                {t("workouts.template.exercisesCount", { count: filteredExercises.length })}
               </Text>
               {equipMatch === "partial" && (
                 <View style={[styles.subsBadge, { backgroundColor: theme.warning + "20" }]}>
                   <Feather name="refresh-cw" size={10} color={theme.warning} />
-                  <Text style={{ color: theme.warning, fontFamily: "Inter_500Medium", fontSize: 10 }}>Substituted</Text>
+                  <Text style={{ color: theme.warning, fontFamily: "Inter_500Medium", fontSize: 10 }}>{t("workouts.template.substituted")}</Text>
                 </View>
               )}
             </View>
@@ -397,12 +395,12 @@ export default function WorkoutTemplateScreen() {
                 <View style={{ flex: 1 }}>
                   {ex.isSubstitution && (
                     <Text style={[styles.subLabel, { color: theme.warning, fontFamily: "Inter_500Medium" }]}>
-                      Replaces: {ex.substituteFor}
+                      {t("workouts.template.replaces", { name: ex.substituteFor })}
                     </Text>
                   )}
                   {ex.missingEquipment && !ex.isSubstitution && (
                     <Text style={[styles.subLabel, { color: theme.danger, fontFamily: "Inter_500Medium" }]}>
-                      Needs: {ex.missingEquipment.replace(/_/g, " ")} (unavailable)
+                      {t("workouts.template.needsUnavailable", { equipment: ex.missingEquipment.replace(/_/g, " ") })}
                     </Text>
                   )}
                   <Text style={[
@@ -414,7 +412,7 @@ export default function WorkoutTemplateScreen() {
                   <View style={styles.exDetails}>
                     {ex.sets && (
                       <Text style={[styles.exStat, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        {ex.sets} sets × {ex.reps || ex.duration}
+                        {ex.sets} {t("workouts.template.setsX")} {ex.reps || ex.duration}
                       </Text>
                     )}
                     {!ex.sets && ex.duration && (
@@ -423,13 +421,13 @@ export default function WorkoutTemplateScreen() {
                     {ex.rest && (
                       <View style={[styles.restPill, { backgroundColor: theme.secondaryDim }]}>
                         <Feather name="clock" size={10} color={theme.secondary} />
-                        <Text style={{ color: theme.secondary, fontFamily: "Inter_400Regular", fontSize: 11 }}>Rest {ex.rest}</Text>
+                        <Text style={{ color: theme.secondary, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("workouts.template.restTime", { time: ex.rest })}</Text>
                       </View>
                     )}
                   </View>
                   {!ex.isSubstitution && !ex.missingEquipment && ex.alternatives && ex.alternatives.length > 0 && (
                     <Text style={[styles.exNote, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      Alt: {ex.alternatives[0]}
+                      {t("workouts.template.alt")}: {ex.alternatives[0]}
                     </Text>
                   )}
                   {isGymTemplate && exerciseHistoryMap[ex.name] != null && (() => {
@@ -438,12 +436,12 @@ export default function WorkoutTemplateScreen() {
                     if (target.trend === "first") return null;
                     const trendColors: Record<string, string> = { progress: theme.primary, maintain: theme.secondary, deload: theme.warning };
                     const trendColor = trendColors[target.trend] ?? theme.textMuted;
-                    const trendLabels: Record<string, string> = { progress: "↑ Level up", maintain: "→ Hold steady", deload: "↓ Recovery" };
+                    const trendLabels: Record<string, string> = { progress: `↑ ${t("workouts.template.levelUp")}`, maintain: `→ ${t("workouts.template.holdSteady")}`, deload: `↓ ${t("workouts.template.recovery")}` };
                     return (
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
                         {target.previousDisplay ? (
                           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                            Last: {target.previousDisplay}
+                            {t("workouts.template.last")}: {target.previousDisplay}
                           </Text>
                         ) : null}
                         <View style={{ backgroundColor: trendColor + "18", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
@@ -471,7 +469,7 @@ export default function WorkoutTemplateScreen() {
           <View style={[styles.coachTip, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "30" }]}>
             <Feather name="cpu" size={14} color={theme.primary} />
             <Text style={[styles.coachTipText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Tap "Customise & Log" to adjust weights, reps, or duration before logging.
+              {t("workouts.template.coachTip")}
             </Text>
           </View>
         </Animated.View>
@@ -482,19 +480,19 @@ export default function WorkoutTemplateScreen() {
         {template.activityType === "gym" ? (
           <>
             <Button
-              title="▶  Start Workout"
+              title={`▶  ${t("workouts.template.startWorkout")}`}
               onPress={() => router.push({ pathname: "/workouts/execute" as any, params: { id: template.id } })}
             />
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Button
-                title="Log as Done"
+                title={t("workouts.template.logAsDone")}
                 onPress={handleLogWorkout}
                 loading={logMutation.isPending}
                 variant="outline"
                 style={{ flex: 1 }}
               />
               <Button
-                title="Customise"
+                title={t("workouts.template.customise")}
                 onPress={() => router.push({
                   pathname: "/workouts/log" as any,
                   params: { prefillName: template.name, prefillType: template.activityType, prefillDuration: template.durationMinutes.toString() },
@@ -507,12 +505,12 @@ export default function WorkoutTemplateScreen() {
         ) : (
           <>
             <Button
-              title="Log as Completed"
+              title={t("workouts.template.logAsCompleted")}
               onPress={handleLogWorkout}
               loading={logMutation.isPending}
             />
             <Button
-              title="Customise & Log"
+              title={t("workouts.template.customiseAndLog")}
               onPress={() => router.push({
                 pathname: "/workouts/log" as any,
                 params: { prefillName: template.name, prefillType: template.activityType, prefillDuration: template.durationMinutes.toString() },
