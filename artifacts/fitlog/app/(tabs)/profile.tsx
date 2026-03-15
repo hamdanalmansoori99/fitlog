@@ -5,6 +5,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
+import { rtlIcon } from "@/lib/rtl";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
@@ -536,10 +537,10 @@ export default function ProfileScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: "#448aff", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("profile.upgrade")}</Text>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                      Photo analysis · Unlimited plans · Advanced analytics
+                      {t("profile.premiumFeatures")}
                     </Text>
                   </View>
-                  <Feather name="chevron-right" size={14} color="#448aff" />
+                  <Feather name={rtlIcon("chevron-right")} size={14} color="#448aff" />
                 </Pressable>
               )}
             </Card>
@@ -556,7 +557,7 @@ export default function ProfileScreen() {
                 <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("achievements.title")}</Text>
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("profile.badgesStreaksRecords")}</Text>
               </View>
-              <Feather name="chevron-right" size={18} color={theme.textMuted} />
+              <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
             </Pressable>
 
             {/* ── Notifications ── */}
@@ -608,7 +609,7 @@ export default function ProfileScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 14 }}>{meta.label}</Text>
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                          {pref.enabled ? `Daily at ${fmtTime(pref.time)}` : meta.description}
+                          {pref.enabled ? t("profile.dailyAt", { time: fmtTime(pref.time) }) : meta.description}
                         </Text>
                       </View>
                       <Switch
@@ -726,7 +727,7 @@ export default function ProfileScreen() {
                   <Feather name="download" size={18} color={theme.secondary} />
                   <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 15 }}>{t("profile.exportData")}</Text>
                 </View>
-                <Feather name="chevron-right" size={18} color={theme.textMuted} />
+                <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
               </Pressable>
               
               <Pressable onPress={handleDeleteAccount} style={styles.settingRow}>
@@ -734,7 +735,7 @@ export default function ProfileScreen() {
                   <Feather name="trash-2" size={18} color={theme.danger} />
                   <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 15 }}>{t("profile.deleteAccount")}</Text>
                 </View>
-                <Feather name="chevron-right" size={18} color={theme.textMuted} />
+                <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
               </Pressable>
             </Card>
             

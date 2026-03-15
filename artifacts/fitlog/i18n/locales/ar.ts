@@ -720,6 +720,8 @@ export default {
     badgesStreaksRecords: "الشارات والسلاسل والأرقام القياسية",
     reminderTime: "وقت التذكير",
     appVersion: "FitLog v{{version}}",
+    premiumFeatures: "تحليل الصور · خطط غير محدودة · تحليلات متقدمة",
+    dailyAt: "يوميًا في {{time}}",
     appearance: "المظهر",
     units: "الوحدات",
     account: "الحساب",
@@ -1122,6 +1124,10 @@ export default {
       moreToTarget: "{{count}} جلسة أخرى لتحقيق هدفك الشهري البالغ {{target}}.",
       monthlyLabel: "{{done}} / {{target}} جلسات",
     },
+  },
+  recovery: {
+    sleepValidation: "ساعات النوم يجب أن تكون بين ٠ و ٢٤.",
+    sleepPlaceholder: "مثال: ٦.٥",
   },
   notFound: {
     title: "الصفحة غير موجودة",

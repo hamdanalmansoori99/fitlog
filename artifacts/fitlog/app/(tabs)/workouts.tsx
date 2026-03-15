@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
+import { rtlIcon } from "@/lib/rtl";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -104,7 +105,7 @@ function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void })
             </Text>
           </View>
         </View>
-        <Feather name="chevron-right" size={18} color={theme.textMuted} />
+        <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
       </View>
 
       <Text style={[styles.recWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
@@ -185,7 +186,7 @@ function TodaySuggestionCard({ suggestion, onPress }: { suggestion: any; onPress
 
 function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () => void }) {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const color = getActivityColor(workout.activityType, theme);
   const icon = getActivityIcon(workout.activityType);
 
@@ -204,7 +205,7 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
             {workout.name || workout.activityType}
           </Text>
           <Text style={[styles.historyDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {new Date(workout.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {new Date(workout.date).toLocaleDateString(i18n.language === "ar" ? "ar-SA" : "en-US", { month: "short", day: "numeric" })}
           </Text>
         </View>
         <Pressable onPress={(e) => { e.stopPropagation(); onDelete(); }} style={styles.deleteBtn} hitSlop={8}>
@@ -397,7 +398,7 @@ export default function WorkoutsScreen() {
                   {t("workouts.coachSetupMessage")}
                 </Text>
               </View>
-              <Feather name="arrow-right" size={20} color={theme.primary} />
+              <Feather name={rtlIcon("arrow-right")} size={20} color={theme.primary} />
             </Pressable>
           </Animated.View>
         )}
@@ -465,7 +466,7 @@ export default function WorkoutsScreen() {
                   {t("workouts.weeklyPlanSubtitle")}
                 </Text>
               </View>
-              <Feather name="arrow-right" size={18} color={theme.secondary} />
+              <Feather name={rtlIcon("arrow-right")} size={18} color={theme.secondary} />
             </Pressable>
           </Animated.View>
         )}
@@ -518,7 +519,7 @@ export default function WorkoutsScreen() {
                   {t("workouts.saveTemplateDesc")}
                 </Text>
               </View>
-              <Feather name="arrow-right" size={18} color={theme.secondary} />
+              <Feather name={rtlIcon("arrow-right")} size={18} color={theme.secondary} />
             </Pressable>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
@@ -624,7 +625,7 @@ export default function WorkoutsScreen() {
                           <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>{tmpl.name}</Text>
                           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{tmpl.durationMinutes}{t("common.min")} · {tmpl.difficulty}</Text>
                         </View>
-                        <Feather name="chevron-right" size={16} color={theme.textMuted} />
+                        <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
                       </Pressable>
                     );
                   })}

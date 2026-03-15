@@ -11,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { rtlIcon } from "@/lib/rtl";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useTranslation } from "react-i18next";
@@ -130,7 +131,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
       if (sleepCustom && sleepCustomVal) {
         const parsed = parseFloat(sleepCustomVal);
         if (isNaN(parsed) || parsed < 0 || parsed > 24) {
-          return Promise.reject(new Error("Sleep hours must be between 0 and 24."));
+          return Promise.reject(new Error(t("recovery.sleepValidation")));
         }
       }
 
@@ -255,7 +256,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
         </View>
         <View style={s.promptCta}>
           <Text style={s.promptCtaText}>{t("components.recoveryCheckIn.checkIn")}</Text>
-          <Feather name="chevron-right" size={14} color={theme.primary} />
+          <Feather name={rtlIcon("chevron-right")} size={14} color={theme.primary} />
         </View>
       </Pressable>
     );
@@ -300,7 +301,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
       {sleepCustom && (
         <TextInput
           style={s.customInput}
-          placeholder="e.g. 6.5"
+          placeholder={t("recovery.sleepPlaceholder")}
           placeholderTextColor={theme.textMuted}
           keyboardType="decimal-pad"
           value={sleepCustomVal}

@@ -818,6 +818,8 @@ export default {
     badgesStreaksRecords: "Badges, streaks & personal records",
     reminderTime: "Reminder time",
     appVersion: "FitLog v{{version}}",
+    premiumFeatures: "Photo analysis · Unlimited plans · Advanced analytics",
+    dailyAt: "Daily at {{time}}",
   },
   measurements: {
     addMeasurement: "Add Measurement",
@@ -1309,6 +1311,10 @@ export default {
       moreToTarget: "{{count}} more sessions to hit your monthly target of {{target}}.",
       monthlyLabel: "{{done}} / {{target}} sessions",
     },
+  },
+  recovery: {
+    sleepValidation: "Sleep hours must be between 0 and 24.",
+    sleepPlaceholder: "e.g. 6.5",
   },
   notFound: {
     title: "Page Not Found",
