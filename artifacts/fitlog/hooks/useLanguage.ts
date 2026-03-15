@@ -26,6 +26,7 @@ export function useLanguage() {
       if (Platform.OS === "web") {
         document.documentElement.dir = isRTL ? "rtl" : "ltr";
         document.documentElement.lang = lng;
+        window.location.reload();
       }
     },
     [i18n, setStoreLanguage],

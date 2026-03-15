@@ -78,6 +78,9 @@ The PostgreSQL database uses Drizzle ORM. Key tables include `users`, `profiles`
 ## Cache Invalidation
 A robust cache invalidation pattern is implemented using React Query. Mutations invalidate relevant query keys to ensure data freshness across the application (e.g., workout mutations invalidate `workouts`, `todayStats`, `weeklyStats`).
 
+## Internationalization (i18n)
+Full bilingual support (English + Arabic) with RTL layout. Uses `i18next` + `react-i18next` + `expo-localization`. Translation files at `artifacts/fitlog/i18n/locales/en.ts` (~1100 lines, ~500+ keys) and `ar.ts` (fully synced Arabic). All 28 screen files and 12 components use `useTranslation()` with `t()` calls. Language switching via `useLanguage` hook persists to API, updates RTL via `I18nManager`, and reloads on web. Server-driven language hydration reads `GET /settings` on login to restore saved preference. AI coach responds in Arabic when `language === "ar"`.
+
 ## AI Coach Context
 The `/api/coach/message` endpoint builds a rich system prompt for the AI coach, incorporating user profile details (goals, experience, equipment), recent workout history, today's nutrition, and a list of all available workout templates for context.
 

@@ -30,6 +30,8 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   const { token, _hydrated } = useAuthStore();
   const router = useRouter();
+  const { i18n } = useTranslation();
+  const setLanguage = useSettingsStore((s) => s.setLanguage);
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -38,6 +40,33 @@ function RootLayoutNav() {
     staleTime: 60 * 1000,
     retry: false,
   });
+
+  const { data: serverSettings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: api.getSettings,
+    enabled: !!token && !!_hydrated,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (serverSettings?.language) {
+      const serverLang = serverSettings.language as "en" | "ar";
+      if (i18n.language !== serverLang) {
+        setLanguage(serverLang);
+        i18n.changeLanguage(serverLang);
+        const isRTL = serverLang === "ar";
+        if (I18nManager.isRTL !== isRTL) {
+          I18nManager.forceRTL(isRTL);
+          I18nManager.allowRTL(isRTL);
+        }
+        if (Platform.OS === "web") {
+          document.documentElement.dir = isRTL ? "rtl" : "ltr";
+          document.documentElement.lang = serverLang;
+        }
+      }
+    }
+  }, [serverSettings]);
 
   useEffect(() => {
     if (!_hydrated) return;

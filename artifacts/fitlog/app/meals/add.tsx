@@ -661,21 +661,24 @@ export default function AddMealScreen() {
         </View>
 
         {/* ── Meal Details ── */}
-        <Input label="Meal Name" value={mealName} onChangeText={setMealName} placeholder="e.g. Chicken & Rice" />
-        <Input label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+        <Input label={t("meals.mealName")} value={mealName} onChangeText={setMealName} placeholder="e.g. Chicken & Rice" />
+        <Input label={t("workouts.date")} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
 
         <View>
-          <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Category</Text>
+          <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("meals.category")}</Text>
           <View style={styles.categoryRow}>
-            {CATEGORIES.map(cat => (
-              <Pressable
-                key={cat}
-                onPress={() => setCategory(cat)}
-                style={[styles.catChip, { backgroundColor: category === cat ? theme.primaryDim : theme.card, borderColor: category === cat ? theme.primary : theme.border }]}
-              >
-                <Text style={{ color: category === cat ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{cat}</Text>
-              </Pressable>
-            ))}
+            {CATEGORIES.map(cat => {
+              const catLabels: Record<string, string> = { Breakfast: t("meals.breakfast"), Lunch: t("meals.lunch"), Dinner: t("meals.dinner"), Snacks: t("meals.snacks") };
+              return (
+                <Pressable
+                  key={cat}
+                  onPress={() => setCategory(cat)}
+                  style={[styles.catChip, { backgroundColor: category === cat ? theme.primaryDim : theme.card, borderColor: category === cat ? theme.primary : theme.border }]}
+                >
+                  <Text style={{ color: category === cat ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{catLabels[cat] || cat}</Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
@@ -683,8 +686,8 @@ export default function AddMealScreen() {
         {recentFoods.length > 0 && (
           <View>
             <View style={styles.sectionRow}>
-              <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium", marginBottom: 0 }]}>Recent Foods</Text>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>Tap to add</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium", marginBottom: 0 }]}>{t("meals.recentFoods")}</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("meals.tapToAdd")}</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
               <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingRight: 28, paddingTop: 6, paddingBottom: 4 }}>
