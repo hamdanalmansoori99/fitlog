@@ -9,6 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
+import { dateLocale } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import {
@@ -267,7 +268,7 @@ export default function WeeklyPlanScreen() {
     setSaved(false);
   };
 
-  const today = new Date().toLocaleString("en-US", { weekday: "long" });
+  const today = new Date().toLocaleString(dateLocale(), { weekday: "long" });
 
   if (profileLoading || plan === null) {
     return (

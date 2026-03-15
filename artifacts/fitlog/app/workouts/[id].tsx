@@ -11,6 +11,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { useTranslation } from "react-i18next";
+import { dateLocale } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -105,7 +106,7 @@ function ShareCard({ workout, theme, useImperial }: { workout: any; theme: any; 
   const color = getActivityColor(workout.activityType, theme);
   const icon = getActivityIcon(workout.activityType);
   const exercises: any[] = workout.exercises || [];
-  const dateStr = new Date(workout.date).toLocaleDateString("en-US", {
+  const dateStr = new Date(workout.date).toLocaleDateString(dateLocale(), {
     weekday: "short", month: "short", day: "numeric",
   });
 
@@ -265,7 +266,7 @@ export default function WorkoutDetailScreen() {
 
   const color = getActivityColor(workout.activityType, theme);
   const icon = getActivityIcon(workout.activityType);
-  const dateStr = new Date(workout.date).toLocaleDateString("en-US", {
+  const dateStr = new Date(workout.date).toLocaleDateString(dateLocale(), {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
   const exercises: any[] = workout.exercises || [];

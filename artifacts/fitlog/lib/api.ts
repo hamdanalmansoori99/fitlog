@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { useAuthStore } from "@/store/authStore";
+import i18n from "@/i18n";
 
 const DOMAIN = process.env.EXPO_PUBLIC_DOMAIN || "";
 export const BASE_URL = Platform.OS === "web"
@@ -26,7 +27,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const data = await res.json();
   
   if (!res.ok) {
-    throw new Error(data.error || data.message || "Request failed");
+    throw new Error(data.error || data.message || i18n.t("common.requestFailed"));
   }
   
   return data;

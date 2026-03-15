@@ -1,4 +1,5 @@
 import i18n from "@/i18n";
+import { dateLocale } from "@/lib/rtl";
 
 export interface GoalInsight {
   id: string;
@@ -100,7 +101,7 @@ function clamp(v: number, min = 0, max = 1) {
 }
 
 function fmt(n: number): string {
-  return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  return n.toLocaleString(dateLocale(), { maximumFractionDigits: 0 });
 }
 
 const CARDIO_TYPES = new Set(["running", "cycling", "walking", "swimming", "rowing", "hiking", "elliptical"]);

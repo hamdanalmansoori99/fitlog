@@ -14,8 +14,8 @@ import { useWeeklyPlanStore, PlannedDay, PlannedMeal } from "@/store/weeklyPlanS
 import { useToast } from "@/components/ui/Toast";
 import { Card } from "@/components/ui/Card";
 import { useTranslation } from "react-i18next";
+import { dateLocale } from "@/lib/rtl";
 
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CATEGORY_COLORS: Record<string, string> = {
   Breakfast: "#ffab40",
   Lunch: "#00e676",
@@ -30,7 +30,7 @@ function getDayLabel(dateStr: string, t: any): string {
   const diffDays = Math.round((d.getTime() - today.getTime()) / 86400000);
   if (diffDays === 0) return t("common.today");
   if (diffDays === 1) return t("meals.tomorrow");
-  return DAY_LABELS[d.getDay()] + " " + d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString(dateLocale(), { weekday: "short", month: "short", day: "numeric" });
 }
 
 interface MealRowProps {
@@ -299,7 +299,7 @@ export default function WeeklyPlanScreen() {
   };
 
   const generatedLabel = generatedAt
-    ? `Generated ${new Date(generatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+    ? t("meals.generatedOn", { date: new Date(generatedAt).toLocaleDateString(dateLocale(), { month: "short", day: "numeric" }) })
     : null;
 
   return (

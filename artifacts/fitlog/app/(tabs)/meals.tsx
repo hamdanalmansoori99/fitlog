@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { useTranslation } from "react-i18next";
+import { dateLocale } from "@/lib/rtl";
 
 const CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
@@ -338,7 +339,7 @@ export default function MealsScreen() {
   function handleDuplicateDay() {
     Alert.alert(
       t("meals.copyDayTitle"),
-      t("meals.copyDayMessage", { date: new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) }),
+      t("meals.copyDayMessage", { date: new Date(selectedDate + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric" }) }),
       [
         { text: t("common.cancel"), style: "cancel" },
         { text: t("common.copy"), onPress: () => duplicateMutation.mutate(selectedDate) },
@@ -411,7 +412,7 @@ export default function MealsScreen() {
           <Feather name="chevron-left" size={22} color={theme.textMuted} />
         </Pressable>
         <Text style={[styles.dateText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          {isToday ? t("common.today") : new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          {isToday ? t("common.today") : new Date(selectedDate + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
         </Text>
         <Pressable onPress={() => changeDate(1)} style={styles.dateArrow} disabled={isToday}>
           <Feather name="chevron-right" size={22} color={isToday ? theme.border : theme.textMuted} />

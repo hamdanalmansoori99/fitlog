@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+import { dateLocale } from "@/lib/rtl";
 
 const DAY_LABEL_KEYS = [
   "components.weeklyBarChart.mon",
@@ -190,7 +191,7 @@ export function WorkoutCalendar() {
         <Pressable style={s.modalOverlay} onPress={() => setDetailModal(false)}>
           <View style={[s.detailCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginBottom: 10 }}>
-              {selected && new Date(selected.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+              {selected && new Date(selected.date + "T12:00:00").toLocaleDateString(dateLocale(), { weekday: "long", month: "long", day: "numeric" })}
             </Text>
             {selected?.workouts.map((w) => (
               <View key={w.id} style={[s.detailRow, { borderBottomColor: theme.border }]}>

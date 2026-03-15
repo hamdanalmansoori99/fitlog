@@ -12,6 +12,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { useTranslation } from "react-i18next";
+import { dateLocale } from "@/lib/rtl";
 
 const CAT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   Breakfast: "sun", Lunch: "cloud", Dinner: "moon", Snacks: "coffee", snacks: "coffee",
@@ -131,7 +132,7 @@ export default function MealDetailScreen() {
   const catKey = (meal.category || "").charAt(0).toUpperCase() + (meal.category || "").slice(1).toLowerCase();
   const catIcon: keyof typeof Feather.glyphMap = CAT_ICONS[catKey] || CAT_ICONS[meal.category] || "coffee";
 
-  const dateStr = new Date(meal.date).toLocaleDateString("en-US", {
+  const dateStr = new Date(meal.date).toLocaleDateString(dateLocale(), {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 

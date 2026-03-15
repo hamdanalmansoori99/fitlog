@@ -5,7 +5,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import { rtlIcon } from "@/lib/rtl";
+import { rtlIcon, dateLocale } from "@/lib/rtl";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
@@ -30,11 +30,10 @@ const PRESET_TIMES = [
   "19:00","20:00","21:00","22:00",
 ];
 
-function fmtTime(t: string): string {
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "pm" : "am";
-  const hr = h % 12 || 12;
-  return m === 0 ? `${hr}${ampm}` : `${hr}:${m.toString().padStart(2, "0")}${ampm}`;
+function fmtTime(timeStr: string): string {
+  const [h, m] = timeStr.split(":").map(Number);
+  const date = new Date(2000, 0, 1, h, m);
+  return date.toLocaleTimeString(dateLocale(), { hour: "numeric", minute: m === 0 ? undefined : "2-digit" });
 }
 
 const FITNESS_GOALS = ["Lose Weight", "Build Muscle", "Stay Active", "Improve Endurance", "Improve Flexibility"];

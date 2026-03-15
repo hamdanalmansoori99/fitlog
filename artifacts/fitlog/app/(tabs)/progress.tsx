@@ -22,6 +22,7 @@ import { WorkoutCalendar } from "@/components/WorkoutCalendar";
 import { usePhotoStore } from "@/store/photoStore";
 import * as ImagePicker from "expo-image-picker";
 import { useTranslation } from "react-i18next";
+import { dateLocale } from "@/lib/rtl";
 
 function MiniLineChart({ data, color, unit, showTrend = true }: { data: number[]; color: string; unit?: string; showTrend?: boolean }) {
   const { theme } = useTheme();
@@ -418,7 +419,7 @@ export default function ProgressScreen() {
                       />
                     </Pressable>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                      {new Date(photos[0].date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                      {new Date(photos[0].date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric", year: "2-digit" })}
                     </Text>
                   </View>
                   <View style={{ width: 1, backgroundColor: theme.border, marginVertical: 8 }} />
@@ -432,7 +433,7 @@ export default function ProgressScreen() {
                       />
                     </Pressable>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                      {new Date(photos[photos.length - 1].date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                      {new Date(photos[photos.length - 1].date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric", year: "2-digit" })}
                     </Text>
                   </View>
                 </View>
@@ -444,7 +445,7 @@ export default function ProgressScreen() {
                   <Pressable key={photo.id} onPress={() => setPhotoViewer(photo.uri)} style={styles.photoCell}>
                     <Image source={{ uri: photo.uri }} style={[styles.photoThumb, { borderColor: theme.border }]} resizeMode="cover" />
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4, textAlign: "center" }}>
-                      {new Date(photo.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {new Date(photo.date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
                     </Text>
                     <Pressable
                       onPress={() => handleDeletePhoto(photo.id)}
@@ -844,7 +845,7 @@ export default function ProgressScreen() {
                   </View>
                   {r.date && (
                     <Text style={[styles.recordDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {new Date(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {new Date(r.date).toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
                     </Text>
                   )}
                 </Card>

@@ -8,6 +8,7 @@ import { useFonts } from "expo-font";
 import { useQuery, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as Updates from "expo-updates";
 import React, { useEffect } from "react";
 import { I18nManager, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -56,13 +57,21 @@ function RootLayoutNav() {
         setLanguage(serverLang);
         i18n.changeLanguage(serverLang);
         const isRTL = serverLang === "ar";
-        if (I18nManager.isRTL !== isRTL) {
+        const rtlChanged = I18nManager.isRTL !== isRTL;
+        if (rtlChanged) {
           I18nManager.forceRTL(isRTL);
           I18nManager.allowRTL(isRTL);
         }
         if (Platform.OS === "web") {
           document.documentElement.dir = isRTL ? "rtl" : "ltr";
           document.documentElement.lang = serverLang;
+          if (rtlChanged) {
+            window.location.reload();
+          }
+        } else if (rtlChanged) {
+          try {
+            Updates.reloadAsync();
+          } catch {}
         }
       }
     }

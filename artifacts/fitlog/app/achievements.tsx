@@ -11,6 +11,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { useTranslation } from "react-i18next";
+import { dateLocale } from "@/lib/rtl";
 
 type AchievementCategory = "all" | "workouts" | "streaks" | "nutrition" | "hydration" | "prs";
 
@@ -68,7 +69,7 @@ function WeekDots({ perDay, theme }: { perDay: any[]; theme: any }) {
   const dayLabels = ["M", "T", "W", "T", "F", "S", "S"];
   const actual = days.map((d, i) => ({
     ...d,
-    label: new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "narrow" }),
+    label: new Date(d.date + "T12:00:00").toLocaleDateString(dateLocale(), { weekday: "narrow" }),
   }));
   return (
     <View style={styles.weekDotsRow}>
@@ -128,7 +129,7 @@ function AchievementBadge({ item, theme }: { item: any; theme: any }) {
 
         {item.earned ? (
           <Text style={[styles.badgeDate, { color: color, fontFamily: "Inter_500Medium" }]}>
-            {item.earnedAt ? new Date(item.earnedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : t("achievements.earned")}
+            {item.earnedAt ? new Date(item.earnedAt).toLocaleDateString(dateLocale(), { month: "short", day: "numeric" }) : t("achievements.earned")}
           </Text>
         ) : (
           progress && (
@@ -301,7 +302,7 @@ export default function AchievementsScreen() {
                       <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{pr.exercise}</Text>
                       {pr.date && (
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                          {new Date(pr.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          {new Date(pr.date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
                         </Text>
                       )}
                     </View>

@@ -1,4 +1,5 @@
 import { I18nManager } from "react-native";
+import i18n from "@/i18n";
 
 type DirectionalIcon = "chevron-right" | "chevron-left" | "arrow-right" | "arrow-left";
 
@@ -14,4 +15,8 @@ export function rtlIcon(icon: DirectionalIcon): DirectionalIcon {
     return RTL_FLIP_MAP[icon];
   }
   return icon;
+}
+
+export function dateLocale(): string {
+  return i18n.language === "ar" ? "ar-SA" : "en-US";
 }

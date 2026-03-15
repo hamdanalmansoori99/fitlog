@@ -9,6 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInDown, FadeIn, ZoomIn } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
+import { dateLocale } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
@@ -105,7 +106,7 @@ function getGreeting(t: (key: string) => string) {
 }
 
 function formatDate() {
-  return new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return new Date().toLocaleDateString(dateLocale(), { weekday: "long", month: "long", day: "numeric" });
 }
 
 function diffColor(d: string | undefined, theme: any) {

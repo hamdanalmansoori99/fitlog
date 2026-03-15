@@ -34,6 +34,7 @@ export default {
     calories: "Calories",
     goBack: "Go Back",
     continueText: "Continue",
+    requestFailed: "Request failed",
   },
   tabs: {
     home: "Home",
@@ -637,6 +638,7 @@ export default {
     groceryListPremium: "Grocery list is a Premium feature",
     couldNotGenerateGrocery: "Could not generate grocery list.",
     tomorrow: "Tomorrow",
+    generatedOn: "Generated {{date}}",
     allowCameraSettings: "Allow camera access in settings.",
     photoLibraryAccessNeeded: "Photo library access needed",
     allowPhotoAccess: "Allow photo access in settings.",

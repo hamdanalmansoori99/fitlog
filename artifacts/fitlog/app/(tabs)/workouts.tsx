@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import { rtlIcon } from "@/lib/rtl";
+import { rtlIcon, dateLocale } from "@/lib/rtl";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -205,7 +205,7 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
             {workout.name || workout.activityType}
           </Text>
           <Text style={[styles.historyDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {new Date(workout.date).toLocaleDateString(i18n.language === "ar" ? "ar-SA" : "en-US", { month: "short", day: "numeric" })}
+            {new Date(workout.date).toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
           </Text>
         </View>
         <Pressable onPress={(e) => { e.stopPropagation(); onDelete(); }} style={styles.deleteBtn} hitSlop={8}>
