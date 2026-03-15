@@ -1,11 +1,65 @@
 import { Router } from "express";
-import { db, mealsTable, mealFoodItemsTable, profilesTable } from "@workspace/db";
-import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
+import { db, mealsTable, mealFoodItemsTable, profilesTable, bodyMeasurementsTable } from "@workspace/db";
+import { eq, and, gte, lt, desc, sql, isNotNull } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { trackEvent } from "../services/analyticsService";
 
 const router = Router();
+
+async function computeNutritionTargets(userId: number, profile: any, overrideCalories?: number, overrideProtein?: number) {
+  const goals: string[] = profile.fitnessGoals || [];
+  const isMuscleBuilding = goals.some(g => /muscle|gain|bulk/i.test(g));
+  const isWeightLoss = goals.some(g => /lose|weight|cut|fat|slim/i.test(g));
+
+  let bodyWeightKg: number | null = profile.weightKg ?? null;
+  if (!bodyWeightKg) {
+    const latestMeasurement = await db
+      .select({ weightKg: bodyMeasurementsTable.weightKg })
+      .from(bodyMeasurementsTable)
+      .where(and(eq(bodyMeasurementsTable.userId, userId), isNotNull(bodyMeasurementsTable.weightKg)))
+      .orderBy(desc(bodyMeasurementsTable.date))
+      .limit(1);
+    bodyWeightKg = latestMeasurement[0]?.weightKg ?? null;
+  }
+
+  const proteinPerKg = isMuscleBuilding ? 2.2 : isWeightLoss ? 2.0 : 1.8;
+  const computedProtein = bodyWeightKg ? Math.round(bodyWeightKg * proteinPerKg) : null;
+  const defaultProtein = isMuscleBuilding ? 170 : isWeightLoss ? 160 : 150;
+
+  const proteinGoal = overrideProtein
+    ?? (profile.dailyProteinGoal || computedProtein || defaultProtein);
+
+  let calorieGoal = overrideCalories ?? profile.dailyCalorieGoal ?? null;
+  if (!calorieGoal) {
+    const w = bodyWeightKg;
+    const h = profile.heightCm ?? null;
+    const a = profile.age ?? 30;
+    const gender = profile.gender ?? "male";
+
+    if (w && h) {
+      const bmr = gender === "female"
+        ? 10 * w + 6.25 * h - 5 * a - 161
+        : 10 * w + 6.25 * h - 5 * a + 5;
+      const activityMap: Record<string, number> = {
+        sedentary: 1.2, lightly_active: 1.375,
+        moderately_active: 1.55, very_active: 1.725, extra_active: 1.9,
+      };
+      const tdee = Math.round(bmr * (activityMap[profile.activityLevel ?? "moderately_active"] ?? 1.55));
+      calorieGoal = isMuscleBuilding ? tdee + 300 : isWeightLoss ? Math.max(tdee - 400, 1400) : tdee;
+    } else {
+      calorieGoal = isMuscleBuilding ? 2600 : isWeightLoss ? 1800 : 2200;
+    }
+  }
+
+  const goalContext = isMuscleBuilding
+    ? "muscle building (calorie surplus, high protein)"
+    : isWeightLoss
+    ? "fat loss (calorie deficit, high protein to preserve muscle)"
+    : "general fitness / body recomposition";
+
+  return { proteinGoal, calorieGoal, bodyWeightKg, goalContext };
+}
 
 router.post("/barcode-lookup", requireAuth, async (req, res) => {
   try {
@@ -637,26 +691,33 @@ router.post("/generate-plan", requireAuth, async (req, res) => {
     const profiles = await db.select().from(profilesTable).where(eq(profilesTable.userId, user.id)).limit(1);
     const profile = profiles[0] || {};
 
-    const calorieGoal = req.body.calorieGoal ?? profile.dailyCalorieGoal ?? 2000;
-    const proteinGoal = req.body.proteinGoalG ?? profile.dailyProteinGoal ?? 150;
+    const { proteinGoal, calorieGoal, bodyWeightKg, goalContext } = await computeNutritionTargets(
+      user.id, profile, req.body.calorieGoal, req.body.proteinGoalG
+    );
     const preferences: string[] = req.body.preferences ?? [];
     const prefStr = preferences.length > 0 ? preferences.join(", ") : "no specific preferences";
+    const weightNote = bodyWeightKg ? `- Body weight: ${bodyWeightKg} kg` : "";
 
-    const prompt = `You are a nutrition coach. Generate a one-day meal plan for someone with these goals:
+    const prompt = `You are a precision nutrition coach. Generate a one-day meal plan tailored to this person:
+- Goal: ${goalContext}
+${weightNote}
 - Daily calorie target: ${calorieGoal} kcal
-- Daily protein target: ${proteinGoal}g
+- Daily protein target: ${proteinGoal}g (CRITICAL — every meal must be high in protein; total MUST reach ${proteinGoal}g)
 - Dietary preferences: ${prefStr}
 
-Return EXACTLY a JSON array (no markdown, no extra text) with 4 to 5 meal objects. Each object must have these fields:
+Choose protein-dense foods: chicken breast, lean beef, eggs, Greek yogurt, cottage cheese, fish, tofu, legumes.
+Distribute protein across all meals — do not load it only into dinner.
+
+Return EXACTLY a JSON array (no markdown, no extra text) with 4 to 5 meal objects. Each object must have:
 - name: string (meal name)
-- description: string (1 short sentence describing the meal)
+- description: string (1 short sentence describing the meal and its main protein source)
 - category: one of "Breakfast", "Lunch", "Dinner", "Snacks"
 - calories: number (integer)
-- proteinG: number (integer)
+- proteinG: number (integer, must be high — aim for ${Math.round(proteinGoal / 4)}g+ per meal)
 - carbsG: number (integer)
 - fatG: number (integer)
 
-The sum of calories across all meals should be close to ${calorieGoal}. Return only the JSON array.`;
+The sum of calories must be close to ${calorieGoal}. The sum of proteinG MUST be at least ${proteinGoal}g. Return only the JSON array.`;
 
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5",
@@ -693,10 +754,12 @@ router.post("/generate-week-plan", requireAuth, async (req, res) => {
     const profiles = await db.select().from(profilesTable).where(eq(profilesTable.userId, user.id)).limit(1);
     const profile = profiles[0] || {};
 
-    const calorieGoal = req.body.calorieGoal ?? profile.dailyCalorieGoal ?? 2000;
-    const proteinGoal = req.body.proteinGoalG ?? profile.dailyProteinGoal ?? 150;
+    const { proteinGoal, calorieGoal, bodyWeightKg, goalContext } = await computeNutritionTargets(
+      user.id, profile, req.body.calorieGoal, req.body.proteinGoalG
+    );
     const preferences: string[] = req.body.preferences ?? [];
     const prefStr = preferences.length > 0 ? preferences.join(", ") : "no specific preferences";
+    const weightNote = bodyWeightKg ? `- Body weight: ${bodyWeightKg} kg` : "";
 
     const today = new Date();
     const days: string[] = [];
@@ -706,10 +769,15 @@ router.post("/generate-week-plan", requireAuth, async (req, res) => {
       days.push(d.toISOString().split("T")[0]);
     }
 
-    const prompt = `You are a nutrition coach. Generate a 7-day meal plan for someone with these goals:
+    const prompt = `You are a precision nutrition coach. Generate a 7-day meal plan tailored to this person:
+- Goal: ${goalContext}
+${weightNote}
 - Daily calorie target: ${calorieGoal} kcal
-- Daily protein target: ${proteinGoal}g
+- Daily protein target: ${proteinGoal}g (CRITICAL — total protein per day MUST be at least ${proteinGoal}g)
 - Dietary preferences: ${prefStr}
+
+Choose protein-dense foods: chicken breast, lean beef, ground turkey, eggs, Greek yogurt, cottage cheese, fish, shrimp, tofu, edamame, lentils.
+Distribute protein evenly across all 4 meals — do not load it only into dinner.
 
 Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
 {
@@ -719,7 +787,7 @@ Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
       "meals": [
         {
           "name": "string",
-          "description": "string (1 short sentence)",
+          "description": "string (1 short sentence including main protein source)",
           "category": "Breakfast" | "Lunch" | "Dinner" | "Snacks",
           "calories": number,
           "proteinG": number,
@@ -732,9 +800,10 @@ Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
 }
 
 The 7 dates must be: ${days.join(", ")}.
-Each day should have 4 meals (Breakfast, Lunch, Dinner, Snacks).
-The sum of calories per day should be close to ${calorieGoal}.
-Vary the meals across the week — avoid repeating the same meal on consecutive days.
+Each day must have exactly 4 meals (Breakfast, Lunch, Dinner, Snacks).
+The sum of calories per day must be close to ${calorieGoal}.
+The sum of proteinG per day MUST be at least ${proteinGoal}g — aim for ${Math.round(proteinGoal / 4)}g+ per meal.
+Vary the meals across the week — do not repeat the same meal on consecutive days.
 Return only the JSON object.`;
 
     const message = await anthropic.messages.create({
