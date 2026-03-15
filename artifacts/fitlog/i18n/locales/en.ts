@@ -815,6 +815,9 @@ export default {
     languageChangeTitle: "Change Language",
     languageChangeMessage: "The app will reload to apply the new language.",
     languageChangeConfirm: "Change & Reload",
+    badgesStreaksRecords: "Badges, streaks & personal records",
+    reminderTime: "Reminder time",
+    appVersion: "FitLog v{{version}}",
   },
   measurements: {
     addMeasurement: "Add Measurement",

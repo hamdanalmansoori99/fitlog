@@ -554,7 +554,7 @@ export default function ProfileScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("achievements.title")}</Text>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>Badges, streaks &amp; personal records</Text>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("profile.badgesStreaksRecords")}</Text>
               </View>
               <Feather name="chevron-right" size={18} color={theme.textMuted} />
             </Pressable>
@@ -623,16 +623,16 @@ export default function ProfileScreen() {
                     {expanded && pref.enabled && (
                       <View style={{ marginTop: 10 }}>
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginBottom: 8 }}>
-                          Reminder time
+                          {t("profile.reminderTime")}
                         </Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                           <View style={{ flexDirection: "row", gap: 6 }}>
-                            {PRESET_TIMES.map((t) => {
-                              const sel = pref.time === t;
+                            {PRESET_TIMES.map((pt) => {
+                              const sel = pref.time === pt;
                               return (
                                 <Pressable
-                                  key={t}
-                                  onPress={() => handleSetTime(type, t)}
+                                  key={pt}
+                                  onPress={() => handleSetTime(type, pt)}
                                   style={[{
                                     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
                                     borderWidth: 1.5,
@@ -645,7 +645,7 @@ export default function ProfileScreen() {
                                     fontFamily: sel ? "Inter_600SemiBold" : "Inter_400Regular",
                                     fontSize: 12,
                                   }}>
-                                    {fmtTime(t)}
+                                    {fmtTime(pt)}
                                   </Text>
                                 </Pressable>
                               );
@@ -740,7 +740,7 @@ export default function ProfileScreen() {
             
             <View style={styles.versionInfo}>
               <Text style={[styles.versionText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                FitLog v1.0.0
+                {t("profile.appVersion", { version: "1.0.0" })}
               </Text>
             </View>
           </>

@@ -185,6 +185,7 @@ function TodaySuggestionCard({ suggestion, onPress }: { suggestion: any; onPress
 
 function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () => void }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const color = getActivityColor(workout.activityType, theme);
   const icon = getActivityIcon(workout.activityType);
 
