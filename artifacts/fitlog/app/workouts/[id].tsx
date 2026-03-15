@@ -426,7 +426,7 @@ export default function WorkoutDetailScreen() {
                   setSharing(true);
                   try {
                     if (Platform.OS === "web") {
-                      const uri = await captureRef(cardRef, { format: "png", quality: 1 });
+                      const uri = await captureRef(cardRef, { format: "png", quality: 1, result: "data-uri" });
                       const link = document.createElement("a");
                       link.href = uri;
                       link.download = `fitlog-workout-${id}.png`;
