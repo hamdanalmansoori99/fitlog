@@ -164,7 +164,7 @@ function StreakCard({ icon, value, label, color }: { icon: keyof typeof Feather.
 export default function ProgressScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const [measureDays, setMeasureDays] = useState(30);
+  const [measureDays, setMeasureDays] = useState(60);
   const [photoViewer, setPhotoViewer] = useState<string | null>(null);
   const [addPhotoNote, setAddPhotoNote] = useState("");
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -262,7 +262,11 @@ export default function ProgressScreen() {
         delta: raw.delta != null ? convert(raw.delta) : null,
       },
     };
-  }).filter(m => m.data !== null);
+  });
+
+  const latestMeasurementId = sortedMeasurements.length > 0
+    ? sortedMeasurements[sortedMeasurements.length - 1].id
+    : null;
   
   const caloriesData = (nutritionStats?.dailyCalories || [])
     .slice(-30)
@@ -549,10 +553,10 @@ export default function ProgressScreen() {
                 style={[styles.measureLogBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "40" }]}
               >
                 <Feather name="plus" size={13} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>Log</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>Log measurement</Text>
               </Pressable>
               <View style={styles.rangeRow}>
-                {[30, 90, 365].map(d => (
+                {[60, 90, 365].map(d => (
                   <Pressable
                     key={d}
                     onPress={() => setMeasureDays(d)}
@@ -586,82 +590,88 @@ export default function ProgressScreen() {
                 <SkeletonBox width={80} height={13} borderRadius={5} />
               </View>
             </SkeletonCard>
-          ) : weightData.length > 0 || metricResults.length > 0 ? (
+          ) : sortedMeasurements.length > 0 ? (
             <>
-              <PremiumGate feature="advancedAnalytics" minHeight={140}>
-              <Card>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                  <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    Weight over time
-                  </Text>
-                  <PremiumBadge small />
-                </View>
-                <MiniLineChart data={weightData} color={theme.primary} unit={weightUnit} />
-                <View style={styles.weightInfo}>
-                  <Text style={[styles.weightCurrent, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-                    {weightData[weightData.length - 1]?.toFixed(1)} {weightUnit}
-                  </Text>
-                  <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }]}>
-                    Current weight
-                  </Text>
-                </View>
-              </Card>
-              </PremiumGate>
-
-              {metricResults.length > 0 && (
-                <View style={styles.metricGrid}>
-                  {metricResults.map(metric => {
-                    const d = metric.data!;
-                    const hasChart = d.values.length >= 2;
-                    const deltaVal = d.delta;
-                    const isPercent = metric.unit === "%";
-                    const displayCurrent = isPercent ? d.current.toFixed(1) : d.current.toFixed(1);
-                    const displayDelta = deltaVal != null ? (isPercent ? Math.abs(deltaVal).toFixed(1) : Math.abs(deltaVal).toFixed(1)) : null;
-
-                    return (
-                      <Pressable
-                        key={metric.key}
-                        onPress={() => router.push("/measurements/add")}
-                        style={[styles.metricCard, { backgroundColor: theme.card, borderColor: theme.border }]}
-                      >
-                        <View style={styles.metricCardHeader}>
-                          <View style={[styles.metricIconWrap, { backgroundColor: metric.color + "18" }]}>
-                            <Feather name={metric.icon} size={14} color={metric.color} />
-                          </View>
-                          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 }}>{metric.label}</Text>
-                          {deltaVal != null && (
-                            <View style={[styles.deltaBadge, { backgroundColor: metric.color + "18" }]}>
-                              <Feather
-                                name={deltaVal < -0.05 ? "trending-down" : deltaVal > 0.05 ? "trending-up" : "minus"}
-                                size={11}
-                                color={metric.color}
-                              />
-                              <Text style={{
-                                color: metric.color,
-                                fontFamily: "Inter_500Medium", fontSize: 10,
-                              }}>
-                                {deltaVal > 0 ? "+" : deltaVal < 0 ? "-" : ""}{displayDelta}{metric.unit}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 20, marginTop: 4 }}>
-                          {displayCurrent}<Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: "Inter_400Regular" }}> {metric.unit}</Text>
-                        </Text>
-                        {hasChart ? (
-                          <View style={{ marginTop: 6 }}>
-                            <MiniLineChart data={d.values} color={metric.color} showTrend={false} />
-                          </View>
-                        ) : (
-                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 8 }}>
-                            Log more entries to see trend
-                          </Text>
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </View>
+              {weightData.length > 0 && (
+                <PremiumGate feature="advancedAnalytics" minHeight={140}>
+                <Card>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      Weight over time
+                    </Text>
+                    <PremiumBadge small />
+                  </View>
+                  <MiniLineChart data={weightData} color={theme.primary} unit={weightUnit} />
+                  <View style={styles.weightInfo}>
+                    <Text style={[styles.weightCurrent, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                      {weightData[weightData.length - 1]?.toFixed(1)} {weightUnit}
+                    </Text>
+                    <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }]}>
+                      Current weight
+                    </Text>
+                  </View>
+                </Card>
+                </PremiumGate>
               )}
+
+              <View style={styles.metricGrid}>
+                {metricResults.map(metric => {
+                  const d = metric.data;
+                  const hasData = d !== null && d.values.length > 0;
+                  const hasChart = d !== null && d.values.length >= 2;
+                  const deltaVal = d?.delta ?? null;
+                  const displayCurrent = hasData ? d!.current.toFixed(1) : "—";
+                  const displayDelta = deltaVal != null ? Math.abs(deltaVal).toFixed(1) : null;
+
+                  return (
+                    <Pressable
+                      key={metric.key}
+                      onPress={() => {
+                        if (latestMeasurementId) {
+                          router.push(`/measurements/edit?id=${latestMeasurementId}` as any);
+                        } else {
+                          router.push("/measurements/add");
+                        }
+                      }}
+                      style={[styles.metricCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+                    >
+                      <View style={styles.metricCardHeader}>
+                        <View style={[styles.metricIconWrap, { backgroundColor: metric.color + "18" }]}>
+                          <Feather name={metric.icon} size={14} color={metric.color} />
+                        </View>
+                        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 }}>{metric.label}</Text>
+                        {deltaVal != null && (
+                          <View style={[styles.deltaBadge, { backgroundColor: metric.color + "18" }]}>
+                            <Feather
+                              name={deltaVal < -0.05 ? "trending-down" : deltaVal > 0.05 ? "trending-up" : "minus"}
+                              size={11}
+                              color={metric.color}
+                            />
+                            <Text style={{
+                              color: metric.color,
+                              fontFamily: "Inter_500Medium", fontSize: 10,
+                            }}>
+                              {deltaVal > 0 ? "+" : deltaVal < 0 ? "-" : ""}{displayDelta}{metric.unit}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={{ color: hasData ? theme.text : theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 20, marginTop: 4 }}>
+                        {displayCurrent}{hasData && <Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: "Inter_400Regular" }}> {metric.unit}</Text>}
+                      </Text>
+                      {hasChart ? (
+                        <View style={{ marginTop: 6 }}>
+                          <MiniLineChart data={d!.values} color={metric.color} showTrend={false} />
+                        </View>
+                      ) : (
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 8 }}>
+                          {hasData ? "Log more entries to see trend" : "No data yet — tap to log"}
+                        </Text>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
             </>
           ) : (
             <Animated.View entering={ZoomIn.duration(350)}>
