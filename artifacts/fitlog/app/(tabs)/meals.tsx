@@ -8,6 +8,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import Svg, { Circle, G } from "react-native-svg";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -93,6 +94,92 @@ function CalorieSummary({ data }: { data: any }) {
   );
 }
 
+const MACRO_DONUT_SIZE = 80;
+const MACRO_DONUT_R = 28;
+const MACRO_DONUT_SW = 12;
+const MACRO_DONUT_CIRC = 2 * Math.PI * MACRO_DONUT_R;
+const MACRO_DONUT_CX = MACRO_DONUT_SIZE / 2;
+const MACRO_DONUT_CY = MACRO_DONUT_SIZE / 2;
+
+function MacroBreakdown({ dailyTotals, profile }: { dailyTotals: any; profile: any }) {
+  const { theme } = useTheme();
+  const p = Math.round(dailyTotals.proteinG || 0);
+  const c = Math.round(dailyTotals.carbsG || 0);
+  const f = Math.round(dailyTotals.fatG || 0);
+  const total = p + c + f;
+
+  const proteinGoal = profile?.dailyProteinGoal || null;
+  const carbsGoal = profile?.dailyCarbsGoal || null;
+  const fatGoal = profile?.dailyFatGoal || null;
+
+  const macros = [
+    { label: "Protein", short: "P", value: p, goal: proteinGoal, color: "#e040fb" },
+    { label: "Carbs", short: "C", value: c, goal: carbsGoal, color: theme.secondary },
+    { label: "Fat", short: "F", value: f, goal: fatGoal, color: theme.orange },
+  ];
+
+  let offset = 0;
+  const segments = total > 0 ? macros.map(m => {
+    const pct = m.value / total;
+    const dash = pct * MACRO_DONUT_CIRC;
+    const seg = { ...m, dash, offset };
+    offset += dash;
+    return seg;
+  }) : [];
+
+  return (
+    <Card style={styles.macroBreakdownCard}>
+      <View style={styles.macroBreakdownRow}>
+        <View style={{ alignItems: "center", justifyContent: "center" }}>
+          <Svg width={MACRO_DONUT_SIZE} height={MACRO_DONUT_SIZE}>
+            <G rotation="-90" origin={`${MACRO_DONUT_CX},${MACRO_DONUT_CY}`}>
+              <Circle
+                cx={MACRO_DONUT_CX} cy={MACRO_DONUT_CY} r={MACRO_DONUT_R}
+                stroke={theme.border} strokeWidth={MACRO_DONUT_SW} fill="none"
+              />
+              {segments.map((seg, i) => (
+                <Circle
+                  key={i}
+                  cx={MACRO_DONUT_CX} cy={MACRO_DONUT_CY} r={MACRO_DONUT_R}
+                  stroke={seg.color}
+                  strokeWidth={MACRO_DONUT_SW}
+                  fill="none"
+                  strokeDasharray={`${seg.dash} ${MACRO_DONUT_CIRC - seg.dash}`}
+                  strokeDashoffset={-seg.offset}
+                  strokeLinecap="butt"
+                />
+              ))}
+            </G>
+          </Svg>
+          {total === 0 && (
+            <View style={{ position: "absolute", alignItems: "center" }}>
+              <Feather name="pie-chart" size={18} color={theme.textMuted} />
+            </View>
+          )}
+        </View>
+        <View style={styles.macroPillsCol}>
+          {macros.map(m => (
+            <View key={m.label} style={[styles.macroPillRow, { backgroundColor: m.color + "12", borderColor: m.color + "30" }]}>
+              <View style={[styles.macroDot, { backgroundColor: m.color }]} />
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 }}>
+                {m.short} {m.value}g{m.goal ? ` / ${m.goal}g` : ""}
+              </Text>
+              {m.goal && (
+                <Text style={{
+                  color: m.value >= m.goal ? theme.primary : theme.textMuted,
+                  fontFamily: "Inter_500Medium", fontSize: 11,
+                }}>
+                  {m.value >= m.goal ? "Hit" : `${m.goal - m.value}g left`}
+                </Text>
+              )}
+            </View>
+          ))}
+        </View>
+      </View>
+    </Card>
+  );
+}
+
 export default function MealsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -112,6 +199,12 @@ export default function MealsScreen() {
   const { data, isLoading: mealsLoading } = useQuery({
     queryKey: ["meals", selectedDate],
     queryFn: () => api.getMeals(selectedDate),
+  });
+
+  const { data: profileData } = useQuery({
+    queryKey: ["profile"],
+    queryFn: api.getProfile,
+    staleTime: 300000,
   });
 
   const { data: favData } = useQuery({
@@ -424,6 +517,13 @@ export default function MealsScreen() {
           <CalorieSummary data={data} />
         ) : null}
 
+        {/* Macro Breakdown */}
+        {!mealsLoading && data && (
+          <Animated.View entering={FadeInDown.delay(60).duration(350)}>
+            <MacroBreakdown dailyTotals={data.dailyTotals} profile={profileData} />
+          </Animated.View>
+        )}
+
         {/* AI Meal Plan Generator */}
         {isToday && (
           <Animated.View entering={FadeInDown.delay(80).duration(350)}>
@@ -664,6 +764,12 @@ const styles = StyleSheet.create({
   favCard: { width: 155, borderRadius: 16, borderWidth: 1, padding: 12 },
   favIcon: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   logNowBtn: { marginTop: 10, paddingVertical: 7, borderRadius: 8, alignItems: "center" },
+
+  macroBreakdownCard: { gap: 0 },
+  macroBreakdownRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  macroPillsCol: { flex: 1, gap: 6 },
+  macroPillRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1 },
+  macroDot: { width: 8, height: 8, borderRadius: 4 },
 
   calCard: { gap: 0 },
   calRow: { flexDirection: "row", alignItems: "center", gap: 16 },
