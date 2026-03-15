@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, mealsTable, mealFoodItemsTable, profilesTable, bodyMeasurementsTable } from "@workspace/db";
+import { db, mealsTable, mealFoodItemsTable, profilesTable, bodyMeasurementsTable, settingsTable } from "@workspace/db";
 import { eq, and, gte, lt, desc, sql, isNotNull } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
@@ -698,26 +698,36 @@ router.post("/generate-plan", requireAuth, async (req, res) => {
     const prefStr = preferences.length > 0 ? preferences.join(", ") : "no specific preferences";
     const weightNote = bodyWeightKg ? `- Body weight: ${bodyWeightKg} kg` : "";
 
+    const bMin = Math.round(proteinGoal * 0.22);
+    const lMin = Math.round(proteinGoal * 0.28);
+    const dMin = Math.round(proteinGoal * 0.30);
+    const sMin = Math.round(proteinGoal * 0.20);
+
     const prompt = `You are a precision nutrition coach. Generate a one-day meal plan tailored to this person:
 - Goal: ${goalContext}
 ${weightNote}
 - Daily calorie target: ${calorieGoal} kcal
-- Daily protein target: ${proteinGoal}g (CRITICAL — every meal must be high in protein; total MUST reach ${proteinGoal}g)
+- Daily protein target: ${proteinGoal}g
 - Dietary preferences: ${prefStr}
 
-Choose protein-dense foods: chicken breast, lean beef, eggs, Greek yogurt, cottage cheese, fish, tofu, legumes.
-Distribute protein across all meals — do not load it only into dinner.
+PROTEIN IS THE #1 PRIORITY. You MUST hit at least ${proteinGoal}g total protein. Use protein-dense foods: chicken breast, lean beef, ground turkey, eggs, egg whites, Greek yogurt, cottage cheese, whey protein, fish, shrimp, tofu, edamame, lentils.
 
-Return EXACTLY a JSON array (no markdown, no extra text) with 4 to 5 meal objects. Each object must have:
-- name: string (meal name)
-- description: string (1 short sentence describing the meal and its main protein source)
+MINIMUM protein per meal:
+- Breakfast: ≥ ${bMin}g protein
+- Lunch: ≥ ${lMin}g protein
+- Dinner: ≥ ${dMin}g protein
+- Snacks: ≥ ${sMin}g protein
+
+Return EXACTLY a JSON array (no markdown, no extra text) with 4 meal objects. Each object:
+- name: string
+- description: string (1 sentence, mention the main protein source)
 - category: one of "Breakfast", "Lunch", "Dinner", "Snacks"
 - calories: number (integer)
-- proteinG: number (integer, must be high — aim for ${Math.round(proteinGoal / 4)}g+ per meal)
+- proteinG: number (integer — MUST meet the minimum above)
 - carbsG: number (integer)
 - fatG: number (integer)
 
-The sum of calories must be close to ${calorieGoal}. The sum of proteinG MUST be at least ${proteinGoal}g. Return only the JSON array.`;
+HARD CONSTRAINT: Sum of proteinG MUST be ≥ ${proteinGoal}g. Sum of calories close to ${calorieGoal}. Any plan below ${proteinGoal}g total protein is INVALID. Return only the JSON array.`;
 
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5",
@@ -769,15 +779,25 @@ router.post("/generate-week-plan", requireAuth, async (req, res) => {
       days.push(d.toISOString().split("T")[0]);
     }
 
+    const bMin = Math.round(proteinGoal * 0.22);
+    const lMin = Math.round(proteinGoal * 0.28);
+    const dMin = Math.round(proteinGoal * 0.30);
+    const sMin = Math.round(proteinGoal * 0.20);
+
     const prompt = `You are a precision nutrition coach. Generate a 7-day meal plan tailored to this person:
 - Goal: ${goalContext}
 ${weightNote}
 - Daily calorie target: ${calorieGoal} kcal
-- Daily protein target: ${proteinGoal}g (CRITICAL — total protein per day MUST be at least ${proteinGoal}g)
+- Daily protein target: ${proteinGoal}g
 - Dietary preferences: ${prefStr}
 
-Choose protein-dense foods: chicken breast, lean beef, ground turkey, eggs, Greek yogurt, cottage cheese, fish, shrimp, tofu, edamame, lentils.
-Distribute protein evenly across all 4 meals — do not load it only into dinner.
+PROTEIN IS THE #1 PRIORITY. EVERY DAY must hit at least ${proteinGoal}g total protein. Use protein-dense foods: chicken breast, lean beef, ground turkey, eggs, egg whites, Greek yogurt, cottage cheese, whey protein, fish, shrimp, tofu, edamame, lentils.
+
+MINIMUM protein per meal EVERY DAY:
+- Breakfast: ≥ ${bMin}g protein
+- Lunch: ≥ ${lMin}g protein
+- Dinner: ≥ ${dMin}g protein
+- Snacks: ≥ ${sMin}g protein
 
 Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
 {
@@ -787,7 +807,7 @@ Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
       "meals": [
         {
           "name": "string",
-          "description": "string (1 short sentence including main protein source)",
+          "description": "string (1 sentence, mention the main protein source)",
           "category": "Breakfast" | "Lunch" | "Dinner" | "Snacks",
           "calories": number,
           "proteinG": number,
@@ -801,9 +821,10 @@ Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
 
 The 7 dates must be: ${days.join(", ")}.
 Each day must have exactly 4 meals (Breakfast, Lunch, Dinner, Snacks).
-The sum of calories per day must be close to ${calorieGoal}.
-The sum of proteinG per day MUST be at least ${proteinGoal}g — aim for ${Math.round(proteinGoal / 4)}g+ per meal.
-Vary the meals across the week — do not repeat the same meal on consecutive days.
+Sum of calories per day must be close to ${calorieGoal}.
+
+HARD CONSTRAINT: EVERY DAY the sum of proteinG MUST be ≥ ${proteinGoal}g. Not a single day may fall below ${proteinGoal}g protein. Any day below this is INVALID — fix it before responding.
+Vary meals across the week — no identical meals on consecutive days.
 Return only the JSON object.`;
 
     const message = await anthropic.messages.create({
@@ -844,11 +865,21 @@ router.post("/generate-grocery-list", requireAuth, async (req, res) => {
       return;
     }
 
+    const userSettings = await db.select().from(settingsTable)
+      .where(eq(settingsTable.userId, user.id)).limit(1);
+    const isMetric = (userSettings[0]?.unitSystem ?? "metric") === "metric";
+
     const mealList = meals
       .map((m: any, i: number) => `${i + 1}. ${m.name} — ${m.description || ""}`)
       .join("\n");
 
+    const unitInstruction = isMetric
+      ? "Use METRIC units for all quantities: grams (g) for small amounts, kilograms (kg) for large amounts, milliliters (mL) or liters (L) for liquids. Example: 500g chicken breast, 1 kg rice, 1 L milk, 200g spinach."
+      : "Use IMPERIAL units for all quantities: ounces (oz) for small amounts, pounds (lbs) for large amounts, cups or fluid ounces (fl oz) for liquids. Example: 2 lbs chicken breast, 1 lb rice, 1 quart milk, 8 oz spinach.";
+
     const prompt = `You are a helpful grocery shopping assistant. Given the following meal plan, generate a consolidated grocery list grouped by aisle/category. Combine duplicate ingredients and estimate reasonable quantities for one person.
+
+${unitInstruction}
 
 Meals:
 ${mealList}
@@ -861,14 +892,14 @@ Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
       "items": [
         {
           "name": "string (ingredient name)",
-          "quantity": "string (e.g. 2 lbs, 1 dozen, 500g)"
+          "quantity": "string — must use ${isMetric ? "metric (g, kg, mL, L)" : "imperial (oz, lbs, cups, fl oz)"} units"
         }
       ]
     }
   ]
 }
 
-Be practical — combine similar items, use standard grocery quantities, and sort categories logically (Produce first, then Proteins, Dairy, etc.). Return only the JSON object.`;
+Be practical — combine similar items, use standard grocery quantities in ${isMetric ? "metric" : "imperial"} units, and sort categories logically (Produce first, then Proteins, Dairy, etc.). Return only the JSON object.`;
 
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5",
