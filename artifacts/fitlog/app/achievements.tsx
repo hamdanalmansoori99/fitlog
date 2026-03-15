@@ -121,10 +121,10 @@ function AchievementBadge({ item, theme }: { item: any; theme: any }) {
         </View>
 
         <Text style={[styles.badgeTitle, { color: item.earned ? theme.text : theme.textMuted, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-          {item.title}
+          {t(`achievements.badgeDefs.${item.key}.title`, { defaultValue: item.title })}
         </Text>
         <Text style={[styles.badgeDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
-          {item.description}
+          {t(`achievements.badgeDefs.${item.key}.description`, { defaultValue: item.description })}
         </Text>
 
         {item.earned ? (

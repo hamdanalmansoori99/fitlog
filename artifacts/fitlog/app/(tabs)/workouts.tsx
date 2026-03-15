@@ -19,6 +19,15 @@ import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { useTranslation } from "react-i18next";
 
+const GOAL_KEY: Record<string, string> = {
+  "Stay active": "stayActive",
+  "Lose weight": "loseWeight",
+  "Build muscle": "buildMuscle",
+  "Get stronger": "getStronger",
+  "Improve endurance": "improveEndurance",
+  "Improve flexibility": "improveFlexibility",
+};
+
 function formatDuration(mins?: number | null) {
   if (!mins) return "";
   if (mins < 60) return `${mins}m`;
@@ -91,12 +100,12 @@ function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void })
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.recName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-            {template.name}
+            {t(`workouts.templates.${template.id}.name`, { defaultValue: template.name })}
           </Text>
           <View style={styles.recMeta}>
             <DifficultyDot difficulty={template.difficulty} />
             <Text style={[styles.recMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {template.difficulty}
+              {t(`workouts.plan.difficulty.${template.difficulty}`)}
             </Text>
             <Text style={{ color: theme.border }}> · </Text>
             <Feather name="clock" size={10} color={theme.textMuted} />
@@ -133,7 +142,7 @@ function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void })
       <View style={styles.recFooter}>
         <View style={[styles.goalTag, { backgroundColor: theme.primaryDim }]}>
           <Text style={[styles.goalTagText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
-            {template.goals[0]}
+            {t(`workouts.goals.${GOAL_KEY[template.goals[0]] ?? template.goals[0]}`, { defaultValue: template.goals[0] })}
           </Text>
         </View>
         <EquipmentMatchBadge match={equipmentMatch ?? "full"} />
@@ -157,7 +166,7 @@ function TodaySuggestionCard({ suggestion, onPress }: { suggestion: any; onPress
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.todayLabel, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>{t("workouts.todaysSuggestion")}</Text>
-            <Text style={[styles.todayName, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{template.name}</Text>
+            <Text style={[styles.todayName, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t(`workouts.templates.${template.id}.name`, { defaultValue: template.name })}</Text>
           </View>
           <View style={[styles.startBtn, { backgroundColor: theme.primary }]}>
             <Feather name="play" size={14} color="#0f0f1a" />
@@ -176,7 +185,7 @@ function TodaySuggestionCard({ suggestion, onPress }: { suggestion: any; onPress
           </View>
           <View style={[styles.diffDot, { backgroundColor: (({ Beginner: theme.primary, Intermediate: theme.secondary, Advanced: theme.danger } as Record<string, string>)[template.difficulty]) || theme.primary }]} />
           <Text style={[styles.todayStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {template.difficulty}
+            {t(`workouts.plan.difficulty.${template.difficulty}`)}
           </Text>
         </View>
       </View>
@@ -622,8 +631,8 @@ export default function WorkoutsScreen() {
                           <Feather name={getActivityIcon(tmpl.activityType)} size={17} color={tColor} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>{tmpl.name}</Text>
-                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{tmpl.durationMinutes}{t("common.min")} · {tmpl.difficulty}</Text>
+                          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>{t(`workouts.templates.${tmpl.id}.name`, { defaultValue: tmpl.name })}</Text>
+                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{tmpl.durationMinutes}{t("common.min")} · {t(`workouts.plan.difficulty.${tmpl.difficulty}`)}</Text>
                         </View>
                         <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
                       </Pressable>
@@ -646,11 +655,11 @@ export default function WorkoutsScreen() {
                           <Feather name={getActivityIcon(tmpl.activityType)} size={20} color={getActivityColor(tmpl.activityType, theme)} />
                         </View>
                         <Text style={[styles.templateName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
-                          {tmpl.name}
+                          {t(`workouts.templates.${tmpl.id}.name`, { defaultValue: tmpl.name })}
                         </Text>
                         <View style={styles.templateMeta}>
                           <Text style={[styles.templateMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                            {tmpl.durationMinutes}{t("common.min")} · {tmpl.difficulty}
+                            {tmpl.durationMinutes}{t("common.min")} · {t(`workouts.plan.difficulty.${tmpl.difficulty}`)}
                           </Text>
                         </View>
                       </Pressable>
