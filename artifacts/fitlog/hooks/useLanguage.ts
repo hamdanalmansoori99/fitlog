@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { I18nManager, Platform } from "react-native";
 import { useTranslation } from "react-i18next";
+import * as Updates from "expo-updates";
 import { useSettingsStore } from "@/store/settingsStore";
 import { api } from "@/lib/api";
 
@@ -14,7 +15,8 @@ export function useLanguage() {
       await i18n.changeLanguage(lng);
 
       const isRTL = lng === "ar";
-      if (I18nManager.isRTL !== isRTL) {
+      const rtlChanged = I18nManager.isRTL !== isRTL;
+      if (rtlChanged) {
         I18nManager.forceRTL(isRTL);
         I18nManager.allowRTL(isRTL);
       }
@@ -27,6 +29,10 @@ export function useLanguage() {
         document.documentElement.dir = isRTL ? "rtl" : "ltr";
         document.documentElement.lang = lng;
         window.location.reload();
+      } else if (rtlChanged) {
+        try {
+          await Updates.reloadAsync();
+        } catch {}
       }
     },
     [i18n, setStoreLanguage],

@@ -1,20 +1,18 @@
-// ─── Goal-Based Insights Engine ───────────────────────────────────────────────
-// Pure computation — no API calls. Takes already-fetched data and derives
-// actionable, goal-specific insight cards shown on dashboard and progress page.
+import i18n from "@/i18n";
 
 export interface GoalInsight {
   id: string;
   goalKey: GoalKey;
   goalLabel: string;
-  goalIcon: string;      // Feather icon for the goal group header
-  icon: string;          // Feather icon for this specific insight
+  goalIcon: string;
+  icon: string;
   headline: string;
   value: string;
   detail: string;
-  progress: number;      // 0–1 for progress bar (clamped)
+  progress: number;
   progressLabel?: string;
   trend: "up" | "down" | "flat" | null;
-  trendPositive: boolean; // whether "up" trend is good
+  trendPositive: boolean;
   accentColor: string;
 }
 
@@ -58,7 +56,7 @@ export interface GoalInsightsInput {
   };
 }
 
-// ─── Goal detection ────────────────────────────────────────────────────────────
+const t = (key: string, opts?: Record<string, any>) => i18n.t(key, opts);
 
 const GOAL_VARIANTS: Record<GoalKey, RegExp> = {
   lose_weight: /lose weight|weight loss|fat loss|slim|cut/i,
@@ -68,13 +66,9 @@ const GOAL_VARIANTS: Record<GoalKey, RegExp> = {
   stay_active: /active|health|wellness|general|stay fit/i,
 };
 
-const GOAL_LABELS: Record<GoalKey, string> = {
-  lose_weight: "Lose Weight",
-  build_muscle: "Build Muscle",
-  endurance: "Improve Endurance",
-  flexibility: "Improve Flexibility",
-  stay_active: "Stay Active",
-};
+function getGoalLabel(key: GoalKey): string {
+  return t(`goalInsights.goalLabels.${key}`);
+}
 
 const GOAL_ICONS: Record<GoalKey, string> = {
   lose_weight: "trending-down",
@@ -97,12 +91,9 @@ export function detectGoalKeys(goals: string[]): GoalKey[] {
   for (const [key, regex] of Object.entries(GOAL_VARIANTS) as [GoalKey, RegExp][]) {
     if (goals.some((g) => regex.test(g))) keys.push(key);
   }
-  // Default: stay active
   if (keys.length === 0) keys.push("stay_active");
   return keys;
 }
-
-// ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function clamp(v: number, min = 0, max = 1) {
   return Math.max(min, Math.min(max, v));
@@ -157,7 +148,7 @@ function uniqueDays<T extends { date: string }>(list: T[]): number {
   return new Set(list.map((w) => new Date(w.date).toDateString())).size;
 }
 
-function trend(current: number, previous: number): "up" | "down" | "flat" {
+function trendCalc(current: number, previous: number): "up" | "down" | "flat" {
   if (previous === 0) return current > 0 ? "up" : "flat";
   const pct = (current - previous) / previous;
   if (pct > 0.05) return "up";
@@ -165,117 +156,110 @@ function trend(current: number, previous: number): "up" | "down" | "flat" {
   return "flat";
 }
 
-// ─── Insight builders ──────────────────────────────────────────────────────────
+function pluralS(n: number): string {
+  return n !== 1 ? "s" : "";
+}
 
 function loseWeightInsights(input: GoalInsightsInput): GoalInsight[] {
   const color = GOAL_COLORS.lose_weight;
   const goalKey: GoalKey = "lose_weight";
-  const goalLabel = GOAL_LABELS[goalKey];
+  const goalLabel = getGoalLabel(goalKey);
   const goalIcon = GOAL_ICONS[goalKey];
 
   const calGoal = input.profile.calorieGoal ?? 2000;
   const weeklyTarget = input.profile.weeklyWorkoutDays ?? 3;
   const insights: GoalInsight[] = [];
 
-  // 1. Calorie trend
   if (input.nutritionStats) {
-    const { avg7DayCalories, avg30DayCalories, dailyCalories } = input.nutritionStats;
+    const { dailyCalories } = input.nutritionStats;
     const last7 = dailyCalories.slice(-7);
     const prev7 = dailyCalories.slice(-14, -7);
     const last7Avg = last7.reduce((s, d) => s + d.calories, 0) / Math.max(last7.length, 1);
     const prev7Avg = prev7.reduce((s, d) => s + d.calories, 0) / Math.max(prev7.length, 1);
     const logged = last7.filter((d) => d.calories > 0).length;
     const pct = calGoal > 0 ? last7Avg / calGoal : 0.8;
-    const t = trend(last7Avg, prev7Avg);
+    const tr = trendCalc(last7Avg, prev7Avg);
     const deficit = calGoal - last7Avg;
 
     let detail: string;
     if (logged < 3) {
-      detail = "Log meals consistently for accurate calorie tracking.";
+      detail = t("goalInsights.lw.logMealsConsistently");
     } else if (deficit > 100) {
-      detail = `${fmt(deficit)} kcal below your goal — solid deficit for fat loss.`;
+      detail = t("goalInsights.lw.solidDeficit", { deficit: fmt(deficit) });
     } else if (deficit < -100) {
-      detail = `${fmt(-deficit)} kcal above your goal — consider smaller portions.`;
+      detail = t("goalInsights.lw.aboveGoal", { surplus: fmt(-deficit) });
     } else {
-      detail = "Right at your target — precision nutrition pays off over weeks.";
+      detail = t("goalInsights.lw.rightAtTarget");
     }
 
     insights.push({
       id: "lw_calories",
       goalKey, goalLabel, goalIcon,
       icon: "pie-chart",
-      headline: "Calorie trend",
-      value: logged > 0 ? `${fmt(Math.round(last7Avg))} kcal / day` : "No data yet",
+      headline: t("goalInsights.lw.calorieTrend"),
+      value: logged > 0 ? t("goalInsights.lw.kcalPerDay", { value: fmt(Math.round(last7Avg)) }) : t("goalInsights.lw.noDataYet"),
       detail,
-      progress: clamp(1 - pct + 0.5), // under-goal is closer to full bar
-      progressLabel: `Goal: ${fmt(calGoal)} kcal`,
-      trend: t,
-      trendPositive: false, // lower calories (down) is positive for weight loss
+      progress: clamp(1 - pct + 0.5),
+      progressLabel: t("goalInsights.lw.goalKcal", { value: fmt(calGoal) }),
+      trend: tr,
+      trendPositive: false,
       accentColor: color,
     });
 
-    // 2. Weekly deficit estimate
     if (logged >= 3 && deficit > 0) {
       const weeklyDeficit = deficit * 7;
-      const deficitProgress = clamp(weeklyDeficit / 3500); // 3500 kcal ≈ 0.5 kg
+      const deficitProgress = clamp(weeklyDeficit / 3500);
       insights.push({
         id: "lw_deficit",
         goalKey, goalLabel, goalIcon,
         icon: "minus-circle",
-        headline: "Weekly deficit",
-        value: `~${fmt(Math.round(weeklyDeficit))} kcal`,
-        detail: `~${(weeklyDeficit / 7700).toFixed(2)} kg potential fat loss this week. (7,700 kcal = 1 kg fat)`,
+        headline: t("goalInsights.lw.weeklyDeficit"),
+        value: t("goalInsights.lw.weeklyDeficitValue", { value: fmt(Math.round(weeklyDeficit)) }),
+        detail: t("goalInsights.lw.weeklyDeficitDetail", { kg: (weeklyDeficit / 7700).toFixed(2) }),
         progress: deficitProgress,
-        progressLabel: "3,500 kcal = ~0.5 kg",
-        trend: t,
+        progressLabel: t("goalInsights.lw.weeklyDeficitLabel"),
+        trend: tr,
         trendPositive: false,
         accentColor: color,
       });
     }
   }
 
-  // 3. Workout consistency
   const thisWeek = workoutsThisWeek(input.workouts);
   const lastWeek = workoutsLastWeek(input.workouts);
-  const activeDays = uniqueDays(thisWeek);
-  const prevActiveDays = uniqueDays(lastWeek);
   insights.push({
     id: "lw_consistency",
     goalKey, goalLabel, goalIcon,
     icon: "calendar",
-    headline: "Activity consistency",
-    value: `${thisWeek.length} session${thisWeek.length !== 1 ? "s" : ""} this week`,
-    detail:
-      thisWeek.length >= weeklyTarget
-        ? "Weekly goal hit — every session creates a calorie deficit."
-        : `${weeklyTarget - thisWeek.length} more session${weeklyTarget - thisWeek.length !== 1 ? "s" : ""} to hit your target. Cardio burns fat most efficiently.`,
+    headline: t("goalInsights.lw.activityConsistency"),
+    value: t("goalInsights.lw.sessionsThisWeek", { count: thisWeek.length, s: pluralS(thisWeek.length) }),
+    detail: thisWeek.length >= weeklyTarget
+      ? t("goalInsights.lw.weeklyGoalHit")
+      : t("goalInsights.lw.moreSessionsTarget", { count: weeklyTarget - thisWeek.length, s: pluralS(weeklyTarget - thisWeek.length) }),
     progress: clamp(thisWeek.length / weeklyTarget),
-    progressLabel: `${thisWeek.length} / ${weeklyTarget} sessions`,
-    trend: trend(thisWeek.length, lastWeek.length),
+    progressLabel: t("goalInsights.lw.sessionsLabel", { done: thisWeek.length, target: weeklyTarget }),
+    trend: trendCalc(thisWeek.length, lastWeek.length),
     trendPositive: true,
     accentColor: color,
   });
 
-  // 4. Cardio mix
   const cardioThisWeek = thisWeek.filter(isCardio);
   const cardioPct = thisWeek.length > 0 ? cardioThisWeek.length / thisWeek.length : 0;
   insights.push({
     id: "lw_cardio",
     goalKey, goalLabel, goalIcon,
     icon: "activity",
-    headline: "Cardio support",
-    value:
-      thisWeek.length > 0
-        ? `${Math.round(cardioPct * 100)}% cardio`
-        : "No sessions logged",
-    detail:
-      cardioPct >= 0.5
-        ? "Good cardio mix — great for sustained fat burning."
-        : cardioThisWeek.length === 0
-        ? "Add a cardio session (run, walk, cycle) to accelerate your deficit."
-        : "A cardio-heavy week accelerates weight loss. Aim for 50%+ cardio.",
+    headline: t("goalInsights.lw.cardioSupport"),
+    value: thisWeek.length > 0
+      ? t("goalInsights.lw.cardioPercent", { pct: Math.round(cardioPct * 100) })
+      : t("goalInsights.lw.noSessionsLogged"),
+    detail: cardioPct >= 0.5
+      ? t("goalInsights.lw.goodCardioMix")
+      : cardioThisWeek.length === 0
+      ? t("goalInsights.lw.addCardioSession")
+      : t("goalInsights.lw.aimForCardio"),
     progress: clamp(cardioPct),
-    progressLabel: `${cardioThisWeek.length} of ${thisWeek.length} sessions`,
+    progressLabel: t("goalInsights.lw.cardioLabel", { done: cardioThisWeek.length, total: thisWeek.length }),
     trend: null,
     trendPositive: true,
     accentColor: color,
@@ -287,7 +271,7 @@ function loseWeightInsights(input: GoalInsightsInput): GoalInsight[] {
 function buildMuscleInsights(input: GoalInsightsInput): GoalInsight[] {
   const color = GOAL_COLORS.build_muscle;
   const goalKey: GoalKey = "build_muscle";
-  const goalLabel = GOAL_LABELS[goalKey];
+  const goalLabel = getGoalLabel(goalKey);
   const goalIcon = GOAL_ICONS[goalKey];
   const insights: GoalInsight[] = [];
 
@@ -298,7 +282,6 @@ function buildMuscleInsights(input: GoalInsightsInput): GoalInsight[] {
   const gymThisWeek = thisWeek.filter(isGym);
   const gymLastWeek = lastWeek.filter(isGym);
 
-  // 1. Protein consistency
   if (input.nutritionStats) {
     const { avg7DayCalories, macroSplit } = input.nutritionStats;
     const estimatedDailyProtein = (macroSplit.proteinPercentage / 100) * avg7DayCalories / 4;
@@ -309,62 +292,56 @@ function buildMuscleInsights(input: GoalInsightsInput): GoalInsight[] {
       id: "bm_protein",
       goalKey, goalLabel, goalIcon,
       icon: "droplet",
-      headline: "Protein intake",
-      value: logged > 0 ? `~${Math.round(estimatedDailyProtein)}g / day` : "No data yet",
-      detail:
-        logged < 3
-          ? "Log your meals to track protein. Aim for 1.6–2g per kg of bodyweight."
-          : estimatedDailyProtein >= proteinGoal * 0.9
-          ? `Hitting your ${proteinGoal}g goal — ideal for muscle protein synthesis.`
-          : `${Math.round(proteinGoal - estimatedDailyProtein)}g below target. Prioritise protein at each meal.`,
+      headline: t("goalInsights.bm.proteinIntake"),
+      value: logged > 0 ? t("goalInsights.bm.proteinPerDay", { value: Math.round(estimatedDailyProtein) }) : t("goalInsights.lw.noDataYet"),
+      detail: logged < 3
+        ? t("goalInsights.bm.logMealsProtein")
+        : estimatedDailyProtein >= proteinGoal * 0.9
+        ? t("goalInsights.bm.hittingProteinGoal", { goal: proteinGoal })
+        : t("goalInsights.bm.belowProteinTarget", { shortfall: Math.round(proteinGoal - estimatedDailyProtein) }),
       progress: clamp(proteinPct),
-      progressLabel: `Goal: ${proteinGoal}g`,
+      progressLabel: t("goalInsights.bm.goalProtein", { value: proteinGoal }),
       trend: null,
       trendPositive: true,
       accentColor: color,
     });
   }
 
-  // 2. Training frequency
   insights.push({
     id: "bm_frequency",
     goalKey, goalLabel, goalIcon,
     icon: "repeat",
-    headline: "Training frequency",
-    value: `${gymThisWeek.length} gym session${gymThisWeek.length !== 1 ? "s" : ""} this week`,
-    detail:
-      gymThisWeek.length >= weeklyTarget
-        ? "Frequency is on point for hypertrophy. Keep training each muscle group 2× / week."
-        : `Target ${weeklyTarget} sessions/week for consistent muscle-building stimulus.`,
+    headline: t("goalInsights.bm.trainingFrequency"),
+    value: t("goalInsights.bm.gymSessionsWeek", { count: gymThisWeek.length, s: pluralS(gymThisWeek.length) }),
+    detail: gymThisWeek.length >= weeklyTarget
+      ? t("goalInsights.bm.frequencyOnPoint")
+      : t("goalInsights.bm.targetSessions", { target: weeklyTarget }),
     progress: clamp(gymThisWeek.length / Math.max(weeklyTarget, 1)),
-    progressLabel: `${gymThisWeek.length} / ${weeklyTarget} sessions`,
-    trend: trend(gymThisWeek.length, gymLastWeek.length),
+    progressLabel: t("goalInsights.lw.sessionsLabel", { done: gymThisWeek.length, target: weeklyTarget }),
+    trend: trendCalc(gymThisWeek.length, gymLastWeek.length),
     trendPositive: true,
     accentColor: color,
   });
 
-  // 3. Weight progression (from records)
   if (input.records && input.records.length > 0) {
     const liftRecords = input.records.filter((r) => r.activityType === "gym");
     insights.push({
       id: "bm_progression",
       goalKey, goalLabel, goalIcon,
       icon: "trending-up",
-      headline: "Weight progression",
-      value: liftRecords.length > 0 ? `${liftRecords.length} PR${liftRecords.length !== 1 ? "s" : ""} tracked` : "Log workouts with weights",
-      detail:
-        liftRecords.length > 0
-          ? `Latest: ${liftRecords[0].value} on ${liftRecords[0].label.replace("Best ", "")}. Progressive overload = consistent gains.`
-          : "Start tracking weights in your workouts to see progression over time.",
+      headline: t("goalInsights.bm.weightProgression"),
+      value: liftRecords.length > 0 ? t("goalInsights.bm.prsTracked", { count: liftRecords.length, s: pluralS(liftRecords.length) }) : t("goalInsights.bm.logWorkoutsWeights"),
+      detail: liftRecords.length > 0
+        ? t("goalInsights.bm.latestPR", { value: liftRecords[0].value, label: liftRecords[0].label.replace("Best ", "") })
+        : t("goalInsights.bm.startTrackingWeights"),
       progress: clamp(Math.min(liftRecords.length / 5, 1)),
-      progressLabel: "Up to 5 lifts tracked",
+      progressLabel: t("goalInsights.bm.upToLifts"),
       trend: null,
       trendPositive: true,
       accentColor: color,
     });
   }
 
-  // 4. Recovery score
   if (input.recovery) {
     const { sleepQuality, energyLevel, soreness = {} } = input.recovery;
     const highSore = Object.values(soreness).filter((v) => v >= 2).length;
@@ -377,18 +354,17 @@ function buildMuscleInsights(input: GoalInsightsInput): GoalInsight[] {
       id: "bm_recovery",
       goalKey, goalLabel, goalIcon,
       icon: "moon",
-      headline: "Recovery quality",
-      value: sleepQuality != null ? `${scoreOutOf10}/10 recovery score` : "Check in to log recovery",
-      detail:
-        sleepQuality == null
-          ? "Log your recovery daily — sleep and rest are when muscles actually grow."
-          : highSore >= 3
-          ? "Heavy soreness — prioritise sleep, protein, and take a rest day if needed."
-          : score >= 0.7
-          ? "Well-rested and ready. Perfect conditions for a productive training session."
-          : "Decent recovery. Stay hydrated and get 7-9 hours tonight.",
+      headline: t("goalInsights.bm.recoveryQuality"),
+      value: sleepQuality != null ? t("goalInsights.bm.recoveryScore", { score: scoreOutOf10 }) : t("goalInsights.bm.checkInRecovery"),
+      detail: sleepQuality == null
+        ? t("goalInsights.bm.logRecoveryDaily")
+        : highSore >= 3
+        ? t("goalInsights.bm.heavySoreness")
+        : score >= 0.7
+        ? t("goalInsights.bm.wellRested")
+        : t("goalInsights.bm.decentRecovery"),
       progress: clamp(score),
-      progressLabel: `Sleep ${sleepScore}/5 · Energy ${energyScore}/5`,
+      progressLabel: t("goalInsights.bm.sleepEnergy", { sleep: sleepScore, energy: energyScore }),
       trend: null,
       trendPositive: true,
       accentColor: color,
@@ -401,7 +377,7 @@ function buildMuscleInsights(input: GoalInsightsInput): GoalInsight[] {
 function enduranceInsights(input: GoalInsightsInput): GoalInsight[] {
   const color = GOAL_COLORS.endurance;
   const goalKey: GoalKey = "endurance";
-  const goalLabel = GOAL_LABELS[goalKey];
+  const goalLabel = getGoalLabel(goalKey);
   const goalIcon = GOAL_ICONS[goalKey];
   const insights: GoalInsight[] = [];
 
@@ -413,82 +389,74 @@ function enduranceInsights(input: GoalInsightsInput): GoalInsight[] {
   const cardioLastWeek = lastWeek.filter(isCardio);
   const cardioMinsThisWeek = cardioThisWeek.reduce((s, w) => s + (w.durationMinutes ?? 0), 0);
   const cardioMinsLastWeek = cardioLastWeek.reduce((s, w) => s + (w.durationMinutes ?? 0), 0);
-  const WHO_TARGET = 150; // WHO recommended cardio minutes per week
+  const WHO_TARGET = 150;
 
-  // 1. Cardio minutes
   insights.push({
     id: "end_minutes",
     goalKey, goalLabel, goalIcon,
     icon: "clock",
-    headline: "Weekly cardio volume",
-    value: `${cardioMinsThisWeek} min this week`,
-    detail:
-      cardioMinsThisWeek >= WHO_TARGET
-        ? `WHO target of ${WHO_TARGET} min hit! Every extra minute builds your aerobic base.`
-        : `${WHO_TARGET - cardioMinsThisWeek} min away from the 150 min/week target.`,
+    headline: t("goalInsights.end.weeklyCardioVolume"),
+    value: t("goalInsights.end.minThisWeek", { min: cardioMinsThisWeek }),
+    detail: cardioMinsThisWeek >= WHO_TARGET
+      ? t("goalInsights.end.whoTargetHit", { target: WHO_TARGET })
+      : t("goalInsights.end.minAwayTarget", { min: WHO_TARGET - cardioMinsThisWeek }),
     progress: clamp(cardioMinsThisWeek / WHO_TARGET),
-    progressLabel: `${cardioMinsThisWeek} / ${WHO_TARGET} min`,
-    trend: trend(cardioMinsThisWeek, cardioMinsLastWeek),
+    progressLabel: t("goalInsights.end.minLabel", { done: cardioMinsThisWeek, target: WHO_TARGET }),
+    trend: trendCalc(cardioMinsThisWeek, cardioMinsLastWeek),
     trendPositive: true,
     accentColor: color,
   });
 
-  // 2. Active cardio days
   const cardioDays = uniqueDays(cardioThisWeek);
   insights.push({
     id: "end_days",
     goalKey, goalLabel, goalIcon,
     icon: "calendar",
-    headline: "Active days",
-    value: `${cardioDays} cardio day${cardioDays !== 1 ? "s" : ""} this week`,
-    detail:
-      cardioDays >= 4
-        ? "4+ cardio days per week builds serious endurance. Keep the frequency up."
-        : "Aim for 4+ cardio sessions per week for consistent aerobic gains.",
+    headline: t("goalInsights.end.activeDays"),
+    value: t("goalInsights.end.cardioDays", { count: cardioDays, s: pluralS(cardioDays) }),
+    detail: cardioDays >= 4
+      ? t("goalInsights.end.fourPlusDays")
+      : t("goalInsights.end.aimForFour"),
     progress: clamp(cardioDays / 5),
-    progressLabel: `${cardioDays} / 5 target days`,
-    trend: trend(cardioDays, uniqueDays(cardioLastWeek)),
+    progressLabel: t("goalInsights.end.targetDays", { done: cardioDays }),
+    trend: trendCalc(cardioDays, uniqueDays(cardioLastWeek)),
     trendPositive: true,
     accentColor: color,
   });
 
-  // 3. Cardio variety
   const cardioTypes = [...new Set(cardioThisWeek.map((w) => w.activityType))];
-  const varietyLabel = cardioTypes.length === 0 ? "No cardio this week" : cardioTypes.join(", ");
+  const varietyLabel = cardioTypes.length === 0 ? t("goalInsights.end.noCardioWeek") : cardioTypes.join(", ");
   insights.push({
     id: "end_variety",
     goalKey, goalLabel, goalIcon,
     icon: "shuffle",
-    headline: "Activity variety",
+    headline: t("goalInsights.end.activityVariety"),
     value: varietyLabel.charAt(0).toUpperCase() + varietyLabel.slice(1),
-    detail:
-      cardioTypes.length >= 2
-        ? "Cross-training reduces injury risk and builds balanced endurance."
-        : cardioTypes.length === 1
-        ? "Mix in a second cardio type to build more balanced aerobic fitness."
-        : "Log a run, cycle or swim to start building your aerobic base.",
+    detail: cardioTypes.length >= 2
+      ? t("goalInsights.end.crossTraining")
+      : cardioTypes.length === 1
+      ? t("goalInsights.end.mixSecondCardio")
+      : t("goalInsights.end.logFirstCardio"),
     progress: clamp(cardioTypes.length / 3),
-    progressLabel: `${cardioTypes.length} activity type${cardioTypes.length !== 1 ? "s" : ""}`,
+    progressLabel: t("goalInsights.end.activityTypes", { count: cardioTypes.length, s: pluralS(cardioTypes.length) }),
     trend: null,
     trendPositive: true,
     accentColor: color,
   });
 
-  // 4. Monthly volume
   const cardioThisMonth = thisMonth.filter(isCardio);
   const cardioMinsThisMonth = cardioThisMonth.reduce((s, w) => s + (w.durationMinutes ?? 0), 0);
   insights.push({
     id: "end_monthly",
     goalKey, goalLabel, goalIcon,
     icon: "bar-chart-2",
-    headline: "Monthly cardio total",
-    value: `${cardioMinsThisMonth} min this month`,
-    detail:
-      cardioMinsThisMonth >= 600
-        ? "600+ min/month is elite endurance territory. Your aerobic base is building fast."
-        : `${600 - cardioMinsThisMonth} min to reach the 600 min/month benchmark.`,
+    headline: t("goalInsights.end.monthlyCardioTotal"),
+    value: t("goalInsights.end.minThisMonth", { min: cardioMinsThisMonth }),
+    detail: cardioMinsThisMonth >= 600
+      ? t("goalInsights.end.eliteEndurance")
+      : t("goalInsights.end.minToBenchmark", { min: 600 - cardioMinsThisMonth }),
     progress: clamp(cardioMinsThisMonth / 600),
-    progressLabel: `${cardioMinsThisMonth} / 600 min`,
+    progressLabel: t("goalInsights.end.monthlyMinLabel", { done: cardioMinsThisMonth }),
     trend: null,
     trendPositive: true,
     accentColor: color,
@@ -500,7 +468,7 @@ function enduranceInsights(input: GoalInsightsInput): GoalInsight[] {
 function flexibilityInsights(input: GoalInsightsInput): GoalInsight[] {
   const color = GOAL_COLORS.flexibility;
   const goalKey: GoalKey = "flexibility";
-  const goalLabel = GOAL_LABELS[goalKey];
+  const goalLabel = getGoalLabel(goalKey);
   const goalIcon = GOAL_ICONS[goalKey];
   const insights: GoalInsight[] = [];
 
@@ -513,80 +481,71 @@ function flexibilityInsights(input: GoalInsightsInput): GoalInsight[] {
   const flexThisMonth = thisMonth.filter(isFlexibility);
   const FLEX_TARGET = 3;
 
-  // 1. Weekly mobility sessions
   insights.push({
     id: "fl_weekly",
     goalKey, goalLabel, goalIcon,
     icon: "rotate-cw",
-    headline: "Mobility sessions",
-    value: `${flexThisWeek.length} session${flexThisWeek.length !== 1 ? "s" : ""} this week`,
-    detail:
-      flexThisWeek.length >= FLEX_TARGET
-        ? "3+ sessions per week builds lasting flexibility and joint health."
-        : flexThisWeek.length > 0
-        ? `${FLEX_TARGET - flexThisWeek.length} more session${FLEX_TARGET - flexThisWeek.length !== 1 ? "s" : ""} to hit your weekly target. Even 10-minute stretches count.`
-        : "Add a yoga or stretching session — 10 minutes daily improves flexibility significantly.",
+    headline: t("goalInsights.fl.mobilitySessions"),
+    value: t("goalInsights.fl.sessionsWeek", { count: flexThisWeek.length, s: pluralS(flexThisWeek.length) }),
+    detail: flexThisWeek.length >= FLEX_TARGET
+      ? t("goalInsights.fl.threePlusSessions")
+      : flexThisWeek.length > 0
+      ? t("goalInsights.fl.moreSessionsTarget", { count: FLEX_TARGET - flexThisWeek.length, s: pluralS(FLEX_TARGET - flexThisWeek.length) })
+      : t("goalInsights.fl.addYogaSession"),
     progress: clamp(flexThisWeek.length / FLEX_TARGET),
-    progressLabel: `${flexThisWeek.length} / ${FLEX_TARGET} sessions`,
-    trend: trend(flexThisWeek.length, flexLastWeek.length),
+    progressLabel: t("goalInsights.fl.sessionsLabel", { done: flexThisWeek.length, target: FLEX_TARGET }),
+    trend: trendCalc(flexThisWeek.length, flexLastWeek.length),
     trendPositive: true,
     accentColor: color,
   });
 
-  // 2. Consistency (days with flexibility this week)
   const flexDays = uniqueDays(flexThisWeek);
   insights.push({
     id: "fl_consistency",
     goalKey, goalLabel, goalIcon,
     icon: "check-circle",
-    headline: "Stretching consistency",
-    value: `${flexDays} day${flexDays !== 1 ? "s" : ""} this week`,
-    detail:
-      flexDays >= 4
-        ? "Daily mobility practice is the fastest path to lasting flexibility gains."
-        : "Daily short stretching sessions beat long infrequent ones — try 5–10 min daily.",
+    headline: t("goalInsights.fl.stretchingConsistency"),
+    value: t("goalInsights.fl.daysWeek", { count: flexDays, s: pluralS(flexDays) }),
+    detail: flexDays >= 4
+      ? t("goalInsights.fl.dailyMobility")
+      : t("goalInsights.fl.dailyShortStretching"),
     progress: clamp(flexDays / 5),
-    progressLabel: `${flexDays} / 5 target days`,
+    progressLabel: t("goalInsights.fl.targetDays", { done: flexDays }),
     trend: null,
     trendPositive: true,
     accentColor: color,
   });
 
-  // 3. Monthly total
   insights.push({
     id: "fl_monthly",
     goalKey, goalLabel, goalIcon,
     icon: "calendar",
-    headline: "Monthly total",
-    value: `${flexThisMonth.length} session${flexThisMonth.length !== 1 ? "s" : ""} this month`,
-    detail:
-      flexThisMonth.length >= 12
-        ? "12+ sessions per month is excellent. Your mobility and injury resistance improve measurably."
-        : `${Math.max(0, 12 - flexThisMonth.length)} more to reach 12 sessions this month.`,
+    headline: t("goalInsights.fl.monthlyTotal"),
+    value: t("goalInsights.fl.sessionsMonth", { count: flexThisMonth.length, s: pluralS(flexThisMonth.length) }),
+    detail: flexThisMonth.length >= 12
+      ? t("goalInsights.fl.excellentMobility")
+      : t("goalInsights.fl.moreToReach", { count: Math.max(0, 12 - flexThisMonth.length) }),
     progress: clamp(flexThisMonth.length / 12),
-    progressLabel: `${flexThisMonth.length} / 12 sessions`,
+    progressLabel: t("goalInsights.fl.monthlyLabel", { done: flexThisMonth.length }),
     trend: null,
     trendPositive: true,
     accentColor: color,
   });
 
-  // 4. Recovery synergy (flexibility helps recovery)
   if (input.recovery) {
     const { soreness = {} } = input.recovery;
-    const totalSore = Object.values(soreness).reduce((s, v) => s + v, 0);
     const high = Object.values(soreness).filter((v) => v >= 2).length;
     insights.push({
       id: "fl_recovery",
       goalKey, goalLabel, goalIcon,
       icon: "wind",
-      headline: "Soreness & mobility",
-      value: high > 0 ? `${high} area${high !== 1 ? "s" : ""} needing attention` : "Feeling fresh",
-      detail:
-        high >= 2
-          ? "Targeted stretching of sore areas speeds recovery and maintains flexibility."
-          : high === 1
-          ? "A focused 15-min stretch session will ease soreness and improve range of motion."
-          : "No significant soreness — ideal time for deep stretching to expand your range.",
+      headline: t("goalInsights.fl.sorenessAndMobility"),
+      value: high > 0 ? t("goalInsights.fl.areasNeedingAttention", { count: high, s: pluralS(high) }) : t("goalInsights.fl.feelingFresh"),
+      detail: high >= 2
+        ? t("goalInsights.fl.targetedStretching")
+        : high === 1
+        ? t("goalInsights.fl.focusedStretchSession")
+        : t("goalInsights.fl.noSignificantSoreness"),
       progress: clamp(1 - high / 5),
       trend: null,
       trendPositive: false,
@@ -600,7 +559,7 @@ function flexibilityInsights(input: GoalInsightsInput): GoalInsight[] {
 function stayActiveInsights(input: GoalInsightsInput): GoalInsight[] {
   const color = GOAL_COLORS.stay_active;
   const goalKey: GoalKey = "stay_active";
-  const goalLabel = GOAL_LABELS[goalKey];
+  const goalLabel = getGoalLabel(goalKey);
   const goalIcon = GOAL_ICONS[goalKey];
   const insights: GoalInsight[] = [];
 
@@ -610,78 +569,70 @@ function stayActiveInsights(input: GoalInsightsInput): GoalInsight[] {
   const thisMonth = workoutsThisMonth(input.workouts);
   const activeDays = uniqueDays(thisWeek);
 
-  // 1. Days active this week
   insights.push({
     id: "sa_days",
     goalKey, goalLabel, goalIcon,
     icon: "sun",
-    headline: "Active days this week",
-    value: `${activeDays} of 7 days`,
-    detail:
-      activeDays >= weeklyTarget
-        ? "Consistent movement this week. This is the habit that stacks up over months."
-        : `${weeklyTarget - activeDays} more active day${weeklyTarget - activeDays !== 1 ? "s" : ""} to hit your target. Any movement counts.`,
+    headline: t("goalInsights.sa.activeDaysWeek"),
+    value: t("goalInsights.sa.ofSevenDays", { count: activeDays }),
+    detail: activeDays >= weeklyTarget
+      ? t("goalInsights.sa.consistentMovement")
+      : t("goalInsights.sa.moreActiveDays", { count: weeklyTarget - activeDays, s: pluralS(weeklyTarget - activeDays) }),
     progress: clamp(activeDays / 7),
-    progressLabel: `${activeDays} / 7 days`,
-    trend: trend(activeDays, uniqueDays(lastWeek)),
+    progressLabel: t("goalInsights.sa.daysLabel", { done: activeDays }),
+    trend: trendCalc(activeDays, uniqueDays(lastWeek)),
     trendPositive: true,
     accentColor: color,
   });
 
-  // 2. Week-over-week
   insights.push({
     id: "sa_wow",
     goalKey, goalLabel, goalIcon,
     icon: "bar-chart",
-    headline: "Week over week",
-    value: `${thisWeek.length} vs ${lastWeek.length} last week`,
-    detail:
-      thisWeek.length > lastWeek.length
-        ? "More active than last week — momentum is building."
-        : thisWeek.length === lastWeek.length
-        ? "Same pace as last week. Consistency is the foundation of fitness."
-        : "Fewer sessions than last week. Even a short walk counts — keep the streak alive.",
+    headline: t("goalInsights.sa.weekOverWeek"),
+    value: t("goalInsights.sa.vsLastWeek", { current: thisWeek.length, last: lastWeek.length }),
+    detail: thisWeek.length > lastWeek.length
+      ? t("goalInsights.sa.moreActive")
+      : thisWeek.length === lastWeek.length
+      ? t("goalInsights.sa.samePace")
+      : t("goalInsights.sa.fewerSessions"),
     progress: clamp(thisWeek.length / Math.max(lastWeek.length + 1, weeklyTarget)),
-    progressLabel: `+${thisWeek.length - lastWeek.length} vs last week`,
-    trend: trend(thisWeek.length, lastWeek.length),
+    progressLabel: t("goalInsights.sa.vsLastWeekLabel", { diff: thisWeek.length - lastWeek.length }),
+    trend: trendCalc(thisWeek.length, lastWeek.length),
     trendPositive: true,
     accentColor: color,
   });
 
-  // 3. Activity variety
   const activityTypes = [...new Set(thisMonth.map((w) => w.activityType))];
   insights.push({
     id: "sa_variety",
     goalKey, goalLabel, goalIcon,
     icon: "grid",
-    headline: "Activity variety",
-    value: `${activityTypes.length} type${activityTypes.length !== 1 ? "s" : ""} this month`,
-    detail:
-      activityTypes.length >= 3
-        ? `${activityTypes.slice(0, 3).join(", ")} — great mix. Variety prevents boredom and trains different systems.`
-        : activityTypes.length > 0
-        ? `${activityTypes.join(", ")}. Try a new activity to keep things fresh and work different muscles.`
-        : "Log your first workout to start tracking your activity mix.",
+    headline: t("goalInsights.sa.activityVariety"),
+    value: t("goalInsights.sa.typesThisMonth", { count: activityTypes.length, s: pluralS(activityTypes.length) }),
+    detail: activityTypes.length >= 3
+      ? t("goalInsights.sa.greatMix", { types: activityTypes.slice(0, 3).join(", ") })
+      : activityTypes.length > 0
+      ? t("goalInsights.sa.tryNewActivity", { types: activityTypes.join(", ") })
+      : t("goalInsights.sa.logFirstWorkout"),
     progress: clamp(activityTypes.length / 4),
-    progressLabel: `${activityTypes.length} different activities`,
+    progressLabel: t("goalInsights.sa.differentActivities", { count: activityTypes.length }),
     trend: null,
     trendPositive: true,
     accentColor: color,
   });
 
-  // 4. Monthly total
   insights.push({
     id: "sa_monthly",
     goalKey, goalLabel, goalIcon,
     icon: "award",
-    headline: "Monthly total",
-    value: `${thisMonth.length} session${thisMonth.length !== 1 ? "s" : ""} this month`,
-    detail:
-      thisMonth.length >= weeklyTarget * 4
-        ? `${thisMonth.length} sessions in 30 days — you're nailing your monthly target consistently.`
-        : `${weeklyTarget * 4 - thisMonth.length} more sessions to hit your monthly target of ${weeklyTarget * 4}.`,
+    headline: t("goalInsights.sa.monthlyTotal"),
+    value: t("goalInsights.sa.sessionsMonth", { count: thisMonth.length, s: pluralS(thisMonth.length) }),
+    detail: thisMonth.length >= weeklyTarget * 4
+      ? t("goalInsights.sa.nailingTarget", { count: thisMonth.length })
+      : t("goalInsights.sa.moreToTarget", { count: weeklyTarget * 4 - thisMonth.length, target: weeklyTarget * 4 }),
     progress: clamp(thisMonth.length / (weeklyTarget * 4)),
-    progressLabel: `${thisMonth.length} / ${weeklyTarget * 4} sessions`,
+    progressLabel: t("goalInsights.sa.monthlyLabel", { done: thisMonth.length, target: weeklyTarget * 4 }),
     trend: null,
     trendPositive: true,
     accentColor: color,
@@ -689,8 +640,6 @@ function stayActiveInsights(input: GoalInsightsInput): GoalInsight[] {
 
   return insights;
 }
-
-// ─── Public API ────────────────────────────────────────────────────────────────
 
 export function computeGoalInsights(input: GoalInsightsInput): GoalInsight[] {
   const goalKeys = detectGoalKeys(input.goals);
@@ -709,4 +658,4 @@ export function computeGoalInsights(input: GoalInsightsInput): GoalInsight[] {
   return allInsights;
 }
 
-export { GOAL_LABELS, GOAL_ICONS, GOAL_COLORS };
+export { getGoalLabel, GOAL_ICONS, GOAL_COLORS };

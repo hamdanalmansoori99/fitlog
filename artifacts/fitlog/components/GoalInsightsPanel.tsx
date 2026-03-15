@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { GoalInsight, GOAL_LABELS, GOAL_ICONS, GOAL_COLORS, detectGoalKeys, GoalKey } from "../lib/goalInsights";
+import { GoalInsight, getGoalLabel, GOAL_ICONS, GOAL_COLORS, detectGoalKeys, GoalKey } from "../lib/goalInsights";
 import { useTranslation } from "react-i18next";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -74,7 +74,7 @@ function GoalSection({ goalKey, insights, theme, compact }: {
   const displayed = compact ? insights.slice(0, 2) : insights;
   const color = GOAL_COLORS[goalKey];
   const icon = GOAL_ICONS[goalKey] as any;
-  const label = GOAL_LABELS[goalKey];
+  const label = getGoalLabel(goalKey);
 
   const toggle = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
