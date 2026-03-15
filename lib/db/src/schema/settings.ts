@@ -8,6 +8,7 @@ export const settingsTable = pgTable("settings", {
   userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull().unique(),
   darkMode: boolean("dark_mode").notNull().default(true),
   unitSystem: text("unit_system").notNull().default("metric"),
+  language: text("language").notNull().default("en"),
   notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -4,8 +4,18 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_LABEL_KEYS = [
+  "components.weeklyBarChart.mon",
+  "components.weeklyBarChart.tue",
+  "components.weeklyBarChart.wed",
+  "components.weeklyBarChart.thu",
+  "components.weeklyBarChart.fri",
+  "components.weeklyBarChart.sat",
+  "components.weeklyBarChart.sun",
+];
+
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -34,6 +44,7 @@ interface DayDetail {
 
 export function WorkoutCalendar() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -80,6 +91,8 @@ export function WorkoutCalendar() {
 
   const totalWorkouts = Object.values(days).reduce((s, arr) => s + arr.length, 0);
 
+  const dayLabels = DAY_LABEL_KEYS.map((key) => t(key));
+
   return (
     <View style={[s.container, { backgroundColor: theme.card, borderColor: theme.border }]}>
       <View style={s.header}>
@@ -92,7 +105,7 @@ export function WorkoutCalendar() {
           </Text>
           {totalWorkouts > 0 && (
             <Text style={{ color: theme.primary, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>
-              {totalWorkouts} workout{totalWorkouts !== 1 ? "s" : ""} this month
+              {t("components.workoutCalendar.workoutsThisMonth", { count: totalWorkouts, plural: totalWorkouts !== 1 ? "s" : "" })}
             </Text>
           )}
         </View>
@@ -111,14 +124,14 @@ export function WorkoutCalendar() {
       </View>
 
       <View style={s.dayLabelsRow}>
-        {DAY_LABELS.map((d) => (
+        {dayLabels.map((d) => (
           <Text key={d} style={[s.dayLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{d}</Text>
         ))}
       </View>
 
       {isLoading ? (
         <View style={{ height: 120, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>Loading…</Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("components.workoutCalendar.loading")}</Text>
         </View>
       ) : (
         <View style={s.grid}>

@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import {
@@ -152,6 +153,7 @@ function SwapModal({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function WeeklyPlanScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();

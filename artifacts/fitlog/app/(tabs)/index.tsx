@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInDown, FadeIn, ZoomIn } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
@@ -40,10 +41,11 @@ function WeightShortcutCard({ todayWeight, measurementId, loading, useImperial, 
   useImperial: boolean;
   theme: any;
 }) {
+  const { t } = useTranslation();
   const displayWeight = todayWeight != null
     ? useImperial
-      ? `${(todayWeight * 2.20462).toFixed(1)} lbs`
-      : `${todayWeight.toFixed(1)} kg`
+      ? `${(todayWeight * 2.20462).toFixed(1)} ${t("common.lbs")}`
+      : `${todayWeight.toFixed(1)} ${t("common.kg")}`
     : null;
 
   if (loading) return null;
@@ -76,16 +78,16 @@ function WeightShortcutCard({ todayWeight, measurementId, loading, useImperial, 
               {displayWeight}
             </Text>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-              Weight logged today · tap to edit
+              {t("home.weightLoggedToday")}
             </Text>
           </>
         ) : (
           <>
             <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-              Log today's weight
+              {t("home.logTodaysWeight")}
             </Text>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-              Tap to add a measurement
+              {t("home.tapToAddMeasurement")}
             </Text>
           </>
         )}
@@ -95,11 +97,11 @@ function WeightShortcutCard({ todayWeight, measurementId, loading, useImperial, 
   );
 }
 
-function getGreeting() {
+function getGreeting(t: (key: string) => string) {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return t("home.goodMorning");
+  if (h < 17) return t("home.goodAfternoon");
+  return t("home.goodEvening");
 }
 
 function formatDate() {
@@ -121,6 +123,7 @@ function TodayWorkoutCard({
   todayRec: TodayRecommendation;
   theme: any;
 }) {
+  const { t } = useTranslation();
   const { recommendation: rec, reasonPills, contextSummary, isRestDayRecommended } = todayRec;
 
   if (isRestDayRecommended) {
@@ -133,22 +136,22 @@ function TodayWorkoutCard({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.todayLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Today's Recommendation
+                {t("home.todaysRecommendation")}
               </Text>
               <Text style={[styles.todayTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-                Rest Day
+                {t("home.restDay")}
               </Text>
             </View>
           </View>
           <Text style={[styles.todayContext, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            You've trained 5+ days in a row — your body needs recovery to grow. Take a rest day or go for a light walk.
+            {t("home.restDayMessage")}
           </Text>
           <Pressable
             onPress={() => router.push("/(tabs)/workouts")}
             style={[styles.todaySecondaryBtn, { borderColor: theme.border }]}
           >
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-              Browse all workouts anyway
+              {t("home.browseWorkoutsAnyway")}
             </Text>
             <Feather name="chevron-right" size={14} color={theme.textMuted} />
           </Pressable>
@@ -167,7 +170,7 @@ function TodayWorkoutCard({
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.todayLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Today's Recommended Workout
+              {t("home.todaysRecommendedWorkout")}
             </Text>
             <Text
               style={[styles.todayTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}
@@ -183,7 +186,7 @@ function TodayWorkoutCard({
           <View style={styles.metaBadge}>
             <Feather name="clock" size={11} color={theme.textMuted} />
             <Text style={[styles.metaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {rec.template.durationMinutes} min
+              {rec.template.durationMinutes} {t("common.min")}
             </Text>
           </View>
           <View style={[styles.metaBadge, { backgroundColor: diffColor(rec.template.difficulty, theme) + "20" }]}>
@@ -203,7 +206,7 @@ function TodayWorkoutCard({
               color: rec.equipmentMatch === "full" ? theme.primary : theme.orange || "#ff6d00",
               fontFamily: "Inter_400Regular", fontSize: 11,
             }}>
-              {rec.equipmentMatch === "full" ? "Full match" : "With subs"}
+              {rec.equipmentMatch === "full" ? t("home.fullMatch") : t("home.withSubs")}
             </Text>
           </View>
         </View>
@@ -238,7 +241,7 @@ function TodayWorkoutCard({
         >
           <Feather name="play" size={15} color="#0f0f1a" />
           <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>
-            Start Workout
+            {t("home.startWorkout")}
           </Text>
         </Pressable>
       </Card>
@@ -249,6 +252,7 @@ function TodayWorkoutCard({
 // ─── Rest Day Card (onboarding done, no recommendation needed today) ──────────
 
 function RestDayCard({ theme }: { theme: any }) {
+  const { t } = useTranslation();
   return (
     <Animated.View entering={FadeIn.duration(400)}>
       <Card style={{ borderColor: theme.primary + "20" }}>
@@ -257,19 +261,19 @@ function RestDayCard({ theme }: { theme: any }) {
             <Feather name="moon" size={18} color={theme.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>AI Coach</Text>
-            <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>Rest & Recover Today</Text>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("home.aiCoach")}</Text>
+            <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>{t("home.restAndRecover")}</Text>
           </View>
         </View>
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
-          Your coach has analysed your recent training and recommends rest today. Recovery is where gains happen — stay hydrated and get good sleep.
+          {t("home.restRecoverMessage")}
         </Text>
         <Pressable
           onPress={() => router.push("/(tabs)/workouts" as any)}
           style={[{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 12, marginTop: 14 }, { backgroundColor: theme.primaryDim }]}
         >
           <Feather name="activity" size={15} color={theme.primary} />
-          <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Log a Workout Anyway</Text>
+          <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("home.logWorkoutAnyway")}</Text>
         </Pressable>
       </Card>
     </Animated.View>
@@ -279,6 +283,7 @@ function RestDayCard({ theme }: { theme: any }) {
 // ─── Coach CTA (no onboarding) ────────────────────────────────────────────────
 
 function CoachCtaCard({ theme }: { theme: any }) {
+  const { t } = useTranslation();
   return (
     <Animated.View entering={FadeIn.duration(400)}>
       <Card style={[styles.todayCard, { borderColor: theme.secondary + "30" }]}>
@@ -288,15 +293,15 @@ function CoachCtaCard({ theme }: { theme: any }) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.todayLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              AI Coach
+              {t("home.aiCoach")}
             </Text>
             <Text style={[styles.todayTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-              Unlock smart recommendations
+              {t("home.unlockRecommendations")}
             </Text>
           </View>
         </View>
         <Text style={[styles.todayContext, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          Tell the coach your goals, equipment and schedule — and get a personalised daily workout every time you open the app.
+          {t("home.unlockMessage")}
         </Text>
         <Pressable
           onPress={() => router.push("/workouts/onboarding" as any)}
@@ -304,7 +309,7 @@ function CoachCtaCard({ theme }: { theme: any }) {
         >
           <Feather name="zap" size={15} color="#0f0f1a" />
           <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>
-            Set Up AI Coach
+            {t("home.setUpAICoach")}
           </Text>
         </Pressable>
       </Card>
@@ -315,6 +320,7 @@ function CoachCtaCard({ theme }: { theme: any }) {
 // ─── Coach Insight Card ────────────────────────────────────────────────────────
 
 function CoachInsightCard({ insights, theme }: { insights: CoachInsight[]; theme: any }) {
+  const { t } = useTranslation();
   if (insights.length === 0) return null;
 
   const iconColor = (insight: CoachInsight) =>
@@ -329,7 +335,7 @@ function CoachInsightCard({ insights, theme }: { insights: CoachInsight[]; theme
         <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Feather name="cpu" size={13} color={theme.primary} />
           <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 0.4 }}>
-            COACH INSIGHTS
+            {t("home.coachInsights")}
           </Text>
         </View>
         {insights.map((insight, i) => (
@@ -361,16 +367,17 @@ function CoachInsightCard({ insights, theme }: { insights: CoachInsight[]; theme
 // ─── Nutrition Insights Card ───────────────────────────────────────────────────
 
 function NutritionInsightsCard({ insights, theme }: { insights: NutritionInsight[]; theme: any }) {
+  const { t } = useTranslation();
   if (insights.length === 0) return null;
 
-  const borderColor = (t: NutritionInsight["type"]) => {
-    if (t === "warning") return theme.warning || "#ffab40";
-    if (t === "success") return theme.primary;
-    if (t === "info")    return theme.secondary;
+  const borderColorFn = (type: NutritionInsight["type"]) => {
+    if (type === "warning") return theme.warning || "#ffab40";
+    if (type === "success") return theme.primary;
+    if (type === "info")    return theme.secondary;
     return theme.primary;
   };
-  const iconColor = (t: NutritionInsight["type"]) => borderColor(t);
-  const iconBg = (t: NutritionInsight["type"]) => borderColor(t) + "18";
+  const iconColor = (type: NutritionInsight["type"]) => borderColorFn(type);
+  const iconBg = (type: NutritionInsight["type"]) => borderColorFn(type) + "18";
 
   return (
     <Animated.View entering={FadeIn.delay(80).duration(400)}>
@@ -378,7 +385,7 @@ function NutritionInsightsCard({ insights, theme }: { insights: NutritionInsight
         <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Feather name="aperture" size={13} color={theme.secondary} />
           <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 0.4 }}>
-            NUTRITION INSIGHTS
+            {t("home.nutritionInsights")}
           </Text>
         </View>
         {insights.map((insight, i) => (
@@ -406,7 +413,7 @@ function NutritionInsightsCard({ insights, theme }: { insights: NutritionInsight
           onPress={() => router.push("/(tabs)/meals" as any)}
           style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderTopWidth: 1, borderTopColor: theme.border, gap: 4 }}
         >
-          <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>View nutrition</Text>
+          <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("home.viewNutrition")}</Text>
           <Feather name="chevron-right" size={12} color={theme.secondary} />
         </Pressable>
       </Card>
@@ -417,6 +424,7 @@ function NutritionInsightsCard({ insights, theme }: { insights: NutritionInsight
 // ─── Streak & Achievements Summary Card ───────────────────────────────────────
 
 function StreakSummaryCard({ data, theme }: { data: any; theme: any }) {
+  const { t } = useTranslation();
   if (!data) return null;
   const { streaks, weeklyScore, achievements } = data;
   const earned = (achievements ?? []).filter((a: any) => a.earned).length;
@@ -427,13 +435,13 @@ function StreakSummaryCard({ data, theme }: { data: any; theme: any }) {
   return (
     <Card style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Streaks</Text>
+        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("home.streaks")}</Text>
         <Pressable
           onPress={() => router.push("/achievements" as any)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
         >
           <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-            {earned}/{total} badges
+            {earned}/{total} {t("home.badges")}
           </Text>
           <Feather name="chevron-right" size={13} color={theme.primary} />
         </Pressable>
@@ -441,9 +449,9 @@ function StreakSummaryCard({ data, theme }: { data: any; theme: any }) {
 
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         {[
-          { icon: "activity" as const, value: streaks?.workout?.current ?? 0,    label: "Workout",   color: "#00e676" },
-          { icon: "coffee"   as const, value: streaks?.meal?.current ?? 0,       label: "Meals",     color: "#ffab40" },
-          { icon: "droplet"  as const, value: streaks?.hydration?.current ?? 0,  label: "Hydration", color: "#448aff" },
+          { icon: "activity" as const, value: streaks?.workout?.current ?? 0,    label: t("home.workout"),   color: "#00e676" },
+          { icon: "coffee"   as const, value: streaks?.meal?.current ?? 0,       label: t("home.mealsLabel"),     color: "#ffab40" },
+          { icon: "droplet"  as const, value: streaks?.hydration?.current ?? 0,  label: t("home.hydration"), color: "#448aff" },
         ].map((s, i) => (
           <View key={s.label} style={{ flex: 1, alignItems: "center", gap: 3 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
@@ -461,7 +469,7 @@ function StreakSummaryCard({ data, theme }: { data: any; theme: any }) {
           <Text style={{ color: scoreColor, fontFamily: "Inter_700Bold", fontSize: 24, lineHeight: 28 }}>
             {score}%
           </Text>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>This week</Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("home.thisWeek")}</Text>
         </Pressable>
       </View>
     </Card>
@@ -472,6 +480,7 @@ function StreakSummaryCard({ data, theme }: { data: any; theme: any }) {
 
 export default function HomeScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
 
@@ -717,10 +726,10 @@ export default function HomeScreen() {
         <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
           <View>
             <Text style={[styles.greeting, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {getGreeting()},
+              {getGreeting(t)},
             </Text>
             <Text style={[styles.name, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-              {user?.firstName || "Friend"} {user?.lastName || ""}
+              {user?.firstName || t("home.friend")} {user?.lastName || ""}
             </Text>
             <Text style={[styles.date, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               {formatDate()}
@@ -738,13 +747,13 @@ export default function HomeScreen() {
 
         {/* Quick Stats */}
         <Animated.View entering={FadeInDown.delay(80).duration(400)} style={[styles.section, { marginBottom: 28 }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 8 }]}>Today</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 8 }]}>{t("common.today")}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsScroll}>
             <View style={styles.statsRow}>
-              <StatCard icon="zap" value={todayStats?.caloriesBurned || 0} label="Cal Burned" color={theme.orange} loading={statsLoading} />
-              <StatCard icon="clock" value={`${todayStats?.activeMinutes || 0}m`} label="Active" color={theme.secondary} loading={statsLoading} />
-              <StatCard icon="check-circle" value={todayStats?.workoutsCompleted || 0} label="Workouts" color={theme.primary} loading={statsLoading} />
-              <StatCard icon="coffee" value={todayStats?.mealsLogged || 0} label="Meals" color={theme.pink} loading={statsLoading} />
+              <StatCard icon="zap" value={todayStats?.caloriesBurned || 0} label={t("home.calBurned")} color={theme.orange} loading={statsLoading} />
+              <StatCard icon="clock" value={`${todayStats?.activeMinutes || 0}m`} label={t("home.active")} color={theme.secondary} loading={statsLoading} />
+              <StatCard icon="check-circle" value={todayStats?.workoutsCompleted || 0} label={t("home.workoutsLabel")} color={theme.primary} loading={statsLoading} />
+              <StatCard icon="coffee" value={todayStats?.mealsLogged || 0} label={t("home.mealsLabel")} color={theme.pink} loading={statsLoading} />
             </View>
           </ScrollView>
         </Animated.View>
@@ -784,12 +793,12 @@ export default function HomeScreen() {
         <Animated.View entering={FadeInDown.delay(160).duration(400)} style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Today's Workout
+              {t("home.todaysWorkout")}
             </Text>
             {hasCoachOnboarding && (
               <View style={[styles.aiPill, { backgroundColor: theme.primaryDim }]}>
                 <Feather name="cpu" size={10} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 10 }}>AI Coach</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 10 }}>{t("home.aiCoach")}</Text>
               </View>
             )}
           </View>
@@ -834,7 +843,7 @@ export default function HomeScreen() {
         {profile && (
           <Animated.View entering={FadeInDown.delay(244).duration(400)} style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 12 }]}>
-              Goal Progress
+              {t("home.goalProgress")}
             </Text>
             <GoalInsightsPanel
               insights={goalInsights}
@@ -848,7 +857,7 @@ export default function HomeScreen() {
         {/* Recovery Check-In */}
         <Animated.View entering={FadeInDown.delay(248).duration(400)} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 12 }]}>
-            Recovery
+            {t("home.recovery")}
           </Text>
           <RecoveryCheckIn todayLog={recoveryTodayData?.log ?? null} theme={theme} />
         </Animated.View>
@@ -856,7 +865,7 @@ export default function HomeScreen() {
         {/* Water Tracker */}
         <Animated.View entering={FadeInDown.delay(255).duration(400)} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 12 }]}>
-            Hydration
+            {t("home.hydration")}
           </Text>
           <WaterTracker workedOutToday={(todayStats?.workoutsCompleted ?? 0) > 0} />
         </Animated.View>
@@ -875,10 +884,10 @@ export default function HomeScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.coachChatTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Chat with AI Coach
+                {t("home.chatWithCoach")}
               </Text>
               <Text style={[styles.coachChatSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Ask me what to train, get plans, or understand your progress
+                {t("home.chatWithCoachSubtitle")}
               </Text>
             </View>
             <Feather name="chevron-right" size={18} color={theme.textMuted} />
@@ -889,10 +898,10 @@ export default function HomeScreen() {
         <Animated.View entering={FadeInDown.delay(280).duration(400)} style={styles.section}>
           <Card>
             <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Weekly Activity
+              {t("home.weeklyActivity")}
             </Text>
             <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Active minutes per day
+              {t("home.activeMinutesPerDay")}
             </Text>
             {weeklyLoading ? (
               <View style={{ flexDirection: "row", alignItems: "flex-end", height: 120, gap: 5, marginTop: 8 }}>
@@ -901,12 +910,12 @@ export default function HomeScreen() {
                 ))}
               </View>
             ) : weeklyData?.days ? (
-              <WeeklyBarChart data={weeklyData.days} emptyMessage="Log your first workout to see your weekly activity" />
+              <WeeklyBarChart data={weeklyData.days} emptyMessage={t("home.logFirstWorkoutActivity")} />
             ) : (
               <View style={styles.emptyChart}>
                 <Feather name="bar-chart-2" size={28} color={theme.border} />
                 <Text style={[styles.emptyChartText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Log your first workout to see your weekly activity chart
+                  {t("home.logFirstWorkoutChart")}
                 </Text>
               </View>
             )}
@@ -916,7 +925,7 @@ export default function HomeScreen() {
         {/* Recent Activity */}
         <Animated.View entering={FadeInDown.delay(320).duration(400)} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            Recent Activity
+            {t("home.recentActivity")}
           </Text>
           <Card padding={0}>
             <View style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
@@ -950,10 +959,10 @@ export default function HomeScreen() {
                     <Feather name="activity" size={28} color={theme.primary} />
                   </View>
                   <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                    Nothing logged yet
+                    {t("home.nothingLoggedYet")}
                   </Text>
                   <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    Tap the + button to log your first workout or meal — every step counts!
+                    {t("home.tapPlusToLog")}
                   </Text>
                   <Pressable
                     onPress={() => router.push("/workouts/log")}
@@ -961,7 +970,7 @@ export default function HomeScreen() {
                   >
                     <Feather name="plus" size={14} color={theme.primary} />
                     <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-                      Log a workout
+                      {t("home.logAWorkout")}
                     </Text>
                   </Pressable>
                 </Animated.View>
@@ -988,6 +997,7 @@ export default function HomeScreen() {
 }
 
 function FABMenu({ theme, open, onToggle }: { theme: any; open: boolean; onToggle: () => void }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.fab}>
       {open && (
@@ -997,14 +1007,14 @@ function FABMenu({ theme, open, onToggle }: { theme: any; open: boolean; onToggl
             style={[styles.fabOption, { backgroundColor: theme.card, borderColor: theme.border }]}
           >
             <Feather name="coffee" size={18} color={theme.pink} />
-            <Text style={[styles.fabOptionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>Log Meal</Text>
+            <Text style={[styles.fabOptionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{t("home.logMeal")}</Text>
           </Pressable>
           <Pressable
             onPress={() => { onToggle(); router.push("/workouts/log"); }}
             style={[styles.fabOption, { backgroundColor: theme.card, borderColor: theme.border }]}
           >
             <Feather name="activity" size={18} color={theme.primary} />
-            <Text style={[styles.fabOptionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>Log Workout</Text>
+            <Text style={[styles.fabOptionText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{t("home.logWorkout")}</Text>
           </Pressable>
         </>
       )}

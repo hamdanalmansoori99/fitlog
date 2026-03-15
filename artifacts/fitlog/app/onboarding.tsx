@@ -12,6 +12,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface OnboardingData {
@@ -149,6 +150,7 @@ function NumberInput({
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function OnboardingScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -244,6 +246,70 @@ export default function OnboardingScreen() {
 
   const progress = (step + 1) / TOTAL_STEPS;
 
+  const genderLabels: Record<string, string> = {
+    "Male": t("onboarding.male"),
+    "Female": t("onboarding.female"),
+    "Other": t("onboarding.other"),
+    "Prefer not to say": t("onboarding.preferNotToSay"),
+  };
+
+  const fitnessGoalLabels: Record<string, { label: string; desc: string }> = {
+    "Lose weight": { label: t("onboarding.loseWeight"), desc: t("onboarding.loseWeightDesc") },
+    "Build muscle": { label: t("onboarding.buildMuscle"), desc: t("onboarding.buildMuscleDesc") },
+    "Get stronger": { label: t("onboarding.getStronger"), desc: t("onboarding.getStrongerDesc") },
+    "Stay active": { label: t("onboarding.stayActive"), desc: t("onboarding.stayActiveDesc") },
+    "Improve endurance": { label: t("onboarding.improveEndurance"), desc: t("onboarding.improveEnduranceDesc") },
+    "Improve flexibility": { label: t("onboarding.improveFlexibility"), desc: t("onboarding.improveFlexibilityDesc") },
+  };
+
+  const activityLevelLabels: Record<string, { label: string; desc: string }> = {
+    "sedentary": { label: t("onboarding.sedentary"), desc: t("onboarding.sedentaryDesc") },
+    "lightly_active": { label: t("onboarding.lightlyActive"), desc: t("onboarding.lightlyActiveDesc") },
+    "moderately_active": { label: t("onboarding.moderatelyActive"), desc: t("onboarding.moderatelyActiveDesc") },
+    "very_active": { label: t("onboarding.veryActive"), desc: t("onboarding.veryActiveDesc") },
+    "extra_active": { label: t("onboarding.extraActive"), desc: t("onboarding.extraActiveDesc") },
+  };
+
+  const equipmentLabels: Record<string, string> = {
+    "none": t("onboarding.bodyweightOnly"),
+    "dumbbells": t("onboarding.dumbbells"),
+    "barbell": t("onboarding.barbell"),
+    "bench": t("onboarding.bench"),
+    "pullup_bar": t("onboarding.pullUpBar"),
+    "resistance_bands": t("onboarding.resistanceBands"),
+    "kettlebells": t("onboarding.kettlebells"),
+    "cable_machine": t("onboarding.cableMachine"),
+    "smith_machine": t("onboarding.smithMachine"),
+    "leg_press": t("onboarding.legPress"),
+    "treadmill": t("onboarding.treadmill"),
+    "stationary_bike": t("onboarding.stationaryBike"),
+    "rowing_machine": t("onboarding.rowingMachine"),
+    "yoga_mat": t("onboarding.yogaMat"),
+    "jump_rope": t("onboarding.jumpRope"),
+    "tennis_racket": t("onboarding.tennisRacket"),
+    "swimming_pool": t("onboarding.swimmingPool"),
+  };
+
+  const locationLabels: Record<string, { label: string; desc: string }> = {
+    "Home": { label: t("onboarding.home"), desc: t("onboarding.homeDesc") },
+    "Gym": { label: t("onboarding.gym"), desc: t("onboarding.gymDesc") },
+    "Outdoors": { label: t("onboarding.outdoors"), desc: t("onboarding.outdoorsDesc") },
+    "Mixed": { label: t("onboarding.mixed"), desc: t("onboarding.mixedDesc") },
+  };
+
+  const durationLabels: Record<string, { label: string; sub: string }> = {
+    "15 minutes": { label: t("onboarding.fifteenMin"), sub: t("onboarding.quickSessions") },
+    "30 minutes": { label: t("onboarding.thirtyMin"), sub: t("onboarding.halfHour") },
+    "45 minutes": { label: t("onboarding.fortyFiveMin"), sub: t("onboarding.standardSession") },
+    "60+ minutes": { label: t("onboarding.sixtyPlusMin"), sub: t("onboarding.longSessions") },
+  };
+
+  const experienceLabels: Record<string, { label: string; desc: string }> = {
+    "Beginner": { label: t("onboarding.beginner"), desc: t("onboarding.beginnerDesc") },
+    "Intermediate": { label: t("onboarding.intermediate"), desc: t("onboarding.intermediateDesc") },
+    "Advanced": { label: t("onboarding.advanced"), desc: t("onboarding.advancedDesc") },
+  };
+
   const renderStep = () => {
     switch (step) {
 
@@ -251,10 +317,10 @@ export default function OnboardingScreen() {
       case 0:
         return (
           <>
-            <StepHeader title="What's your name?" subtitle="We'll use this to personalise your experience." />
+            <StepHeader title={t("onboarding.whatsYourName")} subtitle={t("onboarding.nameSubtitle")} />
             <View style={styles.inputGroup}>
               <View style={[styles.textInputWrap, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                <Text style={[styles.textInputLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>First name *</Text>
+                <Text style={[styles.textInputLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("onboarding.firstNameRequired")}</Text>
                 <TextInput
                   value={data.firstName}
                   onChangeText={v => set("firstName", v)}
@@ -265,7 +331,7 @@ export default function OnboardingScreen() {
                 />
               </View>
               <View style={[styles.textInputWrap, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                <Text style={[styles.textInputLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Last name (optional)</Text>
+                <Text style={[styles.textInputLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("onboarding.lastNameOptional")}</Text>
                 <TextInput
                   value={data.lastName}
                   onChangeText={v => set("lastName", v)}
@@ -283,16 +349,16 @@ export default function OnboardingScreen() {
       case 1:
         return (
           <>
-            <StepHeader title="How old are you?" subtitle="Used to calculate your recommended targets." />
+            <StepHeader title={t("onboarding.howOld")} subtitle={t("onboarding.ageSubtitle")} />
             <NumberInput
-              label="Age"
+              label={t("onboarding.age")}
               value={data.age}
               onChange={v => set("age", v.replace(/[^0-9]/g, ""))}
               placeholder="e.g. 28"
-              suffix="years"
+              suffix={t("onboarding.years")}
             />
             <Text style={[styles.groupLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-              Gender (optional)
+              {t("onboarding.genderOptional")}
             </Text>
             <View style={styles.chipRow}>
               {GENDER_OPTIONS.map(g => (
@@ -306,7 +372,7 @@ export default function OnboardingScreen() {
                 >
                   {data.gender === g && <Feather name="check" size={13} color={theme.primary} />}
                   <Text style={[styles.chipText, { color: data.gender === g ? theme.primary : theme.text, fontFamily: data.gender === g ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
-                    {g}
+                    {genderLabels[g] || g}
                   </Text>
                 </Pressable>
               ))}
@@ -318,10 +384,10 @@ export default function OnboardingScreen() {
       case 2:
         return (
           <>
-            <StepHeader title="Your body stats" subtitle="Used to personalise your calorie and macro targets." />
+            <StepHeader title={t("onboarding.bodyStats")} subtitle={t("onboarding.bodyStatsSubtitle")} />
             <View style={styles.inputGroup}>
               <NumberInput
-                label="Height"
+                label={t("onboarding.height")}
                 value={data.heightCm}
                 onChange={v => set("heightCm", v)}
                 placeholder="e.g. 175"
@@ -329,7 +395,7 @@ export default function OnboardingScreen() {
                 keyboardType="decimal-pad"
               />
               <NumberInput
-                label="Weight"
+                label={t("onboarding.weight")}
                 value={data.weightKg}
                 onChange={v => set("weightKg", v)}
                 placeholder="e.g. 75"
@@ -344,7 +410,7 @@ export default function OnboardingScreen() {
       case 3:
         return (
           <>
-            <StepHeader title="What's your main goal?" subtitle="We'll tailor your workouts and nutrition to match." />
+            <StepHeader title={t("onboarding.mainGoal")} subtitle={t("onboarding.goalSubtitle")} />
             <View style={styles.goalGrid}>
               {FITNESS_GOALS.map(g => {
                 const selected = data.fitnessGoal === g.id;
@@ -354,10 +420,10 @@ export default function OnboardingScreen() {
                       <Feather name={g.icon} size={22} color={selected ? theme.primary : theme.textMuted} />
                     </View>
                     <Text style={[styles.goalLabel, { color: selected ? theme.primary : theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                      {g.id}
+                      {fitnessGoalLabels[g.id]?.label || g.id}
                     </Text>
                     <Text style={[styles.goalDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {g.desc}
+                      {fitnessGoalLabels[g.id]?.desc || g.desc}
                     </Text>
                   </OptionCard>
                 );
@@ -370,7 +436,7 @@ export default function OnboardingScreen() {
       case 4:
         return (
           <>
-            <StepHeader title="How active are you now?" subtitle="Be honest — this affects your calorie recommendations." />
+            <StepHeader title={t("onboarding.howActive")} subtitle={t("onboarding.activeSubtitle")} />
             <View style={styles.listStack}>
               {ACTIVITY_LEVELS.map(a => {
                 const selected = data.activityLevel === a.id;
@@ -381,10 +447,10 @@ export default function OnboardingScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.listLabel, { color: selected ? theme.primary : theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                        {a.label}
+                        {activityLevelLabels[a.id]?.label || a.label}
                       </Text>
                       <Text style={[styles.listDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        {a.desc}
+                        {activityLevelLabels[a.id]?.desc || a.desc}
                       </Text>
                     </View>
                     {selected && <Feather name="check-circle" size={18} color={theme.primary} />}
@@ -399,7 +465,7 @@ export default function OnboardingScreen() {
       case 5:
         return (
           <>
-            <StepHeader title="What equipment do you have?" subtitle="Select everything available to you." />
+            <StepHeader title={t("onboarding.whatEquipment")} subtitle={t("onboarding.equipmentSubtitle")} />
             <View style={styles.chipGrid}>
               {EQUIPMENT_OPTIONS.map(eq => {
                 const selected = data.availableEquipment.includes(eq.id);
@@ -414,7 +480,7 @@ export default function OnboardingScreen() {
                   >
                     <Feather name={eq.icon} size={14} color={selected ? theme.primary : theme.textMuted} />
                     <Text style={[styles.equipLabel, { color: selected ? theme.primary : theme.text, fontFamily: selected ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
-                      {eq.label}
+                      {equipmentLabels[eq.id] || eq.label}
                     </Text>
                   </Pressable>
                 );
@@ -427,7 +493,7 @@ export default function OnboardingScreen() {
       case 6:
         return (
           <>
-            <StepHeader title="Where do you work out?" subtitle="This helps us suggest the right workouts." />
+            <StepHeader title={t("onboarding.whereWorkout")} subtitle={t("onboarding.whereSubtitle")} />
             <View style={styles.listStack}>
               {LOCATION_OPTIONS.map(l => {
                 const selected = data.workoutLocation === l.id;
@@ -438,10 +504,10 @@ export default function OnboardingScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.listLabel, { color: selected ? theme.primary : theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                        {l.label}
+                        {locationLabels[l.id]?.label || l.label}
                       </Text>
                       <Text style={[styles.listDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        {l.desc}
+                        {locationLabels[l.id]?.desc || l.desc}
                       </Text>
                     </View>
                     {selected && <Feather name="check-circle" size={18} color={theme.primary} />}
@@ -456,10 +522,10 @@ export default function OnboardingScreen() {
       case 7:
         return (
           <>
-            <StepHeader title="Your training schedule" subtitle="How often and how long do you want to train?" />
+            <StepHeader title={t("onboarding.trainingSchedule")} subtitle={t("onboarding.scheduleSubtitle")} />
 
             <Text style={[styles.groupLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-              Days per week
+              {t("onboarding.daysPerWeek")}
             </Text>
             <View style={styles.daysRow}>
               {DAYS_OPTIONS.map(d => {
@@ -482,7 +548,7 @@ export default function OnboardingScreen() {
             </View>
 
             <Text style={[styles.groupLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium", marginTop: 24 }]}>
-              Session length
+              {t("onboarding.sessionLength")}
             </Text>
             <View style={styles.durationGrid}>
               {DURATION_OPTIONS.map(dur => {
@@ -497,10 +563,10 @@ export default function OnboardingScreen() {
                     ]}
                   >
                     <Text style={[styles.durationLabel, { color: selected ? theme.primary : theme.text, fontFamily: "Inter_700Bold" }]}>
-                      {dur.label}
+                      {durationLabels[dur.id]?.label || dur.label}
                     </Text>
                     <Text style={[styles.durationSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {dur.sub}
+                      {durationLabels[dur.id]?.sub || dur.sub}
                     </Text>
                   </Pressable>
                 );
@@ -513,7 +579,7 @@ export default function OnboardingScreen() {
       case 8:
         return (
           <>
-            <StepHeader title="Experience level" subtitle="Be honest — we'll adjust everything accordingly." />
+            <StepHeader title={t("onboarding.experienceLevel")} subtitle={t("onboarding.experienceSubtitle")} />
             <View style={styles.listStack}>
               {EXPERIENCE_OPTIONS.map((e, idx) => {
                 const selected = data.experienceLevel === e.id;
@@ -527,10 +593,10 @@ export default function OnboardingScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.listLabel, { color: selected ? theme.primary : theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                        {e.label}
+                        {experienceLabels[e.id]?.label || e.label}
                       </Text>
                       <Text style={[styles.listDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                        {e.desc}
+                        {experienceLabels[e.id]?.desc || e.desc}
                       </Text>
                     </View>
                     {selected && <Feather name="check-circle" size={18} color={theme.primary} />}
@@ -555,17 +621,17 @@ export default function OnboardingScreen() {
             <Feather name="activity" size={42} color={theme.primary} />
           </View>
           <Text style={[styles.welcomeTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-            Welcome to FitLog
+            {t("onboarding.welcomeTitle")}
           </Text>
           <Text style={[styles.welcomeSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Let's build your personalised fitness plan. This takes about 2 minutes and unlocks everything — from AI coaching to custom workouts.
+            {t("onboarding.welcomeDescription")}
           </Text>
 
           <View style={styles.welcomeFeatures}>
             {[
-              { icon: "zap" as const, label: "AI-powered workout plans" },
-              { icon: "pie-chart" as const, label: "Nutrition tracking & coaching" },
-              { icon: "trending-up" as const, label: "Progress insights & goals" },
+              { icon: "zap" as const, label: t("onboarding.aiWorkoutPlans") },
+              { icon: "pie-chart" as const, label: t("onboarding.nutritionTracking") },
+              { icon: "trending-up" as const, label: t("onboarding.progressInsightsGoals") },
             ].map(f => (
               <View key={f.label} style={styles.welcomeFeatureRow}>
                 <View style={[styles.welcomeFeatureIcon, { backgroundColor: theme.primaryDim }]}>
@@ -576,7 +642,7 @@ export default function OnboardingScreen() {
             ))}
           </View>
 
-          <Button title="Let's get started" onPress={() => setPhase("steps")} style={{ marginTop: 8 }} />
+          <Button title={t("onboarding.letsGetStarted")} onPress={() => setPhase("steps")} style={{ marginTop: 8 }} />
         </Animated.View>
       </View>
     );
@@ -591,12 +657,12 @@ export default function OnboardingScreen() {
             <Feather name="check" size={48} color={theme.primary} />
           </View>
           <Text style={[styles.welcomeTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-            You're all set, {data.firstName || "there"}!
+            {t("onboarding.allSet")}{data.firstName ? `, ${data.firstName}` : ""}!
           </Text>
           <Text style={[styles.welcomeSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Your personalised plan is ready. Time to start your fitness journey.
+            {t("onboarding.allSetMessage")}
           </Text>
-          <Button title="Go to my dashboard" onPress={() => router.replace("/(tabs)")} style={{ marginTop: 16 }} />
+          <Button title={t("onboarding.goToMyDashboard")} onPress={() => router.replace("/(tabs)")} style={{ marginTop: 16 }} />
         </Animated.View>
       </View>
     );
@@ -646,7 +712,7 @@ export default function OnboardingScreen() {
       {/* Footer */}
       <View style={[styles.footer, { paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 12, borderTopColor: theme.border, backgroundColor: theme.background }]}>
         <Button
-          title={step === TOTAL_STEPS - 1 ? "Build my plan" : "Continue"}
+          title={step === TOTAL_STEPS - 1 ? t("onboarding.buildMyPlan") : t("common.continueText")}
           onPress={handleNext}
           disabled={!canAdvance()}
           loading={saveMutation.isPending}
@@ -654,7 +720,7 @@ export default function OnboardingScreen() {
         {step < TOTAL_STEPS - 1 && step > 0 && (
           <Pressable onPress={handleNext} style={styles.skipBtn}>
             <Text style={[styles.skipText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Skip this step
+              {t("onboarding.skipThisStep")}
             </Text>
           </Pressable>
         )}

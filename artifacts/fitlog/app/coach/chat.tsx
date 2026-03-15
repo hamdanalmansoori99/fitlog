@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/store/authStore";
 import { api, BASE_URL } from "@/lib/api";
 import { useTheme } from "@/hooks/useTheme";
@@ -55,8 +56,20 @@ const SUGGESTIONS = [
 
 export default function CoachChatScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const token = useAuthStore((s) => s.token);
+
+  const suggestions = [
+    t("coach.suggestion1"),
+    t("coach.suggestion2"),
+    t("coach.suggestion3"),
+    t("coach.suggestion4"),
+    t("coach.suggestion5"),
+    t("coach.suggestion6"),
+    t("coach.suggestion7"),
+    t("coach.suggestion8"),
+  ];
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -93,12 +106,12 @@ export default function CoachChatScreen() {
 
   const handleClear = () => {
     Alert.alert(
-      "Clear Chat",
-      "This will delete your entire conversation history with the AI Coach.",
+      t("coach.clearChat"),
+      t("coach.clearChatMessage"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Clear",
+          text: t("coach.clear"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -106,7 +119,7 @@ export default function CoachChatScreen() {
               setConversationId(data.id);
               setMessages([]);
             } catch (err) {
-              Alert.alert("Error", "Failed to clear conversation.");
+              Alert.alert(t("common.error"), t("coach.errorClearing"));
             }
           },
         },
@@ -202,7 +215,7 @@ export default function CoachChatScreen() {
               ? {
                   ...m,
                   content:
-                    "Sorry, I'm having trouble connecting right now. Please try again.",
+                    t("coach.connectionError"),
                   streaming: false,
                 }
               : m
@@ -273,7 +286,7 @@ export default function CoachChatScreen() {
         </Pressable>
         <View style={styles.headerCenter}>
           <View style={styles.headerDot} />
-          <Text style={[styles.headerTitle, { color: theme.text }]}>AI Coach</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>{t("coach.aiCoach")}</Text>
         </View>
         <Pressable onPress={handleClear} style={styles.headerBtn} hitSlop={8}>
           <Feather name="trash-2" size={18} color={theme.textMuted} />
@@ -284,7 +297,7 @@ export default function CoachChatScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={theme.primary} size="large" />
           <Text style={[styles.loadingText, { color: theme.textMuted }]}>
-            Loading your conversation...
+            {t("coach.loadingConversation")}
           </Text>
         </View>
       ) : (
@@ -303,18 +316,18 @@ export default function CoachChatScreen() {
                 <Text style={{ fontSize: 48 }}>🤖</Text>
               </View>
               <Text style={[styles.emptyTitle, { color: theme.text }]}>
-                Your AI Fitness Coach
+                {t("coach.yourAICoach")}
               </Text>
               <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
-                Ask me anything about training, workouts, or how to reach your goals. I know your history and equipment.
+                {t("coach.coachDescription")}
               </Text>
               <Text style={[styles.suggestionsLabel, { color: theme.textMuted }]}>
-                Try asking:
+                {t("coach.tryAsking")}
               </Text>
               <View style={styles.suggestionsGrid}>
-                {SUGGESTIONS.map((s) => (
+                {suggestions.map((s, i) => (
                   <Pressable
-                    key={s}
+                    key={i}
                     style={({ pressed }) => [
                       styles.suggestionChip,
                       { backgroundColor: theme.card, borderColor: theme.border },
@@ -346,7 +359,7 @@ export default function CoachChatScreen() {
           <View style={[styles.inputBar, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.background }]}
-              placeholder="Ask your coach anything..."
+              placeholder={t("coach.askPlaceholder")}
               placeholderTextColor={theme.textMuted}
               value={input}
               onChangeText={setInput}
@@ -380,9 +393,9 @@ export default function CoachChatScreen() {
               contentContainerStyle={styles.quickChips}
               keyboardShouldPersistTaps="handled"
             >
-              {SUGGESTIONS.slice(0, 4).map((s) => (
+              {suggestions.slice(0, 4).map((s, i) => (
                 <Pressable
-                  key={s}
+                  key={i}
                   style={({ pressed }) => [
                     styles.quickChip,
                     { backgroundColor: theme.card, borderColor: theme.border },

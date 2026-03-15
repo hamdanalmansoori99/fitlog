@@ -21,9 +21,11 @@ import { PremiumBadge } from "@/components/PremiumBadge";
 import { WorkoutCalendar } from "@/components/WorkoutCalendar";
 import { usePhotoStore } from "@/store/photoStore";
 import * as ImagePicker from "expo-image-picker";
+import { useTranslation } from "react-i18next";
 
 function MiniLineChart({ data, color, unit, showTrend = true }: { data: number[]; color: string; unit?: string; showTrend?: boolean }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   if (data.length === 0) return null;
 
@@ -31,7 +33,7 @@ function MiniLineChart({ data, color, unit, showTrend = true }: { data: number[]
     return (
       <View style={{ height: 60, alignItems: "center", justifyContent: "center" }}>
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textAlign: "center" }}>
-          Log more entries to see your trend
+          {t("progress.logMoreEntries")}
         </Text>
       </View>
     );
@@ -73,7 +75,7 @@ function MiniLineChart({ data, color, unit, showTrend = true }: { data: number[]
             color={delta < -0.05 ? theme.primary : delta > 0.05 ? theme.danger : theme.textMuted}
           />
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-            {delta > 0 ? "+" : ""}{delta.toFixed(1)}{unitLabel ? ` ${unitLabel}` : ""} over {data.length} entries
+            {delta > 0 ? "+" : ""}{delta.toFixed(1)}{unitLabel ? ` ${unitLabel}` : ""} {t("progress.entries", { count: data.length })}
           </Text>
         </View>
       )}
@@ -90,13 +92,14 @@ const DONUT_CY = DONUT_SIZE / 2;
 
 function DonutChart({ data }: { data: { label: string; value: number; color: string }[] }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const total = data.reduce((s, d) => s + Math.max(d.value, 0), 0);
 
   if (total === 0) {
     return (
       <View style={styles.pieChart}>
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
-          No macro data yet
+          {t("progress.noMacroData")}
         </Text>
       </View>
     );
@@ -163,6 +166,7 @@ function StreakCard({ icon, value, label, color }: { icon: keyof typeof Feather.
 
 export default function ProgressScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [measureDays, setMeasureDays] = useState(60);
   const [photoViewer, setPhotoViewer] = useState<string | null>(null);
@@ -182,9 +186,9 @@ export default function ProgressScreen() {
       }
       return;
     }
-    Alert.alert("Add Progress Photo", "Choose source", [
+    Alert.alert(t("progress.addProgressPhoto"), t("progress.chooseSource"), [
       {
-        text: "Camera", onPress: async () => {
+        text: t("progress.camera"), onPress: async () => {
           const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
           if (!result.canceled && result.assets[0]) {
             addPhoto({ uri: result.assets[0].uri, date: new Date().toISOString().split("T")[0], note: "" });
@@ -192,21 +196,21 @@ export default function ProgressScreen() {
         }
       },
       {
-        text: "Photo Library", onPress: async () => {
+        text: t("progress.photoLibrary"), onPress: async () => {
           const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
           if (!result.canceled && result.assets[0]) {
             addPhoto({ uri: result.assets[0].uri, date: new Date().toISOString().split("T")[0], note: "" });
           }
         }
       },
-      { text: "Cancel", style: "cancel" },
+      { text: t("common.cancel"), style: "cancel" },
     ]);
   }
 
   function handleDeletePhoto(id: string) {
-    Alert.alert("Delete Photo?", "This cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deletePhoto(id) },
+    Alert.alert(t("progress.deletePhoto"), t("progress.deletePhotoMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.delete"), style: "destructive", onPress: () => deletePhoto(id) },
     ]);
   }
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -243,11 +247,11 @@ export default function ProgressScreen() {
   }
 
   const metricDefs = [
-    { key: "bodyFatPercent", label: "Body Fat", unit: "%", icon: "activity" as const, color: "#e040fb", field: "bodyFatPercent" },
-    { key: "waistCm", label: "Waist", unit: useImperial ? "in" : "cm", icon: "maximize" as const, color: "#448aff", field: "waistCm", imperial: 0.393701 },
-    { key: "chestCm", label: "Chest", unit: useImperial ? "in" : "cm", icon: "shield" as const, color: "#00e676", field: "chestCm", imperial: 0.393701 },
-    { key: "hipsCm", label: "Hips", unit: useImperial ? "in" : "cm", icon: "circle" as const, color: "#ffab40", field: "hipsCm", imperial: 0.393701 },
-    { key: "armsCm", label: "Arms", unit: useImperial ? "in" : "cm", icon: "zap" as const, color: "#ff6d00", field: "armsCm", imperial: 0.393701 },
+    { key: "bodyFatPercent", label: t("progress.bodyFat"), unit: "%", icon: "activity" as const, color: "#e040fb", field: "bodyFatPercent" },
+    { key: "waistCm", label: t("progress.waist"), unit: useImperial ? "in" : "cm", icon: "maximize" as const, color: "#448aff", field: "waistCm", imperial: 0.393701 },
+    { key: "chestCm", label: t("progress.chest"), unit: useImperial ? "in" : "cm", icon: "shield" as const, color: "#00e676", field: "chestCm", imperial: 0.393701 },
+    { key: "hipsCm", label: t("progress.hips"), unit: useImperial ? "in" : "cm", icon: "circle" as const, color: "#ffab40", field: "hipsCm", imperial: 0.393701 },
+    { key: "armsCm", label: t("progress.arms"), unit: useImperial ? "in" : "cm", icon: "zap" as const, color: "#ff6d00", field: "armsCm", imperial: 0.393701 },
   ];
 
   const metricResults = metricDefs.map(def => {
@@ -317,13 +321,13 @@ export default function ProgressScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
-        <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Progress</Text>
+        <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("progress.title")}</Text>
         <Pressable
           onPress={() => router.push("/measurements/add")}
           style={[styles.addBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
         >
           <Feather name="plus" size={18} color={theme.primary} />
-          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Log</Text>
+          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("progress.log")}</Text>
         </Pressable>
       </View>
       
@@ -333,13 +337,13 @@ export default function ProgressScreen() {
       >
         {/* Workout History Calendar */}
         <Animated.View entering={FadeInDown.duration(350)}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Workout History</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.workoutHistory")}</Text>
           <WorkoutCalendar />
         </Animated.View>
 
         {/* Goal-based insights */}
         <Animated.View entering={FadeInDown.delay(20).duration(350)}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Goal Insights</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.goalInsights")}</Text>
           <GoalInsightsPanel
             insights={goalInsights}
             goals={profile?.fitnessGoals || []}
@@ -349,7 +353,7 @@ export default function ProgressScreen() {
 
         {/* Streaks */}
         <Animated.View entering={FadeInDown.delay(40).duration(350)}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Streaks</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.streaksTitle")}</Text>
           {streaksLoading ? (
             <View style={styles.streaksRow}>
               {[0, 1, 2].map(i => (
@@ -362,9 +366,9 @@ export default function ProgressScreen() {
             </View>
           ) : (
             <View style={styles.streaksRow}>
-              <StreakCard icon="zap" value={streaks?.currentWorkoutStreak || 0} label="Workout Streak" color={theme.primary} />
-              <StreakCard icon="award" value={streaks?.longestWorkoutStreak || 0} label="Longest Streak" color={theme.warning} />
-              <StreakCard icon="coffee" value={streaks?.currentMealStreak || 0} label="Meal Streak" color={theme.pink} />
+              <StreakCard icon="zap" value={streaks?.currentWorkoutStreak || 0} label={t("progress.workoutStreak")} color={theme.primary} />
+              <StreakCard icon="award" value={streaks?.longestWorkoutStreak || 0} label={t("progress.longestStreak")} color={theme.warning} />
+              <StreakCard icon="coffee" value={streaks?.currentMealStreak || 0} label={t("progress.mealStreak")} color={theme.pink} />
             </View>
           )}
         </Animated.View>
@@ -372,13 +376,13 @@ export default function ProgressScreen() {
         {/* Progress Photos */}
         <Animated.View entering={FadeInDown.delay(45).duration(350)}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>Progress Photos</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("progress.progressPhotos")}</Text>
             <Pressable
               onPress={handleAddPhoto}
               style={[styles.addBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
             >
               <Feather name="camera" size={14} color={theme.primary} />
-              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Add</Text>
+              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("progress.addPhoto")}</Text>
             </Pressable>
           </View>
 
@@ -387,16 +391,16 @@ export default function ProgressScreen() {
               <View style={[styles.emptyPhotoIcon, { backgroundColor: theme.cardAlt }]}>
                 <Feather name="camera" size={22} color={theme.textMuted} />
               </View>
-              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>No photos yet</Text>
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("progress.noPhotosYet")}</Text>
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", lineHeight: 18, maxWidth: 230 }}>
-                Track your body transformation by adding progress photos over time.
+                {t("progress.trackTransformation")}
               </Text>
               <Pressable
                 onPress={handleAddPhoto}
                 style={[{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, marginTop: 4, borderColor: theme.primary + "50", backgroundColor: theme.primary + "15" }]}
               >
                 <Feather name="camera" size={14} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Take a photo</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("progress.takePhoto")}</Text>
               </Pressable>
             </View>
           ) : (
@@ -405,7 +409,7 @@ export default function ProgressScreen() {
               {photos.length >= 2 && (
                 <View style={[styles.compareRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
                   <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>FIRST</Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("progress.first")}</Text>
                     <Pressable onPress={() => setPhotoViewer(photos[0].uri)}>
                       <Image
                         source={{ uri: photos[0].uri }}
@@ -419,7 +423,7 @@ export default function ProgressScreen() {
                   </View>
                   <View style={{ width: 1, backgroundColor: theme.border, marginVertical: 8 }} />
                   <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>LATEST</Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("progress.latest")}</Text>
                     <Pressable onPress={() => setPhotoViewer(photos[photos.length - 1].uri)}>
                       <Image
                         source={{ uri: photos[photos.length - 1].uri }}
@@ -475,20 +479,20 @@ export default function ProgressScreen() {
             </SkeletonCard>
           ) : (
             <Card>
-              <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Workout Stats</Text>
+              <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.workoutStats")}</Text>
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
                   <Text style={[styles.statValue, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
                     {workoutSummary?.totalThisWeek || 0}
                   </Text>
-                  <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>This Week</Text>
+                  <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("progress.thisWeek")}</Text>
                 </View>
                 <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
                 <View style={styles.statItem}>
                   <Text style={[styles.statValue, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
                     {workoutSummary?.totalThisMonth || 0}
                   </Text>
-                  <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>This Month</Text>
+                  <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("progress.thisMonth")}</Text>
                 </View>
               </View>
             </Card>
@@ -507,7 +511,7 @@ export default function ProgressScreen() {
           </SkeletonCard>
         ) : workoutSummary?.weeklyFrequency ? (
           <Card>
-            <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Workouts per Week</Text>
+            <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.workoutsPerWeek")}</Text>
             <WeeklyBarChart
               data={workoutSummary.weeklyFrequency.map((w: any, idx: number, arr: any[]) => {
                 const weeksAgo = arr.length - 1 - idx;
@@ -519,7 +523,7 @@ export default function ProgressScreen() {
                   valueLabel: w.count === 0 ? "" : String(w.count),
                 };
               })}
-              emptyMessage="No workouts logged yet"
+              emptyMessage={t("progress.noWorkoutsLogged")}
             />
           </Card>
         ) : null}
@@ -529,7 +533,7 @@ export default function ProgressScreen() {
           <PremiumGate feature="advancedAnalytics" minHeight={180}>
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-              <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>Activity Breakdown</Text>
+              <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("progress.activityBreakdown")}</Text>
               <PremiumBadge small />
             </View>
             <DonutChart
@@ -546,14 +550,14 @@ export default function ProgressScreen() {
         {/* Body Measurements */}
         <View>
           <View style={styles.measureHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Body Measurements</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.bodyMeasurements")}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Pressable
                 onPress={() => router.push("/measurements/add")}
                 style={[styles.measureLogBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "40" }]}
               >
                 <Feather name="plus" size={13} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>Log measurement</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{t("progress.logMeasurement")}</Text>
               </Pressable>
               <View style={styles.rangeRow}>
                 {[60, 90, 365].map(d => (
@@ -597,7 +601,7 @@ export default function ProgressScreen() {
                 <Card>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                     <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      Weight over time
+                      {t("progress.weightOverTime")}
                     </Text>
                     <PremiumBadge small />
                   </View>
@@ -607,7 +611,7 @@ export default function ProgressScreen() {
                       {weightData[weightData.length - 1]?.toFixed(1)} {weightUnit}
                     </Text>
                     <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }]}>
-                      Current weight
+                      {t("progress.currentWeight")}
                     </Text>
                   </View>
                 </Card>
@@ -665,7 +669,7 @@ export default function ProgressScreen() {
                         </View>
                       ) : (
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 8 }}>
-                          {hasData ? "Log more entries to see trend" : "No data yet — tap to log"}
+                          {hasData ? t("progress.logMoreToSeeTrend") : t("progress.noDataTapToLog")}
                         </Text>
                       )}
                     </Pressable>
@@ -681,17 +685,17 @@ export default function ProgressScreen() {
                     <Feather name="trending-up" size={24} color={theme.primary} />
                   </View>
                   <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                    No measurements yet
+                    {t("progress.noMeasurements")}
                   </Text>
                   <Text style={[styles.emptyDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    Log your weight and body measurements to visualise your progress over time.
+                    {t("progress.logMeasurementsMessage")}
                   </Text>
                   <Pressable
                     onPress={() => router.push("/measurements/add")}
                     style={[styles.emptyBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "50" }]}
                   >
                     <Feather name="plus" size={14} color={theme.primary} />
-                    <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Log measurement</Text>
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("progress.logMeasurement")}</Text>
                   </Pressable>
                 </View>
               </Card>
@@ -717,26 +721,26 @@ export default function ProgressScreen() {
           </SkeletonCard>
         ) : nutritionStats ? (
           <Card>
-            <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Nutrition</Text>
+            <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.nutrition")}</Text>
             <View style={styles.statsGrid}>
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: theme.orange, fontFamily: "Inter_700Bold" }]}>
                   {Math.round(nutritionStats.avg7DayCalories || 0)}
                 </Text>
-                <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>7-day avg kcal</Text>
+                <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("progress.sevenDayAvgKcal")}</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: theme.orange, fontFamily: "Inter_700Bold" }]}>
                   {Math.round(nutritionStats.avg30DayCalories || 0)}
                 </Text>
-                <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>30-day avg kcal</Text>
+                <Text style={[styles.statLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("progress.thirtyDayAvgKcal")}</Text>
               </View>
             </View>
             {caloriesData.length >= 2 && (
               <View style={{ marginTop: 12 }}>
                 <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 4 }]}>
-                  Calorie trend (last {caloriesData.length} days)
+                  {t("progress.calorieTrend", { count: caloriesData.length })}
                 </Text>
                 <View style={{ height: 44, flexDirection: "row", alignItems: "flex-end", gap: 2 }}>
                   {caloriesData.map((v: number, i: number) => {
@@ -762,15 +766,15 @@ export default function ProgressScreen() {
             <View style={{ marginTop: 12 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                 <Text style={[styles.cardSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Macro split (30-day avg)
+                  {t("progress.macroSplit")}
                 </Text>
                 <PremiumBadge small />
               </View>
               <DonutChart
                 data={[
-                  { label: "Protein", value: nutritionStats.macroSplit?.proteinPercentage || 0, color: theme.secondary },
-                  { label: "Carbs", value: nutritionStats.macroSplit?.carbsPercentage || 0, color: theme.warning },
-                  { label: "Fat", value: nutritionStats.macroSplit?.fatPercentage || 0, color: theme.orange },
+                  { label: t("common.protein"), value: nutritionStats.macroSplit?.proteinPercentage || 0, color: theme.secondary },
+                  { label: t("common.carbs"), value: nutritionStats.macroSplit?.carbsPercentage || 0, color: theme.warning },
+                  { label: t("common.fat"), value: nutritionStats.macroSplit?.fatPercentage || 0, color: theme.orange },
                 ]}
               />
             </View>
@@ -782,16 +786,16 @@ export default function ProgressScreen() {
               <View style={[styles.emptyIconWrap, { backgroundColor: theme.cardAlt }]}>
                 <Feather name="coffee" size={22} color={theme.textMuted} />
               </View>
-              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>No nutrition data yet</Text>
+              <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.noNutritionData")}</Text>
               <Text style={[styles.emptyDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Log meals to see your calorie and macro breakdown here.
+                {t("progress.logMealsToSee")}
               </Text>
               <Pressable
                 onPress={() => router.push("/meals/add" as any)}
                 style={[styles.emptyBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "50" }]}
               >
                 <Feather name="plus" size={14} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Log first meal</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("progress.logFirstMeal")}</Text>
               </Pressable>
             </View>
           </Card>
@@ -799,7 +803,7 @@ export default function ProgressScreen() {
         
         {/* Personal Records */}
         <View style={{ marginBottom: 8 }}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Personal Records</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.personalRecords")}</Text>
           {recordsLoading ? (
             <View style={{ gap: 8 }}>
               {[0, 1, 2].map(i => (
@@ -853,9 +857,9 @@ export default function ProgressScreen() {
                 <View style={[styles.emptyIconWrap, { backgroundColor: theme.cardAlt }]}>
                   <Feather name="award" size={22} color={theme.textMuted} />
                 </View>
-                <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>No PRs yet</Text>
+                <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.noPRsYet")}</Text>
                 <Text style={[styles.emptyDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Log gym workouts to automatically track your personal bests.
+                  {t("progress.logGymWorkouts")}
                 </Text>
               </View>
             </Card>
@@ -869,7 +873,7 @@ export default function ProgressScreen() {
           {photoViewer && (
             <Image source={{ uri: photoViewer }} style={{ width: "100%", height: "80%" }} resizeMode="contain" />
           )}
-          <Text style={{ color: "#ffffff99", fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 16 }}>Tap anywhere to close</Text>
+          <Text style={{ color: "#ffffff99", fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 16 }}>{t("progress.tapToClose")}</Text>
         </Pressable>
       </Modal>
     </View>

@@ -13,6 +13,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { useTranslation } from "react-i18next";
 
 interface RecoveryLog {
   id: number;
@@ -32,71 +33,70 @@ interface Props {
 const SLEEP_HOURS = [5, 6, 7, 8, 9];
 
 const SLEEP_QUALITY_OPTIONS = [
-  { value: 1, label: "😴", desc: "Terrible" },
-  { value: 2, label: "😕", desc: "Poor" },
-  { value: 3, label: "😐", desc: "Okay" },
-  { value: 4, label: "😊", desc: "Good" },
-  { value: 5, label: "✨", desc: "Great" },
+  { value: 1, label: "😴", descKey: "terrible" },
+  { value: 2, label: "😕", descKey: "poor" },
+  { value: 3, label: "😐", descKey: "okay" },
+  { value: 4, label: "😊", descKey: "good" },
+  { value: 5, label: "✨", descKey: "great" },
 ];
 
 const ENERGY_OPTIONS = [
-  { value: 1, label: "🥱", desc: "Drained" },
-  { value: 2, label: "😕", desc: "Low" },
-  { value: 3, label: "😐", desc: "Okay" },
-  { value: 4, label: "⚡", desc: "High" },
-  { value: 5, label: "🔥", desc: "Peak" },
+  { value: 1, label: "🥱", descKey: "drained" },
+  { value: 2, label: "😕", descKey: "low" },
+  { value: 3, label: "😐", descKey: "okay" },
+  { value: 4, label: "⚡", descKey: "high" },
+  { value: 5, label: "🔥", descKey: "peak" },
 ];
 
 const STRESS_OPTIONS = [
-  { value: 1, label: "😌", desc: "Chill" },
-  { value: 2, label: "🙂", desc: "Low" },
-  { value: 3, label: "😐", desc: "Some" },
-  { value: 4, label: "😤", desc: "High" },
-  { value: 5, label: "🤯", desc: "Max" },
+  { value: 1, label: "😌", descKey: "chill" },
+  { value: 2, label: "🙂", descKey: "low" },
+  { value: 3, label: "😐", descKey: "some" },
+  { value: 4, label: "😤", descKey: "high" },
+  { value: 5, label: "🤯", descKey: "max" },
 ];
 
 const SORENESS_PARTS = [
-  { key: "legs", label: "Legs" },
-  { key: "glutes", label: "Glutes" },
-  { key: "chest", label: "Chest" },
-  { key: "back", label: "Back" },
-  { key: "shoulders", label: "Shoulders" },
-  { key: "arms", label: "Arms" },
-  { key: "core", label: "Core" },
+  { key: "legs", labelKey: "legs" },
+  { key: "glutes", labelKey: "glutes" },
+  { key: "chest", labelKey: "chest" },
+  { key: "back", labelKey: "back" },
+  { key: "shoulders", labelKey: "shoulders" },
+  { key: "arms", labelKey: "arms" },
+  { key: "core", labelKey: "core" },
 ];
 
-const SORENESS_LEVELS = [
-  { value: 0, label: "None", color: null },
-  { value: 1, label: "Mild", color: "#ffab40" },
-  { value: 2, label: "Moderate", color: "#ff7043" },
-  { value: 3, label: "Severe", color: "#ef5350" },
+const SORENESS_LEVELS_DATA = [
+  { value: 0, labelKey: "none", color: null },
+  { value: 1, labelKey: "mild", color: "#ffab40" },
+  { value: 2, labelKey: "moderate", color: "#ff7043" },
+  { value: 3, labelKey: "severe", color: "#ef5350" },
 ];
 
 function sorenessColor(level: number): string | null {
-  return SORENESS_LEVELS[level]?.color ?? null;
+  return SORENESS_LEVELS_DATA[level]?.color ?? null;
 }
 
-function sorenessLabel(level: number): string {
-  return SORENESS_LEVELS[level]?.label ?? "None";
-}
+function getRecoveryInfluence(log: RecoveryLog, t: any): string | null {
+  const soreness = log.soreness ?? {};
+  const legSore = Math.max(soreness["legs"] ?? 0, soreness["glutes"] ?? 0);
+  const upperSore = Math.max(
+    soreness["chest"] ?? 0, soreness["back"] ?? 0,
+    soreness["shoulders"] ?? 0, soreness["arms"] ?? 0
+  );
+  const energy = log.energyLevel ?? 3;
+  const sleep = log.sleepQuality ?? 3;
 
-function recoverySummary(log: RecoveryLog): string {
-  const parts: string[] = [];
-  if (log.sleepHours) parts.push(`${log.sleepHours}h sleep`);
-  if (log.energyLevel) {
-    const e = ENERGY_OPTIONS.find((o) => o.value === log.energyLevel);
-    if (e) parts.push(`${e.label} Energy ${log.energyLevel}/5`);
-  }
-  const soreEntries = Object.entries(log.soreness ?? {}).filter(([, v]) => v > 0);
-  if (soreEntries.length > 0) {
-    const worst = soreEntries.reduce((a, b) => (b[1] > a[1] ? b : a));
-    const part = SORENESS_PARTS.find((p) => p.key === worst[0]);
-    parts.push(`${part?.label ?? worst[0]}: ${sorenessLabel(worst[1])}`);
-  }
-  return parts.join("  ·  ") || "Logged";
+  if (legSore >= 2 && upperSore >= 2) return t("components.recoveryCheckIn.influenceHighSoreness");
+  if (legSore >= 2) return t("components.recoveryCheckIn.influenceLegSore");
+  if (upperSore >= 2) return t("components.recoveryCheckIn.influenceUpperSore");
+  if (energy >= 4 && sleep >= 4) return t("components.recoveryCheckIn.influenceGreatEnergy");
+  if (energy <= 2 || sleep <= 2) return t("components.recoveryCheckIn.influenceLowEnergy");
+  return null;
 }
 
 export function RecoveryCheckIn({ todayLog, theme }: Props) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
 
@@ -146,12 +146,16 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
       queryClient.invalidateQueries({ queryKey: ["recoveryToday"] });
       setExpanded(false);
     },
-    onError: (err: any) => Alert.alert("Error", err?.message || "Failed to save recovery log. Please try again."),
+    onError: (err: any) => Alert.alert(t("components.recoveryCheckIn.errorTitle"), err?.message || t("components.recoveryCheckIn.errorMessage")),
   });
+
+  const sorenessLabel = (level: number): string => {
+    const key = SORENESS_LEVELS_DATA[level]?.labelKey ?? "none";
+    return t(`components.recoveryCheckIn.${key}`);
+  };
 
   const s = styles(theme);
 
-  // ── Checked-in summary view ─────────────────────────────────────────────────
   if (todayLog && !expanded) {
     return (
       <View style={s.card}>
@@ -160,13 +164,13 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
             <View style={s.iconBadge}>
               <Feather name="activity" size={14} color={theme.primary} />
             </View>
-            <Text style={s.cardTitle}>Recovery</Text>
+            <Text style={s.cardTitle}>{t("components.recoveryCheckIn.recovery")}</Text>
             <View style={s.doneBadge}>
-              <Text style={s.doneBadgeText}>✓ Logged</Text>
+              <Text style={s.doneBadgeText}>{t("components.recoveryCheckIn.logged")}</Text>
             </View>
           </View>
           <Pressable onPress={() => setExpanded(true)} hitSlop={8}>
-            <Text style={s.editLink}>Edit</Text>
+            <Text style={s.editLink}>{t("components.recoveryCheckIn.edit")}</Text>
           </Pressable>
         </View>
 
@@ -182,7 +186,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
               <Text style={s.summaryChipEmoji}>
                 {SLEEP_QUALITY_OPTIONS.find((o) => o.value === todayLog.sleepQuality)?.label}
               </Text>
-              <Text style={s.summaryChipText}>Sleep {todayLog.sleepQuality}/5</Text>
+              <Text style={s.summaryChipText}>{t("components.recoveryCheckIn.sleepLabel", { value: todayLog.sleepQuality })}</Text>
             </View>
           )}
           {todayLog.energyLevel != null && (
@@ -190,7 +194,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
               <Text style={s.summaryChipEmoji}>
                 {ENERGY_OPTIONS.find((o) => o.value === todayLog.energyLevel)?.label}
               </Text>
-              <Text style={s.summaryChipText}>Energy {todayLog.energyLevel}/5</Text>
+              <Text style={s.summaryChipText}>{t("components.recoveryCheckIn.energyLabel", { value: todayLog.energyLevel })}</Text>
             </View>
           )}
           {todayLog.stressLevel != null && todayLog.stressLevel >= 4 && (
@@ -198,7 +202,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
               <Text style={s.summaryChipEmoji}>
                 {STRESS_OPTIONS.find((o) => o.value === todayLog.stressLevel)?.label}
               </Text>
-              <Text style={[s.summaryChipText, { color: "#ff7043" }]}>High stress</Text>
+              <Text style={[s.summaryChipText, { color: "#ff7043" }]}>{t("components.recoveryCheckIn.highStress")}</Text>
             </View>
           )}
         </View>
@@ -216,7 +220,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
                     style={[s.soreChip, col ? { borderColor: col, backgroundColor: col + "22" } : {}]}
                   >
                     <Text style={[s.soreChipText, col ? { color: col } : {}]}>
-                      {part?.label ?? key}
+                      {part ? t(`components.recoveryCheckIn.${part.labelKey}`) : key}
                     </Text>
                   </View>
                 );
@@ -224,18 +228,16 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
           </View>
         )}
 
-        {/* Recovery influence badge */}
-        {getRecoveryInfluence(todayLog) && (
+        {getRecoveryInfluence(todayLog, t) && (
           <View style={s.influenceBanner}>
             <Feather name="zap" size={11} color={theme.primary} />
-            <Text style={s.influenceText}>{getRecoveryInfluence(todayLog)}</Text>
+            <Text style={s.influenceText}>{getRecoveryInfluence(todayLog, t)}</Text>
           </View>
         )}
       </View>
     );
   }
 
-  // ── Check-in prompt (not yet logged) ───────────────────────────────────────
   if (!todayLog && !expanded) {
     return (
       <Pressable
@@ -247,19 +249,18 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
             <Feather name="activity" size={14} color={theme.primary} />
           </View>
           <View>
-            <Text style={s.cardTitle}>Recovery Check-In</Text>
-            <Text style={s.promptSub}>Log sleep, energy & soreness to personalise today's workout</Text>
+            <Text style={s.cardTitle}>{t("components.recoveryCheckIn.recoveryCheckIn")}</Text>
+            <Text style={s.promptSub}>{t("components.recoveryCheckIn.promptSubtitle")}</Text>
           </View>
         </View>
         <View style={s.promptCta}>
-          <Text style={s.promptCtaText}>Check In</Text>
+          <Text style={s.promptCtaText}>{t("components.recoveryCheckIn.checkIn")}</Text>
           <Feather name="chevron-right" size={14} color={theme.primary} />
         </View>
       </Pressable>
     );
   }
 
-  // ── Expanded form ───────────────────────────────────────────────────────────
   return (
     <View style={s.card}>
       <View style={s.headerRow}>
@@ -267,15 +268,14 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
           <View style={s.iconBadge}>
             <Feather name="activity" size={14} color={theme.primary} />
           </View>
-          <Text style={s.cardTitle}>Recovery Check-In</Text>
+          <Text style={s.cardTitle}>{t("components.recoveryCheckIn.recoveryCheckIn")}</Text>
         </View>
         <Pressable onPress={() => setExpanded(false)} hitSlop={8}>
           <Feather name="x" size={18} color={theme.textMuted} />
         </Pressable>
       </View>
 
-      {/* Sleep hours */}
-      <Text style={s.sectionLabel}>How long did you sleep?</Text>
+      <Text style={s.sectionLabel}>{t("components.recoveryCheckIn.howLongSleep")}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
         <View style={s.chipRow}>
           {SLEEP_HOURS.map((h) => (
@@ -293,7 +293,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
             style={[s.valueChip, sleepCustom && s.valueChipActive]}
             onPress={() => setSleepCustom(true)}
           >
-            <Text style={[s.valueChipText, sleepCustom && s.valueChipTextActive]}>Other</Text>
+            <Text style={[s.valueChipText, sleepCustom && s.valueChipTextActive]}>{t("components.recoveryCheckIn.other")}</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -308,8 +308,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
         />
       )}
 
-      {/* Sleep quality */}
-      <Text style={s.sectionLabel}>Sleep quality</Text>
+      <Text style={s.sectionLabel}>{t("components.recoveryCheckIn.sleepQuality")}</Text>
       <View style={s.emojiRow}>
         {SLEEP_QUALITY_OPTIONS.map((opt) => (
           <Pressable
@@ -318,13 +317,12 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
             onPress={() => setSleepQuality(opt.value)}
           >
             <Text style={s.emojiLabel}>{opt.label}</Text>
-            <Text style={[s.emojiDesc, sleepQuality === opt.value && s.emojiDescActive]}>{opt.desc}</Text>
+            <Text style={[s.emojiDesc, sleepQuality === opt.value && s.emojiDescActive]}>{t(`components.recoveryCheckIn.${opt.descKey}`)}</Text>
           </Pressable>
         ))}
       </View>
 
-      {/* Energy */}
-      <Text style={s.sectionLabel}>Energy level</Text>
+      <Text style={s.sectionLabel}>{t("components.recoveryCheckIn.energyLevel")}</Text>
       <View style={s.emojiRow}>
         {ENERGY_OPTIONS.map((opt) => (
           <Pressable
@@ -333,13 +331,12 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
             onPress={() => setEnergyLevel(opt.value)}
           >
             <Text style={s.emojiLabel}>{opt.label}</Text>
-            <Text style={[s.emojiDesc, energyLevel === opt.value && s.emojiDescActive]}>{opt.desc}</Text>
+            <Text style={[s.emojiDesc, energyLevel === opt.value && s.emojiDescActive]}>{t(`components.recoveryCheckIn.${opt.descKey}`)}</Text>
           </Pressable>
         ))}
       </View>
 
-      {/* Stress */}
-      <Text style={s.sectionLabel}>Stress level</Text>
+      <Text style={s.sectionLabel}>{t("components.recoveryCheckIn.stressLevel")}</Text>
       <View style={s.emojiRow}>
         {STRESS_OPTIONS.map((opt) => (
           <Pressable
@@ -348,13 +345,12 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
             onPress={() => setStressLevel(opt.value)}
           >
             <Text style={s.emojiLabel}>{opt.label}</Text>
-            <Text style={[s.emojiDesc, stressLevel === opt.value && s.emojiDescActive]}>{opt.desc}</Text>
+            <Text style={[s.emojiDesc, stressLevel === opt.value && s.emojiDescActive]}>{t(`components.recoveryCheckIn.${opt.descKey}`)}</Text>
           </Pressable>
         ))}
       </View>
 
-      {/* Soreness grid */}
-      <Text style={s.sectionLabel}>Muscle soreness  <Text style={s.tapHint}>(tap to cycle)</Text></Text>
+      <Text style={s.sectionLabel}>{t("components.recoveryCheckIn.muscleSoreness")}  <Text style={s.tapHint}>{t("components.recoveryCheckIn.tapToCycle")}</Text></Text>
       <View style={s.sorenessGrid}>
         {SORENESS_PARTS.map((part) => {
           const level = soreness[part.key] ?? 0;
@@ -371,7 +367,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
               onPress={() => cycleSoreness(part.key)}
             >
               <Text style={[s.sorenessCellLabel, col ? { color: col } : { color: theme.textMuted }]}>
-                {part.label}
+                {t(`components.recoveryCheckIn.${part.labelKey}`)}
               </Text>
               <Text style={[s.sorenessCellLevel, col ? { color: col } : { color: theme.textMuted }]}>
                 {sorenessLabel(level)}
@@ -381,7 +377,6 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
         })}
       </View>
 
-      {/* Save button */}
       <Pressable
         style={({ pressed }) => [s.saveBtn, mutation.isPending && s.saveBtnDisabled, { opacity: pressed ? 0.85 : 1 }]}
         onPress={() => mutation.mutate()}
@@ -392,34 +387,16 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
         ) : (
           <>
             <Feather name="check" size={15} color="#0f0f1a" />
-            <Text style={s.saveBtnText}>Save Check-In</Text>
+            <Text style={s.saveBtnText}>{t("components.recoveryCheckIn.saveCheckIn")}</Text>
           </>
         )}
       </Pressable>
 
       {mutation.isError && (
-        <Text style={s.errorText}>Failed to save — please try again.</Text>
+        <Text style={s.errorText}>{t("components.recoveryCheckIn.failedToSave")}</Text>
       )}
     </View>
   );
-}
-
-function getRecoveryInfluence(log: RecoveryLog): string | null {
-  const soreness = log.soreness ?? {};
-  const legSore = Math.max(soreness["legs"] ?? 0, soreness["glutes"] ?? 0);
-  const upperSore = Math.max(
-    soreness["chest"] ?? 0, soreness["back"] ?? 0,
-    soreness["shoulders"] ?? 0, soreness["arms"] ?? 0
-  );
-  const energy = log.energyLevel ?? 3;
-  const sleep = log.sleepQuality ?? 3;
-
-  if (legSore >= 2 && upperSore >= 2) return "High soreness — cardio or mobility workout prioritised";
-  if (legSore >= 2) return "Leg soreness detected — upper body session recommended";
-  if (upperSore >= 2) return "Upper body sore — lower body or cardio session recommended";
-  if (energy >= 4 && sleep >= 4) return "Great energy & sleep — harder session unlocked";
-  if (energy <= 2 || sleep <= 2) return "Low energy — lighter session selected for you";
-  return null;
 }
 
 function styles(theme: any) {

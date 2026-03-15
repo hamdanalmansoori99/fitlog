@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInRight, FadeOutLeft } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
@@ -56,6 +57,7 @@ interface OnboardingData {
 }
 
 export default function WorkoutOnboardingScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -82,50 +84,50 @@ export default function WorkoutOnboardingScreen() {
 
   const STEPS = [
     {
-      title: "What equipment\ndo you have?",
-      subtitle: "Select everything available to you",
+      title: t("workouts.whatEquipmentTitle"),
+      subtitle: t("workouts.selectEverything"),
       key: "availableEquipment",
       type: "multiselect",
       options: EQUIPMENT_OPTIONS.map(e => ({ id: e.id, label: e.label, icon: e.icon })),
     },
     {
-      title: "Where do you\nusually work out?",
-      subtitle: "Pick your primary workout location",
+      title: t("workouts.whereWorkoutTitle"),
+      subtitle: t("workouts.pickLocation"),
       key: "workoutLocation",
       type: "single",
       options: LOCATION_OPTIONS.map(l => ({ id: l, label: l })),
     },
     {
-      title: "What is your\nmain goal?",
-      subtitle: "You can update this anytime",
+      title: t("workouts.mainGoalTitle"),
+      subtitle: t("workouts.updateAnytime"),
       key: "fitnessGoals",
       type: "multiselect",
       options: GOAL_OPTIONS.map(g => ({ id: g, label: g })),
     },
     {
-      title: "How many days per\nweek to train?",
-      subtitle: "We'll build your plan around this",
+      title: t("workouts.howManyDaysTitle"),
+      subtitle: t("workouts.buildAroundThis"),
       key: "weeklyWorkoutDays",
       type: "number",
       options: DAYS_OPTIONS.map(d => ({ id: String(d), label: `${d} day${d !== 1 ? "s" : ""}` })),
     },
     {
-      title: "How long should\nyour workouts be?",
-      subtitle: "Typical session length",
+      title: t("workouts.howLongTitle"),
+      subtitle: t("workouts.typicalSession"),
       key: "preferredWorkoutDuration",
       type: "single",
       options: DURATION_OPTIONS.map(d => ({ id: d, label: d })),
     },
     {
-      title: "What's your\nexperience level?",
-      subtitle: "Be honest — we'll adjust accordingly",
+      title: t("workouts.experienceLevelTitle"),
+      subtitle: t("workouts.beHonest"),
       key: "experienceLevel",
       type: "single",
       options: EXPERIENCE_OPTIONS.map(e => ({ id: e, label: e })),
     },
     {
-      title: "What types of\ntraining do you enjoy?",
-      subtitle: "We'll prioritise these in recommendations",
+      title: t("workouts.whatTrainingTitle"),
+      subtitle: t("workouts.prioritise"),
       key: "trainingPreferences",
       type: "multiselect",
       options: TRAINING_PREF_OPTIONS.map(t => ({ id: t, label: t })),
@@ -258,14 +260,14 @@ export default function WorkoutOnboardingScreen() {
       {/* Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Button
-          title={step === STEPS.length - 1 ? "Get My Plan" : "Continue"}
+          title={step === STEPS.length - 1 ? t("workouts.getMyPlan") : t("common.continue")}
           onPress={handleNext}
           disabled={!canContinue()}
           loading={mutation.isPending}
         />
         <Pressable onPress={handleNext} style={{ paddingVertical: 8, alignItems: "center" }}>
           <Text style={[styles.skipText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {step === STEPS.length - 1 ? "" : "Skip for now"}
+            {step === STEPS.length - 1 ? "" : t("workouts.skipForNow")}
           </Text>
         </Pressable>
       </View>

@@ -9,6 +9,7 @@ import {
   getTrendColor,
   formatPace,
 } from "@/lib/progressionEngine";
+import { useTranslation } from "react-i18next";
 
 interface ProgressionCardProps {
   target: ProgressionTarget;
@@ -17,12 +18,13 @@ interface ProgressionCardProps {
 }
 
 function TrendBadge({ trend, theme }: { trend: ProgressionTarget["trend"]; theme: any }) {
+  const { t } = useTranslation();
   const color = getTrendColor(trend, theme);
   const labels: Record<string, string> = {
-    progress: "Level up",
-    maintain: "Hold steady",
-    deload: "Recovery",
-    first: "First session",
+    progress: t("components.progressionCard.levelUp"),
+    maintain: t("components.progressionCard.holdSteady"),
+    deload: t("components.progressionCard.recoveryTrend"),
+    first: t("components.progressionCard.firstSession"),
   };
   const icons: Record<string, string> = {
     progress: "trending-up",
@@ -40,12 +42,13 @@ function TrendBadge({ trend, theme }: { trend: ProgressionTarget["trend"]; theme
 
 function StrengthDisplay({ target, compact }: { target: StrengthTarget; compact?: boolean }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const trendColor = getTrendColor(target.trend, theme);
 
   if (target.trend === "first") {
     return (
       <Text style={[styles.firstText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-        Complete this exercise to start tracking your progression.
+        {t("components.progressionCard.completeToStart")}
       </Text>
     );
   }
@@ -55,7 +58,7 @@ function StrengthDisplay({ target, compact }: { target: StrengthTarget; compact?
       {target.previousDisplay && (
         <View style={styles.col}>
           <Text style={[styles.colLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Last session
+            {t("components.progressionCard.lastSession")}
           </Text>
           <Text style={[styles.colValue, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
             {target.previousDisplay}
@@ -69,7 +72,7 @@ function StrengthDisplay({ target, compact }: { target: StrengthTarget; compact?
       )}
       <View style={styles.col}>
         <Text style={[styles.colLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          Target today
+          {t("components.progressionCard.targetToday")}
         </Text>
         <Text style={[styles.colValue, { color: trendColor, fontFamily: "Inter_700Bold" }]}>
           {target.suggestedSets != null && target.suggestedReps != null
@@ -77,8 +80,8 @@ function StrengthDisplay({ target, compact }: { target: StrengthTarget; compact?
             : target.suggestedWeightKg != null
             ? `@ ${target.suggestedWeightKg}kg`
             : target.suggestedReps != null
-            ? `${target.suggestedReps} reps`
-            : "Keep current pace"}
+            ? t("components.progressionCard.reps", { count: target.suggestedReps })
+            : t("components.progressionCard.keepCurrentPace")}
         </Text>
       </View>
     </View>
@@ -87,12 +90,13 @@ function StrengthDisplay({ target, compact }: { target: StrengthTarget; compact?
 
 function CardioDisplay({ target, compact }: { target: CardioTarget; compact?: boolean }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const trendColor = getTrendColor(target.trend, theme);
 
   if (target.trend === "first") {
     return (
       <Text style={[styles.firstText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-        Log your first session to start tracking your progression.
+        {t("components.progressionCard.logFirstSession")}
       </Text>
     );
   }
@@ -110,7 +114,7 @@ function CardioDisplay({ target, compact }: { target: CardioTarget; compact?: bo
       {target.previousDisplay && (
         <View style={styles.col}>
           <Text style={[styles.colLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Last session
+            {t("components.progressionCard.lastSession")}
           </Text>
           <Text style={[styles.colValue, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
             {target.previousDisplay}
@@ -125,7 +129,7 @@ function CardioDisplay({ target, compact }: { target: CardioTarget; compact?: bo
       {targetDisplay ? (
         <View style={styles.col}>
           <Text style={[styles.colLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            Target today
+            {t("components.progressionCard.targetToday")}
           </Text>
           <Text style={[styles.colValue, { color: trendColor, fontFamily: "Inter_700Bold" }]}>
             {targetDisplay}
@@ -142,6 +146,7 @@ export function ProgressionCard({
   compact = false,
 }: ProgressionCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -149,7 +154,7 @@ export function ProgressionCard({
         <View style={styles.headerLeft}>
           <Feather name="trending-up" size={14} color={theme.primary} />
           <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-            {exerciseName ? exerciseName : "Suggested next target"}
+            {exerciseName ? exerciseName : t("components.progressionCard.suggestedNextTarget")}
           </Text>
         </View>
         <TrendBadge trend={target.trend} theme={theme} />

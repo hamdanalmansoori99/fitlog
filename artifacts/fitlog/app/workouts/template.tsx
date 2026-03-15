@@ -7,6 +7,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeIn, SlideInRight, ZoomIn } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { getTemplateById } from "@/lib/workoutTemplates";
 import { getFilteredExercises, getActivityBenefits, getEquipmentMatchLevel } from "@/lib/coachEngine";
@@ -111,6 +112,7 @@ function BenefitRow({ benefit, index }: { benefit: string; index: number }) {
 }
 
 export default function WorkoutTemplateScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { id, whyGoodForYou } = useLocalSearchParams<{ id: string; whyGoodForYou?: string }>();
@@ -193,14 +195,14 @@ export default function WorkoutTemplateScreen() {
       setSuccess(true);
       setTimeout(() => router.replace("/(tabs)/workouts" as any), 2000);
     },
-    onError: (err: any) => Alert.alert("Error", err.message || "Failed to log workout. Please try again."),
+    onError: (err: any) => Alert.alert(t("common.error"), err.message || t("workouts.errorSaving")),
   });
 
   if (!template) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background, justifyContent: "center", alignItems: "center" }]}>
         <Feather name="alert-circle" size={40} color={theme.textMuted} />
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 12 }}>Workout not found</Text>
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 12 }}>{t("workouts.workoutNotFound")}</Text>
       </View>
     );
   }
@@ -209,8 +211,8 @@ export default function WorkoutTemplateScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <SuccessView
-          title="Workout Logged!"
-          subtitle={`Great job completing ${template.name}. Keep the momentum going!`}
+          title={t("workouts.workoutLogged")}
+          subtitle={t("workouts.greatJobCompleting", { name: template.name })}
         />
       </View>
     );
@@ -238,7 +240,7 @@ export default function WorkoutTemplateScreen() {
         >
           <Feather name="bookmark" size={16} color={saved ? theme.primary : theme.textMuted} />
           <Text style={{ color: saved ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-            {saved ? "Saved" : "Save"}
+            {saved ? t("workouts.savedLabel") : t("workouts.saveBtnLabel")}
           </Text>
         </Pressable>
       </View>
@@ -287,7 +289,7 @@ export default function WorkoutTemplateScreen() {
               <View style={styles.whyHeader}>
                 <Feather name="zap" size={16} color={theme.primary} />
                 <Text style={[styles.whyTitle, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
-                  Why this is good for you today
+                  {t("workouts.whyGoodForYou")}
                 </Text>
               </View>
               <Text style={[styles.whyText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>{whyGoodForYou}</Text>
@@ -302,7 +304,7 @@ export default function WorkoutTemplateScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
                 <Feather name="trending-up" size={14} color={theme.secondary} />
                 <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-                  Progression · {primaryProgressionEntry.name}
+                  {t("workouts.progressionLabel")} · {primaryProgressionEntry.name}
                 </Text>
               </View>
               <ProgressionCard
@@ -318,7 +320,7 @@ export default function WorkoutTemplateScreen() {
         {template.requiredEquipment.length > 0 && (
           <Animated.View entering={FadeInDown.delay(150).duration(350)}>
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Equipment needed</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.equipmentNeeded")}</Text>
               <View style={styles.tagRow}>
                 {template.requiredEquipment.map(eq => {
                   const isMissing = missingEquip.includes(eq);
@@ -341,7 +343,7 @@ export default function WorkoutTemplateScreen() {
                 <View style={[styles.subNoteRow, { backgroundColor: theme.warning + "15", borderColor: theme.warning + "40" }]}>
                   <Feather name="info" size={13} color={theme.warning} />
                   <Text style={[styles.subNote, { color: theme.warning, fontFamily: "Inter_400Regular" }]}>
-                    Missing items are swapped for best alternatives in the exercise list below.
+                    {t("workouts.missingSwapped")}
                   </Text>
                 </View>
               )}

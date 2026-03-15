@@ -10,9 +10,11 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+import { useTranslation } from "react-i18next";
 
 export function InstallBanner() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { installState, triggerInstall, dismiss } = useInstallPrompt();
   const slideAnim = useRef(new Animated.Value(-80)).current;
 
@@ -52,9 +54,9 @@ export function InstallBanner() {
           <Feather name="download" size={18} color={theme.primary} />
         </View>
         <View style={styles.textBlock}>
-          <Text style={[styles.title, { color: theme.text }]}>Install FitLog</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{t("components.installBanner.installFitLog")}</Text>
           <Text style={[styles.sub, { color: theme.textMuted }]}>
-            Add to home screen for the full experience
+            {t("components.installBanner.installMessage")}
           </Text>
         </View>
       </View>
@@ -63,7 +65,7 @@ export function InstallBanner() {
           onPress={triggerInstall}
           style={[styles.installBtn, { backgroundColor: theme.primary }]}
         >
-          <Text style={[styles.installText, { color: "#0f0f1a" }]}>Install</Text>
+          <Text style={[styles.installText, { color: "#0f0f1a" }]}>{t("components.installBanner.install")}</Text>
         </Pressable>
         <Pressable onPress={dismiss} style={styles.dismissBtn} hitSlop={12}>
           <Feather name="x" size={18} color={theme.textMuted} />

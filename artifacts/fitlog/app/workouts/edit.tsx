@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
@@ -29,6 +30,7 @@ const MOODS = ["Exhausted", "Tough", "Good", "Great", "Crushing it"];
 const MOOD_ICONS = ["😴", "😤", "🙂", "😁", "🔥"];
 
 export default function EditWorkoutScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -76,27 +78,27 @@ export default function EditWorkoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["weeklyStats"] });
       queryClient.invalidateQueries({ queryKey: ["workoutSummary"] });
       queryClient.invalidateQueries({ queryKey: ["recentActivity"] });
-      showToast("Workout updated", "success");
+      showToast(t("workouts.workoutUpdated"), "success");
       router.back();
     },
-    onError: () => setError("Failed to save changes. Please try again."),
+    onError: () => setError(t("workouts.failedToSave")),
   });
 
   const handleSave = () => {
     setError("");
-    if (!name.trim()) { setError("Workout name is required."); return; }
-    if (!date.trim()) { setError("Date is required."); return; }
+    if (!name.trim()) { setError(t("workouts.workoutNameRequired")); return; }
+    if (!date.trim()) { setError(t("workouts.dateRequired")); return; }
     if (duration) {
       const d = parseFloat(duration);
-      if (isNaN(d) || d < 1 || d > 600) { setError("Duration must be between 1 and 600 minutes."); return; }
+      if (isNaN(d) || d < 1 || d > 600) { setError(t("workouts.durationValidation")); return; }
     }
     if (distance) {
       const d = parseFloat(distance);
-      if (isNaN(d) || d < 0 || d > 1000) { setError("Distance must be between 0 and 1,000 km."); return; }
+      if (isNaN(d) || d < 0 || d > 1000) { setError(t("workouts.distanceValidation")); return; }
     }
     if (calories) {
       const c = parseFloat(calories);
-      if (isNaN(c) || c < 0 || c > 5000) { setError("Calories must be between 0 and 5,000."); return; }
+      if (isNaN(c) || c < 0 || c > 5000) { setError(t("workouts.caloriesValidation")); return; }
     }
     mutation.mutate({
       name: name.trim(),
@@ -121,7 +123,7 @@ export default function EditWorkoutScreen() {
   if (isError || !workoutId) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular" }}>Workout not found.</Text>
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular" }}>{t("workouts.workoutNotFoundMsg")}</Text>
       </View>
     );
   }
@@ -134,7 +136,7 @@ export default function EditWorkoutScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
-        <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Edit Workout</Text>
+        <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.editWorkout")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -144,9 +146,9 @@ export default function EditWorkoutScreen() {
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 36 }]}
           keyboardShouldPersistTaps="handled"
         >
-          <Input label="Workout Name" value={name} onChangeText={setName} placeholder="Morning Run" />
+          <Input label={t("workouts.workoutName")} value={name} onChangeText={setName} placeholder="Morning Run" />
           <Input
-            label="Date"
+            label={t("workouts.date")}
             value={date}
             onChangeText={setDate}
             placeholder="YYYY-MM-DD"
@@ -156,7 +158,7 @@ export default function EditWorkoutScreen() {
           {/* Activity Type */}
           <View>
             <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-              Activity Type
+              {t("workouts.activityType")}
             </Text>
             <View style={styles.activityGrid}>
               {ACTIVITY_TYPES.map(a => (
@@ -183,7 +185,7 @@ export default function EditWorkoutScreen() {
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
               <Input
-                label="Duration (min)"
+                label={t("workouts.durationMin")}
                 value={duration}
                 onChangeText={setDuration}
                 placeholder="45"
@@ -193,7 +195,7 @@ export default function EditWorkoutScreen() {
             {isDistanceBased && (
               <View style={{ flex: 1 }}>
                 <Input
-                  label="Distance (km)"
+                  label={t("workouts.distanceKm")}
                   value={distance}
                   onChangeText={setDistance}
                   placeholder="5.0"
@@ -204,7 +206,7 @@ export default function EditWorkoutScreen() {
           </View>
 
           <Input
-            label="Calories Burned"
+            label={t("workouts.caloriesBurnedLabel")}
             value={calories}
             onChangeText={setCalories}
             placeholder="320"
@@ -213,7 +215,7 @@ export default function EditWorkoutScreen() {
 
           {/* Mood */}
           <View>
-            <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Mood</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.mood")}</Text>
             <View style={styles.moodRow}>
               {MOODS.map((m, idx) => (
                 <Pressable
@@ -237,10 +239,10 @@ export default function EditWorkoutScreen() {
           </View>
 
           <Input
-            label="Notes"
+            label={t("workouts.notesLabel")}
             value={notes}
             onChangeText={setNotes}
-            placeholder="How did it feel? Any PRs?"
+            placeholder={t("workouts.notesPlaceholder")}
             multiline
             numberOfLines={3}
           />
@@ -251,7 +253,7 @@ export default function EditWorkoutScreen() {
             </Text>
           ) : null}
 
-          <Button title="Save Changes" onPress={handleSave} loading={mutation.isPending} />
+          <Button title={t("workouts.saveChanges")} onPress={handleSave} loading={mutation.isPending} />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

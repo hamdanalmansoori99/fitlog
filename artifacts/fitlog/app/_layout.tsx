@@ -9,13 +9,17 @@ import { useQuery, QueryClient, QueryClientProvider } from "@tanstack/react-quer
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { I18nManager, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import "@/i18n";
+import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { InstallBanner } from "@/components/InstallBanner";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useAuthStore } from "@/store/authStore";
+import { useSettingsStore } from "@/store/settingsStore";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { api } from "@/lib/api";
 
@@ -77,8 +81,25 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+  const { i18n } = useTranslation();
+  const language = useSettingsStore((s) => s.language);
 
   useServiceWorker();
+
+  useEffect(() => {
+    if (language && i18n.language !== language) {
+      i18n.changeLanguage(language);
+    }
+    const isRTL = language === "ar";
+    if (I18nManager.isRTL !== isRTL) {
+      I18nManager.forceRTL(isRTL);
+      I18nManager.allowRTL(isRTL);
+    }
+    if (Platform.OS === "web") {
+      document.documentElement.dir = isRTL ? "rtl" : "ltr";
+      document.documentElement.lang = language || "en";
+    }
+  }, [language]);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

@@ -11,6 +11,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
+import { useTranslation } from "react-i18next";
 
 const CAT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   Breakfast: "sun", Lunch: "cloud", Dinner: "moon", Snacks: "coffee", snacks: "coffee",
@@ -60,6 +61,7 @@ function FoodItemRow({ item, theme }: { item: any; theme: any }) {
 
 export default function MealDetailScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -83,16 +85,16 @@ export default function MealDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ["achievements"] });
       router.back();
     },
-    onError: () => Alert.alert("Error", "Failed to delete meal."),
+    onError: () => Alert.alert(t("common.error"), t("meals.failedToDeleteMeal")),
   });
 
   const handleDelete = () => {
     Alert.alert(
-      "Delete Meal",
-      "This will permanently remove this meal and all food items. This cannot be undone.",
+      t("meals.deleteMealTitle"),
+      t("meals.deleteMealMessage"),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate() },
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate() },
       ]
     );
   };
@@ -110,10 +112,10 @@ export default function MealDetailScreen() {
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <Feather name="alert-circle" size={40} color={theme.danger} />
         <Text style={[styles.errorText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          Meal not found
+          {t("meals.mealNotFound")}
         </Text>
         <Pressable onPress={() => router.back()} style={styles.backLink}>
-          <Text style={[{ color: theme.primary, fontFamily: "Inter_500Medium" }]}>Go back</Text>
+          <Text style={[{ color: theme.primary, fontFamily: "Inter_500Medium" }]}>{t("common.goBack")}</Text>
         </Pressable>
       </View>
     );
@@ -135,13 +137,12 @@ export default function MealDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Nav bar */}
       <View style={[styles.navBar, { paddingTop: topPad + 8, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-          Meal Detail
+          {t("meals.mealDetail")}
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           <Pressable
@@ -161,7 +162,6 @@ export default function MealDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 20, paddingBottom: 40 + bottomPad, gap: 16 }}
       >
-        {/* Header */}
         <Animated.View entering={FadeInDown.duration(350)}>
           <Card>
             <View style={styles.mealHeader}>
@@ -178,26 +178,23 @@ export default function MealDetailScreen() {
               </View>
             </View>
 
-            {/* Calories */}
             <View style={[styles.calBig, { borderColor: theme.border }]}>
               <Text style={[styles.calNum, { color: theme.orange, fontFamily: "Inter_700Bold" }]}>
                 {Math.round(totalCal)}
               </Text>
               <Text style={[styles.calUnit, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                kcal
+                {t("common.kcal")}
               </Text>
             </View>
 
-            {/* Macro bars */}
             {totalMacroG > 0 && (
               <View style={{ gap: 8, marginTop: 4 }}>
-                <MacroBar label="Protein" value={totalProtein} total={totalMacroG} color={theme.secondary} theme={theme} />
-                <MacroBar label="Carbs" value={totalCarbs} total={totalMacroG} color={theme.warning} theme={theme} />
-                <MacroBar label="Fat" value={totalFat} total={totalMacroG} color={theme.orange} theme={theme} />
+                <MacroBar label={t("common.protein")} value={totalProtein} total={totalMacroG} color={theme.secondary} theme={theme} />
+                <MacroBar label={t("common.carbs")} value={totalCarbs} total={totalMacroG} color={theme.warning} theme={theme} />
+                <MacroBar label={t("common.fat")} value={totalFat} total={totalMacroG} color={theme.orange} theme={theme} />
               </View>
             )}
 
-            {/* Notes */}
             {meal.notes ? (
               <View style={[styles.notesWrap, { backgroundColor: theme.primaryDim, borderColor: theme.border }]}>
                 <Feather name="file-text" size={13} color={theme.textMuted} />
@@ -209,11 +206,10 @@ export default function MealDetailScreen() {
           </Card>
         </Animated.View>
 
-        {/* Food items */}
         {foodItems.length > 0 && (
           <Animated.View entering={FadeInDown.delay(80).duration(350)}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Food Items · {foodItems.length}
+              {t("meals.foodItemsCount", { count: foodItems.length })}
             </Text>
             <Card padding={0}>
               {foodItems.map((item: any, idx: number) => (
@@ -229,14 +225,13 @@ export default function MealDetailScreen() {
               <View style={styles.emptyItems}>
                 <Feather name="coffee" size={28} color={theme.border} />
                 <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  No food items recorded for this meal.
+                  {t("meals.noFoodItems")}
                 </Text>
               </View>
             </Card>
           </Animated.View>
         )}
 
-        {/* Log again shortcut */}
         <Animated.View entering={FadeInDown.delay(160).duration(350)}>
           <Pressable
             onPress={() => router.push({
@@ -247,7 +242,7 @@ export default function MealDetailScreen() {
           >
             <Feather name="plus-circle" size={16} color={theme.primary} />
             <Text style={[styles.logAgainText, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
-              Log another {catKey.toLowerCase()}
+              {t("meals.logAnother", { category: catKey.toLowerCase() })}
             </Text>
           </Pressable>
         </Animated.View>

@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 interface PremiumBadgeProps {
   label?: string;
@@ -8,7 +9,10 @@ interface PremiumBadgeProps {
   color?: string;
 }
 
-export function PremiumBadge({ label = "Premium", small = false, color = "#448aff" }: PremiumBadgeProps) {
+export function PremiumBadge({ label, small = false, color = "#448aff" }: PremiumBadgeProps) {
+  const { t } = useTranslation();
+  const displayLabel = label ?? t("components.premiumBadge.premium");
+
   if (small) {
     return (
       <View style={[styles.badgeSmall, { backgroundColor: color + "22", borderColor: color + "44" }]}>
@@ -20,7 +24,7 @@ export function PremiumBadge({ label = "Premium", small = false, color = "#448af
   return (
     <View style={[styles.badge, { backgroundColor: color + "18", borderColor: color + "35" }]}>
       <Feather name="zap" size={10} color={color} />
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
+      <Text style={[styles.badgeText, { color }]}>{displayLabel}</Text>
     </View>
   );
 }

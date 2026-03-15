@@ -6,6 +6,7 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
@@ -18,6 +19,7 @@ export default function LoginScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { setAuth } = useAuthStore();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,11 +30,11 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      setError("Please fill in all fields");
+      setError(t("auth.fillAllFields"));
       return;
     }
     if (!email.includes("@") || email.indexOf(".") < email.indexOf("@")) {
-      setError("Enter a valid email address");
+      setError(t("auth.validEmail"));
       return;
     }
     setError("");
@@ -51,7 +53,7 @@ export default function LoginScreen() {
         router.replace("/(tabs)");
       }
     } catch (err: any) {
-      setError(err.message || "Login failed. Check your email and password.");
+      setError(err.message || t("auth.loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -76,15 +78,15 @@ export default function LoginScreen() {
             <View style={[styles.logoCircle, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "60" }]}>
               <Feather name="activity" size={38} color={theme.primary} />
             </View>
-            <Text style={[styles.appName, { color: theme.text, fontFamily: "Inter_700Bold" }]}>FitLog</Text>
+            <Text style={[styles.appName, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("auth.fitlog")}</Text>
             <Text style={[styles.tagline, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Your personal fitness companion
+              {t("auth.tagline")}
             </Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Welcome back</Text>
+            <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("auth.welcomeBack")}</Text>
 
             {error ? (
               <View style={[styles.errorBox, { backgroundColor: theme.dangerDim, borderColor: theme.danger + "60" }]}>
@@ -94,10 +96,10 @@ export default function LoginScreen() {
             ) : null}
 
             <Input
-              label="Email"
+              label={t("auth.email")}
               value={email}
               onChangeText={setEmail}
-              placeholder="you@example.com"
+              placeholder={t("auth.emailPlaceholder")}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -109,28 +111,28 @@ export default function LoginScreen() {
 
             <Input
               ref={passwordRef}
-              label="Password"
+              label={t("auth.password")}
               value={password}
               onChangeText={setPassword}
-              placeholder="Your password"
+              placeholder={t("auth.passwordPlaceholder")}
               secureEntry
               returnKeyType="done"
               onSubmitEditing={handleLogin}
               leftIcon={<Feather name="lock" size={18} color={theme.textMuted} />}
             />
 
-            <Button title="Sign In" onPress={handleLogin} loading={loading} style={styles.btn} />
+            <Button title={t("auth.signIn")} onPress={handleLogin} loading={loading} style={styles.btn} />
 
             <View style={styles.divider}>
               <View style={[styles.line, { backgroundColor: theme.border }]} />
-              <Text style={[styles.or, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>or</Text>
+              <Text style={[styles.or, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("common.or")}</Text>
               <View style={[styles.line, { backgroundColor: theme.border }]} />
             </View>
 
             <Pressable onPress={() => router.push("/auth/register")} style={styles.registerLink}>
               <Text style={[styles.registerText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Don't have an account?{" "}
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold" }}>Sign up</Text>
+                {t("auth.noAccount")}{" "}
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold" }}>{t("auth.signUp")}</Text>
               </Text>
             </Pressable>
           </View>

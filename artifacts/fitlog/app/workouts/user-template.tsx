@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -23,6 +24,7 @@ const ACTIVITY_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
 };
 
 export default function UserTemplateScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id: string }>();
@@ -48,7 +50,7 @@ export default function UserTemplateScreen() {
       queryClient.invalidateQueries({ queryKey: ["userTemplates"] });
       setEditing(false);
     },
-    onError: () => Alert.alert("Error", "Failed to update template. Please try again."),
+    onError: () => Alert.alert(t("common.error"), t("workouts.failedToUpdate")),
   });
 
   const deleteMutation = useMutation({
@@ -57,13 +59,13 @@ export default function UserTemplateScreen() {
       queryClient.invalidateQueries({ queryKey: ["userTemplates"] });
       router.back();
     },
-    onError: () => Alert.alert("Error", "Failed to delete template. Please try again."),
+    onError: () => Alert.alert(t("common.error"), t("workouts.failedToDeleteTemplate")),
   });
 
   const toggleFavMutation = useMutation({
     mutationFn: () => api.toggleTemplateFavorite(Number(params.id)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userTemplates"] }),
-    onError: () => Alert.alert("Error", "Failed to update favourite. Please try again."),
+    onError: () => Alert.alert(t("common.error"), t("workouts.failedToUpdateFavourite")),
   });
 
   const useMutation2 = useMutation({
@@ -104,9 +106,9 @@ export default function UserTemplateScreen() {
   }
 
   function handleDelete() {
-    Alert.alert("Delete Template?", "This action cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate() },
+    Alert.alert(t("workouts.deleteTemplateTitle"), t("workouts.cannotBeUndone"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate() },
     ]);
   }
 
@@ -119,7 +121,7 @@ export default function UserTemplateScreen() {
           </Pressable>
         </View>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular" }}>Loading…</Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular" }}>{t("workouts.loadingText")}</Text>
         </View>
       </View>
     );
@@ -163,21 +165,21 @@ export default function UserTemplateScreen() {
                 <TextInput
                   value={editName}
                   onChangeText={setEditName}
-                  placeholder="Template name"
+                  placeholder={t("workouts.templateName")}
                   placeholderTextColor={theme.textMuted}
                   style={[styles.editInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card, fontFamily: "Inter_600SemiBold", fontSize: 18 }]}
                 />
                 <TextInput
                   value={editDescription}
                   onChangeText={setEditDescription}
-                  placeholder="Description (optional)"
+                  placeholder={t("workouts.descriptionOptional")}
                   placeholderTextColor={theme.textMuted}
                   style={[styles.editInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card, fontFamily: "Inter_400Regular", fontSize: 14 }]}
                 />
                 <TextInput
                   value={editMinutes}
                   onChangeText={setEditMinutes}
-                  placeholder="Est. duration (minutes)"
+                  placeholder={t("workouts.estDurationMinutes")}
                   placeholderTextColor={theme.textMuted}
                   keyboardType="numeric"
                   style={[styles.editInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card, fontFamily: "Inter_400Regular", fontSize: 14 }]}
@@ -187,14 +189,14 @@ export default function UserTemplateScreen() {
                     onPress={() => setEditing(false)}
                     style={[styles.editCancelBtn, { borderColor: theme.border }]}
                   >
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium" }}>Cancel</Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium" }}>{t("common.cancel")}</Text>
                   </Pressable>
                   <Pressable
                     onPress={handleSaveEdit}
                     style={[styles.editSaveBtn, { backgroundColor: theme.primary }]}
                   >
                     <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold" }}>
-                      {updateMutation.isPending ? "Saving…" : "Save"}
+                      {updateMutation.isPending ? t("workouts.saving") : t("workouts.saveBtnLabel")}
                     </Text>
                   </Pressable>
                 </View>
@@ -242,7 +244,7 @@ export default function UserTemplateScreen() {
         {exercises.length > 0 && (
           <Animated.View entering={FadeInDown.delay(80).duration(400)}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Exercises ({exercises.length})
+              {t("workouts.exercisesLabel")} ({exercises.length})
             </Text>
             <Card style={{ gap: 0, paddingHorizontal: 0, paddingVertical: 0, overflow: "hidden", marginTop: 8 }}>
               {exercises.map((ex: any, i: number) => (
@@ -275,13 +277,13 @@ export default function UserTemplateScreen() {
 
         {/* Actions */}
         <Animated.View entering={FadeInDown.delay(160).duration(400)} style={{ gap: 10, marginTop: 8 }}>
-          <Button title="Start Workout" onPress={handleStartWorkout} />
+          <Button title={t("workouts.startWorkoutBtn")} onPress={handleStartWorkout} />
           <Pressable
             onPress={handleDelete}
             style={[styles.deleteBtn, { borderColor: theme.danger + "50" }]}
           >
             <Feather name="trash-2" size={16} color={theme.danger} />
-            <Text style={{ color: theme.danger, fontFamily: "Inter_500Medium", fontSize: 14 }}>Delete Template</Text>
+            <Text style={{ color: theme.danger, fontFamily: "Inter_500Medium", fontSize: 14 }}>{t("workouts.deleteTemplateBtn")}</Text>
           </Pressable>
         </Animated.View>
       </ScrollView>

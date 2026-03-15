@@ -16,6 +16,7 @@ import { getRecommendations, getTodaySuggestion } from "@/lib/coachEngine";
 import { WORKOUT_TEMPLATES, WorkoutTemplate } from "@/lib/workoutTemplates";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
+import { useTranslation } from "react-i18next";
 
 function formatDuration(mins?: number | null) {
   if (!mins) return "";
@@ -48,12 +49,13 @@ function DifficultyDot({ difficulty }: { difficulty: string }) {
 
 function EquipmentMatchBadge({ match }: { match: "full" | "partial" | "none" }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   if (match === "full") {
     return (
       <View style={[styles.matchBadge, { backgroundColor: theme.primary + "20" }]}>
         <Feather name="check-circle" size={10} color={theme.primary} />
         <Text style={[styles.matchBadgeText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
-          Full match
+          {t("workouts.fullMatchLabel")}
         </Text>
       </View>
     );
@@ -62,7 +64,7 @@ function EquipmentMatchBadge({ match }: { match: "full" | "partial" | "none" }) 
     <View style={[styles.matchBadge, { backgroundColor: theme.warning + "20" }]}>
       <Feather name="refresh-cw" size={10} color={theme.warning} />
       <Text style={[styles.matchBadgeText, { color: theme.warning, fontFamily: "Inter_500Medium" }]}>
-        With substitutions
+        {t("workouts.withSubstitutions")}
       </Text>
     </View>
   );
@@ -70,6 +72,7 @@ function EquipmentMatchBadge({ match }: { match: "full" | "partial" | "none" }) 
 
 function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { template, whyGoodForYou, equipmentMatch, missingEquipment } = rec;
   const color = getActivityColor(template.activityType, theme);
 
@@ -97,39 +100,35 @@ function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void })
             <Text style={{ color: theme.border }}> · </Text>
             <Feather name="clock" size={10} color={theme.textMuted} />
             <Text style={[styles.recMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {template.durationMinutes} min
+              {template.durationMinutes} {t("common.min")}
             </Text>
           </View>
         </View>
         <Feather name="chevron-right" size={18} color={theme.textMuted} />
       </View>
 
-      {/* Why it's good for you */}
       <Text style={[styles.recWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
         {whyGoodForYou}
       </Text>
 
-      {/* Equipment row */}
       <View style={styles.recEquipRow}>
         <Feather name="tool" size={11} color={theme.textMuted} />
         <Text style={[styles.recEquipText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
           {template.requiredEquipment.length === 0
-            ? "No equipment needed"
+            ? t("workouts.noEquipmentNeeded")
             : template.requiredEquipment.map((e: string) => e.replace(/_/g, " ")).join(", ")}
         </Text>
       </View>
 
-      {/* Missing equipment note */}
       {missingEquipment && missingEquipment.length > 0 && (
         <View style={[styles.missingRow, { backgroundColor: theme.warning + "14" }]}>
           <Feather name="alert-circle" size={10} color={theme.warning} />
           <Text style={[styles.missingText, { color: theme.warning, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-            Missing: {missingEquipment.map((e: string) => e.replace(/_/g, " ")).join(", ")} — alternatives shown inside
+            {t("workouts.missing")}: {missingEquipment.map((e: string) => e.replace(/_/g, " ")).join(", ")} — {t("workouts.alternativesInside")}
           </Text>
         </View>
       )}
 
-      {/* Footer tags */}
       <View style={styles.recFooter}>
         <View style={[styles.goalTag, { backgroundColor: theme.primaryDim }]}>
           <Text style={[styles.goalTagText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
@@ -144,6 +143,7 @@ function RecommendationCard({ rec, onPress }: { rec: any; onPress: () => void })
 
 function TodaySuggestionCard({ suggestion, onPress }: { suggestion: any; onPress: () => void }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { template, whyGoodForYou } = suggestion;
   const color = getActivityColor(template.activityType, theme);
 
@@ -155,12 +155,12 @@ function TodaySuggestionCard({ suggestion, onPress }: { suggestion: any; onPress
             <Feather name={getActivityIcon(template.activityType)} size={24} color={color} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.todayLabel, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>Today's Suggestion</Text>
+            <Text style={[styles.todayLabel, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>{t("workouts.todaysSuggestion")}</Text>
             <Text style={[styles.todayName, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{template.name}</Text>
           </View>
           <View style={[styles.startBtn, { backgroundColor: theme.primary }]}>
             <Feather name="play" size={14} color="#0f0f1a" />
-            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>Start</Text>
+            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{t("workouts.start")}</Text>
           </View>
         </View>
         <Text style={[styles.todayWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
@@ -170,7 +170,7 @@ function TodaySuggestionCard({ suggestion, onPress }: { suggestion: any; onPress
           <View style={styles.todayStat}>
             <Feather name="clock" size={12} color={theme.textMuted} />
             <Text style={[styles.todayStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {template.durationMinutes} min
+              {template.durationMinutes} {t("common.min")}
             </Text>
           </View>
           <View style={[styles.diffDot, { backgroundColor: (({ Beginner: theme.primary, Intermediate: theme.secondary, Advanced: theme.danger } as Record<string, string>)[template.difficulty]) || theme.primary }]} />
@@ -231,7 +231,7 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
           <View style={styles.histStat}>
             <Feather name="zap" size={11} color={theme.textMuted} />
             <Text style={[styles.histStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {workout.caloriesBurned} kcal
+              {workout.caloriesBurned} {t("common.kcal")}
             </Text>
           </View>
         )}
@@ -248,6 +248,7 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
 
 export default function WorkoutsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -271,24 +272,24 @@ export default function WorkoutsScreen() {
       queryClient.invalidateQueries({ queryKey: ["recentActivity"] });
       queryClient.invalidateQueries({ queryKey: ["streaks"] });
       queryClient.invalidateQueries({ queryKey: ["achievements"] });
-      showToast("Workout deleted", "success");
+      showToast(t("workouts.workoutDeleted"), "success");
     },
-    onError: () => showToast("Could not delete workout. Please try again.", "error"),
+    onError: () => showToast(t("workouts.couldNotDeleteWorkout"), "error"),
   });
 
   const deleteTemplateMutation = useMutation({
     mutationFn: (id: number) => api.deleteUserTemplate(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userTemplates"] });
-      showToast("Template deleted", "success");
+      showToast(t("workouts.templateDeleted"), "success");
     },
-    onError: () => showToast("Could not delete template. Please try again.", "error"),
+    onError: () => showToast(t("workouts.couldNotDeleteTemplate"), "error"),
   });
 
   const toggleFavMutation = useMutation({
     mutationFn: (id: number) => api.toggleTemplateFavorite(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["userTemplates"] }),
-    onError: () => showToast("Could not update favourite", "error"),
+    onError: () => showToast(t("workouts.couldNotUpdateFavourite"), "error"),
   });
 
   const onRefresh = useCallback(async () => {
@@ -302,7 +303,6 @@ export default function WorkoutsScreen() {
   const hasCompletedOnboarding = profile?.coachOnboardingComplete;
   const userTemplates: any[] = userTemplatesData?.templates || [];
 
-  // Build coach profile for recommendations
   const coachProfile = {
     availableEquipment: profile?.availableEquipment || [],
     workoutLocation: profile?.workoutLocation || "Home",
@@ -327,15 +327,26 @@ export default function WorkoutsScreen() {
     ? getTodaySuggestion(coachProfile, recentWorkouts)
     : null;
 
+  const quickLogItems = [
+    { label: t("workouts.run"), icon: "activity" as const, type: "running", color: theme.primary },
+    { label: t("workouts.gym"), icon: "zap" as const, type: "gym", color: theme.purple },
+    { label: t("workouts.walk"), icon: "navigation" as const, type: "walking", color: theme.cyan },
+    { label: t("workouts.cycle"), icon: "wind" as const, type: "cycling", color: theme.secondary },
+    { label: t("workouts.swim"), icon: "droplet" as const, type: "swimming", color: "#4fc3f7" },
+    { label: t("workouts.yoga"), icon: "heart" as const, type: "yoga", color: theme.pink },
+    { label: t("workouts.tennis"), icon: "circle" as const, type: "tennis", color: theme.warning },
+    { label: t("workouts.otherActivity"), icon: "more-horizontal" as const, type: "other", color: theme.textMuted },
+  ];
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
         <View>
-          <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Workouts</Text>
+          <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("workouts.title")}</Text>
           {hasCompletedOnboarding && (
             <Text style={[styles.subtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Your personalised coach
+              {t("workouts.yourPersonalisedCoach")}
             </Text>
           )}
         </View>
@@ -343,7 +354,7 @@ export default function WorkoutsScreen() {
           {hasCompletedOnboarding && (
             <Pressable onPress={() => router.push("/workouts/plan" as any)} style={[styles.planBtn, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <Feather name="calendar" size={16} color={theme.primary} />
-              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Week</Text>
+              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("workouts.week")}</Text>
             </Pressable>
           )}
           <Pressable
@@ -351,7 +362,7 @@ export default function WorkoutsScreen() {
             style={[styles.planBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
           >
             <Feather name="message-circle" size={16} color={theme.secondary} />
-            <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>Coach</Text>
+            <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("workouts.coach")}</Text>
           </Pressable>
           <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/workouts/log"); }}
@@ -379,10 +390,10 @@ export default function WorkoutsScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.onboardingTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-                  Set up your fitness coach
+                  {t("workouts.setUpCoach")}
                 </Text>
                 <Text style={[styles.onboardingSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  Tell us your goals, equipment and preferences — we'll build a personalised plan for you.
+                  {t("workouts.coachSetupMessage")}
                 </Text>
               </View>
               <Feather name="arrow-right" size={20} color={theme.primary} />
@@ -408,10 +419,10 @@ export default function WorkoutsScreen() {
           <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Recommended for you
+                {t("workouts.recommendedForYou")}
               </Text>
               <Pressable onPress={() => router.push("/workouts/onboarding" as any)}>
-                <Text style={[styles.editPrefs, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>Edit prefs</Text>
+                <Text style={[styles.editPrefs, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>{t("workouts.editPrefs")}</Text>
               </Pressable>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recScroll}>
@@ -447,10 +458,10 @@ export default function WorkoutsScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.planBannerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                  Weekly Training Plan
+                  {t("workouts.weeklyTrainingPlan")}
                 </Text>
                 <Text style={[styles.planBannerSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  View, edit and track your 7-day schedule
+                  {t("workouts.weeklyPlanSubtitle")}
                 </Text>
               </View>
               <Feather name="arrow-right" size={18} color={theme.secondary} />
@@ -460,19 +471,10 @@ export default function WorkoutsScreen() {
 
         {/* ── QUICK ACTIONS ── */}
         <Animated.View entering={FadeInDown.delay(150).duration(400)} style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Quick log</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.quickLog")}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.quickRow}>
-              {[
-                { label: "Run", icon: "activity" as const, type: "running", color: theme.primary },
-                { label: "Gym", icon: "zap" as const, type: "gym", color: theme.purple },
-                { label: "Walk", icon: "navigation" as const, type: "walking", color: theme.cyan },
-                { label: "Cycle", icon: "wind" as const, type: "cycling", color: theme.secondary },
-                { label: "Swim", icon: "droplet" as const, type: "swimming", color: "#4fc3f7" },
-                { label: "Yoga", icon: "heart" as const, type: "yoga", color: theme.pink },
-                { label: "Tennis", icon: "circle" as const, type: "tennis", color: theme.warning },
-                { label: "Other", icon: "more-horizontal" as const, type: "other", color: theme.textMuted },
-              ].map((act) => (
+              {quickLogItems.map((act) => (
                 <Pressable
                   key={act.type}
                   onPress={() => {
@@ -494,10 +496,10 @@ export default function WorkoutsScreen() {
         {/* ── MY TEMPLATES ── */}
         <Animated.View entering={FadeInDown.delay(175).duration(400)} style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>My Templates</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.myTemplates")}</Text>
             {userTemplates.length > 0 && (
               <Pressable onPress={() => router.push("/workouts/my-templates" as any)}>
-                <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 13 }}>Manage</Text>
+                <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.manage")}</Text>
               </Pressable>
             )}
           </View>
@@ -510,9 +512,9 @@ export default function WorkoutsScreen() {
                 <Feather name="bookmark" size={20} color={theme.secondary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Save your first template</Text>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("workouts.saveFirstTemplate")}</Text>
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-                  Log any workout and save it as a reusable template
+                  {t("workouts.saveTemplateDesc")}
                 </Text>
               </View>
               <Feather name="arrow-right" size={18} color={theme.secondary} />
@@ -548,11 +550,11 @@ export default function WorkoutsScreen() {
                         {tmpl.name}
                       </Text>
                       <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                        {exCount > 0 ? `${exCount} exercise${exCount !== 1 ? "s" : ""}` : tmpl.activityType}
+                        {exCount > 0 ? t("workouts.exercises", { count: exCount }) : tmpl.activityType}
                       </Text>
                       {tmpl.usageCount > 0 && (
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 3 }}>
-                          Used {tmpl.usageCount}×
+                          {t("workouts.usedCount", { count: tmpl.usageCount })}
                         </Text>
                       )}
                     </Pressable>
@@ -566,15 +568,14 @@ export default function WorkoutsScreen() {
         {/* ── BROWSE TEMPLATES ── */}
         <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Browse templates</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.browseTemplatesTitle")}</Text>
           </View>
-          {/* Search bar */}
           <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Feather name="search" size={15} color={theme.textMuted} />
             <TextInput
               value={templateSearch}
               onChangeText={setTemplateSearch}
-              placeholder="Search templates…"
+              placeholder={t("workouts.searchTemplatesPlaceholder")}
               placeholderTextColor={theme.textMuted}
               style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 14, paddingVertical: 0 }}
               returnKeyType="search"
@@ -600,7 +601,7 @@ export default function WorkoutsScreen() {
               return (
                 <View style={{ paddingVertical: 20, alignItems: "center", gap: 6 }}>
                   <Feather name="search" size={24} color={theme.textMuted} />
-                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>No templates match "{templateSearch}"</Text>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("workouts.noTemplatesMatch", { query: templateSearch })}</Text>
                 </View>
               );
             }
@@ -620,7 +621,7 @@ export default function WorkoutsScreen() {
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>{tmpl.name}</Text>
-                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{tmpl.durationMinutes}min · {tmpl.difficulty}</Text>
+                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{tmpl.durationMinutes}{t("common.min")} · {tmpl.difficulty}</Text>
                         </View>
                         <Feather name="chevron-right" size={16} color={theme.textMuted} />
                       </Pressable>
@@ -647,7 +648,7 @@ export default function WorkoutsScreen() {
                         </Text>
                         <View style={styles.templateMeta}>
                           <Text style={[styles.templateMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                            {tmpl.durationMinutes}min · {tmpl.difficulty}
+                            {tmpl.durationMinutes}{t("common.min")} · {tmpl.difficulty}
                           </Text>
                         </View>
                       </Pressable>
@@ -659,7 +660,7 @@ export default function WorkoutsScreen() {
                   style={{ alignItems: "center", paddingTop: 8 }}
                 >
                   <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-                    See all {WORKOUT_TEMPLATES.length} templates
+                    {t("workouts.seeAllTemplates", { count: WORKOUT_TEMPLATES.length })}
                   </Text>
                 </Pressable>
               </>
@@ -669,7 +670,7 @@ export default function WorkoutsScreen() {
 
         {/* ── WORKOUT HISTORY ── */}
         <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>History</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.history")}</Text>
 
           {workoutsLoading ? (
             <View style={{ gap: 10 }}>
@@ -698,10 +699,10 @@ export default function WorkoutsScreen() {
                     <Feather name="zap" size={26} color={theme.primary} />
                   </View>
                   <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                    Your journey starts here
+                    {t("workouts.yourJourneyStarts")}
                   </Text>
                   <Text style={[styles.emptyText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    Choose a template above or log a custom workout to start building your history.
+                    {t("workouts.chooseTemplateOrLog")}
                   </Text>
                   <Pressable
                     onPress={() => router.push("/workouts/log" as any)}
@@ -709,7 +710,7 @@ export default function WorkoutsScreen() {
                   >
                     <Feather name="plus" size={14} color={theme.primary} />
                     <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-                      Log your first workout
+                      {t("workouts.logFirstWorkoutBtn")}
                     </Text>
                   </Pressable>
                 </View>
@@ -723,12 +724,12 @@ export default function WorkoutsScreen() {
                   workout={w}
                   onDelete={() => {
                     Alert.alert(
-                      "Delete workout?",
-                      "This cannot be undone.",
+                      t("workouts.deleteWorkoutQuestion"),
+                      t("workouts.cannotBeUndone"),
                       [
-                        { text: "Cancel", style: "cancel" },
+                        { text: t("common.cancel"), style: "cancel" },
                         {
-                          text: "Delete",
+                          text: t("common.delete"),
                           style: "destructive",
                           onPress: () => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -770,7 +771,6 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   sectionTitle: { fontSize: 16 },
   editPrefs: { fontSize: 13 },
-  // Onboarding
   onboardingCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
     padding: 16, borderRadius: 16, borderWidth: 1.5,
@@ -778,7 +778,6 @@ const styles = StyleSheet.create({
   onboardingIcon: { width: 50, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   onboardingTitle: { fontSize: 15, marginBottom: 4 },
   onboardingSub: { fontSize: 13, lineHeight: 18 },
-  // Today
   todayCard: {},
   todayInner: { borderRadius: 16, borderWidth: 1.5, padding: 16, gap: 10 },
   todayTop: { flexDirection: "row", alignItems: "center", gap: 12 },
@@ -793,7 +792,6 @@ const styles = StyleSheet.create({
   todayStats: { flexDirection: "row", alignItems: "center", gap: 8 },
   todayStat: { flexDirection: "row", alignItems: "center", gap: 4 },
   todayStatText: { fontSize: 12 },
-  // Recommendations
   recScroll: { marginHorizontal: -20 },
   recRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 },
   recCardWrap: { width: 270 },
@@ -814,14 +812,12 @@ const styles = StyleSheet.create({
   matchBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   matchBadgeText: { fontSize: 10 },
   diffDot: { width: 6, height: 6, borderRadius: 3 },
-  // Quick actions
   quickRow: { flexDirection: "row", gap: 10, paddingRight: 8 },
   quickChip: {
     alignItems: "center", gap: 6, padding: 12, borderRadius: 12, borderWidth: 1, minWidth: 72,
   },
   quickIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   quickLabel: { fontSize: 12 },
-  // Templates
   templateRow: { flexDirection: "row", gap: 10, paddingRight: 8 },
   templateCard: { width: 150, borderRadius: 16, borderWidth: 1, padding: 14, gap: 8 },
   templateIcon: { width: 40, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center" },
@@ -836,7 +832,6 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 12,
     borderWidth: 1, borderRadius: 12, padding: 12,
   },
-  // History
   historyCard: { gap: 8, paddingVertical: 12 },
   historyHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   historyIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
@@ -848,7 +843,6 @@ const styles = StyleSheet.create({
   histStatText: { fontSize: 12 },
   moodChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   moodText: { fontSize: 11 },
-  // My Templates
   createTemplateCard: {
     flexDirection: "row", alignItems: "center", gap: 12, padding: 14,
     borderRadius: 16, borderWidth: 1,
@@ -856,7 +850,6 @@ const styles = StyleSheet.create({
   createTemplateIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   myTmplCard: { width: 140, borderRadius: 16, borderWidth: 1, padding: 12 },
   myTmplIcon: { width: 32, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center" },
-  // Empty
   empty: { alignItems: "center", gap: 10, paddingVertical: 28 },
   emptyIconBg: { width: 60, height: 60, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: 4 },
   emptyTitle: { fontSize: 16 },

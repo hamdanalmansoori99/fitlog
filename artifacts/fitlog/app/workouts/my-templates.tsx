@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -33,6 +34,7 @@ const ACTIVITY_TYPES = [
 ];
 
 export default function MyTemplatesScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -75,9 +77,9 @@ export default function MyTemplatesScreen() {
   });
 
   function handleDelete(tmpl: any) {
-    Alert.alert("Delete Template?", `"${tmpl.name}" will be permanently removed.`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(tmpl.id) },
+    Alert.alert(t("workouts.deleteTemplateTitle"), t("workouts.permanentlyRemoved", { name: tmpl.name }), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate(tmpl.id) },
     ]);
   }
 
@@ -123,7 +125,7 @@ export default function MyTemplatesScreen() {
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
         <View style={{ flex: 1, alignItems: "center" }}>
-          <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>My Templates</Text>
+          <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("workouts.myTemplates")}</Text>
           {templateLimit !== null && (
             <Text style={{ color: templates.length >= templateLimit ? theme.danger : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>
               {templates.length} / {templateLimit} templates
@@ -165,10 +167,10 @@ export default function MyTemplatesScreen() {
               />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: templates.length >= templateLimit ? "#ff5252" : theme.warning, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-                  {templates.length >= templateLimit ? "Template limit reached" : `Almost at your limit (${templates.length}/${templateLimit})`}
+                  {templates.length >= templateLimit ? t("workouts.templateLimitReached") : t("workouts.almostAtLimit", { count: templates.length, limit: templateLimit })}
                 </Text>
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>
-                  Upgrade to Premium for unlimited saved plans
+                  {t("workouts.upgradePremiumTemplates")}
                 </Text>
               </View>
               <Feather name="chevron-right" size={14} color={theme.textMuted} />
@@ -180,7 +182,7 @@ export default function MyTemplatesScreen() {
         {showCreate && (
           <Animated.View entering={FadeInDown.duration(300)}>
             <Card style={{ gap: 12 }}>
-              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>New Template</Text>
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("workouts.newTemplate")}</Text>
               <TextInput
                 value={newName}
                 onChangeText={setNewName}
@@ -189,7 +191,7 @@ export default function MyTemplatesScreen() {
                 style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background, fontFamily: "Inter_400Regular" }]}
                 autoFocus
               />
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>Activity type</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.activityType")}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {ACTIVITY_TYPES.map((act) => {
@@ -215,7 +217,7 @@ export default function MyTemplatesScreen() {
               </ScrollView>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Pressable onPress={() => setShowCreate(false)} style={[styles.cancelBtn, { borderColor: theme.border }]}>
-                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium" }}>Cancel</Text>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium" }}>{t("common.cancel")}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => createMutation.mutate()}
@@ -223,7 +225,7 @@ export default function MyTemplatesScreen() {
                   style={[styles.saveBtn, { backgroundColor: theme.primary }]}
                 >
                   <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold" }}>
-                    {createMutation.isPending ? "Creating…" : "Create"}
+                    {createMutation.isPending ? t("workouts.creating") : t("workouts.createBtn")}
                   </Text>
                 </Pressable>
               </View>
@@ -233,7 +235,7 @@ export default function MyTemplatesScreen() {
 
         {isLoading && (
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 20 }}>
-            Loading…
+            {t("workouts.loadingText")}
           </Text>
         )}
 
@@ -241,7 +243,7 @@ export default function MyTemplatesScreen() {
         {favorites.length > 0 && (
           <Animated.View entering={FadeInDown.delay(50).duration(400)} style={{ gap: 8 }}>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, letterSpacing: 0.5 }}>
-              FAVOURITES
+              {t("workouts.favourites")}
             </Text>
             {favorites.map((tmpl) => <TemplateRow key={tmpl.id} tmpl={tmpl} />)}
           </Animated.View>
@@ -252,7 +254,7 @@ export default function MyTemplatesScreen() {
           <Animated.View entering={FadeInDown.delay(100).duration(400)} style={{ gap: 8 }}>
             {favorites.length > 0 && (
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, letterSpacing: 0.5 }}>
-                ALL TEMPLATES
+                {t("workouts.allTemplatesLabel")}
               </Text>
             )}
             {rest.map((tmpl) => <TemplateRow key={tmpl.id} tmpl={tmpl} />)}
@@ -266,17 +268,17 @@ export default function MyTemplatesScreen() {
               <Feather name="bookmark" size={30} color={theme.secondary} />
             </View>
             <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 17, textAlign: "center" }}>
-              No templates yet
+              {t("workouts.noTemplatesYet")}
             </Text>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14, textAlign: "center", lineHeight: 20 }}>
-              Save any workout as a template so you can quickly reuse it later.
+              {t("workouts.saveWorkoutAsTemplate")}
             </Text>
             <Pressable
               onPress={() => setShowCreate(true)}
               style={[styles.createEmptyBtn, { backgroundColor: theme.secondaryDim, borderColor: theme.secondary + "50" }]}
             >
               <Feather name="plus" size={14} color={theme.secondary} />
-              <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Create Template</Text>
+              <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("workouts.newTemplate")}</Text>
             </Pressable>
           </Animated.View>
         )}

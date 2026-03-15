@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { PremiumGate } from "@/components/PremiumGate";
 import { useToast } from "@/components/ui/Toast";
+import { useTranslation } from "react-i18next";
 
 const CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 const UNITS = ["grams", "oz", "cups", "pieces", "servings", "ml"];
@@ -69,6 +70,7 @@ function getServingSuggestions(name: string) {
 
 export default function AddMealScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams();
@@ -193,7 +195,7 @@ export default function AddMealScreen() {
     if (!cameraPermission?.granted) {
       const perm = await requestCameraPermission();
       if (!perm.granted) {
-        Alert.alert("Camera access needed", "Allow camera access in settings to scan barcodes.");
+        Alert.alert(t("meals.cameraAccessNeeded"), t("meals.allowCameraBarcode"));
         return;
       }
     }

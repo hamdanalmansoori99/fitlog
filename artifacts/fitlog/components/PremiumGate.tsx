@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useSubscription, type SubscriptionFeatures } from "@/hooks/useSubscription";
+import { useTranslation } from "react-i18next";
 
 interface PremiumGateProps {
   feature: keyof SubscriptionFeatures;
@@ -15,6 +16,7 @@ interface PremiumGateProps {
 
 export function PremiumGate({ feature, message, children, compact = false, minHeight }: PremiumGateProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { features, isLoading } = useSubscription();
 
   if (isLoading || features[feature]) {
@@ -22,16 +24,16 @@ export function PremiumGate({ feature, message, children, compact = false, minHe
   }
 
   const defaultMessages: Partial<Record<keyof SubscriptionFeatures, string>> = {
-    aiPhotoAnalysis: "Snap a photo of your meal and let AI identify every ingredient and estimate macros instantly.",
-    advancedAnalytics: "Unlock detailed body composition trends, macro breakdown charts, and week-over-week progress insights.",
-    smartProgression: "Track personal records, strength curves, and progression over time for every exercise.",
-    deeperRecovery: "See your sleep quality trends, recovery scores, and readiness predictions over time.",
-    unlimitedTemplates: "Save unlimited custom workout plans to build your perfect training library.",
-    exportData: "Export your full workout and nutrition history as CSV or JSON.",
-    advancedNutrition: "Set per-meal macro targets, view nutrient density scores, and get AI-powered meal coaching.",
+    aiPhotoAnalysis: t("components.premiumGate.aiPhotoAnalysis"),
+    advancedAnalytics: t("components.premiumGate.advancedAnalytics"),
+    smartProgression: t("components.premiumGate.smartProgression"),
+    deeperRecovery: t("components.premiumGate.deeperRecovery"),
+    unlimitedTemplates: t("components.premiumGate.unlimitedTemplates"),
+    exportData: t("components.premiumGate.exportData"),
+    advancedNutrition: t("components.premiumGate.advancedNutrition"),
   };
 
-  const displayMessage = message ?? defaultMessages[feature] ?? "Upgrade to Premium to unlock this feature.";
+  const displayMessage = message ?? defaultMessages[feature] ?? t("components.premiumGate.upgradeMessage");
 
   return (
     <View style={{ position: "relative" }}>
@@ -55,7 +57,7 @@ export function PremiumGate({ feature, message, children, compact = false, minHe
         </View>
 
         {!compact && (
-          <Text style={[styles.lockTitle, { color: theme.text }]}>Premium Feature</Text>
+          <Text style={[styles.lockTitle, { color: theme.text }]}>{t("components.premiumGate.premiumFeature")}</Text>
         )}
 
         <Text
@@ -75,7 +77,7 @@ export function PremiumGate({ feature, message, children, compact = false, minHe
         >
           <Feather name="zap" size={compact ? 11 : 13} color="#0f0f1a" />
           <Text style={[styles.upgradeBtnText, compact && { fontSize: 11 }]}>
-            {compact ? "Upgrade" : "Upgrade to Premium"}
+            {compact ? t("components.premiumGate.upgrade") : t("components.premiumGate.upgradeToPremium")}
           </Text>
         </Pressable>
       </View>

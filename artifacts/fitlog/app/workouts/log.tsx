@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
@@ -50,6 +51,7 @@ interface GymExercise {
 }
 
 export default function LogWorkoutScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -154,7 +156,7 @@ export default function LogWorkoutScreen() {
       setTemplateSaved(true);
       setShowSaveTemplate(false);
     },
-    onError: (err: any) => setError(err.message || "Failed to save template. Please try again."),
+    onError: (err: any) => setError(err.message || t("workouts.failedSaveTemplate")),
   });
 
   useEffect(() => {
@@ -190,13 +192,13 @@ export default function LogWorkoutScreen() {
     if (activityType === "gym") {
       const namedExercises = exercises.filter(e => e.name.trim());
       if (namedExercises.length === 0) {
-        setError("Add at least one exercise before saving.");
+        setError(t("workouts.addExerciseError"));
         return;
       }
     } else {
       const parsedDist = distanceKm ? parseFloat(distanceKm) : 0;
       if (durationMinutes === 0 && parsedDist <= 0) {
-        setError("Enter a duration or distance for your workout.");
+        setError(t("workouts.durationOrDistanceError"));
         return;
       }
     }
@@ -204,7 +206,7 @@ export default function LogWorkoutScreen() {
     if (distanceKm) {
       const d = parseFloat(distanceKm);
       if (isNaN(d) || d <= 0 || d > 2000) {
-        setError("Distance must be between 0.1 and 2000 km.");
+        setError(t("workouts.distanceRangeError"));
         return;
       }
     }
@@ -212,13 +214,13 @@ export default function LogWorkoutScreen() {
     if (caloriesBurned) {
       const c = parseInt(caloriesBurned);
       if (isNaN(c) || c < 0 || c > 10000) {
-        setError("Calories burned must be between 0 and 10,000.");
+        setError(t("workouts.caloriesRangeError"));
         return;
       }
     }
 
     if (durationM && (parseInt(durationM) < 0 || parseInt(durationM) > 59)) {
-      setError("Minutes must be between 0 and 59.");
+      setError(t("workouts.minutesRangeError"));
       return;
     }
 
@@ -288,13 +290,13 @@ export default function LogWorkoutScreen() {
     return (
       <View style={[styles.successScreen, { backgroundColor: theme.background }]}>
         <SuccessView
-          title="Workout Logged!"
-          subtitle={`${activityLabel} recorded. Keep up the great work!`}
+          title={t("workouts.workoutLogged")}
+          subtitle={t("workouts.recordedKeepUp", { activity: activityLabel })}
         />
         {activityType === "gym" && completedExercises.length > 0 && (
           <View style={{ width: "100%", paddingHorizontal: 20, gap: 8 }}>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center", marginBottom: 4 }}>
-              Next Session Targets
+              {t("workouts.nextSessionTargets")}
             </Text>
             {completedExercises.map((ex) => {
               const sessions = exerciseHistoryMap[ex.name] ?? [];
@@ -302,7 +304,7 @@ export default function LogWorkoutScreen() {
               if (target.trend === "first") return null;
               const trendColors: Record<string, string> = { progress: theme.primary, maintain: theme.secondary, deload: theme.warning };
               const trendColor = trendColors[target.trend] ?? theme.textMuted;
-              const trendLabels: Record<string, string> = { progress: "Level up", maintain: "Hold steady", deload: "Recovery" };
+              const trendLabels: Record<string, string> = { progress: t("workouts.levelUp"), maintain: t("workouts.holdSteady"), deload: t("workouts.recoveryLabel") };
               return (
                 <View
                   key={ex.name}
@@ -312,8 +314,8 @@ export default function LogWorkoutScreen() {
                     <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{ex.name}</Text>
                     <Text style={{ color: trendColor, fontFamily: "Inter_400Regular", fontSize: 12 }}>
                       {target.suggestedSets != null && target.suggestedReps != null
-                        ? `Target: ${target.suggestedSets}×${target.suggestedReps}${target.suggestedWeightKg ? ` @ ${target.suggestedWeightKg}kg` : ""}`
-                        : "Same as before"}
+                        ? `${t("workouts.target")}: ${target.suggestedSets}×${target.suggestedReps}${target.suggestedWeightKg ? ` @ ${target.suggestedWeightKg}kg` : ""}`
+                        : t("workouts.sameAsBefore")}
                     </Text>
                   </View>
                   <View style={[styles.trendBadge, { backgroundColor: trendColor + "20" }]}>
@@ -331,7 +333,7 @@ export default function LogWorkoutScreen() {
             style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 20 }}
           >
             <Feather name="bookmark" size={16} color={theme.secondary} />
-            <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Save as Template</Text>
+            <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("workouts.saveAsTemplate")}</Text>
           </Pressable>
         )}
         {activityType === "gym" && showSaveTemplate && (
@@ -339,7 +341,7 @@ export default function LogWorkoutScreen() {
             <TextInput
               value={savedTemplateName}
               onChangeText={setSavedTemplateName}
-              placeholder="Template name"
+              placeholder={t("workouts.templateName")}
               placeholderTextColor={theme.textMuted}
               style={{
                 borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
@@ -348,7 +350,7 @@ export default function LogWorkoutScreen() {
               }}
             />
             <Button
-              title={saveTemplateMutation.isPending ? "Saving…" : "Save Template"}
+              title={saveTemplateMutation.isPending ? t("workouts.saving") : t("workouts.saveTemplate")}
               onPress={() => saveTemplateMutation.mutate(savedTemplateName)}
               style={{ backgroundColor: theme.secondary }}
             />
@@ -357,10 +359,10 @@ export default function LogWorkoutScreen() {
         {templateSaved && (
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 20 }}>
             <Feather name="check-circle" size={16} color={theme.primary} />
-            <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Template saved!</Text>
+            <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("workouts.templateSaved")}</Text>
           </View>
         )}
-        <Button title="Go to Dashboard" onPress={() => router.replace("/(tabs)")} style={{ marginHorizontal: 20 }} />
+        <Button title={t("workouts.goToDashboard")} onPress={() => router.replace("/(tabs)")} style={{ marginHorizontal: 20 }} />
       </View>
     );
   }
@@ -373,7 +375,7 @@ export default function LogWorkoutScreen() {
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          {step === "select" ? "Choose Activity" : "Log Workout"}
+          {step === "select" ? t("workouts.chooseActivity") : t("workouts.logWorkout")}
         </Text>
         <View style={{ width: 44 }} />
       </View>
@@ -414,27 +416,27 @@ export default function LogWorkoutScreen() {
         ) : (
           <View style={styles.form}>
             {/* Date */}
-            <Input label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+            <Input label={t("workouts.date")} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
             
             {/* Name (optional, gym required) */}
             {activityType === "gym" && (
-              <Input label="Workout Name" value={workoutName} onChangeText={setWorkoutName} placeholder="e.g. Push Day" />
+              <Input label={t("workouts.workoutName")} value={workoutName} onChangeText={setWorkoutName} placeholder="e.g. Push Day" />
             )}
             {activityType === "other" && (
-              <Input label="Activity Name" value={workoutName} onChangeText={setWorkoutName} placeholder="e.g. Rock Climbing" />
+              <Input label={t("workouts.activityName")} value={workoutName} onChangeText={setWorkoutName} placeholder="e.g. Rock Climbing" />
             )}
             
             {/* Duration */}
             <View>
-              <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Duration</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.duration")}</Text>
               <View style={styles.durationRow}>
                 <View style={{ flex: 1 }}>
                   <Input value={durationH} onChangeText={setDurationH} placeholder="0" keyboardType="numeric" />
-                  <Text style={[styles.durationUnit, { color: theme.textMuted }]}>hours</Text>
+                  <Text style={[styles.durationUnit, { color: theme.textMuted }]}>{t("workouts.hours")}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Input value={durationM} onChangeText={setDurationM} placeholder="45" keyboardType="numeric" />
-                  <Text style={[styles.durationUnit, { color: theme.textMuted }]}>minutes</Text>
+                  <Text style={[styles.durationUnit, { color: theme.textMuted }]}>{t("workouts.minutes")}</Text>
                 </View>
               </View>
             </View>
@@ -442,7 +444,7 @@ export default function LogWorkoutScreen() {
             {/* Distance */}
             {["cycling", "running", "walking", "swimming"].includes(activityType) && (
               <Input
-                label={activityType === "swimming" ? "Distance (meters)" : "Distance (km)"}
+                label={activityType === "swimming" ? t("workouts.distanceMeters") : t("workouts.distanceKm")}
                 value={distanceKm}
                 onChangeText={setDistanceKm}
                 placeholder={activityType === "swimming" ? "1000" : "5.0"}
@@ -454,14 +456,14 @@ export default function LogWorkoutScreen() {
             {activityType === "cycling" && (
               <>
                 <ChipGroup
-                  label="Route Type"
+                  label={t("workouts.routeType")}
                   options={["Road", "Mountain", "Stationary", "Trail"]}
                   selected={routeType}
                   onSelect={setRouteType}
                   theme={theme}
                 />
                 <ChipGroup
-                  label="Intensity"
+                  label={t("workouts.intensity")}
                   options={["Easy", "Moderate", "Hard"]}
                   selected={intensity}
                   onSelect={setIntensity}
@@ -472,52 +474,52 @@ export default function LogWorkoutScreen() {
             
             {activityType === "running" && (
               <>
-                <ChipGroup label="Terrain" options={["Road", "Trail", "Treadmill", "Track"]} selected={terrain} onSelect={setTerrain} theme={theme} />
-                <ChipGroup label="Intensity" options={["Easy", "Moderate", "Hard", "Intervals"]} selected={intensity} onSelect={setIntensity} theme={theme} />
+                <ChipGroup label={t("workouts.terrainLabel")} options={["Road", "Trail", "Treadmill", "Track"]} selected={terrain} onSelect={setTerrain} theme={theme} />
+                <ChipGroup label={t("workouts.intensity")} options={["Easy", "Moderate", "Hard", "Intervals"]} selected={intensity} onSelect={setIntensity} theme={theme} />
               </>
             )}
             
             {activityType === "walking" && (
               <>
-                <Input label="Steps (optional)" value={steps} onChangeText={setSteps} placeholder="8000" keyboardType="numeric" />
-                <ChipGroup label="Terrain" options={["Flat", "Hilly", "Treadmill"]} selected={terrain} onSelect={setTerrain} theme={theme} />
-                <ChipGroup label="Intensity" options={["Light", "Moderate", "Brisk"]} selected={intensity} onSelect={setIntensity} theme={theme} />
+                <Input label={t("workouts.stepsOptional")} value={steps} onChangeText={setSteps} placeholder="8000" keyboardType="numeric" />
+                <ChipGroup label={t("workouts.terrainLabel")} options={["Flat", "Hilly", "Treadmill"]} selected={terrain} onSelect={setTerrain} theme={theme} />
+                <ChipGroup label={t("workouts.intensity")} options={["Light", "Moderate", "Brisk"]} selected={intensity} onSelect={setIntensity} theme={theme} />
               </>
             )}
             
             {activityType === "tennis" && (
               <>
-                <ChipGroup label="Match Type" options={["Singles", "Doubles"]} selected={matchType} onSelect={setMatchType} theme={theme} />
-                <Input label="Sets Played" value={setsPlayed} onChangeText={setSetsPlayed} placeholder="3" keyboardType="numeric" />
-                <ChipGroup label="Result" options={["Won", "Lost", "Practice"]} selected={result} onSelect={setResult} theme={theme} />
-                <ChipGroup label="Intensity" options={["Easy", "Moderate", "Hard"]} selected={intensity} onSelect={setIntensity} theme={theme} />
+                <ChipGroup label={t("workouts.matchType")} options={["Singles", "Doubles"]} selected={matchType} onSelect={setMatchType} theme={theme} />
+                <Input label={t("workouts.setsPlayed")} value={setsPlayed} onChangeText={setSetsPlayed} placeholder="3" keyboardType="numeric" />
+                <ChipGroup label={t("workouts.resultLabel")} options={["Won", "Lost", "Practice"]} selected={result} onSelect={setResult} theme={theme} />
+                <ChipGroup label={t("workouts.intensity")} options={["Easy", "Moderate", "Hard"]} selected={intensity} onSelect={setIntensity} theme={theme} />
               </>
             )}
             
             {activityType === "swimming" && (
               <>
-                <Input label="Laps" value={laps} onChangeText={setLaps} placeholder="20" keyboardType="numeric" />
-                <ChipGroup label="Stroke" options={["Freestyle", "Backstroke", "Breaststroke", "Butterfly", "Mixed"]} selected={strokeType} onSelect={setStrokeType} theme={theme} />
+                <Input label={t("workouts.lapsLabel")} value={laps} onChangeText={setLaps} placeholder="20" keyboardType="numeric" />
+                <ChipGroup label={t("workouts.strokeLabel")} options={["Freestyle", "Backstroke", "Breaststroke", "Butterfly", "Mixed"]} selected={strokeType} onSelect={setStrokeType} theme={theme} />
               </>
             )}
             
             {activityType === "yoga" && (
-              <ChipGroup label="Type" options={["Vinyasa", "Hatha", "Yin", "Power", "Stretching", "Other"]} selected={yogaType} onSelect={setYogaType} theme={theme} />
+              <ChipGroup label={t("workouts.typeLabel")} options={["Vinyasa", "Hatha", "Yin", "Power", "Stretching", "Other"]} selected={yogaType} onSelect={setYogaType} theme={theme} />
             )}
             
             {activityType === "other" && (
-              <Input label="Calories Burned" value={caloriesBurned} onChangeText={setCaloriesBurned} placeholder="250" keyboardType="numeric" />
+              <Input label={t("workouts.caloriesBurnedLabel")} value={caloriesBurned} onChangeText={setCaloriesBurned} placeholder="250" keyboardType="numeric" />
             )}
             
             {/* Gym Exercises */}
             {activityType === "gym" && (
               <View style={styles.exercisesSection}>
-                <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Exercises</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.exercisesLabel")}</Text>
                 {exercises.map((ex, exIdx) => (
                   <Card key={exIdx} style={styles.exerciseCard}>
                     <View style={styles.exerciseHeader}>
                       <Text style={[styles.exerciseNum, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
-                        Exercise {exIdx + 1}
+                        {t("workouts.exerciseN", { n: exIdx + 1 })}
                       </Text>
                       {exercises.length > 1 && (
                         <Pressable
@@ -540,7 +542,7 @@ export default function LogWorkoutScreen() {
                         newEx[exIdx].name = t;
                         setExercises(newEx);
                       }}
-                      placeholder="Exercise name..."
+                      placeholder={t("workouts.exerciseNamePlaceholder")}
                       placeholderTextColor={theme.textMuted}
                       style={[styles.exerciseInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background, fontFamily: "Inter_400Regular" }]}
                     />
@@ -577,13 +579,13 @@ export default function LogWorkoutScreen() {
                           <View style={{ flex: 1 }}>
                             {target.previousDisplay && (
                               <Text style={[styles.progressionBadgeText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                                Last: {target.previousDisplay}
+                                {t("workouts.last")}: {target.previousDisplay}
                               </Text>
                             )}
                             <Text style={[styles.progressionBadgeTarget, { color: trendColor, fontFamily: "Inter_600SemiBold" }]}>
-                              Target: {target.suggestedSets != null && target.suggestedReps != null
+                              {t("workouts.target")}: {target.suggestedSets != null && target.suggestedReps != null
                                 ? `${target.suggestedSets}×${target.suggestedReps}${target.suggestedWeightKg ? ` @ ${target.suggestedWeightKg}kg` : ""}`
-                                : target.suggestedReps != null ? `${target.suggestedReps} reps` : "Same as before"}
+                                : target.suggestedReps != null ? `${target.suggestedReps} ${t("workouts.reps")}` : t("workouts.sameAsBefore")}
                             </Text>
                           </View>
                         </View>
@@ -592,9 +594,9 @@ export default function LogWorkoutScreen() {
                     
                     {/* Sets */}
                     <View style={styles.setsHeader}>
-                      <Text style={[styles.setLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular", flex: 1 }]}>Set</Text>
-                      <Text style={[styles.setLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular", flex: 2 }]}>Reps</Text>
-                      <Text style={[styles.setLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular", flex: 2 }]}>Weight (kg)</Text>
+                      <Text style={[styles.setLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular", flex: 1 }]}>{t("workouts.setLabel")}</Text>
+                      <Text style={[styles.setLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular", flex: 2 }]}>{t("workouts.reps")}</Text>
+                      <Text style={[styles.setLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular", flex: 2 }]}>{t("workouts.weightKgLabel")}</Text>
                       <View style={{ width: 24 }} />
                     </View>
                     
@@ -649,13 +651,13 @@ export default function LogWorkoutScreen() {
                       style={[styles.addSetBtn, { borderColor: theme.primary }]}
                     >
                       <Feather name="plus" size={14} color={theme.primary} />
-                      <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>Add Set</Text>
+                      <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.addSet")}</Text>
                     </Pressable>
 
                     {/* RPE Selector */}
                     <View style={{ marginTop: 12 }}>
                       <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 6 }]}>
-                        Effort Level (RPE)
+                        {t("workouts.effortLevel")}
                       </Text>
                       <View style={{ flexDirection: "row", gap: 6 }}>
                         {RPE_VALUES.map((rpeVal, rpeIdx) => {
@@ -694,14 +696,14 @@ export default function LogWorkoutScreen() {
                   style={[styles.addExBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
                 >
                   <Feather name="plus" size={18} color={theme.primary} />
-                  <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium" }}>Add Exercise</Text>
+                  <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium" }}>{t("workouts.addExercise")}</Text>
                 </Pressable>
               </View>
             )}
             
             {/* Mood */}
             <View>
-              <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Mood</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.mood")}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.moodRow}>
                   {MOODS.map((m, i) => (
@@ -729,11 +731,11 @@ export default function LogWorkoutScreen() {
             
             {/* Notes */}
             <View>
-              <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Notes (optional)</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.notesOptional")}</Text>
               <TextInput
                 value={notes}
                 onChangeText={setNotes}
-                placeholder="How did it feel?"
+                placeholder={t("workouts.notesPlaceholder")}
                 placeholderTextColor={theme.textMuted}
                 multiline
                 numberOfLines={3}
@@ -745,7 +747,7 @@ export default function LogWorkoutScreen() {
               <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13 }}>{error}</Text>
             ) : null}
             
-            <Button title="Save Workout" onPress={handleSubmit} loading={mutation.isPending} />
+            <Button title={t("workouts.saveWorkout")} onPress={handleSubmit} loading={mutation.isPending} />
           </View>
         )}
       </ScrollView>

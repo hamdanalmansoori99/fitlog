@@ -10,6 +10,7 @@ import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -193,6 +194,7 @@ function ShareCard({ workout, theme, useImperial }: { workout: any; theme: any; 
 }
 
 export default function WorkoutDetailScreen() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -225,16 +227,16 @@ export default function WorkoutDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ["achievements"] });
       router.back();
     },
-    onError: () => Alert.alert("Error", "Failed to delete workout."),
+    onError: () => Alert.alert(t("common.error"), t("workouts.failedToDelete")),
   });
 
   const handleDelete = () => {
     Alert.alert(
-      "Delete Workout",
-      "This will permanently remove this workout and all its sets. This cannot be undone.",
+      t("workouts.deleteWorkoutTitle"),
+      t("workouts.deleteWorkoutConfirm"),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate() },
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate() },
       ]
     );
   };
@@ -252,10 +254,10 @@ export default function WorkoutDetailScreen() {
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <Feather name="alert-circle" size={40} color={theme.danger} />
         <Text style={[styles.errorText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          Workout not found
+          {t("workouts.workoutNotFound")}
         </Text>
         <Pressable onPress={() => router.back()} style={styles.backLink}>
-          <Text style={[{ color: theme.primary, fontFamily: "Inter_500Medium" }]}>Go back</Text>
+          <Text style={[{ color: theme.primary, fontFamily: "Inter_500Medium" }]}>{t("workouts.goBackLabel")}</Text>
         </Pressable>
       </View>
     );
@@ -277,7 +279,7 @@ export default function WorkoutDetailScreen() {
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-          Workout Detail
+          {t("workouts.workoutDetail")}
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           <Pressable onPress={() => setShareOpen(true)} style={styles.editBtn} hitSlop={8}>
@@ -320,22 +322,22 @@ export default function WorkoutDetailScreen() {
             {/* Stats row */}
             <View style={styles.statsRow}>
               {workout.durationMinutes != null && (
-                <StatPill icon="clock" label="Duration" value={`${workout.durationMinutes} min`} color={color} theme={theme} />
+                <StatPill icon="clock" label={t("workouts.durationLabel")} value={`${workout.durationMinutes} min`} color={color} theme={theme} />
               )}
               {workout.distanceKm != null && (
                 <StatPill
                   icon="map-pin"
-                  label="Distance"
+                  label={t("workouts.distanceLabel")}
                   value={useImperial ? `${(workout.distanceKm * 0.621371).toFixed(1)} mi` : `${workout.distanceKm.toFixed(1)} km`}
                   color={theme.secondary}
                   theme={theme}
                 />
               )}
               {workout.caloriesBurned != null && (
-                <StatPill icon="zap" label="Calories" value={`${workout.caloriesBurned} kcal`} color={theme.warning} theme={theme} />
+                <StatPill icon="zap" label={t("workouts.caloriesLabel")} value={`${workout.caloriesBurned} kcal`} color={theme.warning} theme={theme} />
               )}
               {workout.mood && (
-                <StatPill icon="smile" label="Mood" value={workout.mood} color={theme.primary} theme={theme} />
+                <StatPill icon="smile" label={t("workouts.moodLabel")} value={workout.mood} color={theme.primary} theme={theme} />
               )}
             </View>
 
@@ -354,7 +356,7 @@ export default function WorkoutDetailScreen() {
         {exercises.length > 0 && (
           <Animated.View entering={FadeInDown.delay(80).duration(350)}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-              Exercises · {exercises.length}
+              {t("workouts.exercisesLabel")} · {exercises.length}
             </Text>
             <View style={{ gap: 10 }}>
               {exercises.map((ex: any, exIdx: number) => (
@@ -384,8 +386,8 @@ export default function WorkoutDetailScreen() {
                   {(ex.sets ?? []).length > 0 && (
                     <View style={[styles.setsTable, { borderColor: theme.border }]}>
                       <View style={[styles.setsHeader, { borderBottomColor: theme.border }]}>
-                        <Text style={[styles.setsHeaderText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Set</Text>
-                        <Text style={[styles.setsHeaderText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Weight / Reps / Time</Text>
+                        <Text style={[styles.setsHeaderText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.setLabel")}</Text>
+                        <Text style={[styles.setsHeaderText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.weightRepsTime")}</Text>
                         <Text style={[styles.setsHeaderText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>✓</Text>
                       </View>
                       {(ex.sets ?? []).map((s: any, sIdx: number) => (
@@ -405,7 +407,7 @@ export default function WorkoutDetailScreen() {
               <View style={[styles.noExWrap, { borderColor: theme.border }]}>
                 <Feather name={icon} size={32} color={color} />
                 <Text style={[styles.noExText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {workout.activityType.charAt(0).toUpperCase() + workout.activityType.slice(1)} session logged
+                  {t("workouts.sessionLogged", { type: workout.activityType.charAt(0).toUpperCase() + workout.activityType.slice(1) })}
                 </Text>
               </View>
             </Card>
@@ -431,19 +433,19 @@ export default function WorkoutDetailScreen() {
                       link.href = uri;
                       link.download = `fitlog-workout-${id}.png`;
                       link.click();
-                      showToast("Image downloaded!", "success");
+                      showToast(t("workouts.imageDownloaded"), "success");
                     } else {
                       const uri = await captureRef(cardRef, { format: "jpg", quality: 0.95 });
                       const available = await Sharing.isAvailableAsync();
                       if (available) {
-                        await Sharing.shareAsync(uri, { mimeType: "image/jpeg", dialogTitle: "Share your workout" });
+                        await Sharing.shareAsync(uri, { mimeType: "image/jpeg", dialogTitle: t("workouts.shareDialogTitle") });
                       } else {
-                        showToast("Sharing is not available on this device", "error");
+                        showToast(t("workouts.sharingNotAvailable"), "error");
                       }
                     }
                   } catch (err) {
                     console.error("Share error:", err);
-                    showToast("Could not share. Try taking a screenshot instead.", "error");
+                    showToast(t("workouts.couldNotShare"), "error");
                   } finally {
                     setSharing(false);
                   }
@@ -457,14 +459,14 @@ export default function WorkoutDetailScreen() {
                   <Feather name={Platform.OS === "web" ? "download" : "share"} size={16} color="#0f0f1a" />
                 )}
                 <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                  {sharing ? "Preparing…" : Platform.OS === "web" ? "Download Image" : "Share Workout"}
+                  {sharing ? t("workouts.preparing") : Platform.OS === "web" ? t("workouts.downloadImage") : t("workouts.shareWorkoutBtn")}
                 </Text>
               </Pressable>
               <Pressable
                 onPress={() => setShareOpen(false)}
                 style={[shareStyles.actionBtn, { backgroundColor: "#1a1a2e", borderColor: "#2a2a3e", borderWidth: 1 }]}
               >
-                <Text style={{ color: "#9e9eb8", fontFamily: "Inter_500Medium", fontSize: 14 }}>Close</Text>
+                <Text style={{ color: "#9e9eb8", fontFamily: "Inter_500Medium", fontSize: 14 }}>{t("common.close")}</Text>
               </Pressable>
             </View>
           </Pressable>

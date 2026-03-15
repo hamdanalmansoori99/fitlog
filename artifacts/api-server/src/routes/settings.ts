@@ -26,7 +26,7 @@ router.get("/", requireAuth, async (req, res) => {
 router.put("/", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const { darkMode, unitSystem, notificationsEnabled } = req.body;
+    const { darkMode, unitSystem, language, notificationsEnabled } = req.body;
     
     const existing = await db.select().from(settingsTable)
       .where(eq(settingsTable.userId, user.id)).limit(1);
@@ -36,6 +36,7 @@ router.put("/", requireAuth, async (req, res) => {
         userId: user.id,
         darkMode: darkMode ?? true,
         unitSystem: unitSystem ?? "metric",
+        language: language ?? "en",
         notificationsEnabled: notificationsEnabled ?? true,
       }).returning();
       res.json(newSettings);
@@ -46,6 +47,7 @@ router.put("/", requireAuth, async (req, res) => {
       .set({
         ...(darkMode !== undefined && { darkMode }),
         ...(unitSystem !== undefined && { unitSystem }),
+        ...(language !== undefined && { language }),
         ...(notificationsEnabled !== undefined && { notificationsEnabled }),
         updatedAt: new Date(),
       })

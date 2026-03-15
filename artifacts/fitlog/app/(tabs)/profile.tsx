@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useAuthStore } from "@/store/authStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { useNotificationStore, NOTIF_META, NOTIF_TYPES, type NotifType } from "@/store/notificationStore";
@@ -38,7 +40,9 @@ const FITNESS_GOALS = ["Lose Weight", "Build Muscle", "Stay Active", "Improve En
 const ACTIVITY_LEVELS = ["Sedentary", "Lightly Active", "Moderately Active", "Very Active"];
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const { theme, isDark } = useTheme();
+  const { language, changeLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
   const { user, clearAuth } = useAuthStore();
   const { darkMode, unitSystem, setDarkMode, setUnitSystem } = useSettingsStore();
@@ -50,7 +54,22 @@ export default function ProfileScreen() {
   
   const [tab, setTab] = useState<"profile" | "settings">("profile");
   const { showToast } = useToast();
-  
+
+  const goalLabels: Record<string, string> = {
+    "Lose Weight": t("profile.loseWeight"),
+    "Build Muscle": t("profile.buildMuscle"),
+    "Stay Active": t("profile.stayActive"),
+    "Improve Endurance": t("profile.improveEndurance"),
+    "Improve Flexibility": t("profile.improveFlexibility"),
+  };
+
+  const activityLabels: Record<string, string> = {
+    "Sedentary": t("profile.sedentary"),
+    "Lightly Active": t("profile.lightlyActive"),
+    "Moderately Active": t("profile.moderatelyActive"),
+    "Very Active": t("profile.veryActive"),
+  };
+
   // Profile fields
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
@@ -121,9 +140,9 @@ export default function ProfileScreen() {
     mutationFn: api.updateProfile,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      showToast("Profile updated!");
+      showToast(t("profile.profileUpdated"));
     },
-    onError: () => showToast("Failed to update profile", "error"),
+    onError: () => showToast(t("profile.failedToUpdate"), "error"),
   });
   
   const deleteMutation = useMutation({
@@ -139,9 +158,9 @@ export default function ProfileScreen() {
       const granted = await requestNotificationPermission();
       if (!granted) {
         Alert.alert(
-          "Permission required",
-          "Please enable notifications in your device settings to use this feature.",
-          [{ text: "OK" }]
+          t("profile.permissionRequired"),
+          t("profile.enableNotifications"),
+          [{ text: t("common.ok") }]
         );
         return;
       }
@@ -174,7 +193,7 @@ export default function ProfileScreen() {
     if (age) {
       const a = parseInt(age);
       if (isNaN(a) || a < 10 || a > 120) {
-        showToast("Age must be between 10 and 120.", "error");
+        showToast(t("profile.ageValidation"), "error");
         return;
       }
     }
@@ -185,59 +204,59 @@ export default function ProfileScreen() {
       const ft = parseFloat(heightFt);
       const inVal = parseFloat(heightIn || "0");
       if (heightFt) {
-        if (isNaN(ft) || ft < 1 || ft > 9) { showToast("Height feet must be between 1 and 9.", "error"); return; }
-        if (heightIn && (isNaN(inVal) || inVal < 0 || inVal > 11)) { showToast("Inches must be between 0 and 11.", "error"); return; }
+        if (isNaN(ft) || ft < 1 || ft > 9) { showToast(t("profile.heightFtValidation"), "error"); return; }
+        if (heightIn && (isNaN(inVal) || inVal < 0 || inVal > 11)) { showToast(t("profile.heightInValidation"), "error"); return; }
         resolvedHeightCm = Math.round((ft * 12 + inVal) * 2.54);
       }
       if (weightLbs) {
         const lbs = parseFloat(weightLbs);
-        if (isNaN(lbs) || lbs < 44 || lbs > 1100) { showToast("Weight must be between 44 and 1,100 lbs.", "error"); return; }
+        if (isNaN(lbs) || lbs < 44 || lbs > 1100) { showToast(t("profile.weightLbsValidation"), "error"); return; }
         resolvedWeightKg = parseFloat((lbs / 2.20462).toFixed(2));
       }
     } else {
       if (heightCm) {
         const h = parseFloat(heightCm);
-        if (isNaN(h) || h < 50 || h > 300) { showToast("Height must be between 50 and 300 cm.", "error"); return; }
+        if (isNaN(h) || h < 50 || h > 300) { showToast(t("profile.heightCmValidation"), "error"); return; }
         resolvedHeightCm = h;
       }
       if (weightKg) {
         const w = parseFloat(weightKg);
-        if (isNaN(w) || w < 20 || w > 500) { showToast("Weight must be between 20 and 500 kg.", "error"); return; }
+        if (isNaN(w) || w < 20 || w > 500) { showToast(t("profile.weightKgValidation"), "error"); return; }
         resolvedWeightKg = w;
       }
     }
     if (calorieGoal) {
       const c = parseInt(calorieGoal);
       if (isNaN(c) || c < 500 || c > 10000) {
-        showToast("Calorie goal must be between 500 and 10,000.", "error");
+        showToast(t("profile.calorieValidation"), "error");
         return;
       }
     }
     if (proteinGoal) {
       const p = parseInt(proteinGoal);
       if (isNaN(p) || p < 0 || p > 600) {
-        showToast("Protein goal must be between 0 and 600 g.", "error");
+        showToast(t("profile.proteinValidation"), "error");
         return;
       }
     }
     if (carbsGoal) {
       const c = parseInt(carbsGoal);
       if (isNaN(c) || c < 0 || c > 1500) {
-        showToast("Carbs goal must be between 0 and 1,500 g.", "error");
+        showToast(t("profile.carbsValidation"), "error");
         return;
       }
     }
     if (fatGoal) {
       const f = parseInt(fatGoal);
       if (isNaN(f) || f < 0 || f > 500) {
-        showToast("Fat goal must be between 0 and 500 g.", "error");
+        showToast(t("profile.fatValidation"), "error");
         return;
       }
     }
     if (waterGoalMl) {
       const wml = parseInt(waterGoalMl);
       if (isNaN(wml) || wml < 500 || wml > 10000) {
-        showToast("Water goal must be between 500 and 10,000 ml.", "error");
+        showToast(t("profile.waterValidation"), "error");
         return;
       }
     }
@@ -275,21 +294,21 @@ export default function ProfileScreen() {
   
   const handleDeleteAccount = () => {
     Alert.alert(
-      "Delete Account",
-      "This will permanently delete your account and all your data — workouts, meals, measurements, and progress. This cannot be undone.",
+      t("profile.deleteAccount"),
+      t("profile.deleteAccountMessage"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Continue",
+          text: t("common.continueText"),
           style: "destructive",
           onPress: () => {
             Alert.alert(
-              "Are you absolutely sure?",
-              "There is no recovery option. Your data will be gone forever.",
+              t("profile.deleteAccountConfirm"),
+              t("profile.deleteAccountFinal"),
               [
-                { text: "Go Back", style: "cancel" },
+                { text: t("common.goBack"), style: "cancel" },
                 {
-                  text: "Yes, Delete My Account",
+                  text: t("profile.yesDeleteMyAccount"),
                   style: "destructive",
                   onPress: () => deleteMutation.mutate(),
                 },
@@ -310,7 +329,7 @@ export default function ProfileScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
-        <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Profile</Text>
+        <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("profile.title")}</Text>
       </View>
       
       {/* Tabs */}
@@ -320,7 +339,7 @@ export default function ProfileScreen() {
           style={[styles.tab, { backgroundColor: tab === "profile" ? theme.primary : "transparent" }]}
         >
           <Text style={{ color: tab === "profile" ? "#0f0f1a" : theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-            Profile
+            {t("profile.profileTab")}
           </Text>
         </Pressable>
         <Pressable
@@ -328,7 +347,7 @@ export default function ProfileScreen() {
           style={[styles.tab, { backgroundColor: tab === "settings" ? theme.primary : "transparent" }]}
         >
           <Text style={{ color: tab === "settings" ? "#0f0f1a" : theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-            Settings
+            {t("profile.settingsTab")}
           </Text>
         </Pressable>
       </View>
@@ -365,50 +384,53 @@ export default function ProfileScreen() {
             
             {/* Personal Info */}
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Personal Info</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.personalInfo")}</Text>
               <View style={styles.fieldGroup}>
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
-                    <Input label="First Name" value={firstName} onChangeText={setFirstName} placeholder="John" />
+                    <Input label={t("profile.firstName")} value={firstName} onChangeText={setFirstName} placeholder="John" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Input label="Last Name" value={lastName} onChangeText={setLastName} placeholder="Doe" />
+                    <Input label={t("profile.lastName")} value={lastName} onChangeText={setLastName} placeholder="Doe" />
                   </View>
                 </View>
-                <Input label="Age" value={age} onChangeText={setAge} placeholder="28" keyboardType="numeric" />
+                <Input label={t("profile.age")} value={age} onChangeText={setAge} placeholder="28" keyboardType="numeric" />
                 <View>
-                  <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>Gender</Text>
+                  <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("profile.gender")}</Text>
                   <View style={styles.chipRow}>
-                    {["Male", "Female", "Other"].map(g => (
-                      <Pressable
+                    {["Male", "Female", "Other"].map(g => {
+                      const genderLabels: Record<string, string> = { "Male": t("profile.male"), "Female": t("profile.female"), "Other": t("profile.other") };
+                      return (
+                        <Pressable
                         key={g}
                         onPress={() => setGender(gender === g ? "" : g)}
                         style={[styles.chip, { backgroundColor: gender === g ? theme.primaryDim : "transparent", borderColor: gender === g ? theme.primary : theme.border }]}
                       >
-                        <Text style={{ color: gender === g ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{g}</Text>
+                        <Text style={{ color: gender === g ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{genderLabels[g]}</Text>
                       </Pressable>
-                    ))}
+                      );
+                    })}
                   </View>
                 </View>
                 {unitSystem === "imperial" ? (
                   <View style={styles.row}>
                     <View style={{ flex: 1 }}>
-                      <Input label="Height (ft)" value={heightFt} onChangeText={setHeightFt} placeholder="5" keyboardType="decimal-pad" />
+                      <Input label={t("profile.heightFt")} value={heightFt} onChangeText={setHeightFt} placeholder="5" keyboardType="decimal-pad" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Input label="Height (in)" value={heightIn} onChangeText={setHeightIn} placeholder="10" keyboardType="decimal-pad" />
+                      <Input label={t("profile.heightIn")} value={heightIn} onChangeText={setHeightIn} placeholder="10" keyboardType="decimal-pad" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Input label="Weight (lbs)" value={weightLbs} onChangeText={setWeightLbs} placeholder="165" keyboardType="decimal-pad" />
+                      <Input label={t("profile.weightLbs")} value={weightLbs} onChangeText={setWeightLbs} placeholder="165" keyboardType="decimal-pad" />
                     </View>
                   </View>
                 ) : (
                   <View style={styles.row}>
                     <View style={{ flex: 1 }}>
-                      <Input label="Height (cm)" value={heightCm} onChangeText={setHeightCm} placeholder="175" keyboardType="numeric" />
+                      <Input label={t("profile.heightCm")} value={heightCm} onChangeText={setHeightCm} placeholder="175" keyboardType="numeric" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Input label="Weight (kg)" value={weightKg} onChangeText={setWeightKg} placeholder="75" keyboardType="numeric" />
+                      <Input label={t("profile.weightKg")} value={weightKg} onChangeText={setWeightKg} placeholder="75" keyboardType="numeric" />
                     </View>
                   </View>
                 )}
@@ -417,7 +439,7 @@ export default function ProfileScreen() {
             
             {/* Fitness Goals */}
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Fitness Goals</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.fitnessGoals")}</Text>
               <View style={styles.goalsGrid}>
                 {FITNESS_GOALS.map(goal => (
                   <Pressable
@@ -432,7 +454,7 @@ export default function ProfileScreen() {
                   >
                     {fitnessGoals.includes(goal) && <Feather name="check" size={12} color={theme.primary} />}
                     <Text style={{ color: fitnessGoals.includes(goal) ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-                      {goal}
+                      {goalLabels[goal] || goal}
                     </Text>
                   </Pressable>
                 ))}
@@ -441,7 +463,7 @@ export default function ProfileScreen() {
             
             {/* Activity Level */}
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Activity Level</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.activityLevel")}</Text>
               {ACTIVITY_LEVELS.map(level => (
                 <Pressable
                   key={level}
@@ -452,7 +474,7 @@ export default function ProfileScreen() {
                     {activityLevel === level && <View style={[styles.radioDot, { backgroundColor: theme.primary }]} />}
                   </View>
                   <Text style={{ color: activityLevel === level ? theme.primary : theme.text, fontFamily: "Inter_500Medium", fontSize: 14 }}>
-                    {level}
+                    {activityLabels[level] || level}
                   </Text>
                 </Pressable>
               ))}
@@ -460,21 +482,21 @@ export default function ProfileScreen() {
             
             {/* Nutrition Targets */}
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Daily Targets</Text>
-              <Input label="Calorie Goal (auto-calc if blank)" value={calorieGoal} onChangeText={setCalorieGoal} placeholder="2000" keyboardType="numeric" />
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.dailyTargets")}</Text>
+              <Input label={t("profile.calorieGoalLabel")} value={calorieGoal} onChangeText={setCalorieGoal} placeholder="2000" keyboardType="numeric" />
               <View style={styles.row}>
-                <View style={{ flex: 1 }}><Input label="Protein (g)" value={proteinGoal} onChangeText={setProteinGoal} placeholder="150" keyboardType="numeric" /></View>
-                <View style={{ flex: 1 }}><Input label="Carbs (g)" value={carbsGoal} onChangeText={setCarbsGoal} placeholder="200" keyboardType="numeric" /></View>
-                <View style={{ flex: 1 }}><Input label="Fat (g)" value={fatGoal} onChangeText={setFatGoal} placeholder="60" keyboardType="numeric" /></View>
+                <View style={{ flex: 1 }}><Input label={t("profile.proteinG")} value={proteinGoal} onChangeText={setProteinGoal} placeholder="150" keyboardType="numeric" /></View>
+                <View style={{ flex: 1 }}><Input label={t("profile.carbsG")} value={carbsGoal} onChangeText={setCarbsGoal} placeholder="200" keyboardType="numeric" /></View>
+                <View style={{ flex: 1 }}><Input label={t("profile.fatG")} value={fatGoal} onChangeText={setFatGoal} placeholder="60" keyboardType="numeric" /></View>
               </View>
-              <Input label="Daily Water Goal (ml)" value={waterGoalMl} onChangeText={setWaterGoalMl} placeholder="2000" keyboardType="numeric" />
+              <Input label={t("profile.dailyWaterGoal")} value={waterGoalMl} onChangeText={setWaterGoalMl} placeholder="2000" keyboardType="numeric" />
             </Card>
             
-            <Button title="Save Profile" onPress={handleSave} loading={updateMutation.isPending} />
+            <Button title={t("profile.saveProfile")} onPress={handleSave} loading={updateMutation.isPending} />
             
             <Pressable onPress={handleLogout} style={[styles.logoutBtn, { borderColor: theme.border }]}>
               <Feather name="log-out" size={18} color={theme.danger} />
-              <Text style={{ color: theme.danger, fontFamily: "Inter_500Medium", fontSize: 15 }}>Sign Out</Text>
+              <Text style={{ color: theme.danger, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.signOut")}</Text>
             </Pressable>
           </>
         ) : (
@@ -487,9 +509,9 @@ export default function ProfileScreen() {
                     <Feather name="zap" size={18} color={subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary} />
                   </View>
                   <View>
-                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Current Plan</Text>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("profile.currentPlan")}</Text>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                      {subscriptionData?.plan?.name ?? "Free"} · {(subscriptionData?.subscription?.status ?? "active").charAt(0).toUpperCase() + (subscriptionData?.subscription?.status ?? "active").slice(1)}
+                      {subscriptionData?.plan?.name ?? t("profile.free")} · {(subscriptionData?.subscription?.status ?? t("profile.active")).charAt(0).toUpperCase() + (subscriptionData?.subscription?.status ?? t("profile.active")).slice(1)}
                     </Text>
                   </View>
                 </View>
@@ -512,7 +534,7 @@ export default function ProfileScreen() {
                 >
                   <Feather name="trending-up" size={16} color="#448aff" />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: "#448aff", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Upgrade to Premium</Text>
+                    <Text style={{ color: "#448aff", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("profile.upgrade")}</Text>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
                       Photo analysis · Unlimited plans · Advanced analytics
                     </Text>
@@ -531,7 +553,7 @@ export default function ProfileScreen() {
                 <Feather name="award" size={18} color="#e040fb" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Achievements</Text>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("achievements.title")}</Text>
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>Badges, streaks &amp; personal records</Text>
               </View>
               <Feather name="chevron-right" size={18} color={theme.textMuted} />
@@ -546,9 +568,9 @@ export default function ProfileScreen() {
                     <Feather name="bell" size={18} color={globalEnabled ? theme.primary : theme.textMuted} />
                   </View>
                   <View>
-                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Notifications</Text>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("profile.notifications")}</Text>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                      {globalEnabled ? "Smart reminders on" : "All reminders off"}
+                      {globalEnabled ? t("profile.allNotifications") : t("profile.allNotifications")}
                     </Text>
                   </View>
                 </View>
@@ -639,8 +661,7 @@ export default function ProfileScreen() {
 
             {/* Settings */}
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Appearance</Text>
-              <SettingRow label="Dark Mode" icon="moon" theme={theme}>
+              <SettingRow label={t("profile.darkMode")} icon="moon" theme={theme}>
                 <Switch
                   value={isDark}
                   onValueChange={setDarkMode}
@@ -651,7 +672,7 @@ export default function ProfileScreen() {
             </Card>
             
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Units</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.unitSystem")}</Text>
               <View style={styles.chipRow}>
                 {["metric", "imperial"].map(u => (
                   <Pressable
@@ -660,7 +681,35 @@ export default function ProfileScreen() {
                     style={[styles.chip, { backgroundColor: unitSystem === u ? theme.primaryDim : "transparent", borderColor: unitSystem === u ? theme.primary : theme.border, flex: 1 }]}
                   >
                     <Text style={{ color: unitSystem === u ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
-                      {u.charAt(0).toUpperCase() + u.slice(1)}
+                      {u === "metric" ? t("profile.metric") : t("profile.imperial")}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Card>
+
+            <Card>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.language")}</Text>
+              <View style={styles.chipRow}>
+                {[{ key: "en", label: t("profile.english") }, { key: "ar", label: t("profile.arabic") }].map(lng => (
+                  <Pressable
+                    key={lng.key}
+                    onPress={() => {
+                      if (lng.key !== language) {
+                        Alert.alert(
+                          t("profile.languageChangeTitle"),
+                          t("profile.languageChangeMessage"),
+                          [
+                            { text: t("common.cancel"), style: "cancel" },
+                            { text: t("profile.languageChangeConfirm"), onPress: () => changeLanguage(lng.key as "en" | "ar") },
+                          ]
+                        );
+                      }
+                    }}
+                    style={[styles.chip, { backgroundColor: language === lng.key ? theme.primaryDim : "transparent", borderColor: language === lng.key ? theme.primary : theme.border, flex: 1 }]}
+                  >
+                    <Text style={{ color: language === lng.key ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
+                      {lng.label}
                     </Text>
                   </Pressable>
                 ))}
@@ -668,14 +717,14 @@ export default function ProfileScreen() {
             </Card>
             
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Account</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.dangerZone")}</Text>
               <Pressable
                 onPress={() => router.push("/(tabs)/progress" as any)}
                 style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
               >
                 <View style={styles.settingLeft}>
                   <Feather name="download" size={18} color={theme.secondary} />
-                  <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 15 }}>Export Data</Text>
+                  <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 15 }}>{t("profile.exportData")}</Text>
                 </View>
                 <Feather name="chevron-right" size={18} color={theme.textMuted} />
               </Pressable>
@@ -683,7 +732,7 @@ export default function ProfileScreen() {
               <Pressable onPress={handleDeleteAccount} style={styles.settingRow}>
                 <View style={styles.settingLeft}>
                   <Feather name="trash-2" size={18} color={theme.danger} />
-                  <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 15 }}>Delete Account</Text>
+                  <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 15 }}>{t("profile.deleteAccount")}</Text>
                 </View>
                 <Feather name="chevron-right" size={18} color={theme.textMuted} />
               </Pressable>

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, conversationsTable, messagesTable, profilesTable, workoutsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable } from "@workspace/db";
+import { db, conversationsTable, messagesTable, profilesTable, workoutsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable, settingsTable } from "@workspace/db";
 import { eq, and, desc, gte, lt } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
@@ -271,7 +271,12 @@ router.post("/message", requireAuth, async (req, res) => {
       .limit(1);
     const todayRecovery = recoveryRows[0] ?? null;
 
-    const systemPrompt = buildSystemPrompt(profile, recentWorkouts, userEquipment, todayNutrition, todayRecovery);
+    let systemPrompt = buildSystemPrompt(profile, recentWorkouts, userEquipment, todayNutrition, todayRecovery);
+
+    const [userSettings] = await db.select().from(settingsTable).where(eq(settingsTable.userId, user.id)).limit(1);
+    if (userSettings?.language === "ar") {
+      systemPrompt += "\n\nLANGUAGE: You MUST respond entirely in Arabic (العربية). All text, recommendations, template names, and coaching advice must be in Arabic. Use Arabic numerals for numbers.";
+    }
 
     const chatMessages = history.map((m) => ({
       role: m.role as "user" | "assistant",

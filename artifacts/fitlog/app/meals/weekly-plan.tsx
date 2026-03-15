@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { useWeeklyPlanStore, PlannedDay, PlannedMeal } from "@/store/weeklyPlanStore";
 import { useToast } from "@/components/ui/Toast";
 import { Card } from "@/components/ui/Card";
+import { useTranslation } from "react-i18next";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CATEGORY_COLORS: Record<string, string> = {
@@ -22,13 +23,13 @@ const CATEGORY_COLORS: Record<string, string> = {
   Snacks: "#e040fb",
 };
 
-function getDayLabel(dateStr: string): string {
+function getDayLabel(dateStr: string, t: any): string {
   const d = new Date(dateStr + "T12:00:00");
   const today = new Date();
   today.setHours(12, 0, 0, 0);
   const diffDays = Math.round((d.getTime() - today.getTime()) / 86400000);
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Tomorrow";
+  if (diffDays === 0) return t("common.today");
+  if (diffDays === 1) return t("meals.tomorrow");
   return DAY_LABELS[d.getDay()] + " " + d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
@@ -88,9 +89,10 @@ interface DayCardProps {
   onLog: (meal: PlannedMeal, date: string) => void;
   loggingId: string | null;
   theme: any;
+  t: any;
 }
 
-function DayCard({ day, isLogged, loggedCalories, loggedMealsCount, onLog, loggingId, theme }: DayCardProps) {
+function DayCard({ day, isLogged, loggedCalories, loggedMealsCount, onLog, loggingId, theme, t }: DayCardProps) {
   const [open, setOpen] = useState(
     day.date === new Date().toISOString().split("T")[0] || !isLogged
   );
@@ -106,18 +108,18 @@ function DayCard({ day, isLogged, loggedCalories, loggedMealsCount, onLog, loggi
       >
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 15 }}>
-            {getDayLabel(day.date)}
+            {getDayLabel(day.date, t)}
           </Text>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
             {isLogged
-              ? `${loggedMealsCount} meal${loggedMealsCount !== 1 ? "s" : ""} logged · ${loggedCalories} kcal actual`
-              : `${totalCals} kcal planned · ${totalProtein}g protein`}
+              ? t("meals.mealsLoggedActual", { count: loggedMealsCount, calories: loggedCalories })
+              : t("meals.kcalPlanned", { calories: totalCals, protein: totalProtein })}
           </Text>
         </View>
         {isLogged && (
           <View style={[styles.loggedBadge, { backgroundColor: theme.primaryDim }]}>
             <Feather name="check" size={12} color={theme.primary} />
-            <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>Logged</Text>
+            <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>{t("meals.loggedBadge")}</Text>
           </View>
         )}
         <Feather
@@ -169,6 +171,7 @@ function getCategoryIcon(name: string): keyof typeof Feather.glyphMap {
 
 export default function WeeklyPlanScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const { showToast } = useToast();
@@ -183,16 +186,16 @@ export default function WeeklyPlanScreen() {
     onSuccess: (data) => {
       if (data?.days) {
         setPlan(data.days);
-        showToast("7-day meal plan generated!", "success");
+        showToast(t("meals.planGenerated"), "success");
       } else {
-        showToast("Could not parse plan. Please try again.", "error");
+        showToast(t("meals.couldNotParsePlan"), "error");
       }
     },
     onError: (err: any) => {
       if (err?.message?.includes("Premium")) {
-        showToast("Weekly meal plan is a Premium feature", "error");
+        showToast(t("meals.weeklyPlanPremium"), "error");
       } else {
-        showToast("Could not generate plan. Please try again.", "error");
+        showToast(t("meals.couldNotGeneratePlanRetry"), "error");
       }
     },
   });
@@ -209,11 +212,11 @@ export default function WeeklyPlanScreen() {
         fatG: meal.fatG,
       }),
     onSuccess: () => {
-      showToast("Meal logged!", "success");
+      showToast(t("meals.mealLogged"), "success");
       setLoggingId(null);
     },
     onError: () => {
-      showToast("Could not log meal. Please try again.", "error");
+      showToast(t("meals.couldNotLogMeal"), "error");
       setLoggingId(null);
     },
   });
@@ -274,14 +277,14 @@ export default function WeeklyPlanScreen() {
         setCheckedItems(new Set());
         setGroceryOpen(true);
       } else {
-        showToast("Could not generate grocery list.", "error");
+        showToast(t("meals.couldNotGenerateGrocery"), "error");
       }
     },
     onError: (err: any) => {
       if (err?.message?.includes("Premium")) {
-        showToast("Grocery list is a Premium feature", "error");
+        showToast(t("meals.groceryListPremium"), "error");
       } else {
-        showToast("Could not generate grocery list.", "error");
+        showToast(t("meals.couldNotGenerateGrocery"), "error");
       }
     },
   });
@@ -301,13 +304,12 @@ export default function WeeklyPlanScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 16, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={theme.text} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Weekly Meal Plan</Text>
+          <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("meals.weeklyPlan")}</Text>
           {generatedLabel && (
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
               {generatedLabel}
@@ -350,7 +352,6 @@ export default function WeeklyPlanScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 12 }}
       >
-        {/* Generate button */}
         <Animated.View entering={FadeInDown.duration(300)}>
           <Pressable
             onPress={() => {
@@ -370,20 +371,20 @@ export default function WeeklyPlanScreen() {
               <>
                 <ActivityIndicator size={18} color="#0f0f1a" />
                 <Text style={[styles.generateBtnText, { color: "#0f0f1a", fontFamily: "Inter_700Bold" }]}>
-                  Generating your week…
+                  {t("meals.generatingYourWeek")}
                 </Text>
               </>
             ) : (
               <>
                 <Feather name="cpu" size={18} color="#0f0f1a" />
                 <Text style={[styles.generateBtnText, { color: "#0f0f1a", fontFamily: "Inter_700Bold" }]}>
-                  {plan ? "Regenerate Full Week" : "Generate Full Week"}
+                  {plan ? t("meals.regenerateFullWeek") : t("meals.generateFullWeek")}
                 </Text>
               </>
             )}
           </Pressable>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textAlign: "center", marginTop: 6 }}>
-            AI-tailored to your calorie and protein goals · Premium
+            {t("meals.aiTailoredPremium")}
           </Text>
         </Animated.View>
 
@@ -393,9 +394,9 @@ export default function WeeklyPlanScreen() {
               <View style={[styles.emptyIcon, { backgroundColor: theme.primaryDim }]}>
                 <Feather name="calendar" size={28} color={theme.primary} />
               </View>
-              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>No plan yet</Text>
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{t("meals.noPlanYet")}</Text>
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", lineHeight: 18, maxWidth: 240 }}>
-                Generate a full 7-day meal plan tailored to your goals — then log any meal with one tap.
+                {t("meals.generatePlanDesc")}
               </Text>
             </Card>
           </Animated.View>
@@ -413,6 +414,7 @@ export default function WeeklyPlanScreen() {
                 onLog={handleLogMeal}
                 loggingId={loggingId}
                 theme={theme}
+                t={t}
               />
             </Animated.View>
           );
@@ -443,7 +445,7 @@ export default function WeeklyPlanScreen() {
                 <>
                   <ActivityIndicator size={16} color={theme.primary} />
                   <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                    Generating grocery list…
+                    {t("meals.generatingGroceryList")}
                   </Text>
                 </>
               ) : (
@@ -453,10 +455,10 @@ export default function WeeklyPlanScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                      {groceryList ? "View Grocery List" : "Generate Grocery List"}
+                      {groceryList ? t("meals.viewGroceryList") : t("meals.generateGroceryList")}
                     </Text>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                      AI-compiled shopping list from your plan
+                      {t("meals.aiCompiledShopping")}
                     </Text>
                   </View>
                   <Feather name="chevron-right" size={18} color={theme.textMuted} />
@@ -474,12 +476,12 @@ export default function WeeklyPlanScreen() {
               <Feather name="x" size={22} color={theme.text} />
             </Pressable>
             <Text style={{ flex: 1, color: theme.text, fontFamily: "Inter_700Bold", fontSize: 18, textAlign: "center" }}>
-              Grocery List
+              {t("meals.groceryList")}
             </Text>
             <Pressable
               onPress={() => {
                 setCheckedItems(new Set());
-                showToast("Cleared all checkmarks", "success");
+                showToast(t("meals.clearedCheckmarks"), "success");
               }}
               hitSlop={12}
               style={{ padding: 4 }}
@@ -603,15 +605,15 @@ const styles = StyleSheet.create({
   },
   groceryModal: { flex: 1 },
   groceryModalHeader: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1,
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1,
   },
   groceryCatHeader: {
     flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8,
   },
   groceryItem: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1,
+    paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1,
   },
   groceryCheck: {
     width: 22, height: 22, borderRadius: 6, borderWidth: 1.5,

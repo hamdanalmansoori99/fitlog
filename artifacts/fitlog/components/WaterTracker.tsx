@@ -9,8 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
-
-// ─── Progress ring config ─────────────────────────────────────────────────────
+import { useTranslation } from "react-i18next";
 
 const RING = 110;
 const STROKE = 11;
@@ -29,9 +28,7 @@ function ProgressRing({ pct, totalMl, goalMl, color, successColor, useImperial }
     <View style={{ width: RING, height: RING, alignItems: "center", justifyContent: "center" }}>
       <Svg width={RING} height={RING} style={{ position: "absolute" }}>
         <G rotation="-90" origin={`${RING / 2},${RING / 2}`}>
-          {/* Track */}
           <Circle cx={RING / 2} cy={RING / 2} r={R} stroke={color + "22"} strokeWidth={STROKE} fill="none" />
-          {/* Progress */}
           <Circle
             cx={RING / 2} cy={RING / 2} r={R}
             stroke={pct >= 100 ? successColor : color}
@@ -54,21 +51,20 @@ function ProgressRing({ pct, totalMl, goalMl, color, successColor, useImperial }
   );
 }
 
-// ─── Insight text ─────────────────────────────────────────────────────────────
-
-function waterInsight(pct: number, totalMl: number, goalMl: number, workedOutToday: boolean, useImperial: boolean): { text: string; icon: string } {
+function waterInsight(pct: number, totalMl: number, goalMl: number, workedOutToday: boolean, useImperial: boolean, t: any): { text: string; icon: string } {
   const remaining = Math.max(0, goalMl - totalMl);
   const glasses = Math.ceil(remaining / 250);
   const remainingDisplay = useImperial ? `${(remaining / ML_PER_OZ).toFixed(0)} oz` : `${remaining}ml`;
+  const plural = glasses > 1 ? "es" : "";
 
-  if (pct >= 100) return { text: "Hydration goal reached — great job staying on top of it!", icon: "award" };
-  if (pct === 0 && workedOutToday) return { text: "Hydration is especially important after today's workout — start sipping!", icon: "alert-circle" };
-  if (pct === 0) return { text: useImperial ? "You haven't logged any water today — aim for 64–100 oz." : "You haven't logged any water today — aim for 2–3 litres.", icon: "droplet" };
-  if (pct < 25) return { text: `You're only at ${pct}% of your water goal — ${glasses} more glass${glasses > 1 ? "es" : ""} would make a big difference.`, icon: "alert-circle" };
-  if (pct < 50) return { text: `Drink ${glasses} more glass${glasses > 1 ? "es" : ""} to hit your target — you're getting there.`, icon: "droplet" };
-  if (pct < 80) return { text: `Good progress — ${remainingDisplay} left to reach your goal today.`, icon: "check-circle" };
-  if (pct < 100) return { text: `Almost there! Just ${remainingDisplay} away from today's water goal.`, icon: "check-circle" };
-  return { text: "Keep it up — staying hydrated supports your performance and recovery.", icon: "droplet" };
+  if (pct >= 100) return { text: t("components.waterTracker.insightGoalReached"), icon: "award" };
+  if (pct === 0 && workedOutToday) return { text: t("components.waterTracker.insightPostWorkout"), icon: "alert-circle" };
+  if (pct === 0) return { text: useImperial ? t("components.waterTracker.insightNoWaterImperial") : t("components.waterTracker.insightNoWaterMetric"), icon: "droplet" };
+  if (pct < 25) return { text: t("components.waterTracker.insightLow", { pct, glasses, plural }), icon: "alert-circle" };
+  if (pct < 50) return { text: t("components.waterTracker.insightMedium", { glasses, plural }), icon: "droplet" };
+  if (pct < 80) return { text: t("components.waterTracker.insightGood", { remaining: remainingDisplay }), icon: "check-circle" };
+  if (pct < 100) return { text: t("components.waterTracker.insightAlmost", { remaining: remainingDisplay }), icon: "check-circle" };
+  return { text: t("components.waterTracker.insightKeepUp"), icon: "droplet" };
 }
 
 function fmtTime(date: string | Date) {
@@ -76,10 +72,9 @@ function fmtTime(date: string | Date) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export function WaterTracker({ workedOutToday = false }: { workedOutToday?: boolean }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [customVal, setCustomVal] = useState("");
   const [showLog, setShowLog] = useState(false);
@@ -104,13 +99,13 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
   const logMutation = useMutation({
     mutationFn: api.logWater,
     onSuccess: invalidate,
-    onError: () => Alert.alert("Error", "Failed to log water. Please try again."),
+    onError: () => Alert.alert(t("components.waterTracker.error"), t("components.waterTracker.failedToLog")),
   });
 
   const deleteMutation = useMutation({
     mutationFn: api.deleteWaterLog,
     onSuccess: invalidate,
-    onError: () => Alert.alert("Error", "Failed to remove water log. Please try again."),
+    onError: () => Alert.alert(t("components.waterTracker.error"), t("components.waterTracker.failedToRemove")),
   });
 
   const handleQuickAdd = (amount: number) => {
@@ -122,12 +117,12 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
   const handleCustomAdd = () => {
     const val = parseFloat(customVal);
     if (!val || val <= 0) {
-      Alert.alert("Invalid amount", useImperial ? "Enter a value in fl oz." : "Enter a value between 1 and 5000ml.");
+      Alert.alert(t("components.waterTracker.invalidAmount"), useImperial ? t("components.waterTracker.enterValueOz") : t("components.waterTracker.enterValueMl"));
       return;
     }
     const ml = useImperial ? Math.round(val * ML_PER_OZ) : Math.round(val);
     if (ml <= 0 || ml > 5000) {
-      Alert.alert("Invalid amount", useImperial ? "Enter a value in fl oz." : "Enter a value between 1 and 5000ml.");
+      Alert.alert(t("components.waterTracker.invalidAmount"), useImperial ? t("components.waterTracker.enterValueOz") : t("components.waterTracker.enterValueMl"));
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -136,9 +131,9 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
   };
 
   const handleDelete = (id: number) => {
-    Alert.alert("Remove entry?", "This water log will be deleted.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Remove", style: "destructive", onPress: () => deleteMutation.mutate(id) },
+    Alert.alert(t("components.waterTracker.removeEntry"), t("components.waterTracker.removeEntryMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.remove"), style: "destructive", onPress: () => deleteMutation.mutate(id) },
     ]);
   };
 
@@ -146,7 +141,7 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
   const goalMl: number = data?.goalMl ?? 2000;
   const pct: number = data?.percentage ?? 0;
   const logs: any[] = data?.logs ?? [];
-  const insight = waterInsight(pct, totalMl, goalMl, workedOutToday, useImperial);
+  const insight = waterInsight(pct, totalMl, goalMl, workedOutToday, useImperial, t);
   const goalDisplay = useImperial
     ? `${(goalMl / ML_PER_OZ).toFixed(0)} oz`
     : goalMl >= 1000 ? `${(goalMl / 1000).toFixed(1)}L` : `${goalMl}ml`;
@@ -157,29 +152,27 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
     <Animated.View entering={FadeInDown.duration(400)}>
       <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
 
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={[styles.iconWrap, { backgroundColor: WATER_BLUE + "18" }]}>
               <Feather name="droplet" size={18} color={WATER_BLUE} />
             </View>
             <View>
-              <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>Hydration</Text>
+              <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>{t("components.waterTracker.hydration")}</Text>
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                Goal: {goalDisplay}
+                {t("components.waterTracker.goal", { goal: goalDisplay })}
               </Text>
             </View>
           </View>
           {logs.length > 0 && (
             <Pressable onPress={() => setShowLog((v) => !v)} hitSlop={8}>
               <Text style={{ color: WATER_BLUE, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                {showLog ? "Hide log" : `${logs.length} entr${logs.length > 1 ? "ies" : "y"}`}
+                {showLog ? t("components.waterTracker.hideLog") : (logs.length > 1 ? t("components.waterTracker.entries", { count: logs.length }) : t("components.waterTracker.entry", { count: logs.length }))}
               </Text>
             </Pressable>
           )}
         </View>
 
-        {/* Ring + insight row */}
         <View style={styles.ringRow}>
           {isLoading ? (
             <View style={[styles.ringPlaceholder, { backgroundColor: theme.border }]} />
@@ -199,7 +192,6 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
           </View>
         </View>
 
-        {/* Quick-add buttons */}
         <View style={styles.quickRow}>
           {quickAmounts.map((amount) => (
             <Pressable
@@ -217,13 +209,12 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
           ))}
         </View>
 
-        {/* Custom amount */}
         <View style={styles.customRow}>
           <TextInput
             value={customVal}
             onChangeText={setCustomVal}
             keyboardType="numeric"
-            placeholder={useImperial ? "Custom oz…" : "Custom ml…"}
+            placeholder={useImperial ? t("components.waterTracker.customOz") : t("components.waterTracker.customMl")}
             placeholderTextColor={theme.textMuted}
             style={[styles.customInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
             returnKeyType="done"
@@ -241,11 +232,10 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
           </Pressable>
         </View>
 
-        {/* Today's log */}
         {showLog && logs.length > 0 && (
           <Animated.View entering={FadeIn.duration(250)} style={[styles.logSection, { borderTopColor: theme.border }]}>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11, marginBottom: 8 }}>
-              TODAY'S LOG
+              {t("components.waterTracker.todaysLog")}
             </Text>
             {logs.map((log: any) => (
               <View key={log.id} style={styles.logRow}>

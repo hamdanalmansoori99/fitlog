@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { GoalInsight, GOAL_LABELS, GOAL_ICONS, GOAL_COLORS, detectGoalKeys, GoalKey } from "../lib/goalInsights";
+import { useTranslation } from "react-i18next";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -11,7 +12,7 @@ interface Props {
   insights: GoalInsight[];
   goals: string[];
   theme: any;
-  compact?: boolean; // dashboard = compact (2 per goal), progress = full (all)
+  compact?: boolean;
 }
 
 function TrendIcon({ trend, positive, color }: { trend: "up" | "down" | "flat" | null; positive: boolean; color: string }) {
@@ -102,15 +103,17 @@ function GoalSection({ goalKey, insights, theme, compact }: {
 }
 
 export function GoalInsightsPanel({ insights, goals, theme, compact = false }: Props) {
+  const { t } = useTranslation();
+
   if (insights.length === 0) {
     return (
       <View style={[styles.emptyCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <View style={[styles.emptyIcon, { backgroundColor: theme.primary + "22" }]}>
           <Feather name="target" size={20} color={theme.primary} />
         </View>
-        <Text style={[styles.emptyTitle, { color: theme.text }]}>Set your fitness goals</Text>
+        <Text style={[styles.emptyTitle, { color: theme.text }]}>{t("components.goalInsights.setYourGoals")}</Text>
         <Text style={[styles.emptyDesc, { color: theme.textMuted }]}>
-          Add goals in your profile to see personalised insights here.
+          {t("components.goalInsights.addGoalsMessage")}
         </Text>
       </View>
     );

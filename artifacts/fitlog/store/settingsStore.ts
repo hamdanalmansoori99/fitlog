@@ -5,8 +5,10 @@ import { persist, createJSONStorage } from "zustand/middleware";
 interface SettingsState {
   darkMode: boolean | null;
   unitSystem: "metric" | "imperial";
+  language: "en" | "ar";
   setDarkMode: (val: boolean) => void;
   setUnitSystem: (val: "metric" | "imperial") => void;
+  setLanguage: (val: "en" | "ar") => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -14,8 +16,10 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       darkMode: true,
       unitSystem: "metric",
+      language: "en",
       setDarkMode: (darkMode) => set({ darkMode }),
       setUnitSystem: (unitSystem) => set({ unitSystem }),
+      setLanguage: (language) => set({ language }),
     }),
     {
       name: "fitlog-settings",

@@ -16,30 +16,11 @@ import { useTheme } from "@/hooks/useTheme";
 import { useSubscription } from "@/hooks/useSubscription";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
-
-const FREE_FEATURES = [
-  "Unlimited workout & meal logging",
-  "AI fitness coach (50 messages/day)",
-  "Basic analytics & streaks",
-  "25+ workout templates",
-  "Water & recovery tracking",
-  "Up to 10 saved custom plans",
-];
-
-const PREMIUM_FEATURES = [
-  { icon: "camera" as const, label: "AI meal photo analysis", key: "aiPhotoAnalysis" },
-  { icon: "bar-chart-2" as const, label: "Advanced analytics dashboard", key: "advancedAnalytics" },
-  { icon: "trending-up" as const, label: "Smart progression tracking", key: "smartProgression" },
-  { icon: "moon" as const, label: "Deeper recovery insights", key: "deeperRecovery" },
-  { icon: "bookmark" as const, label: "Unlimited saved workout plans", key: "unlimitedTemplates" },
-  { icon: "target" as const, label: "Advanced macro & nutrition goals", key: "advancedNutrition" },
-  { icon: "download" as const, label: "Data export (CSV / JSON)", key: "exportData" },
-  { icon: "zap" as const, label: "Unlimited AI coach messages", key: "aiCoach" },
-  { icon: "headphones" as const, label: "Priority support", key: "prioritySupport" },
-];
+import { useTranslation } from "react-i18next";
 
 export default function SubscriptionScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { subscription, plan, isPremium, availablePlans } = useSubscription();
   const { showToast } = useToast();
@@ -49,6 +30,27 @@ export default function SubscriptionScreen() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly");
   const [upgrading, setUpgrading] = useState(false);
   const [simulating, setSimulating] = useState(false);
+
+  const FREE_FEATURES = [
+    t("subscription.freeFeature1"),
+    t("subscription.freeFeature2"),
+    t("subscription.freeFeature3"),
+    t("subscription.freeFeature4"),
+    t("subscription.freeFeature5"),
+    t("subscription.freeFeature6"),
+  ];
+
+  const PREMIUM_FEATURES = [
+    { icon: "camera" as const, label: t("subscription.premiumAiPhoto"), key: "aiPhotoAnalysis" },
+    { icon: "bar-chart-2" as const, label: t("subscription.premiumAdvancedAnalytics"), key: "advancedAnalytics" },
+    { icon: "trending-up" as const, label: t("subscription.premiumSmartProgression"), key: "smartProgression" },
+    { icon: "moon" as const, label: t("subscription.premiumDeeperRecovery"), key: "deeperRecovery" },
+    { icon: "bookmark" as const, label: t("subscription.premiumUnlimitedTemplates"), key: "unlimitedTemplates" },
+    { icon: "target" as const, label: t("subscription.premiumAdvancedNutrition"), key: "advancedNutrition" },
+    { icon: "download" as const, label: t("subscription.premiumExportData"), key: "exportData" },
+    { icon: "zap" as const, label: t("subscription.premiumAiCoach"), key: "aiCoach" },
+    { icon: "headphones" as const, label: t("subscription.premiumPrioritySupport"), key: "prioritySupport" },
+  ];
 
   const premiumPlan = availablePlans.find((p: any) => p.key === "premium") ?? {
     priceMonthly: 999,
@@ -66,14 +68,13 @@ export default function SubscriptionScreen() {
       await api.requestUpgrade({ plan: "premium", billingCycle });
     } catch (err: any) {
       if (err?.message?.includes("billing_not_configured") || err?.message?.includes("402")) {
-        // Expected — billing not yet wired
       }
     } finally {
       setUpgrading(false);
       Alert.alert(
-        "Coming Soon",
-        "Stripe billing is being set up. Your plan hasn't changed. We'll notify you when Premium is available!",
-        [{ text: "Got it", style: "default" }]
+        t("subscription.comingSoon"),
+        t("subscription.comingSoonMessage"),
+        [{ text: t("subscription.gotIt"), style: "default" }]
       );
     }
   };
@@ -83,9 +84,9 @@ export default function SubscriptionScreen() {
     try {
       await api.simulateSubscription(planKey);
       queryClient.invalidateQueries({ queryKey: ["subscription"] });
-      showToast(`Switched to ${planKey} plan (dev only)`, "success");
+      showToast(t("subscription.switchedToPlan", { plan: planKey }), "success");
     } catch {
-      showToast("Simulation failed", "error");
+      showToast(t("subscription.simulationFailed"), "error");
     } finally {
       setSimulating(false);
     }
@@ -93,12 +94,11 @@ export default function SubscriptionScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
           <Feather name="chevron-left" size={24} color={theme.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Plans</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>{t("subscription.plans")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -106,24 +106,22 @@ export default function SubscriptionScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 60, paddingHorizontal: 20, gap: 20, paddingTop: 24 }}
       >
-        {/* Hero */}
         <View style={styles.hero}>
           <View style={[styles.heroIcon, { backgroundColor: "#448aff18" }]}>
             <Feather name="zap" size={28} color="#448aff" />
           </View>
-          <Text style={[styles.heroTitle, { color: theme.text }]}>Unlock your full potential</Text>
+          <Text style={[styles.heroTitle, { color: theme.text }]}>{t("subscription.unlockPotential")}</Text>
           <Text style={[styles.heroSub, { color: theme.textMuted }]}>
-            Premium gives you AI-powered insights, unlimited plans, and advanced analytics to take your training to the next level.
+            {t("subscription.premiumDescription")}
           </Text>
         </View>
 
-        {/* Current plan badge */}
         <View style={[styles.currentPlanRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <View style={[styles.currentPlanDot, { backgroundColor: isPremium ? "#448aff" : theme.primary }]} />
           <Text style={[styles.currentPlanText, { color: theme.text }]}>
-            Current plan:{" "}
+            {t("subscription.currentPlanLabel")}{" "}
             <Text style={{ color: isPremium ? "#448aff" : theme.primary, fontFamily: "Inter_700Bold" }}>
-              {plan?.name ?? "Free"}
+              {plan?.name ?? t("subscription.free")}
             </Text>
             {subscription?.status && subscription.status !== "active" && (
               <Text style={{ color: theme.textMuted, fontSize: 12 }}>
@@ -133,7 +131,6 @@ export default function SubscriptionScreen() {
           </Text>
         </View>
 
-        {/* Billing toggle (only show if not premium) */}
         {!isPremium && (
           <View style={[styles.billingToggle, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Pressable
@@ -146,7 +143,7 @@ export default function SubscriptionScreen() {
               <Text style={[
                 styles.billingOptionText,
                 { color: billingCycle === "monthly" ? theme.primary : theme.textMuted },
-              ]}>Monthly</Text>
+              ]}>{t("subscription.monthly")}</Text>
             </Pressable>
             <Pressable
               onPress={() => setBillingCycle("yearly")}
@@ -158,30 +155,28 @@ export default function SubscriptionScreen() {
               <Text style={[
                 styles.billingOptionText,
                 { color: billingCycle === "yearly" ? "#448aff" : theme.textMuted },
-              ]}>Yearly</Text>
+              ]}>{t("subscription.yearly")}</Text>
               {savings > 0 && (
                 <View style={[styles.savingsBadge, { backgroundColor: "#448aff" }]}>
-                  <Text style={styles.savingsBadgeText}>Save {savings}%</Text>
+                  <Text style={styles.savingsBadgeText}>{t("subscription.savePct", { pct: savings })}</Text>
                 </View>
               )}
             </Pressable>
           </View>
         )}
 
-        {/* Plan cards */}
         <View style={styles.plansRow}>
-          {/* Free card */}
           <View style={[styles.planCard, { backgroundColor: theme.card, borderColor: isPremium ? theme.border : theme.primary }]}>
             <View style={styles.planCardHeader}>
-              <Text style={[styles.planName, { color: theme.text }]}>Free</Text>
+              <Text style={[styles.planName, { color: theme.text }]}>{t("subscription.free")}</Text>
               {!isPremium && (
                 <View style={[styles.currentBadge, { backgroundColor: theme.primaryDim }]}>
-                  <Text style={[styles.currentBadgeText, { color: theme.primary }]}>Current</Text>
+                  <Text style={[styles.currentBadgeText, { color: theme.primary }]}>{t("subscription.current")}</Text>
                 </View>
               )}
             </View>
             <Text style={[styles.planPrice, { color: theme.text }]}>$0</Text>
-            <Text style={[styles.planPriceSub, { color: theme.textMuted }]}>Forever free</Text>
+            <Text style={[styles.planPriceSub, { color: theme.textMuted }]}>{t("subscription.foreverFree")}</Text>
             <View style={styles.featureList}>
               {FREE_FEATURES.map((f) => (
                 <View key={f} style={styles.featureRow}>
@@ -192,14 +187,13 @@ export default function SubscriptionScreen() {
             </View>
           </View>
 
-          {/* Premium card */}
           <View style={[styles.planCard, styles.premiumCard, { backgroundColor: "#448aff0a", borderColor: "#448aff" }]}>
             <View style={[styles.premiumGlow, { backgroundColor: "#448aff" }]} />
             <View style={styles.planCardHeader}>
-              <Text style={[styles.planName, { color: theme.text }]}>Premium</Text>
+              <Text style={[styles.planName, { color: theme.text }]}>{t("subscription.premium")}</Text>
               {isPremium && (
                 <View style={[styles.currentBadge, { backgroundColor: "#448aff22" }]}>
-                  <Text style={[styles.currentBadgeText, { color: "#448aff" }]}>Active</Text>
+                  <Text style={[styles.currentBadgeText, { color: "#448aff" }]}>{t("subscription.active")}</Text>
                 </View>
               )}
             </View>
@@ -207,12 +201,12 @@ export default function SubscriptionScreen() {
               ${billingCycle === "yearly" ? perMonthIfYearly : priceMonthly}
             </Text>
             <Text style={[styles.planPriceSub, { color: theme.textMuted }]}>
-              {billingCycle === "yearly" ? `$${priceYearly}/yr, billed annually` : "per month"}
+              {billingCycle === "yearly" ? t("subscription.billedAnnually", { price: priceYearly }) : t("subscription.perMonth")}
             </Text>
             <View style={styles.featureList}>
               <View style={styles.featureRow}>
                 <Feather name="check" size={13} color="#448aff" />
-                <Text style={[styles.featureText, { color: theme.textMuted }]}>Everything in Free</Text>
+                <Text style={[styles.featureText, { color: theme.textMuted }]}>{t("subscription.everythingInFree")}</Text>
               </View>
               {PREMIUM_FEATURES.map((f) => (
                 <View key={f.key} style={styles.featureRow}>
@@ -224,7 +218,6 @@ export default function SubscriptionScreen() {
           </View>
         </View>
 
-        {/* CTA */}
         {!isPremium ? (
           <View style={styles.ctaSection}>
             <Pressable
@@ -234,40 +227,39 @@ export default function SubscriptionScreen() {
             >
               <Feather name="zap" size={18} color="#fff" />
               <Text style={styles.ctaBtnText}>
-                {upgrading ? "Processing…" : `Subscribe to Premium · ${billingCycle === "yearly" ? `$${perMonthIfYearly}/mo` : `$${priceMonthly}/mo`}`}
+                {upgrading ? t("subscription.processing") : `${t("subscription.subscribeToPremium")} · ${billingCycle === "yearly" ? `$${perMonthIfYearly}/mo` : `$${priceMonthly}/mo`}`}
               </Text>
             </Pressable>
             <Text style={[styles.ctaNote, { color: theme.textMuted }]}>
-              Cancel anytime · Secure payment via Stripe · Coming soon
+              {t("subscription.cancelAnytime")}
             </Text>
           </View>
         ) : (
           <View style={[styles.manageCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Feather name="check-circle" size={18} color="#448aff" />
             <Text style={[styles.manageText, { color: theme.text }]}>
-              You're on Premium. Thank you for supporting FitLog!
+              {t("subscription.premiumThanks")}
             </Text>
           </View>
         )}
 
-        {/* Dev tool (non-production only) */}
         {__DEV__ && (
           <View style={[styles.devCard, { backgroundColor: theme.card, borderColor: theme.warning + "44" }]}>
-            <Text style={[styles.devTitle, { color: theme.warning }]}>Dev: Simulate Plan</Text>
+            <Text style={[styles.devTitle, { color: theme.warning }]}>{t("subscription.devSimulatePlan")}</Text>
             <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
               <Pressable
                 onPress={() => handleSimulate("free")}
                 disabled={simulating}
                 style={[styles.devBtn, { borderColor: theme.primary }]}
               >
-                <Text style={[styles.devBtnText, { color: theme.primary }]}>→ Free</Text>
+                <Text style={[styles.devBtnText, { color: theme.primary }]}>→ {t("subscription.free")}</Text>
               </Pressable>
               <Pressable
                 onPress={() => handleSimulate("premium")}
                 disabled={simulating}
                 style={[styles.devBtn, { borderColor: "#448aff" }]}
               >
-                <Text style={[styles.devBtnText, { color: "#448aff" }]}>→ Premium</Text>
+                <Text style={[styles.devBtnText, { color: "#448aff" }]}>→ {t("subscription.premium")}</Text>
               </Pressable>
             </View>
           </View>

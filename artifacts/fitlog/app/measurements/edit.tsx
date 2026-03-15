@@ -11,12 +11,14 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
+import { useTranslation } from "react-i18next";
 
 export default function EditMeasurementScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const measureId = parseInt(id || "0");
 
@@ -65,11 +67,11 @@ export default function EditMeasurementScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["measurements"] });
       queryClient.invalidateQueries({ queryKey: ["measurement", measureId] });
-      showToast("Measurement updated", "success");
+      showToast(t("measurements.measurementUpdated"), "success");
       router.back();
     },
     onError: () => {
-      showToast("Failed to update measurement", "error");
+      showToast(t("measurements.failedToUpdate"), "error");
     },
   });
 
@@ -80,32 +82,32 @@ export default function EditMeasurementScreen() {
     if (weightInput) {
       const v = parseFloat(weightInput);
       if (useImperial) {
-        if (isNaN(v) || v < 22 || v > 1100) { setValidationError("Weight must be between 22 and 1,100 lbs."); return; }
+        if (isNaN(v) || v < 22 || v > 1100) { setValidationError(t("measurements.weightRangeImperial")); return; }
         resolvedWeightKg = parseFloat((v / 2.20462).toFixed(2));
       } else {
-        if (isNaN(v) || v < 10 || v > 500) { setValidationError("Weight must be between 10 and 500 kg."); return; }
+        if (isNaN(v) || v < 10 || v > 500) { setValidationError(t("measurements.weightRangeMetric")); return; }
         resolvedWeightKg = v;
       }
     }
     if (bodyFat) {
       const bf = parseFloat(bodyFat);
-      if (isNaN(bf) || bf < 1 || bf > 70) { setValidationError("Body fat must be between 1% and 70%."); return; }
+      if (isNaN(bf) || bf < 1 || bf > 70) { setValidationError(t("measurements.bodyFatRange")); return; }
     }
     if (chest) {
       const v = parseFloat(chest);
-      if (isNaN(v) || v < 30 || v > 300) { setValidationError("Chest must be between 30 and 300 cm."); return; }
+      if (isNaN(v) || v < 30 || v > 300) { setValidationError(t("measurements.chestRange")); return; }
     }
     if (waist) {
       const v = parseFloat(waist);
-      if (isNaN(v) || v < 30 || v > 300) { setValidationError("Waist must be between 30 and 300 cm."); return; }
+      if (isNaN(v) || v < 30 || v > 300) { setValidationError(t("measurements.waistRange")); return; }
     }
     if (hips) {
       const v = parseFloat(hips);
-      if (isNaN(v) || v < 30 || v > 300) { setValidationError("Hips must be between 30 and 300 cm."); return; }
+      if (isNaN(v) || v < 30 || v > 300) { setValidationError(t("measurements.hipsRange")); return; }
     }
     if (arms) {
       const v = parseFloat(arms);
-      if (isNaN(v) || v < 10 || v > 100) { setValidationError("Arms must be between 10 and 100 cm."); return; }
+      if (isNaN(v) || v < 10 || v > 100) { setValidationError(t("measurements.armsRange")); return; }
     }
     mutation.mutate({
       weightKg: resolvedWeightKg,
@@ -129,7 +131,7 @@ export default function EditMeasurementScreen() {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular" }}>
-          Measurement not found.
+          {t("measurements.notFound")}
         </Text>
       </View>
     );
@@ -142,7 +144,7 @@ export default function EditMeasurementScreen() {
           <Feather name="arrow-left" size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          Edit Measurement
+          {t("measurements.editMeasurement")}
         </Text>
         <View style={{ width: 44 }} />
       </View>
@@ -152,14 +154,14 @@ export default function EditMeasurementScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Input
-          label={useImperial ? "Weight (lbs)" : "Weight (kg)"}
+          label={useImperial ? t("measurements.weightLbs") : t("measurements.weightKg")}
           value={weightInput}
           onChangeText={setWeightInput}
           placeholder={useImperial ? "165.0" : "75.0"}
           keyboardType="decimal-pad"
         />
         <Input
-          label="Body Fat %"
+          label={t("measurements.bodyFat")}
           value={bodyFat}
           onChangeText={setBodyFat}
           placeholder="18.5"
@@ -167,23 +169,23 @@ export default function EditMeasurementScreen() {
         />
 
         <Text style={[styles.sectionTitle, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-          Circumference (cm)
+          {t("measurements.circumference")}
         </Text>
 
         <View style={styles.grid}>
           <View style={{ flex: 1 }}>
-            <Input label="Chest" value={chest} onChangeText={setChest} placeholder="95" keyboardType="decimal-pad" />
+            <Input label={t("measurements.chest")} value={chest} onChangeText={setChest} placeholder="95" keyboardType="decimal-pad" />
           </View>
           <View style={{ flex: 1 }}>
-            <Input label="Waist" value={waist} onChangeText={setWaist} placeholder="80" keyboardType="decimal-pad" />
+            <Input label={t("measurements.waist")} value={waist} onChangeText={setWaist} placeholder="80" keyboardType="decimal-pad" />
           </View>
         </View>
         <View style={styles.grid}>
           <View style={{ flex: 1 }}>
-            <Input label="Hips" value={hips} onChangeText={setHips} placeholder="95" keyboardType="decimal-pad" />
+            <Input label={t("measurements.hips")} value={hips} onChangeText={setHips} placeholder="95" keyboardType="decimal-pad" />
           </View>
           <View style={{ flex: 1 }}>
-            <Input label="Arms" value={arms} onChangeText={setArms} placeholder="35" keyboardType="decimal-pad" />
+            <Input label={t("measurements.arms")} value={arms} onChangeText={setArms} placeholder="35" keyboardType="decimal-pad" />
           </View>
         </View>
 
@@ -192,7 +194,7 @@ export default function EditMeasurementScreen() {
             {validationError}
           </Text>
         ) : null}
-        <Button title="Save Changes" onPress={handleSave} loading={mutation.isPending} />
+        <Button title={t("measurements.saveChanges")} onPress={handleSave} loading={mutation.isPending} />
       </ScrollView>
     </View>
   );

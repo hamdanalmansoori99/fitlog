@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
+import { useTranslation } from "react-i18next";
 
 export interface DayStat {
   dayLabel: string;
@@ -16,16 +17,18 @@ interface WeeklyBarChartProps {
 
 const BAR_TRACK_H = 100;
 
-export function WeeklyBarChart({ data, emptyMessage = "No activity yet" }: WeeklyBarChartProps) {
+export function WeeklyBarChart({ data, emptyMessage }: WeeklyBarChartProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const allEmpty = data.length === 0 || data.every(d => d.activeMinutes === 0);
   const maxMinutes = Math.max(...data.map(d => d.activeMinutes), 1);
+  const displayEmptyMessage = emptyMessage ?? t("components.weeklyBarChart.noActivityYet");
 
   if (allEmpty) {
     return (
       <View style={styles.emptyWrap}>
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
-          {emptyMessage}
+          {displayEmptyMessage}
         </Text>
       </View>
     );

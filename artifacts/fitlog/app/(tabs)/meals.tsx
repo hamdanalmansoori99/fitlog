@@ -14,6 +14,7 @@ import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
+import { useTranslation } from "react-i18next";
 
 const CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
@@ -61,6 +62,7 @@ function ProgressRing({ current, goal, size = 80 }: { current: number; goal: num
 
 function CalorieSummary({ data }: { data: any }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { dailyTotals, calorieGoal } = data;
   const isOver = calorieGoal && dailyTotals.calories > calorieGoal;
   return (
@@ -73,20 +75,20 @@ function CalorieSummary({ data }: { data: any }) {
               {Math.round(dailyTotals.calories)}
             </Text>
             <Text style={[styles.calUnit, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {calorieGoal ? `/ ${calorieGoal} kcal` : "kcal today"}
+              {calorieGoal ? `/ ${calorieGoal} ${t("common.kcal")}` : t("meals.kcalToday")}
             </Text>
           </View>
           {calorieGoal && (
             <Text style={{ color: isOver ? theme.danger : theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
               {isOver
-                ? `${Math.round(dailyTotals.calories - calorieGoal)} kcal over goal`
-                : `${Math.round(calorieGoal - dailyTotals.calories)} kcal remaining`}
+                ? t("meals.kcalOverGoal", { amount: Math.round(dailyTotals.calories - calorieGoal) })
+                : t("meals.kcalRemaining", { amount: Math.round(calorieGoal - dailyTotals.calories) })}
             </Text>
           )}
           <View style={styles.macrosRow}>
-            <MacroBadge label="Protein" value={dailyTotals.proteinG} color={theme.secondary} />
-            <MacroBadge label="Carbs" value={dailyTotals.carbsG} color={theme.warning} />
-            <MacroBadge label="Fat" value={dailyTotals.fatG} color={theme.orange} />
+            <MacroBadge label={t("common.protein")} value={dailyTotals.proteinG} color={theme.secondary} />
+            <MacroBadge label={t("common.carbs")} value={dailyTotals.carbsG} color={theme.warning} />
+            <MacroBadge label={t("common.fat")} value={dailyTotals.fatG} color={theme.orange} />
           </View>
         </View>
       </View>
@@ -103,6 +105,7 @@ const MACRO_DONUT_CY = MACRO_DONUT_SIZE / 2;
 
 function MacroBreakdown({ dailyTotals, profile }: { dailyTotals: any; profile: any }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const p = Math.round(dailyTotals.proteinG || 0);
   const c = Math.round(dailyTotals.carbsG || 0);
   const f = Math.round(dailyTotals.fatG || 0);
@@ -113,9 +116,9 @@ function MacroBreakdown({ dailyTotals, profile }: { dailyTotals: any; profile: a
   const fatGoal = profile?.dailyFatGoal || null;
 
   const macros = [
-    { label: "Protein", short: "P", value: p, goal: proteinGoal, color: "#e040fb" },
-    { label: "Carbs", short: "C", value: c, goal: carbsGoal, color: theme.secondary },
-    { label: "Fat", short: "F", value: f, goal: fatGoal, color: theme.orange },
+    { label: t("common.protein"), short: "P", value: p, goal: proteinGoal, color: "#e040fb" },
+    { label: t("common.carbs"), short: "C", value: c, goal: carbsGoal, color: theme.secondary },
+    { label: t("common.fat"), short: "F", value: f, goal: fatGoal, color: theme.orange },
   ];
 
   let offset = 0;
@@ -169,7 +172,7 @@ function MacroBreakdown({ dailyTotals, profile }: { dailyTotals: any; profile: a
                   color: m.value >= m.goal ? theme.primary : theme.textMuted,
                   fontFamily: "Inter_500Medium", fontSize: 11,
                 }}>
-                  {m.value >= m.goal ? "Hit" : `${m.goal - m.value}g left`}
+                  {m.value >= m.goal ? t("meals.hit") : t("meals.gLeft", { amount: m.goal - m.value })}
                 </Text>
               )}
             </View>
@@ -182,6 +185,7 @@ function MacroBreakdown({ dailyTotals, profile }: { dailyTotals: any; profile: a
 
 export default function MealsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
@@ -237,9 +241,9 @@ export default function MealsScreen() {
     mutationFn: api.deleteMeal,
     onSuccess: () => {
       invalidateMealRelated();
-      showToast("Meal deleted", "success");
+      showToast(t("meals.mealDeleted"), "success");
     },
-    onError: () => showToast("Could not delete meal. Please try again.", "error"),
+    onError: () => showToast(t("meals.couldNotDeleteMeal"), "error"),
   });
 
   const saveFavMutation = useMutation({
@@ -247,11 +251,11 @@ export default function MealsScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["favoriteMeals"] });
       setSavingFavId(null);
-      showToast("Saved to favourites ⭐", "success");
+      showToast(t("meals.savedToFavourites") + " ⭐", "success");
     },
     onError: () => {
       setSavingFavId(null);
-      showToast("Could not save favourite. Please try again.", "error");
+      showToast(t("meals.couldNotSaveFavourite"), "error");
     },
   });
 
@@ -262,18 +266,18 @@ export default function MealsScreen() {
       queryClient.invalidateQueries({ queryKey: ["favoriteMeals"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedDate(today);
-      showToast("Meal logged!", "success");
+      showToast(t("meals.mealLogged"), "success");
     },
-    onError: () => showToast("Could not log meal. Please try again.", "error"),
+    onError: () => showToast(t("meals.couldNotLogMeal"), "error"),
   });
 
   const deleteFavMutation = useMutation({
     mutationFn: (id: number) => api.deleteFavoriteMeal(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["favoriteMeals"] });
-      showToast("Removed from favourites", "success");
+      showToast(t("meals.removedFromFavourites"), "success");
     },
-    onError: () => showToast("Could not remove favourite", "error"),
+    onError: () => showToast(t("meals.couldNotRemoveFavourite"), "error"),
   });
 
   const duplicateMutation = useMutation({
@@ -282,9 +286,9 @@ export default function MealsScreen() {
       invalidateMealRelated();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedDate(today);
-      showToast(`${res.count} meal${res.count !== 1 ? "s" : ""} copied to today`, "success");
+      showToast(t("meals.mealsCopied", { count: res.count }), "success");
     },
-    onError: () => showToast("Could not copy meals. Please try again.", "error"),
+    onError: () => showToast(t("meals.couldNotCopyMeals"), "error"),
   });
 
   const duplicateMealMutation = useMutation({
@@ -295,9 +299,9 @@ export default function MealsScreen() {
       queryClient.invalidateQueries({ queryKey: ["frequentMeals"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (!isToday) setSelectedDate(today);
-      showToast("Meal copied to today", "success");
+      showToast(t("meals.mealCopiedToToday"), "success");
     },
-    onError: () => showToast("Could not copy meal. Please try again.", "error"),
+    onError: () => showToast(t("meals.couldNotCopyMeal"), "error"),
   });
 
   const logFrequentMutation = useMutation({
@@ -306,9 +310,9 @@ export default function MealsScreen() {
       invalidateMealRelated();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedDate(today);
-      showToast("Meal logged!", "success");
+      showToast(t("meals.mealLogged"), "success");
     },
-    onError: () => showToast("Could not log meal. Please try again.", "error"),
+    onError: () => showToast(t("meals.couldNotLogMeal"), "error"),
   });
 
   const generatePlanMutation = useMutation({
@@ -319,9 +323,9 @@ export default function MealsScreen() {
     },
     onError: (err: any) => {
       if (err?.message?.includes("Premium")) {
-        showToast("AI meal plans are a Premium feature", "error");
+        showToast(t("meals.aiMealPlansPremium"), "error");
       } else {
-        showToast("Could not generate meal plan. Please try again.", "error");
+        showToast(t("meals.couldNotGeneratePlan"), "error");
       }
     },
   });
@@ -333,11 +337,11 @@ export default function MealsScreen() {
 
   function handleDuplicateDay() {
     Alert.alert(
-      "Copy to Today?",
-      `Copy all meals from ${new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} to today?`,
+      t("meals.copyDayTitle"),
+      t("meals.copyDayMessage", { date: new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) }),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Copy", onPress: () => duplicateMutation.mutate(selectedDate) },
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("common.copy"), onPress: () => duplicateMutation.mutate(selectedDate) },
       ]
     );
   }
@@ -345,20 +349,20 @@ export default function MealsScreen() {
   function handleDuplicateMeal(meal: any) {
     if (isToday) {
       Alert.alert(
-        "Duplicate Meal",
-        `Add another "${meal.name}" to today?`,
+        t("meals.duplicateMeal"),
+        t("meals.duplicateMealMessage", { name: meal.name }),
         [
-          { text: "Cancel", style: "cancel" },
-          { text: "Add", onPress: () => duplicateMealMutation.mutate({ id: meal.id }) },
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("common.add"), onPress: () => duplicateMealMutation.mutate({ id: meal.id }) },
         ]
       );
     } else {
       Alert.alert(
-        "Copy to Today",
-        `Copy "${meal.name}" to today's log?`,
+        t("meals.copyMealToToday"),
+        t("meals.copyMealMessage", { name: meal.name }),
         [
-          { text: "Cancel", style: "cancel" },
-          { text: "Copy", onPress: () => duplicateMealMutation.mutate({ id: meal.id }) },
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("common.copy"), onPress: () => duplicateMealMutation.mutate({ id: meal.id }) },
         ]
       );
     }
@@ -372,18 +376,25 @@ export default function MealsScreen() {
 
   const showQuickLog = favorites.length > 0 || frequentOnly.length > 0;
 
+  const categoryLabels: Record<string, string> = {
+    Breakfast: t("meals.breakfast"),
+    Lunch: t("meals.lunch"),
+    Dinner: t("meals.dinner"),
+    Snacks: t("meals.snacks"),
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
-        <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Meals</Text>
+        <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("meals.title")}</Text>
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
           <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/meals/weekly-plan" as any); }}
             style={[styles.weeklyBtn, { backgroundColor: theme.secondaryDim, borderColor: theme.secondary + "40" }]}
           >
             <Feather name="calendar" size={15} color={theme.secondary} />
-            <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Week</Text>
+            <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("meals.weekPlan")}</Text>
           </Pressable>
           <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/meals/add"); }}
@@ -400,7 +411,7 @@ export default function MealsScreen() {
           <Feather name="chevron-left" size={22} color={theme.textMuted} />
         </Pressable>
         <Text style={[styles.dateText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          {isToday ? "Today" : new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          {isToday ? t("common.today") : new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
         </Text>
         <Pressable onPress={() => changeDate(1)} style={styles.dateArrow} disabled={isToday}>
           <Feather name="chevron-right" size={22} color={isToday ? theme.border : theme.textMuted} />
@@ -413,7 +424,7 @@ export default function MealsScreen() {
           >
             <Feather name="copy" size={13} color={theme.secondary} />
             <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
-              {duplicateMutation.isPending ? "Copying…" : "Copy to Today"}
+              {duplicateMutation.isPending ? t("meals.copying") : t("meals.copyToToday")}
             </Text>
           </Pressable>
         )}
@@ -427,8 +438,8 @@ export default function MealsScreen() {
         {showQuickLog && (
           <Animated.View entering={FadeInDown.duration(300)} style={{ gap: 10 }}>
             <View style={styles.quickLogHeader}>
-              <Text style={[styles.quickLogTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Quick Log</Text>
-              <Text style={[styles.quickLogSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Tap to log instantly</Text>
+              <Text style={[styles.quickLogTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("meals.quickLog")}</Text>
+              <Text style={[styles.quickLogSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("meals.quickLogSubtitle")}</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
               <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 }}>
@@ -440,9 +451,9 @@ export default function MealsScreen() {
                         <Feather name="star" size={13} color={theme.primary} />
                       </View>
                       <Pressable
-                        onPress={() => Alert.alert("Remove Favourite?", `Remove "${fav.name}"?`, [
-                          { text: "Cancel", style: "cancel" },
-                          { text: "Remove", style: "destructive", onPress: () => deleteFavMutation.mutate(fav.id) },
+                        onPress={() => Alert.alert(t("meals.removeFavourite"), t("meals.removeFavouriteMessage", { name: fav.name }), [
+                          { text: t("common.cancel"), style: "cancel" },
+                          { text: t("common.remove"), style: "destructive", onPress: () => deleteFavMutation.mutate(fav.id) },
                         ])}
                         hitSlop={6}
                       >
@@ -450,19 +461,19 @@ export default function MealsScreen() {
                       </Pressable>
                     </View>
                     <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }} numberOfLines={2}>{fav.name}</Text>
-                    <Text style={{ color: theme.orange, fontFamily: "Inter_500Medium", fontSize: 12, marginTop: 2 }}>{Math.round(fav.totalCalories)} kcal</Text>
+                    <Text style={{ color: theme.orange, fontFamily: "Inter_500Medium", fontSize: 12, marginTop: 2 }}>{Math.round(fav.totalCalories)} {t("common.kcal")}</Text>
                     {fav.totalProteinG > 0 && (
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>{Math.round(fav.totalProteinG)}g protein</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>{t("meals.gProtein", { amount: Math.round(fav.totalProteinG) })}</Text>
                     )}
                     {fav.usageCount > 1 && (
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>Used {fav.usageCount}×</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>{t("meals.used")} {fav.usageCount}×</Text>
                     )}
                     <Pressable
                       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); logFavMutation.mutate({ id: fav.id }); }}
                       disabled={logFavMutation.isPending}
                       style={[styles.logNowBtn, { backgroundColor: theme.primary }]}
                     >
-                      <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 12 }}>Log Now</Text>
+                      <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 12 }}>{t("meals.logNow")}</Text>
                     </Pressable>
                   </View>
                 ))}
@@ -474,19 +485,19 @@ export default function MealsScreen() {
                       <View style={[styles.favIcon, { backgroundColor: theme.secondaryDim }]}>
                         <Feather name="repeat" size={13} color={theme.secondary} />
                       </View>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{meal.use_count}× logged</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("meals.xLogged", { count: meal.use_count })}</Text>
                     </View>
                     <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }} numberOfLines={2}>{meal.name}</Text>
-                    <Text style={{ color: theme.orange, fontFamily: "Inter_500Medium", fontSize: 12, marginTop: 2 }}>{Math.round(meal.avg_calories)} kcal</Text>
+                    <Text style={{ color: theme.orange, fontFamily: "Inter_500Medium", fontSize: 12, marginTop: 2 }}>{Math.round(meal.avg_calories)} {t("common.kcal")}</Text>
                     {meal.avg_protein_g > 0 && (
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>{Math.round(meal.avg_protein_g)}g protein</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>{t("meals.gProtein", { amount: Math.round(meal.avg_protein_g) })}</Text>
                     )}
                     <Pressable
                       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); logFrequentMutation.mutate(meal.latest_meal_id); }}
                       disabled={logFrequentMutation.isPending}
                       style={[styles.logNowBtn, { backgroundColor: theme.secondary }]}
                     >
-                      <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 12 }}>Log Again</Text>
+                      <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 12 }}>{t("meals.logAgain")}</Text>
                     </Pressable>
                   </View>
                 ))}
@@ -541,10 +552,10 @@ export default function MealsScreen() {
                 )}
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                    {generatePlanMutation.isPending ? "Generating your plan…" : "Generate today's meal plan"}
+                    {generatePlanMutation.isPending ? t("meals.generatingPlan") : t("meals.generateTodaysPlan")}
                   </Text>
                   <Text style={{ color: theme.secondary + "aa", fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-                    AI-tailored to your calorie & macro goals · Premium
+                    {t("meals.aiTailoredMacros")}
                   </Text>
                 </View>
                 {!generatePlanMutation.isPending && (
@@ -558,7 +569,7 @@ export default function MealsScreen() {
                     <View style={[styles.planBannerIcon, { backgroundColor: theme.secondaryDim }]}>
                       <Feather name="cpu" size={15} color={theme.secondary} />
                     </View>
-                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>AI Meal Plan</Text>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("meals.aiMealPlan")}</Text>
                   </View>
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <Pressable onPress={() => generatePlanMutation.mutate()} hitSlop={8}>
@@ -577,7 +588,7 @@ export default function MealsScreen() {
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2, lineHeight: 16 }} numberOfLines={2}>{meal.description}</Text>
                       ) : null}
                       <Text style={{ color: theme.warning, fontFamily: "Inter_500Medium", fontSize: 12, marginTop: 4 }}>
-                        {meal.calories} kcal · {meal.proteinG}g P · {meal.carbsG}g C · {meal.fatG}g F
+                        {meal.calories} {t("common.kcal")} · {meal.proteinG}g P · {meal.carbsG}g C · {meal.fatG}g F
                       </Text>
                     </View>
                     <Pressable
@@ -611,17 +622,17 @@ export default function MealsScreen() {
                 <Feather name="sun" size={28} color={theme.orange} />
               </View>
               <Text style={[styles.firstMealTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {new Date().getHours() < 11 ? "Start your day right!" : new Date().getHours() < 15 ? "Time for lunch?" : "How's your nutrition today?"}
+                {new Date().getHours() < 11 ? t("meals.startDayRight") : new Date().getHours() < 15 ? t("meals.timeForLunch") : t("meals.howsNutrition")}
               </Text>
               <Text style={[styles.firstMealSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Log your meals to track calories and macros. Save favourites for even faster logging next time.
+                {t("meals.logMealsMessage")}
               </Text>
               <Pressable
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/meals/add"); }}
                 style={[styles.firstMealBtn, { backgroundColor: theme.orange + "20", borderColor: theme.orange + "50" }]}
               >
                 <Feather name="plus" size={14} color={theme.orange} />
-                <Text style={{ color: theme.orange, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Log first meal</Text>
+                <Text style={{ color: theme.orange, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("meals.logFirstMeal")}</Text>
               </Pressable>
             </View>
           </Animated.View>
@@ -635,10 +646,10 @@ export default function MealsScreen() {
                 <Feather name="calendar" size={28} color={theme.secondary} />
               </View>
               <Text style={[styles.firstMealTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                Nothing logged
+                {t("meals.nothingLogged")}
               </Text>
               <Text style={[styles.firstMealSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                No meals were recorded for this day.
+                {t("meals.noMealsRecorded")}
               </Text>
             </View>
           </Animated.View>
@@ -655,10 +666,10 @@ export default function MealsScreen() {
               <View style={styles.catHeader}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Feather name={catIcon} size={14} color={theme.textMuted} />
-                  <Text style={[styles.catTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{cat}</Text>
+                  <Text style={[styles.catTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{categoryLabels[cat] || cat}</Text>
                 </View>
                 <Text style={[styles.catCals, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {Math.round(catCals)} kcal
+                  {Math.round(catCals)} {t("common.kcal")}
                 </Text>
               </View>
 
@@ -680,7 +691,7 @@ export default function MealsScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.mealName, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{meal.name}</Text>
                         <Text style={[styles.mealCals, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
-                          {Math.round(meal.totalCalories)} kcal
+                          {Math.round(meal.totalCalories)} {t("common.kcal")}
                         </Text>
                       </View>
                       {/* Star / Save as favourite */}
@@ -705,9 +716,9 @@ export default function MealsScreen() {
                       <Pressable
                         onPress={(e) => {
                           e.stopPropagation();
-                          Alert.alert("Delete meal?", "This cannot be undone.", [
-                            { text: "Cancel", style: "cancel" },
-                            { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(meal.id) },
+                          Alert.alert(t("meals.deleteMealQuestion"), t("meals.cannotBeUndone"), [
+                            { text: t("common.cancel"), style: "cancel" },
+                            { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate(meal.id) },
                           ]);
                         }}
                         hitSlop={8}
@@ -733,7 +744,7 @@ export default function MealsScreen() {
                 style={[styles.addMealBtn, { borderColor: theme.border }]}
               >
                 <Feather name="plus" size={16} color={theme.textMuted} />
-                <Text style={[styles.addMealText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Add {cat}</Text>
+                <Text style={[styles.addMealText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("meals.addCategory", { category: categoryLabels[cat] || cat })}</Text>
               </Pressable>
             </Animated.View>
           );

@@ -6,6 +6,7 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
@@ -18,6 +19,7 @@ export default function RegisterScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { setAuth } = useAuthStore();
+  const { t } = useTranslation();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -32,15 +34,15 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
-      setError("Please fill in all fields");
+      setError(t("auth.fillAllFields"));
       return;
     }
     if (!email.includes("@") || email.indexOf(".") < email.indexOf("@")) {
-      setError("Enter a valid email address");
+      setError(t("auth.validEmail"));
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError(t("auth.passwordMin6"));
       return;
     }
     setError("");
@@ -50,7 +52,7 @@ export default function RegisterScreen() {
       setAuth(res.token, res.user);
       router.replace("/onboarding");
     } catch (err: any) {
-      setError(err.message || "Registration failed. Please try again.");
+      setError(err.message || t("auth.registerFailed"));
     } finally {
       setLoading(false);
     }
@@ -75,9 +77,9 @@ export default function RegisterScreen() {
           </Pressable>
 
           <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>Create account</Text>
+            <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("auth.createAccount")}</Text>
             <Text style={[styles.subtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              Start your fitness journey today
+              {t("auth.startJourney")}
             </Text>
           </View>
 
@@ -92,10 +94,10 @@ export default function RegisterScreen() {
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Input
-                  label="First Name"
+                  label={t("auth.firstName")}
                   value={firstName}
                   onChangeText={setFirstName}
-                  placeholder="Alex"
+                  placeholder={t("auth.firstNamePlaceholder")}
                   autoCapitalize="words"
                   returnKeyType="next"
                   onSubmitEditing={() => lastNameRef.current?.focus()}
@@ -105,10 +107,10 @@ export default function RegisterScreen() {
               <View style={{ flex: 1 }}>
                 <Input
                   ref={lastNameRef}
-                  label="Last Name"
+                  label={t("auth.lastName")}
                   value={lastName}
                   onChangeText={setLastName}
-                  placeholder="Smith"
+                  placeholder={t("auth.lastNamePlaceholder")}
                   autoCapitalize="words"
                   returnKeyType="next"
                   onSubmitEditing={() => emailRef.current?.focus()}
@@ -119,10 +121,10 @@ export default function RegisterScreen() {
 
             <Input
               ref={emailRef}
-              label="Email"
+              label={t("auth.email")}
               value={email}
               onChangeText={setEmail}
-              placeholder="you@example.com"
+              placeholder={t("auth.emailPlaceholder")}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -134,22 +136,22 @@ export default function RegisterScreen() {
 
             <Input
               ref={passwordRef}
-              label="Password"
+              label={t("auth.password")}
               value={password}
               onChangeText={setPassword}
-              placeholder="Min. 6 characters"
+              placeholder={t("auth.passwordMinChars")}
               secureEntry
               returnKeyType="done"
               onSubmitEditing={handleRegister}
               leftIcon={<Feather name="lock" size={18} color={theme.textMuted} />}
             />
 
-            <Button title="Create Account" onPress={handleRegister} loading={loading} style={styles.btn} />
+            <Button title={t("auth.createAccount")} onPress={handleRegister} loading={loading} style={styles.btn} />
 
             <Pressable onPress={() => router.back()} style={styles.loginLink}>
               <Text style={[styles.loginText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Already have an account?{" "}
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold" }}>Sign in</Text>
+                {t("auth.hasAccount")}{" "}
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold" }}>{t("auth.signIn")}</Text>
               </Text>
             </Pressable>
           </View>
