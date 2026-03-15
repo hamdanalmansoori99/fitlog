@@ -26,7 +26,8 @@ router.get("/", requireAuth, async (req, res) => {
 router.put("/", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const { darkMode, unitSystem, language, notificationsEnabled } = req.body;
+    const { darkMode, unitSystem, notificationsEnabled } = req.body;
+    const language = req.body.language && ["en", "ar"].includes(req.body.language) ? req.body.language : undefined;
     
     const existing = await db.select().from(settingsTable)
       .where(eq(settingsTable.userId, user.id)).limit(1);
