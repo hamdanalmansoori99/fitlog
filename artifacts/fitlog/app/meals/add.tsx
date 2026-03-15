@@ -302,20 +302,17 @@ export default function AddMealScreen() {
     ]);
   }
 
-  const searchAbort = useRef<AbortController | null>(null);
   const searchSeq = useRef(0);
 
   useEffect(() => {
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
-      if (searchAbort.current) searchAbort.current.abort();
     };
   }, []);
 
   function handleSearchChange(text: string) {
     setSearchQuery(text);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    if (searchAbort.current) searchAbort.current.abort();
     if (text.trim().length < 2) {
       setSearchResults([]);
       setShowSearchResults(false);
@@ -623,6 +620,7 @@ export default function AddMealScreen() {
                       <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
                         P {result.proteinG}g · C {result.carbsG}g · F {result.fatG}g
                       </Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 9 }}>per 100g</Text>
                     </View>
                   </Pressable>
                 ))}
