@@ -33,14 +33,18 @@ import { computeGoalInsights, GoalInsight } from "@/lib/goalInsights";
 
 // ─── Weight Shortcut Card ─────────────────────────────────────────────────────
 
-function WeightShortcutCard({ todayWeight, measurementId, loading, theme }: {
+function WeightShortcutCard({ todayWeight, measurementId, loading, useImperial, theme }: {
   todayWeight: number | null;
   measurementId: number | null;
   loading: boolean;
+  useImperial: boolean;
   theme: any;
 }) {
-  const KG_TO_LBS = 2.20462;
-  const lbs = todayWeight != null ? (todayWeight * KG_TO_LBS).toFixed(1) : null;
+  const displayWeight = todayWeight != null
+    ? useImperial
+      ? `${(todayWeight * 2.20462).toFixed(1)} lbs`
+      : `${todayWeight.toFixed(1)} kg`
+    : null;
 
   if (loading) return null;
 
@@ -69,7 +73,7 @@ function WeightShortcutCard({ todayWeight, measurementId, loading, theme }: {
         {todayWeight != null ? (
           <>
             <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 14 }}>
-              {lbs} lbs
+              {displayWeight}
             </Text>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
               Weight logged today · tap to edit
@@ -537,6 +541,13 @@ export default function HomeScreen() {
     staleTime: 120000,
   });
 
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: api.getSettings,
+    staleTime: 60000,
+  });
+  const useImperial = settings?.unitSystem === "imperial";
+
   const { data: waterData, refetch: refetchWater } = useQuery({
     queryKey: ["waterToday"],
     queryFn: api.getWaterToday,
@@ -744,6 +755,7 @@ export default function HomeScreen() {
             todayWeight={todayWeight}
             measurementId={todayMeasurementId}
             loading={measurementLoading}
+            useImperial={useImperial}
             theme={theme}
           />
         </Animated.View>
