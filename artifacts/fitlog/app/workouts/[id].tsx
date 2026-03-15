@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   Platform, Alert, ActivityIndicator, Modal,
@@ -8,6 +8,8 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -199,6 +201,8 @@ export default function WorkoutDetailScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [shareOpen, setShareOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const cardRef = useRef<View>(null);
 
   const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, staleTime: 60000 });
   const useImperial = settings?.unitSystem === "imperial";
@@ -412,17 +416,49 @@ export default function WorkoutDetailScreen() {
       <Modal visible={shareOpen} transparent animationType="fade" onRequestClose={() => setShareOpen(false)}>
         <Pressable style={shareStyles.overlay} onPress={() => setShareOpen(false)}>
           <Pressable onPress={(e) => e.stopPropagation()}>
-            <ShareCard workout={workout} theme={theme} useImperial={useImperial} />
+            <View ref={cardRef} collapsable={false}>
+              <ShareCard workout={workout} theme={theme} useImperial={useImperial} />
+            </View>
             <View style={shareStyles.actions}>
               <Pressable
-                onPress={() => {
-                  showToast("Take a screenshot to share your workout!");
-                  setShareOpen(false);
+                onPress={async () => {
+                  if (sharing) return;
+                  setSharing(true);
+                  try {
+                    if (Platform.OS === "web") {
+                      const uri = await captureRef(cardRef, { format: "png", quality: 1 });
+                      const link = document.createElement("a");
+                      link.href = uri;
+                      link.download = `fitlog-workout-${id}.png`;
+                      link.click();
+                      showToast("Image downloaded!", "success");
+                    } else {
+                      const uri = await captureRef(cardRef, { format: "jpg", quality: 0.95 });
+                      const available = await Sharing.isAvailableAsync();
+                      if (available) {
+                        await Sharing.shareAsync(uri, { mimeType: "image/jpeg", dialogTitle: "Share your workout" });
+                      } else {
+                        showToast("Sharing is not available on this device", "error");
+                      }
+                    }
+                  } catch (err) {
+                    console.error("Share error:", err);
+                    showToast("Could not share. Try taking a screenshot instead.", "error");
+                  } finally {
+                    setSharing(false);
+                  }
                 }}
-                style={[shareStyles.actionBtn, { backgroundColor: theme.primary }]}
+                disabled={sharing}
+                style={[shareStyles.actionBtn, { backgroundColor: theme.primary, opacity: sharing ? 0.7 : 1 }]}
               >
-                <Feather name="camera" size={16} color="#0f0f1a" />
-                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Screenshot to Share</Text>
+                {sharing ? (
+                  <ActivityIndicator size={16} color="#0f0f1a" />
+                ) : (
+                  <Feather name={Platform.OS === "web" ? "download" : "share"} size={16} color="#0f0f1a" />
+                )}
+                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                  {sharing ? "Preparing…" : Platform.OS === "web" ? "Download Image" : "Share Workout"}
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => setShareOpen(false)}
