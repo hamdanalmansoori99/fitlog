@@ -48,14 +48,14 @@ export const useNotificationStore = create<NotificationState>()(
 
 export const NOTIF_META: Record<
   NotifType,
-  { label: string; description: string; icon: string; color: string }
+  { labelKey: string; descriptionKey: string; icon: string; color: string }
 > = {
-  workout:   { label: "Workout Reminder",  description: "Daily nudge to stick to your training plan",        icon: "activity",    color: "#00e676" },
-  meal:      { label: "Meal Logging",      description: "Reminders to log meals and stay on track",         icon: "coffee",      color: "#ff80ab" },
-  hydration: { label: "Hydration Check",   description: "Afternoon reminder to drink enough water",          icon: "droplet",     color: "#448aff" },
-  streak:    { label: "Streak Keeper",     description: "Evening motivation to protect your streak",         icon: "zap",         color: "#ffab40" },
-  recovery:  { label: "Recovery Reminder", description: "Smart suggestion to rest after intense stretches",  icon: "heart",       color: "#ea80fc" },
-  weekly:    { label: "Weekly Check-in",   description: "Sunday summary of your week's progress",            icon: "bar-chart-2", color: "#18ffff" },
+  workout:   { labelKey: "profile.notif.workoutLabel",   descriptionKey: "profile.notif.workoutDesc",   icon: "activity",    color: "#00e676" },
+  meal:      { labelKey: "profile.notif.mealLabel",      descriptionKey: "profile.notif.mealDesc",      icon: "coffee",      color: "#ff80ab" },
+  hydration: { labelKey: "profile.notif.hydrationLabel", descriptionKey: "profile.notif.hydrationDesc", icon: "droplet",     color: "#448aff" },
+  streak:    { labelKey: "profile.notif.streakLabel",    descriptionKey: "profile.notif.streakDesc",    icon: "zap",         color: "#ffab40" },
+  recovery:  { labelKey: "profile.notif.recoveryLabel",  descriptionKey: "profile.notif.recoveryDesc",  icon: "heart",       color: "#ea80fc" },
+  weekly:    { labelKey: "profile.notif.weeklyLabel",    descriptionKey: "profile.notif.weeklyDesc",    icon: "bar-chart-2", color: "#18ffff" },
 };
 
 export const NOTIF_TYPES: NotifType[] = ["workout", "meal", "hydration", "streak", "recovery", "weekly"];

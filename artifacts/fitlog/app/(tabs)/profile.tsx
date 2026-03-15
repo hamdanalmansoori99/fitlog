@@ -607,9 +607,9 @@ export default function ProfileScreen() {
                         <Feather name={meta.icon as any} size={15} color={pref.enabled ? meta.color : theme.textMuted} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 14 }}>{meta.label}</Text>
+                        <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 14 }}>{t(meta.labelKey)}</Text>
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                          {pref.enabled ? t("profile.dailyAt", { time: fmtTime(pref.time) }) : meta.description}
+                          {pref.enabled ? t("profile.dailyAt", { time: fmtTime(pref.time) }) : t(meta.descriptionKey)}
                         </Text>
                       </View>
                       <Switch
@@ -673,23 +673,6 @@ export default function ProfileScreen() {
             </Card>
             
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.unitSystem")}</Text>
-              <View style={styles.chipRow}>
-                {["metric", "imperial"].map(u => (
-                  <Pressable
-                    key={u}
-                    onPress={() => setUnitSystem(u as any)}
-                    style={[styles.chip, { backgroundColor: unitSystem === u ? theme.primaryDim : "transparent", borderColor: unitSystem === u ? theme.primary : theme.border, flex: 1 }]}
-                  >
-                    <Text style={{ color: unitSystem === u ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
-                      {u === "metric" ? t("profile.metric") : t("profile.imperial")}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </Card>
-
-            <Card>
               <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.language")}</Text>
               <View style={styles.chipRow}>
                 {[{ key: "en", label: t("profile.english") }, { key: "ar", label: t("profile.arabic") }].map(lng => (
@@ -711,6 +694,23 @@ export default function ProfileScreen() {
                   >
                     <Text style={{ color: language === lng.key ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
                       {lng.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Card>
+
+            <Card>
+              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.unitSystem")}</Text>
+              <View style={styles.chipRow}>
+                {["metric", "imperial"].map(u => (
+                  <Pressable
+                    key={u}
+                    onPress={() => setUnitSystem(u as any)}
+                    style={[styles.chip, { backgroundColor: unitSystem === u ? theme.primaryDim : "transparent", borderColor: unitSystem === u ? theme.primary : theme.border, flex: 1 }]}
+                  >
+                    <Text style={{ color: unitSystem === u ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
+                      {u === "metric" ? t("profile.metric") : t("profile.imperial")}
                     </Text>
                   </Pressable>
                 ))}

@@ -30,7 +30,7 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   const { token, _hydrated } = useAuthStore();
   const router = useRouter();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const setLanguage = useSettingsStore((s) => s.setLanguage);
 
   const { data: profile } = useQuery({
@@ -80,7 +80,7 @@ function RootLayoutNav() {
   }, [token, _hydrated, profile]);
 
   return (
-    <Stack screenOptions={{ headerBackTitle: "Back" }}>
+    <Stack screenOptions={{ headerBackTitle: t("common.back") }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="auth/login" options={{ headerShown: false }} />
       <Stack.Screen name="auth/register" options={{ headerShown: false }} />
