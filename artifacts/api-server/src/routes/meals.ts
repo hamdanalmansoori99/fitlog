@@ -758,4 +758,68 @@ Return only the JSON object.`;
   }
 });
 
+router.post("/generate-grocery-list", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+
+    const { getActiveSubscription } = await import("../services/subscriptionService");
+    const sub = await getActiveSubscription(user.id, user.role ?? "user");
+    if (!sub.plan.features.aiPhotoAnalysis) {
+      res.status(403).json({ error: "Grocery list generation is a Premium feature" });
+      return;
+    }
+
+    const { meals } = req.body;
+    if (!Array.isArray(meals) || meals.length === 0) {
+      res.status(400).json({ error: "Meals array is required" });
+      return;
+    }
+
+    const mealList = meals
+      .map((m: any, i: number) => `${i + 1}. ${m.name} — ${m.description || ""}`)
+      .join("\n");
+
+    const prompt = `You are a helpful grocery shopping assistant. Given the following meal plan, generate a consolidated grocery list grouped by aisle/category. Combine duplicate ingredients and estimate reasonable quantities for one person.
+
+Meals:
+${mealList}
+
+Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
+{
+  "categories": [
+    {
+      "name": "string (e.g. Produce, Proteins, Dairy, Grains, Pantry, Frozen, Other)",
+      "items": [
+        {
+          "name": "string (ingredient name)",
+          "quantity": "string (e.g. 2 lbs, 1 dozen, 500g)"
+        }
+      ]
+    }
+  ]
+}
+
+Be practical — combine similar items, use standard grocery quantities, and sort categories logically (Produce first, then Proteins, Dairy, etc.). Return only the JSON object.`;
+
+    const message = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const raw = (message.content[0] as any).text?.trim() ?? "";
+    const jsonStart = raw.indexOf("{");
+    const jsonEnd = raw.lastIndexOf("}");
+    if (jsonStart === -1 || jsonEnd === -1) {
+      res.status(500).json({ error: "Failed to parse grocery list from AI" });
+      return;
+    }
+    const groceryList = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    res.json(groceryList);
+  } catch (err) {
+    console.error("generate-grocery-list error:", err);
+    res.status(500).json({ error: "Failed to generate grocery list" });
+  }
+});
+
 export default router;

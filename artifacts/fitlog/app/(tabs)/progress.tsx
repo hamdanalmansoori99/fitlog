@@ -22,7 +22,7 @@ import { WorkoutCalendar } from "@/components/WorkoutCalendar";
 import { usePhotoStore } from "@/store/photoStore";
 import * as ImagePicker from "expo-image-picker";
 
-function MiniLineChart({ data, color }: { data: number[]; color: string }) {
+function MiniLineChart({ data, color, unit, showTrend = true }: { data: number[]; color: string; unit?: string; showTrend?: boolean }) {
   const { theme } = useTheme();
 
   if (data.length === 0) return null;
@@ -44,6 +44,7 @@ function MiniLineChart({ data, color }: { data: number[]; color: string }) {
   const padMax = max + range * 0.05;
   const padRange = padMax - padMin || 1;
   const delta = data[data.length - 1] - data[0];
+  const unitLabel = unit || "";
 
   return (
     <View>
@@ -64,16 +65,18 @@ function MiniLineChart({ data, color }: { data: number[]; color: string }) {
           );
         })}
       </View>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
-        <Feather
-          name={delta < -0.05 ? "trending-down" : delta > 0.05 ? "trending-up" : "minus"}
-          size={13}
-          color={delta < -0.05 ? theme.primary : delta > 0.05 ? theme.danger : theme.textMuted}
-        />
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-          {delta > 0 ? "+" : ""}{delta.toFixed(1)} kg over {data.length} entries
-        </Text>
-      </View>
+      {showTrend && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
+          <Feather
+            name={delta < -0.05 ? "trending-down" : delta > 0.05 ? "trending-up" : "minus"}
+            size={13}
+            color={delta < -0.05 ? theme.primary : delta > 0.05 ? theme.danger : theme.textMuted}
+          />
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+            {delta > 0 ? "+" : ""}{delta.toFixed(1)}{unitLabel ? ` ${unitLabel}` : ""} over {data.length} entries
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -222,10 +225,44 @@ export default function ProgressScreen() {
   const toDisplayWeight = (kg: number) => useImperial ? kg * 2.20462 : kg;
   const weightUnit = useImperial ? "lbs" : "kg";
 
-  const weightData = (measurements?.measurements || [])
+  const sortedMeasurements = (measurements?.measurements || [])
+    .slice()
+    .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const weightData = sortedMeasurements
     .filter((m: any) => m.weightKg)
-    .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((m: any) => toDisplayWeight(m.weightKg));
+
+  function extractMetric(field: string) {
+    const vals = sortedMeasurements.filter((m: any) => m[field] != null).map((m: any) => Number(m[field]));
+    if (vals.length === 0) return null;
+    const current = vals[vals.length - 1];
+    const prev = vals.length >= 2 ? vals[vals.length - 2] : null;
+    const delta = prev != null ? current - prev : null;
+    return { values: vals, current, delta };
+  }
+
+  const metricDefs = [
+    { key: "bodyFatPercent", label: "Body Fat", unit: "%", icon: "activity" as const, color: "#e040fb", field: "bodyFatPercent" },
+    { key: "waistCm", label: "Waist", unit: useImperial ? "in" : "cm", icon: "maximize" as const, color: "#448aff", field: "waistCm", imperial: 0.393701 },
+    { key: "chestCm", label: "Chest", unit: useImperial ? "in" : "cm", icon: "shield" as const, color: "#00e676", field: "chestCm", imperial: 0.393701 },
+    { key: "hipsCm", label: "Hips", unit: useImperial ? "in" : "cm", icon: "circle" as const, color: "#ffab40", field: "hipsCm", imperial: 0.393701 },
+    { key: "armsCm", label: "Arms", unit: useImperial ? "in" : "cm", icon: "zap" as const, color: "#ff6d00", field: "armsCm", imperial: 0.393701 },
+  ];
+
+  const metricResults = metricDefs.map(def => {
+    const raw = extractMetric(def.field);
+    if (!raw) return { ...def, data: null };
+    const convert = useImperial && def.imperial ? (v: number) => v * def.imperial! : (v: number) => v;
+    return {
+      ...def,
+      data: {
+        values: raw.values.map(convert),
+        current: convert(raw.current),
+        delta: raw.delta != null ? convert(raw.delta) : null,
+      },
+    };
+  }).filter(m => m.data !== null);
   
   const caloriesData = (nutritionStats?.dailyCalories || [])
     .slice(-30)
@@ -506,24 +543,33 @@ export default function ProgressScreen() {
         <View>
           <View style={styles.measureHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Body Measurements</Text>
-            <View style={styles.rangeRow}>
-              {[30, 90, 365].map(d => (
-                <Pressable
-                  key={d}
-                  onPress={() => setMeasureDays(d)}
-                  style={[
-                    styles.rangeBtn,
-                    { backgroundColor: measureDays === d ? theme.primary : theme.card, borderColor: theme.border },
-                  ]}
-                >
-                  <Text style={{
-                    color: measureDays === d ? "#0f0f1a" : theme.textMuted,
-                    fontFamily: "Inter_500Medium", fontSize: 11,
-                  }}>
-                    {d}d
-                  </Text>
-                </Pressable>
-              ))}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Pressable
+                onPress={() => router.push("/measurements/add")}
+                style={[styles.measureLogBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "40" }]}
+              >
+                <Feather name="plus" size={13} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>Log</Text>
+              </Pressable>
+              <View style={styles.rangeRow}>
+                {[30, 90, 365].map(d => (
+                  <Pressable
+                    key={d}
+                    onPress={() => setMeasureDays(d)}
+                    style={[
+                      styles.rangeBtn,
+                      { backgroundColor: measureDays === d ? theme.primary : theme.card, borderColor: theme.border },
+                    ]}
+                  >
+                    <Text style={{
+                      color: measureDays === d ? "#0f0f1a" : theme.textMuted,
+                      fontFamily: "Inter_500Medium", fontSize: 11,
+                    }}>
+                      {d}d
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
           </View>
           
@@ -540,7 +586,7 @@ export default function ProgressScreen() {
                 <SkeletonBox width={80} height={13} borderRadius={5} />
               </View>
             </SkeletonCard>
-          ) : weightData.length > 0 ? (
+          ) : weightData.length > 0 || metricResults.length > 0 ? (
             <>
               <PremiumGate feature="advancedAnalytics" minHeight={140}>
               <Card>
@@ -550,7 +596,7 @@ export default function ProgressScreen() {
                   </Text>
                   <PremiumBadge small />
                 </View>
-                <MiniLineChart data={weightData} color={theme.primary} />
+                <MiniLineChart data={weightData} color={theme.primary} unit={weightUnit} />
                 <View style={styles.weightInfo}>
                   <Text style={[styles.weightCurrent, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
                     {weightData[weightData.length - 1]?.toFixed(1)} {weightUnit}
@@ -561,31 +607,61 @@ export default function ProgressScreen() {
                 </View>
               </Card>
               </PremiumGate>
-              <Card style={{ marginTop: 10 }}>
-                <View style={styles.measureListHeader}>
-                  <Text style={[styles.cardTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
-                    Recent entries
-                  </Text>
+
+              {metricResults.length > 0 && (
+                <View style={styles.metricGrid}>
+                  {metricResults.map(metric => {
+                    const d = metric.data!;
+                    const hasChart = d.values.length >= 2;
+                    const deltaVal = d.delta;
+                    const isPercent = metric.unit === "%";
+                    const displayCurrent = isPercent ? d.current.toFixed(1) : d.current.toFixed(1);
+                    const displayDelta = deltaVal != null ? (isPercent ? Math.abs(deltaVal).toFixed(1) : Math.abs(deltaVal).toFixed(1)) : null;
+
+                    return (
+                      <Pressable
+                        key={metric.key}
+                        onPress={() => router.push("/measurements/add")}
+                        style={[styles.metricCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+                      >
+                        <View style={styles.metricCardHeader}>
+                          <View style={[styles.metricIconWrap, { backgroundColor: metric.color + "18" }]}>
+                            <Feather name={metric.icon} size={14} color={metric.color} />
+                          </View>
+                          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 }}>{metric.label}</Text>
+                          {deltaVal != null && (
+                            <View style={[styles.deltaBadge, { backgroundColor: metric.color + "18" }]}>
+                              <Feather
+                                name={deltaVal < -0.05 ? "trending-down" : deltaVal > 0.05 ? "trending-up" : "minus"}
+                                size={11}
+                                color={metric.color}
+                              />
+                              <Text style={{
+                                color: metric.color,
+                                fontFamily: "Inter_500Medium", fontSize: 10,
+                              }}>
+                                {deltaVal > 0 ? "+" : deltaVal < 0 ? "-" : ""}{displayDelta}{metric.unit}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 20, marginTop: 4 }}>
+                          {displayCurrent}<Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: "Inter_400Regular" }}> {metric.unit}</Text>
+                        </Text>
+                        {hasChart ? (
+                          <View style={{ marginTop: 6 }}>
+                            <MiniLineChart data={d.values} color={metric.color} showTrend={false} />
+                          </View>
+                        ) : (
+                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 8 }}>
+                            Log more entries to see trend
+                          </Text>
+                        )}
+                      </Pressable>
+                    );
+                  })}
                 </View>
-                {(measurements?.measurements || []).slice(0, 5).map((m: any) => (
-                  <Pressable
-                    key={m.id}
-                    onPress={() => router.push(`/measurements/edit?id=${m.id}` as any)}
-                    style={[styles.measureRow, { borderBottomColor: theme.border }]}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={[{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }]}>
-                        {m.weightKg != null ? `${toDisplayWeight(m.weightKg).toFixed(1)} ${weightUnit}` : "—"}
-                        {m.bodyFatPercent != null ? `  ·  ${m.bodyFatPercent}% BF` : ""}
-                      </Text>
-                      <Text style={[{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }]}>
-                        {new Date(m.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </Text>
-                    </View>
-                    <Feather name="edit-2" size={15} color={theme.textMuted} />
-                  </Pressable>
-                ))}
-              </Card>
+              )}
             </>
           ) : (
             <Animated.View entering={ZoomIn.duration(350)}>
@@ -837,6 +913,26 @@ const styles = StyleSheet.create({
   measureRow: {
     flexDirection: "row", alignItems: "center", paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  measureLogBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1,
+  },
+  metricGrid: {
+    flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10,
+  },
+  metricCard: {
+    width: "47.5%", borderRadius: 14, borderWidth: 1, padding: 12,
+  },
+  metricCardHeader: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+  },
+  metricIconWrap: {
+    width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center",
+  },
+  deltaBadge: {
+    flexDirection: "row", alignItems: "center", gap: 2,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
   },
   emptyPhotoCard: { borderRadius: 16, borderWidth: 1, padding: 20, alignItems: "center", gap: 10 },
   emptyPhotoIcon: { width: 56, height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
