@@ -875,7 +875,7 @@ router.post("/generate-grocery-list", requireAuth, async (req, res) => {
 
     const unitInstruction = isMetric
       ? "Use METRIC units for all quantities: grams (g) for small amounts, kilograms (kg) for large amounts, milliliters (mL) or liters (L) for liquids. Example: 500g chicken breast, 1 kg rice, 1 L milk, 200g spinach."
-      : "Use IMPERIAL units for all quantities: ounces (oz) for small amounts, pounds (lbs) for large amounts, cups or fluid ounces (fl oz) for liquids. Example: 2 lbs chicken breast, 1 lb rice, 1 quart milk, 8 oz spinach.";
+      : "Use IMPERIAL units for all quantities: ounces (oz) for small amounts, pounds (lbs) for large amounts, cups for liquids. Example: 2 lbs chicken breast, 1 lb rice, 4 cups milk, 8 oz spinach.";
 
     const prompt = `You are a helpful grocery shopping assistant. Given the following meal plan, generate a consolidated grocery list grouped by aisle/category. Combine duplicate ingredients and estimate reasonable quantities for one person.
 
@@ -892,7 +892,7 @@ Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
       "items": [
         {
           "name": "string (ingredient name)",
-          "quantity": "string — must use ${isMetric ? "metric (g, kg, mL, L)" : "imperial (oz, lbs, cups, fl oz)"} units"
+          "quantity": "string — must use ${isMetric ? "metric (g, kg, mL, L)" : "imperial (oz, lbs, cups)"} units"
         }
       ]
     }
