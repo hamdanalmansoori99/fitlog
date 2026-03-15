@@ -94,6 +94,12 @@ export default function AddMealScreen() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const { showToast } = useToast();
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   // Load existing meal when editing
@@ -296,6 +302,71 @@ export default function AddMealScreen() {
     ]);
   }
 
+  const searchAbort = useRef<AbortController | null>(null);
+  const searchSeq = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+      if (searchAbort.current) searchAbort.current.abort();
+    };
+  }, []);
+
+  function handleSearchChange(text: string) {
+    setSearchQuery(text);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (searchAbort.current) searchAbort.current.abort();
+    if (text.trim().length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    setShowSearchResults(true);
+    const seq = ++searchSeq.current;
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const data = await api.foodSearch(text.trim());
+        if (seq !== searchSeq.current) return;
+        setSearchResults(data.results || []);
+      } catch {
+        if (seq !== searchSeq.current) return;
+        setSearchResults([]);
+      } finally {
+        if (seq === searchSeq.current) setSearching(false);
+      }
+    }, 300);
+  }
+
+  function selectSearchResult(result: any) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const displayName = result.brand ? `${result.name} (${result.brand})` : result.name;
+    const newFood: FoodItem = {
+      name: displayName,
+      portionSize: "100",
+      unit: "grams",
+      calories: String(result.calories || 0),
+      proteinG: String(result.proteinG || 0),
+      carbsG: String(result.carbsG || 0),
+      fatG: String(result.fatG || 0),
+    };
+    const hasEmpty = foodItems.some(f => !f.name);
+    if (hasEmpty) {
+      setFoodItems(fi => {
+        const idx = fi.findIndex(f => !f.name);
+        return fi.map((f, i) => i === idx ? newFood : f);
+      });
+    } else {
+      setFoodItems(fi => [...fi, newFood]);
+    }
+    if (!mealName) setMealName(displayName);
+    setSearchQuery("");
+    setSearchResults([]);
+    setShowSearchResults(false);
+    showToast(`Added: ${displayName}`, "success");
+  }
+
   function addRecentFood(food: any) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newFood: FoodItem = {
@@ -495,6 +566,69 @@ export default function AddMealScreen() {
               </Pressable>
             </View>
           </Card>
+        )}
+
+        {/* ── Food Search ── */}
+        {!isEditing && (
+          <View style={{ zIndex: 10 }}>
+            <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <Feather name="search" size={18} color={theme.textMuted} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={handleSearchChange}
+                placeholder="Search foods…"
+                placeholderTextColor={theme.textMuted}
+                style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 15, paddingVertical: 0 }}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <Pressable onPress={() => { setSearchQuery(""); setSearchResults([]); setShowSearchResults(false); }} hitSlop={8}>
+                  <Feather name="x" size={16} color={theme.textMuted} />
+                </Pressable>
+              )}
+              {searching && <ActivityIndicator size="small" color={theme.primary} />}
+            </View>
+            {showSearchResults && (
+              <View style={[styles.searchDropdown, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                {searching && searchResults.length === 0 && (
+                  <View style={{ padding: 16, alignItems: "center" }}>
+                    <ActivityIndicator size="small" color={theme.primary} />
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 6 }}>Searching…</Text>
+                  </View>
+                )}
+                {!searching && searchResults.length === 0 && searchQuery.length >= 2 && (
+                  <View style={{ padding: 16, alignItems: "center" }}>
+                    <Feather name="info" size={18} color={theme.textMuted} />
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 6 }}>No results — fill in manually</Text>
+                  </View>
+                )}
+                {searchResults.map((result: any, idx: number) => (
+                  <Pressable
+                    key={idx}
+                    onPress={() => selectSearchResult(result)}
+                    style={[styles.searchResultItem, { borderBottomColor: idx < searchResults.length - 1 ? theme.border : "transparent" }]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>
+                        {result.name}
+                      </Text>
+                      {result.brand && (
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }} numberOfLines={1}>
+                          {result.brand}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={{ color: theme.orange, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{result.calories} kcal</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
+                        P {result.proteinG}g · C {result.carbsG}g · F {result.fatG}g
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
         )}
 
         {/* ── Smart Macro Bar ── */}
@@ -810,6 +944,10 @@ const styles = StyleSheet.create({
   navTitle: { fontSize: 17 },
   content: { padding: 20, gap: 16 },
   fieldLabel: { fontSize: 13, marginBottom: 8 },
+
+  searchBar: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, minHeight: 48 },
+  searchDropdown: { borderRadius: 14, borderWidth: 1, marginTop: 4, overflow: "hidden" },
+  searchResultItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, gap: 12 },
 
   scanBanner: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 16, borderWidth: 1.5 },
   scanIconCircle: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },

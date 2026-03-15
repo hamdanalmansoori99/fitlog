@@ -88,6 +88,7 @@ export const api = {
   getNutritionStats: () => request<any>("/meals/stats/nutrition"),
   getAchievements: () => request<any>("/achievements"),
   getRecentFoods: (limit = 25) => request<any>(`/meals/recent-foods?limit=${limit}`),
+  foodSearch: (q: string) => request<any>(`/meals/food-search?q=${encodeURIComponent(q)}`),
   getFrequentMeals: (limit = 6) => request<any>(`/meals/frequent?limit=${limit}`),
   duplicateMeal: (id: number, targetDate?: string) =>
     request<any>(`/meals/${id}/duplicate`, { method: "POST", body: JSON.stringify({ targetDate }) }),

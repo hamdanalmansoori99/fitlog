@@ -407,6 +407,60 @@ router.get("/frequent", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/food-search", requireAuth, async (req, res) => {
+  try {
+    const q = (req.query.q as string || "").trim();
+    if (!q || q.length < 2) {
+      res.json({ results: [] });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let response: Response;
+    try {
+      response = await fetch(
+        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=product_name,product_name_en,brands,nutriments,serving_size,serving_quantity`,
+        { headers: { "User-Agent": "FitLog/1.0 (fitness-tracker-app)" }, signal: controller.signal }
+      );
+    } catch (e: any) {
+      clearTimeout(timeout);
+      res.status(504).json({ error: "Food database timed out" });
+      return;
+    }
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      res.status(502).json({ error: "Could not reach food database" });
+      return;
+    }
+
+    const data: any = await response.json();
+    const products: any[] = data.products || [];
+
+    const results = products
+      .filter((p: any) => p.product_name || p.product_name_en)
+      .map((p: any) => {
+        const n = p.nutriments || {};
+        return {
+          name: p.product_name || p.product_name_en || "Unknown",
+          brand: p.brands || null,
+          servingSize: p.serving_size || "100g",
+          calories: Math.round(Number(n["energy-kcal_100g"]) || 0),
+          proteinG: Math.round(Number(n.proteins_100g) || 0),
+          carbsG: Math.round(Number(n.carbohydrates_100g) || 0),
+          fatG: Math.round(Number(n.fat_100g) || 0),
+        };
+      })
+      .slice(0, 8);
+
+    res.json({ results });
+  } catch (err: any) {
+    console.error("food-search error:", err?.message);
+    res.status(500).json({ error: "Failed to search foods" });
+  }
+});
+
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
