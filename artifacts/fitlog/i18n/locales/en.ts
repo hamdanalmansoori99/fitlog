@@ -820,6 +820,8 @@ export default {
     appVersion: "FitLog v{{version}}",
     premiumFeatures: "Photo analysis · Unlimited plans · Advanced analytics",
     dailyAt: "Daily at {{time}}",
+    firstNamePlaceholder: "John",
+    lastNamePlaceholder: "Doe",
   },
   measurements: {
     addMeasurement: "Add Measurement",

@@ -389,10 +389,10 @@ export default function ProfileScreen() {
               <View style={styles.fieldGroup}>
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
-                    <Input label={t("profile.firstName")} value={firstName} onChangeText={setFirstName} placeholder="John" />
+                    <Input label={t("profile.firstName")} value={firstName} onChangeText={setFirstName} placeholder={t("profile.firstNamePlaceholder")} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Input label={t("profile.lastName")} value={lastName} onChangeText={setLastName} placeholder="Doe" />
+                    <Input label={t("profile.lastName")} value={lastName} onChangeText={setLastName} placeholder={t("profile.lastNamePlaceholder")} />
                   </View>
                 </View>
                 <Input label={t("profile.age")} value={age} onChangeText={setAge} placeholder="28" keyboardType="numeric" />

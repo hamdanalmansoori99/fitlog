@@ -5,7 +5,7 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { I18nManager, Platform, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -56,6 +56,7 @@ function ClassicTabLayout() {
           borderTopColor: theme.tabBarBorder,
           elevation: 0,
           ...(isWeb ? { height: 84 } : {}),
+          ...(I18nManager.isRTL ? { flexDirection: "row-reverse" as const } : {}),
         },
         tabBarLabelStyle: {
           fontFamily: "Inter_500Medium",
