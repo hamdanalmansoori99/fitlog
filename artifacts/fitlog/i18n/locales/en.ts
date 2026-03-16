@@ -239,6 +239,8 @@ export default {
     fat: "Fat",
     quickActions: "Quick Actions",
     scanMeal: "Scan Meal",
+    proteinGoalMet: "Protein goal met!",
+    proteinToGo: "{{count}}g protein to go",
   },
   workouts: {
     title: "Workouts",

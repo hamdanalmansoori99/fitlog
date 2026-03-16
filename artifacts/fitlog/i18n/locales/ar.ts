@@ -239,6 +239,8 @@ export default {
     fat: "دهون",
     quickActions: "إجراءات سريعة",
     scanMeal: "مسح الوجبة",
+    proteinGoalMet: "تم تحقيق هدف البروتين!",
+    proteinToGo: "{{count}}غ بروتين متبقي",
   },
   workouts: {
     title: "التمارين",

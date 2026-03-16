@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { dateLocale } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
@@ -22,9 +22,9 @@ import {
   UserCoachProfile,
   RecoveryContext,
 } from "@/lib/coachEngine";
-import { useTheme as useThemeImpl } from "@/hooks/useTheme";
+import type Colors from "@/constants/colors";
 
-type AppTheme = ReturnType<typeof useThemeImpl>["theme"];
+type AppTheme = (typeof Colors)["dark"];
 
 // ─── Calorie Ring ─────────────────────────────────────────────────────────────
 
@@ -123,8 +123,8 @@ function NutritionCard({ mealsData, theme }: { mealsData: any; theme: AppTheme }
           </View>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 2 }}>
             {protein >= proteinGoal
-              ? "✓ Protein goal met!"
-              : `${proteinGoal - protein}g protein to go`}
+              ? t("home.proteinGoalMet")
+              : t("home.proteinToGo", { count: proteinGoal - protein })}
           </Text>
         </View>
       </View>
