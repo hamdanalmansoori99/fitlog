@@ -63,14 +63,10 @@ export default function CoachChatScreen() {
   const promptSentRef = useRef(false);
 
   const suggestions = [
-    t("coach.suggestion1"),
-    t("coach.suggestion2"),
-    t("coach.suggestion3"),
-    t("coach.suggestion4"),
-    t("coach.suggestion5"),
-    t("coach.suggestion6"),
-    t("coach.suggestion7"),
-    t("coach.suggestion8"),
+    t("home.coachChip1"),
+    t("home.coachChip2"),
+    t("home.coachChip3"),
+    t("home.coachChip4"),
   ];
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);

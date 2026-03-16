@@ -687,65 +687,55 @@ function AIInsightCard({
 
   const trendIcon = insight.trend === "up" ? "trending-up" : insight.trend === "down" ? "trending-down" : null;
   const trendGood = trendIcon ? (insight.trend === "up") === insight.trendPositive : false;
-  const pct = Math.max(0, Math.min(1, insight.progress)) * 100;
 
   return (
-    <Card style={{ gap: 10, borderColor: insight.accentColor + "30" }}>
+    <Card style={{ gap: 8, borderColor: insight.accentColor + "30" }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
           <View style={[styles.insightIconWrap, { backgroundColor: insight.accentColor + "22" }]}>
             <Feather name={insight.icon as any} size={16} color={insight.accentColor} />
           </View>
-          <View>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 }}>
-              {insight.goalLabel}
-            </Text>
-            <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }} numberOfLines={1}>
               {insight.headline}
+            </Text>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }} numberOfLines={1}>
+              {insight.value} · {insight.goalLabel}
             </Text>
           </View>
         </View>
-        {trendIcon && (
-          <Feather name={trendIcon} size={14} color={trendGood ? "#00e676" : "#ef5350"} />
-        )}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          {trendIcon && (
+            <Feather name={trendIcon} size={14} color={trendGood ? "#00e676" : "#ef5350"} />
+          )}
+          <Pressable
+            onPress={() => router.push("/(tabs)/progress" as any)}
+            style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
+          >
+            <Text style={{ color: insight.accentColor, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+              {t("home.viewInsights")}
+            </Text>
+            <Feather name={rtlIcon("chevron-right")} size={12} color={insight.accentColor} />
+          </Pressable>
+        </View>
       </View>
-
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Text style={{ color: insight.accentColor, fontFamily: "Inter_700Bold", fontSize: 18 }}>
-          {insight.value}
-        </Text>
-      </View>
-
-      <View style={{ height: 5, backgroundColor: theme.border, borderRadius: 3, overflow: "hidden" }}>
-        <View style={{ height: 5, width: `${pct}%` as `${number}%`, backgroundColor: insight.accentColor, borderRadius: 3 }} />
-      </View>
-
-      {insight.progressLabel && (
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11 }}>
-          {insight.progressLabel}
-        </Text>
-      )}
-
-      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 17 }}>
-        {insight.detail}
-      </Text>
-
-      <Pressable
-        onPress={() => router.push("/(tabs)/progress" as any)}
-        style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}
-      >
-        <Text style={{ color: insight.accentColor, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-          {t("home.viewInsights")}
-        </Text>
-        <Feather name={rtlIcon("chevron-right")} size={12} color={insight.accentColor} />
-      </Pressable>
     </Card>
   );
 }
 
-function WeeklyReportCard({ theme }: { theme: AppTheme }) {
+function WeeklyReportCard({ theme, streaksData, workoutsData }: { theme: AppTheme; streaksData?: any; workoutsData?: any }) {
   const { t } = useTranslation();
+
+  const dayOfWeek = new Date().getDay();
+  const isReportDay = dayOfWeek === 0 || dayOfWeek === 1;
+  if (!isReportDay) return null;
+
+  const totalWorkouts = workoutsData?.workouts?.length ?? 0;
+  const workoutStreak = streaksData?.currentWorkoutStreak ?? 0;
+  const hasData = totalWorkouts > 0;
+
   return (
+    <Pressable onPress={() => router.push("/(tabs)/progress" as any)}>
     <Card style={{ gap: 10, borderColor: theme.secondary + "20" }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <View style={[styles.weeklyIcon, { backgroundColor: theme.secondary + "18" }]}>
@@ -760,10 +750,32 @@ function WeeklyReportCard({ theme }: { theme: AppTheme }) {
           </Text>
         </View>
       </View>
-      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
-        {t("home.weeklyReportDesc")}
-      </Text>
+      {hasData ? (
+        <View style={{ flexDirection: "row", gap: 16 }}>
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 18 }}>{totalWorkouts}</Text>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("home.workoutsLabel")}</Text>
+          </View>
+          {workoutStreak > 0 && (
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 18 }}>{workoutStreak}</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("home.streaks")}</Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
+          {t("home.weeklyReportDesc")}
+        </Text>
+      )}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 3 }}>
+        <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+          {t("home.viewAll")}
+        </Text>
+        <Feather name={rtlIcon("chevron-right")} size={12} color={theme.secondary} />
+      </View>
     </Card>
+    </Pressable>
   );
 }
 
@@ -1029,14 +1041,27 @@ export default function HomeScreen() {
               {formatDate()}
             </Text>
           </View>
-          <Pressable
-            onPress={() => router.push("/(tabs)/profile")}
-            style={[styles.avatarBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}
-          >
-            <Text style={[styles.avatarText, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
-              {user?.firstName?.[0] || "U"}
-            </Text>
-          </Pressable>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            {streaksData && (streaksData.currentWorkoutStreak ?? 0) > 0 && (
+              <Pressable
+                onPress={() => router.push("/streaks" as any)}
+                style={[styles.streakHeroBadge, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "40" }]}
+              >
+                <Text style={{ fontSize: 14 }}>🔥</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 14 }}>
+                  {streaksData.currentWorkoutStreak}
+                </Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => router.push("/(tabs)/profile")}
+              style={[styles.avatarBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}
+            >
+              <Text style={[styles.avatarText, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
+                {user?.firstName?.[0] || "U"}
+              </Text>
+            </Pressable>
+          </View>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(40).duration(400)} style={styles.section}>
@@ -1143,7 +1168,7 @@ export default function HomeScreen() {
         )}
 
         <Animated.View entering={FadeInDown.delay(320).duration(400)} style={styles.section}>
-          <WeeklyReportCard theme={theme} />
+          <WeeklyReportCard theme={theme} streaksData={streaksData} workoutsData={workoutsData} />
         </Animated.View>
       </ScrollView>
 
@@ -1168,6 +1193,10 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   avatarText: { fontSize: 18 },
+  streakHeroBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
+  },
   section: { paddingHorizontal: 20, marginBottom: 20 },
   aiPill: {
     flexDirection: "row", alignItems: "center", gap: 4,
