@@ -754,7 +754,7 @@ export default function WorkoutsScreen() {
             const filtered = q
               ? EXERCISES.filter(e =>
                   e.name.toLowerCase().includes(q) ||
-                  e.primaryMuscles.some(m => m.toLowerCase().includes(q)) ||
+                  e.primaryMuscle.toLowerCase().includes(q) ||
                   e.category.includes(q)
                 ).slice(0, 8)
               : selectedCategory
@@ -790,7 +790,7 @@ export default function WorkoutsScreen() {
                           {ex.name}
                         </Text>
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                          {ex.primaryMuscles.slice(0, 2).join(" · ")}
+                          {ex.primaryMuscle}
                         </Text>
                       </View>
                       <View style={{ alignItems: "flex-end", gap: 4 }}>

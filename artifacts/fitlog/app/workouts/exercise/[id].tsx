@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Platform,
+  View, Text, StyleSheet, ScrollView, Pressable, Platform, Animated as RNAnimated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
@@ -16,14 +16,32 @@ function difficultyColor(d: string, theme: any) {
   return theme.warning || "#ffab40";
 }
 
-function typeColor(type: string, theme: any) {
-  const map: Record<string, string> = {
-    strength: theme.primary,
-    cardio: "#ef5350",
-    flexibility: "#26c6da",
-    plyometric: theme.warning || "#ffab40",
-  };
-  return map[type] || theme.primary;
+function AnimatedSkeleton({ theme, placeholderId, t }: { theme: any; placeholderId: string; t: (key: string) => string }) {
+  const pulse = useRef(new RNAnimated.Value(0.3)).current;
+  useEffect(() => {
+    const anim = RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.timing(pulse, { toValue: 0.7, duration: 900, useNativeDriver: true }),
+        RNAnimated.timing(pulse, { toValue: 0.3, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
+
+  return (
+    <RNAnimated.View
+      style={[styles.animPlaceholder, { backgroundColor: theme.card, borderColor: theme.border, opacity: pulse }]}
+      accessibilityLabel={`animation-${placeholderId}`}
+    >
+      <View style={[styles.animIcon, { backgroundColor: theme.primary + "20" }]}>
+        <Feather name="play-circle" size={32} color={theme.primary} />
+      </View>
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
+        {t("exercises.animationComingSoon")}
+      </Text>
+    </RNAnimated.View>
+  );
 }
 
 export default function ExerciseDetailScreen() {
@@ -53,11 +71,9 @@ export default function ExerciseDetailScreen() {
 
   const catMeta = EXERCISE_CATEGORIES.find((c) => c.id === exercise.category);
   const dColor = difficultyColor(exercise.difficulty, theme);
-  const tColor = typeColor(exercise.type, theme);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
         <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: theme.card }]} hitSlop={8}>
           <Feather name="arrow-left" size={20} color={theme.text} />
@@ -72,11 +88,7 @@ export default function ExerciseDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 16 }}
       >
-        {/* Hero Badge Row */}
         <Animated.View entering={FadeInDown.duration(350)} style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-          <View style={[styles.badge, { backgroundColor: tColor + "20" }]}>
-            <Text style={[styles.badgeText, { color: tColor }]}>{exercise.type}</Text>
-          </View>
           <View style={[styles.badge, { backgroundColor: dColor + "20" }]}>
             <Text style={[styles.badgeText, { color: dColor }]}>{exercise.difficulty}</Text>
           </View>
@@ -86,37 +98,49 @@ export default function ExerciseDetailScreen() {
               <Text style={[styles.badgeText, { color: theme.textMuted }]}>{catMeta.label}</Text>
             </View>
           )}
-          {(exercise.sets || exercise.reps || exercise.duration) && (
-            <View style={[styles.badge, { backgroundColor: theme.primaryDim }]}>
-              <Feather name="target" size={11} color={theme.primary} />
-              <Text style={[styles.badgeText, { color: theme.primary }]}>
-                {exercise.sets ? `${exercise.sets} sets` : ""}
-                {exercise.sets && (exercise.reps || exercise.duration) ? " · " : ""}
-                {exercise.reps ? `${exercise.reps} reps` : ""}
-                {exercise.duration ? `${exercise.duration}` : ""}
-              </Text>
-            </View>
-          )}
         </Animated.View>
 
-        {/* Description */}
-        <Animated.View entering={FadeInDown.delay(60).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Text style={[styles.cardTitle, { color: theme.text }]}>{t("exercises.overview")}</Text>
-          <Text style={[styles.cardBody, { color: theme.textMuted }]}>{exercise.description}</Text>
+        <Animated.View entering={FadeInDown.delay(40).duration(350)}>
+          <AnimatedSkeleton theme={theme} placeholderId={exercise.animationPlaceholder} t={t} />
         </Animated.View>
 
-        {/* Muscles */}
-        <Animated.View entering={FadeInDown.delay(100).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <Animated.View entering={FadeInDown.delay(80).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Text style={[styles.cardTitle, { color: theme.text }]}>{t("exercises.formInstructions")}</Text>
+          <View style={{ gap: 10, marginTop: 8 }}>
+            {exercise.instructions.map((step, i) => (
+              <View key={i} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                <View style={[styles.stepDot, { backgroundColor: theme.primary }]}>
+                  <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 10 }}>{i + 1}</Text>
+                </View>
+                <Text style={[styles.stepText, { color: theme.textMuted }]}>{step}</Text>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(120).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Text style={[styles.cardTitle, { color: theme.text }]}>{t("exercises.commonMistakes")}</Text>
+          <View style={{ gap: 10, marginTop: 8 }}>
+            {exercise.commonMistakes.map((mistake, i) => (
+              <View key={i} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                <View style={[styles.warningDot, { backgroundColor: (theme.warning || "#ffab40") + "20" }]}>
+                  <Feather name="alert-triangle" size={11} color={theme.warning || "#ffab40"} />
+                </View>
+                <Text style={[styles.stepText, { color: theme.textMuted }]}>{mistake}</Text>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(160).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.text }]}>{t("exercises.musclesWorked")}</Text>
           <View style={{ gap: 12, marginTop: 4 }}>
             <View>
               <Text style={[styles.muscleLabel, { color: theme.textMuted }]}>{t("exercises.primary")}</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-                {exercise.primaryMuscles.map((m) => (
-                  <View key={m} style={[styles.muscleChip, { backgroundColor: theme.primary + "18" }]}>
-                    <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{m}</Text>
-                  </View>
-                ))}
+                <View style={[styles.muscleChip, { backgroundColor: theme.primary + "18" }]}>
+                  <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{exercise.primaryMuscle}</Text>
+                </View>
               </View>
             </View>
             {exercise.secondaryMuscles.length > 0 && (
@@ -134,9 +158,8 @@ export default function ExerciseDetailScreen() {
           </View>
         </Animated.View>
 
-        {/* Equipment */}
-        {exercise.equipment.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(140).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        {exercise.equipment.length > 0 && exercise.equipment[0] !== "none" ? (
+          <Animated.View entering={FadeInDown.delay(200).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Text style={[styles.cardTitle, { color: theme.text }]}>{t("exercises.equipment")}</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
               {exercise.equipment.map((eq) => (
@@ -149,10 +172,8 @@ export default function ExerciseDetailScreen() {
               ))}
             </View>
           </Animated.View>
-        )}
-
-        {exercise.equipment.length === 0 && (
-          <Animated.View entering={FadeInDown.delay(140).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        ) : (
+          <Animated.View entering={FadeInDown.delay(200).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <View style={[styles.noEquipIcon, { backgroundColor: theme.primaryDim }]}>
                 <Feather name="user" size={16} color={theme.primary} />
@@ -167,23 +188,7 @@ export default function ExerciseDetailScreen() {
           </Animated.View>
         )}
 
-        {/* Tips */}
-        <Animated.View entering={FadeInDown.delay(180).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Text style={[styles.cardTitle, { color: theme.text }]}>{t("exercises.proTips")}</Text>
-          <View style={{ gap: 10, marginTop: 8 }}>
-            {exercise.tips.map((tip, i) => (
-              <View key={i} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
-                <View style={[styles.tipDot, { backgroundColor: theme.primary }]}>
-                  <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 10 }}>{i + 1}</Text>
-                </View>
-                <Text style={[styles.tipText, { color: theme.textMuted }]}>{tip}</Text>
-              </View>
-            ))}
-          </View>
-        </Animated.View>
-
-        {/* Log Workout CTA */}
-        <Animated.View entering={FadeInDown.delay(220).duration(350)}>
+        <Animated.View entering={FadeInDown.delay(240).duration(350)}>
           <Pressable
             onPress={() => router.push("/workouts/log" as any)}
             style={({ pressed }) => [
@@ -219,9 +224,6 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontFamily: "Inter_600SemiBold", fontSize: 14, marginBottom: 4,
   },
-  cardBody: {
-    fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 22,
-  },
   badge: {
     flexDirection: "row", alignItems: "center", gap: 5,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
@@ -243,11 +245,15 @@ const styles = StyleSheet.create({
     width: 38, height: 38, borderRadius: 10,
     alignItems: "center", justifyContent: "center",
   },
-  tipDot: {
+  stepDot: {
     width: 20, height: 20, borderRadius: 10,
     alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1,
   },
-  tipText: {
+  warningDot: {
+    width: 22, height: 22, borderRadius: 11,
+    alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 0,
+  },
+  stepText: {
     fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20, flex: 1,
   },
   ctaBtn: {
@@ -256,5 +262,14 @@ const styles = StyleSheet.create({
   },
   notFound: {
     flex: 1, alignItems: "center", justifyContent: "center",
+  },
+  animPlaceholder: {
+    borderRadius: 16, borderWidth: 1, padding: 28,
+    alignItems: "center", justifyContent: "center", gap: 12,
+    height: 160,
+  },
+  animIcon: {
+    width: 56, height: 56, borderRadius: 28,
+    alignItems: "center", justifyContent: "center",
   },
 });

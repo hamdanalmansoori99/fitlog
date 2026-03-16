@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { SuccessView } from "@/components/SuccessView";
 import { calculateStrengthTarget } from "@/lib/progressionEngine";
+import { EXERCISES } from "@/lib/exerciseLibrary";
 
 const ACTIVITY_TYPES = [
   { id: "cycling", label: "Cycling", icon: "wind" as const, color: "secondary" },
@@ -31,14 +32,7 @@ const ACTIVITY_TYPES = [
 const MOODS = ["Exhausted", "Tough", "Good", "Great", "Crushing it"];
 const MOOD_ICONS = ["😴", "😤", "🙂", "😁", "🔥"];
 
-const GYM_EXERCISES = [
-  "Bench Press", "Squat", "Deadlift", "Bicep Curl", "Lat Pulldown",
-  "Shoulder Press", "Leg Press", "Dumbbell Row", "Lunges", "Tricep Pushdown",
-  "Pull-Up", "Push-Up", "Cable Fly", "Incline Press", "Romanian Deadlift",
-  "Hip Thrust", "Leg Curl", "Leg Extension", "Calf Raise", "Face Pull",
-  "Lateral Raise", "Front Raise", "Rear Delt Fly", "Barbell Row", "T-Bar Row",
-  "Preacher Curl", "Hammer Curl", "Skull Crusher", "Dips", "Chest Fly",
-];
+const GYM_EXERCISES = EXERCISES.map((e) => e.name);
 
 const RPE_LABELS = ["Very Easy", "Easy", "Moderate", "Hard", "Max Effort"];
 const RPE_VALUES = [2, 4, 6, 8, 10];
