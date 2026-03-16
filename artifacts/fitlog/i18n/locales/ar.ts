@@ -1654,4 +1654,11 @@ export default {
     canDoAnywhere: "يمكنك ممارسته في أي مكان — بدون أدوات",
     browseExercises: "تصفح التمارين",
   },
+  demo: {
+    bannerText: "أنت في وضع العرض التوضيحي",
+    demoMode: "وضع العرض التوضيحي",
+    demoModeSubtitle: "استكشف التطبيق — لا حاجة لحساب",
+    notAllowed: "غير متاح في وضع العرض التوضيحي",
+    notAllowedMessage: "هذا الإجراء معطّل في وضع العرض التوضيحي. أنشئ حسابًا مجانيًا للوصول الكامل.",
+  },
 } as const;

@@ -1728,4 +1728,11 @@ export default {
     canDoAnywhere: "You can do this anywhere — no gear required",
     browseExercises: "Browse Exercises",
   },
+  demo: {
+    bannerText: "You are in Demo Mode",
+    demoMode: "Demo Mode",
+    demoModeSubtitle: "Explore the app — no account needed",
+    notAllowed: "Not available in Demo Mode",
+    notAllowedMessage: "This action is disabled in Demo Mode. Create a free account to get full access.",
+  },
 } as const;

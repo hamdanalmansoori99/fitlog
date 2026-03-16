@@ -11,6 +11,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
+import { useDemoStore } from "@/store/demoStore";
 import { Card } from "@/components/ui/Card";
 import { useSubscription } from "@/hooks/useSubscription";
 
@@ -36,6 +37,7 @@ const ACTIVITY_TYPES = [
 export default function MyTemplatesScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const { isDemo } = useDemoStore();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -77,6 +79,10 @@ export default function MyTemplatesScreen() {
   });
 
   function handleDelete(tmpl: any) {
+    if (isDemo) {
+      Alert.alert(t("demo.notAllowed"), t("demo.notAllowedMessage"));
+      return;
+    }
     Alert.alert(t("workouts.deleteTemplateTitle"), t("workouts.permanentlyRemoved", { name: tmpl.name }), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate(tmpl.id) },

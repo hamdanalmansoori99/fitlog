@@ -11,6 +11,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
+import { useDemoStore } from "@/store/demoStore";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
@@ -26,6 +27,7 @@ const ACTIVITY_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
 export default function UserTemplateScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const { isDemo } = useDemoStore();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
@@ -106,6 +108,10 @@ export default function UserTemplateScreen() {
   }
 
   function handleDelete() {
+    if (isDemo) {
+      Alert.alert(t("demo.notAllowed"), t("demo.notAllowedMessage"));
+      return;
+    }
     Alert.alert(t("workouts.deleteTemplateTitle"), t("workouts.cannotBeUndone"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate() },

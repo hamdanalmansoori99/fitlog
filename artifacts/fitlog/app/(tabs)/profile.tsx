@@ -9,6 +9,7 @@ import { rtlIcon, dateLocale } from "@/lib/rtl";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
+import { useDemoStore } from "@/store/demoStore";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuthStore } from "@/store/authStore";
 import { useSettingsStore } from "@/store/settingsStore";
@@ -42,6 +43,7 @@ const ACTIVITY_LEVELS = ["Sedentary", "Lightly Active", "Moderately Active", "Ve
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const { theme, isDark } = useTheme();
+  const { isDemo } = useDemoStore();
   const { language, changeLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
   const { user, clearAuth } = useAuthStore();
@@ -293,6 +295,10 @@ export default function ProfileScreen() {
   };
   
   const handleDeleteAccount = () => {
+    if (isDemo) {
+      Alert.alert(t("demo.notAllowed"), t("demo.notAllowedMessage"));
+      return;
+    }
     Alert.alert(
       t("profile.deleteAccount"),
       t("profile.deleteAccountMessage"),

@@ -9,6 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
+import { useDemoStore } from "@/store/demoStore";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -19,14 +20,31 @@ export default function LoginScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { setAuth } = useAuthStore();
+  const { enterDemo } = useDemoStore();
   const { t } = useTranslation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [error, setError] = useState("");
 
   const passwordRef = useRef<TextInput>(null);
+
+  const handleDemoLogin = async () => {
+    setError("");
+    setDemoLoading(true);
+    try {
+      const res = await api.loginAsDemo();
+      setAuth(res.token, res.user);
+      enterDemo();
+      router.replace("/(tabs)");
+    } catch (err: any) {
+      setError(err.message || t("auth.loginFailed"));
+    } finally {
+      setDemoLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -135,6 +153,28 @@ export default function LoginScreen() {
                 <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold" }}>{t("auth.signUp")}</Text>
               </Text>
             </Pressable>
+
+            <View style={[styles.divider, { marginTop: 4 }]}>
+              <View style={[styles.line, { backgroundColor: theme.border }]} />
+              <Text style={[styles.or, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("common.or")}</Text>
+              <View style={[styles.line, { backgroundColor: theme.border }]} />
+            </View>
+
+            <Pressable
+              onPress={handleDemoLogin}
+              disabled={demoLoading}
+              style={[styles.demoBtn, { borderColor: theme.secondary + "80", backgroundColor: theme.secondaryDim ?? theme.cardAlt }]}
+            >
+              <Feather name="eye" size={16} color={theme.secondary} />
+              <View style={styles.demoBtnText}>
+                <Text style={[styles.demoBtnTitle, { color: theme.secondary, fontFamily: "Inter_600SemiBold" }]}>
+                  {demoLoading ? "Loading…" : t("demo.demoMode")}
+                </Text>
+                <Text style={[styles.demoBtnSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  {t("demo.demoModeSubtitle")}
+                </Text>
+              </View>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -166,4 +206,15 @@ const styles = StyleSheet.create({
   or: { fontSize: 13 },
   registerLink: { alignItems: "center", padding: 4 },
   registerText: { fontSize: 14, textAlign: "center" },
+  demoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  demoBtnText: { flex: 1, gap: 2 },
+  demoBtnTitle: { fontSize: 15 },
+  demoBtnSub: { fontSize: 12 },
 });

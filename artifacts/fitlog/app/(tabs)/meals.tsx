@@ -11,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import Svg, { Circle, G } from "react-native-svg";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
+import { useDemoStore } from "@/store/demoStore";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
@@ -186,6 +187,7 @@ function MacroBreakdown({ dailyTotals, profile }: { dailyTotals: any; profile: a
 
 export default function MealsScreen() {
   const { theme } = useTheme();
+  const { isDemo } = useDemoStore();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -717,6 +719,10 @@ export default function MealsScreen() {
                       <Pressable
                         onPress={(e) => {
                           e.stopPropagation();
+                          if (isDemo) {
+                            Alert.alert(t("demo.notAllowed"), t("demo.notAllowedMessage"));
+                            return;
+                          }
                           Alert.alert(t("meals.deleteMealQuestion"), t("meals.cannotBeUndone"), [
                             { text: t("common.cancel"), style: "cancel" },
                             { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate(meal.id) },
