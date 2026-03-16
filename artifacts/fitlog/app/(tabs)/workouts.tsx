@@ -721,30 +721,33 @@ export default function WorkoutsScreen() {
                   <Text style={{
                     fontFamily: "Inter_600SemiBold", fontSize: 12,
                     color: selectedCategory === null ? "#0f0f1a" : theme.text,
-                  }}>All</Text>
+                  }}>{t("exercises.allCategories")}</Text>
                 </Pressable>
-                {EXERCISE_CATEGORIES.map((cat) => (
-                  <Pressable
-                    key={cat.id}
-                    onPress={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                    style={[
-                      styles.catChip,
-                      selectedCategory === cat.id
-                        ? { backgroundColor: theme.primary, borderColor: theme.primary }
-                        : { backgroundColor: theme.card, borderColor: theme.border },
-                    ]}
-                  >
-                    <Feather
-                      name={cat.icon as any}
-                      size={12}
-                      color={selectedCategory === cat.id ? "#0f0f1a" : theme.textMuted}
-                    />
-                    <Text style={{
-                      fontFamily: "Inter_600SemiBold", fontSize: 12,
-                      color: selectedCategory === cat.id ? "#0f0f1a" : theme.text,
-                    }}>{cat.label}</Text>
-                  </Pressable>
-                ))}
+                {EXERCISE_CATEGORIES.map((cat) => {
+                  const catLabelKey = `exercises.category${cat.id.charAt(0).toUpperCase()}${cat.id.slice(1)}` as any;
+                  return (
+                    <Pressable
+                      key={cat.id}
+                      onPress={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                      style={[
+                        styles.catChip,
+                        selectedCategory === cat.id
+                          ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                          : { backgroundColor: theme.card, borderColor: theme.border },
+                      ]}
+                    >
+                      <Feather
+                        name={cat.icon as any}
+                        size={12}
+                        color={selectedCategory === cat.id ? "#0f0f1a" : theme.textMuted}
+                      />
+                      <Text style={{
+                        fontFamily: "Inter_600SemiBold", fontSize: 12,
+                        color: selectedCategory === cat.id ? "#0f0f1a" : theme.text,
+                      }}>{t(catLabelKey)}</Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </ScrollView>
           )}
@@ -785,17 +788,25 @@ export default function WorkoutsScreen() {
                           color={dColor}
                         />
                       </View>
-                      <View style={{ flex: 1 }}>
+                      <View style={{ flex: 1, gap: 2 }}>
                         <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>
                           {ex.name}
                         </Text>
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
                           {ex.primaryMuscle}
                         </Text>
+                        {ex.equipment.length > 0 && ex.equipment[0] !== "none" && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+                            <Feather name="tool" size={10} color={theme.secondary} />
+                            <Text style={{ color: theme.secondary, fontFamily: "Inter_400Regular", fontSize: 11 }} numberOfLines={1}>
+                              {ex.equipment.slice(0, 2).map((e: string) => e.replace(/_/g, " ")).join(", ")}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                       <View style={{ alignItems: "flex-end", gap: 4 }}>
                         <View style={[{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: dColor + "18" }]}>
-                          <Text style={{ color: dColor, fontFamily: "Inter_500Medium", fontSize: 11 }}>{ex.difficulty}</Text>
+                          <Text style={{ color: dColor, fontFamily: "Inter_500Medium", fontSize: 11 }}>{t(`exercises.difficulty${ex.difficulty}`)}</Text>
                         </View>
                         <Feather name="chevron-right" size={14} color={theme.textMuted} />
                       </View>

@@ -393,6 +393,13 @@ export const EXERCISES: Exercise[] = [
     instructions: ["Stand holding dumbbells at your sides", "Shrug your shoulders straight up toward your ears", "Hold the top for a second", "Lower with control"],
     commonMistakes: ["Rolling shoulders (just go straight up)", "Using too much weight and losing range", "Bending elbows"],
   },
+  {
+    id: "barbell-shrug", name: "Barbell Shrug", category: "back",
+    primaryMuscle: "Upper Trapezius", secondaryMuscles: ["Rhomboids"],
+    equipment: ["barbell"], difficulty: "Beginner", animationPlaceholder: "barbell-shrug",
+    instructions: ["Stand holding a barbell in front of your thighs", "Shrug your shoulders straight up toward your ears", "Hold at the top for 1–2 seconds", "Lower with control"],
+    commonMistakes: ["Rolling shoulders", "Using too much weight", "Bending elbows"],
+  },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SHOULDERS (20)
@@ -529,6 +536,13 @@ export const EXERCISES: Exercise[] = [
     equipment: ["barbell"], difficulty: "Intermediate", animationPlaceholder: "landmine-lateral-raise",
     instructions: ["Stand beside the end of a landmine barbell", "Grip the end with the near hand", "Raise the bar out to shoulder height", "Lower with control"],
     commonMistakes: ["Standing too close", "Using too much weight", "Leaning away"],
+  },
+  {
+    id: "kettlebell-press", name: "Kettlebell Overhead Press", category: "shoulders",
+    primaryMuscle: "Front Deltoids", secondaryMuscles: ["Triceps", "Core"],
+    equipment: ["kettlebells"], difficulty: "Intermediate", animationPlaceholder: "kb-press",
+    instructions: ["Clean a kettlebell to the rack position at your shoulder", "Press the kettlebell overhead to full lockout", "Control the descent back to the rack", "Complete all reps then switch sides"],
+    commonMistakes: ["Leaning sideways", "Not locking out fully", "Pressing forward instead of straight up"],
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -884,6 +898,13 @@ export const EXERCISES: Exercise[] = [
     equipment: ["none"], difficulty: "Beginner", animationPlaceholder: "wall-sit",
     instructions: ["Lean against a wall with feet shoulder-width apart", "Slide down until thighs are parallel to the floor", "Keep back flat against the wall", "Hold the position for time"],
     commonMistakes: ["Thighs not reaching parallel", "Pushing knees past toes", "Sliding up the wall as it gets hard"],
+  },
+  {
+    id: "smith-squat", name: "Smith Machine Squat", category: "legs",
+    primaryMuscle: "Quadriceps", secondaryMuscles: ["Glutes", "Hamstrings"],
+    equipment: ["smith_machine"], difficulty: "Beginner", animationPlaceholder: "smith-squat",
+    instructions: ["Position the bar on your upper back in the Smith machine", "Feet slightly forward of the bar path", "Squat down to at least parallel", "Press back up to standing"],
+    commonMistakes: ["Feet too far back (stresses knees)", "Not going deep enough", "Leaning on the guided track"],
   },
 
   // ═══════════════════════════════════════════════════════════════════════════

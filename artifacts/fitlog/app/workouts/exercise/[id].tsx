@@ -40,6 +40,9 @@ function AnimatedSkeleton({ theme, placeholderId, t }: { theme: any; placeholder
       <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
         {t("exercises.animationComingSoon")}
       </Text>
+      <Text style={{ color: theme.textMuted + "60", fontFamily: "Inter_400Regular", fontSize: 10, textAlign: "center" }}>
+        {placeholderId}
+      </Text>
     </RNAnimated.View>
   );
 }
@@ -90,12 +93,12 @@ export default function ExerciseDetailScreen() {
       >
         <Animated.View entering={FadeInDown.duration(350)} style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
           <View style={[styles.badge, { backgroundColor: dColor + "20" }]}>
-            <Text style={[styles.badgeText, { color: dColor }]}>{exercise.difficulty}</Text>
+            <Text style={[styles.badgeText, { color: dColor }]}>{t(`exercises.difficulty${exercise.difficulty}`)}</Text>
           </View>
           {catMeta && (
             <View style={[styles.badge, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
               <Feather name={catMeta.icon as any} size={11} color={theme.textMuted} />
-              <Text style={[styles.badgeText, { color: theme.textMuted }]}>{catMeta.label}</Text>
+              <Text style={[styles.badgeText, { color: theme.textMuted }]}>{t(`exercises.category${catMeta.id.charAt(0).toUpperCase()}${catMeta.id.slice(1)}`)}</Text>
             </View>
           )}
         </Animated.View>
