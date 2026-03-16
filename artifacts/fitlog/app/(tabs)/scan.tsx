@@ -31,7 +31,6 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useTheme } from "@/hooks/useTheme";
 import { api, ScanMealItem, MacroTotals } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -39,7 +38,6 @@ import { useTranslation } from "react-i18next";
 
 type ScreenState = "camera" | "scanning" | "results";
 type MealCategory = "Breakfast" | "Lunch" | "Dinner" | "Snacks";
-
 
 const CATEGORIES: MealCategory[] = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
@@ -222,7 +220,6 @@ export default function ScanScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const cameraRef = useRef<CameraView>(null);
@@ -560,7 +557,7 @@ export default function ScanScreen() {
               ))}
             </View>
 
-            <View style={[styles.footerRow, { paddingBottom: tabBarHeight + 8 }]}>
+            <View style={[styles.footerRow, { paddingBottom: insets.bottom + 8 }]}>
               <Pressable
                 onPress={handleRetake}
                 style={[styles.retakeTextBtn, { borderColor: theme.border }]}

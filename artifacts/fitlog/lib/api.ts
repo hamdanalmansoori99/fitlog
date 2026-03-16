@@ -40,7 +40,6 @@ export const api = {
   login: (body: { email: string; password: string }) =>
     request<{ user: any; token: string }>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
   logout: () => request("/auth/logout", { method: "POST" }),
-  loginAsDemo: () => request<{ user: any; token: string; isDemo: true }>("/auth/demo-login", { method: "POST" }),
   getMe: () => request<any>("/auth/me"),
   
   // Profile

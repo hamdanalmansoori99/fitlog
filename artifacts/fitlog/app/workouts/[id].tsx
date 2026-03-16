@@ -16,7 +16,6 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
-import { useDemoStore } from "@/store/demoStore";
 
 function getActivityColor(type: string, theme: any) {
   const map: Record<string, string> = {
@@ -199,7 +198,6 @@ export default function WorkoutDetailScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const { showToast } = useToast();
-  const { isDemo } = useDemoStore();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -234,10 +232,6 @@ export default function WorkoutDetailScreen() {
   });
 
   const handleDelete = () => {
-    if (isDemo) {
-      Alert.alert(t("demo.notAllowed"), t("demo.notAllowedMessage"));
-      return;
-    }
     Alert.alert(
       t("workouts.deleteWorkoutTitle"),
       t("workouts.deleteWorkoutConfirm"),

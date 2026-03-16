@@ -10,7 +10,6 @@ import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
-import { useDemoStore } from "@/store/demoStore";
 import { Card } from "@/components/ui/Card";
 import { useTranslation } from "react-i18next";
 import { dateLocale } from "@/lib/rtl";
@@ -63,7 +62,6 @@ function FoodItemRow({ item, theme }: { item: any; theme: any }) {
 
 export default function MealDetailScreen() {
   const { theme } = useTheme();
-  const { isDemo } = useDemoStore();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -92,10 +90,6 @@ export default function MealDetailScreen() {
   });
 
   const handleDelete = () => {
-    if (isDemo) {
-      Alert.alert(t("demo.notAllowed"), t("demo.notAllowedMessage"));
-      return;
-    }
     Alert.alert(
       t("meals.deleteMealTitle"),
       t("meals.deleteMealMessage"),

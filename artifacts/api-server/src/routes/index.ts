@@ -1,7 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import authRouter from "./auth";
-import demoRouter from "./demo";
 import profileRouter from "./profile";
 import workoutsRouter from "./workouts";
 import mealsRouter from "./meals";
@@ -22,7 +21,6 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use("/auth", authRouter);
-router.use("/auth", demoRouter);
 router.use("/profile", profileRouter);
 router.use("/workouts/my-templates", userTemplatesRouter);
 router.use("/workouts", workoutsRouter);
