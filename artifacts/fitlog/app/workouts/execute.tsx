@@ -470,7 +470,6 @@ export default function ExecuteWorkoutScreen() {
   }
 
   function skipRest() {
-    if (restTimerRef.current) clearTimeout(restTimerRef.current);
     if (pendingRef.current) {
       const { exIdx, setIdx: si } = pendingRef.current;
       setExerciseIdx(exIdx);
@@ -481,7 +480,6 @@ export default function ExecuteWorkoutScreen() {
     setRestSecondsLeft(0);
   }
 
-  const restTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   function handleSave() {
