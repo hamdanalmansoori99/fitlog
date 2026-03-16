@@ -726,10 +726,6 @@ function AIInsightCard({
 function WeeklyReportCard({ theme, streaksData, workoutsData, mealsData }: { theme: AppTheme; streaksData?: any; workoutsData?: any; mealsData?: any }) {
   const { t } = useTranslation();
 
-  const dayOfWeek = new Date().getDay();
-  const isReportDay = dayOfWeek === 0 || dayOfWeek === 1;
-  if (!isReportDay) return null;
-
   const totalWorkouts = workoutsData?.workouts?.length ?? 0;
   const workoutStreak = streaksData?.currentWorkoutStreak ?? 0;
   const avgCalories = mealsData?.dailyTotals?.calories ?? 0;

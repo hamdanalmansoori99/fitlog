@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import {
-  View, Text, ScrollView, Pressable, Platform, Modal, Share, ActivityIndicator,
+  View, Text, ScrollView, Pressable, Platform, Modal, Share, ActivityIndicator, Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -22,7 +22,8 @@ const WEB_TOP = 67;
 
 function DeltaBadge({ prev, curr, unit = "" }: { prev: number; curr: number; unit?: string }) {
   const { theme } = useTheme();
-  if (!prev || !curr) return null;
+  const { t } = useTranslation();
+  if (prev == null || curr == null) return null;
   const delta = curr - prev;
   const better = delta >= 0;
   const color = better ? theme.primary : theme.danger;
@@ -30,7 +31,7 @@ function DeltaBadge({ prev, curr, unit = "" }: { prev: number; curr: number; uni
     <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 }}>
       <Feather name={better ? "arrow-up-right" : "arrow-down-right"} size={10} color={color} />
       <Text style={{ color, fontFamily: "Inter_500Medium", fontSize: 10 }}>
-        {better ? "+" : ""}{Math.round(delta)}{unit} vs last week
+        {better ? "+" : ""}{Math.round(delta)}{unit} {t("weeklyReport.vsLastWeek")}
       </Text>
     </View>
   );
@@ -78,24 +79,27 @@ export default function WeeklyReportScreen() {
   async function handleShare() {
     setIsSharing(true);
     try {
-      const uri = await captureRef(shareCardRef, { format: "png", quality: 1 });
       if (Platform.OS === "web") {
+        const uri = await captureRef(shareCardRef, { format: "png", quality: 1, result: "data-uri" });
         const link = document.createElement("a");
         link.download = "fitlog-weekly-report.png";
         link.href = uri;
         link.click();
+        setShareModalVisible(false);
       } else {
+        const uri = await captureRef(shareCardRef, { format: "png", quality: 1 });
         const canShare = await ExpoSharing.isAvailableAsync();
         if (canShare) {
-          await ExpoSharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Share your weekly report" });
+          await ExpoSharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: t("weeklyReport.title") });
         } else {
           await Share.share({ url: uri, title: "FitLog Weekly Report" });
         }
+        setShareModalVisible(false);
       }
     } catch {
+      Alert.alert(t("common.error"), t("weeklyReport.shareError"));
     } finally {
       setIsSharing(false);
-      setShareModalVisible(false);
     }
   }
 
@@ -109,6 +113,8 @@ export default function WeeklyReportScreen() {
     isToday: d.isToday,
     valueLabel: d.activeMinutes > 0 ? `${d.activeMinutes}m` : undefined,
   }));
+
+  const hasData = !!data && !((thisWeek?.workoutsCompleted ?? 0) === 0 && (thisWeek?.avgCalories ?? 0) === 0);
 
   const shareStats = [
     { label: t("weeklyReport.workouts"), value: String(thisWeek?.workoutsCompleted ?? 0) },
@@ -128,7 +134,7 @@ export default function WeeklyReportScreen() {
           <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 20, flex: 1 }}>
             {t("weeklyReport.title")}
           </Text>
-          {!isLoading && data && (
+          {!isLoading && hasData && (
             <Pressable
               onPress={() => setShareModalVisible(true)}
               style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: theme.secondaryDim, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 }}

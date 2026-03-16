@@ -390,18 +390,24 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
     const lastMonday = new Date(thisMonday);
     lastMonday.setDate(thisMonday.getDate() - 7);
     const twoWeeksAgo = new Date(lastMonday);
+    // Clamp "this week" upper bound to now to exclude future-dated entries
+    const nowDate = new Date(now);
 
-    const [thisWeekWorkouts, lastWeekWorkouts] = await Promise.all([
+    const [thisWeekWorkouts, lastWeekWorkouts, allWorkouts] = await Promise.all([
       db.select().from(workoutsTable)
-        .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, thisMonday)))
+        .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, thisMonday), lte(workoutsTable.date, nowDate)))
         .orderBy(desc(workoutsTable.date)),
+      // Use lt(thisMonday) to avoid boundary overlap on exact Monday midnight
       db.select().from(workoutsTable)
         .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, lastMonday), lte(workoutsTable.date, thisMonday)))
         .orderBy(desc(workoutsTable.date)),
+      // Full history for accurate streak calculation
+      db.select({ date: workoutsTable.date }).from(workoutsTable)
+        .where(eq(workoutsTable.userId, user.id)),
     ]);
 
     const thisWeekMeals = await db.select().from(mealsTable)
-      .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, thisMonday)));
+      .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, thisMonday), lte(mealsTable.date, nowDate)));
     const lastWeekMeals = await db.select().from(mealsTable)
       .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, lastMonday), lte(mealsTable.date, thisMonday)));
 
@@ -428,11 +434,14 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
     const thisNutrition = avgNutrition(thisWeekMeals);
     const lastNutrition = avgNutrition(lastWeekMeals);
 
-    const thisWeekWeight = measurements.filter(m => new Date(m.date) >= thisMonday && m.weightKg).map(m => m.weightKg!);
-    const lastWeekWeight = measurements.filter(m => new Date(m.date) >= lastMonday && new Date(m.date) < thisMonday && m.weightKg).map(m => m.weightKg!);
+    const thisWeekWeightMeas = measurements.filter(m => new Date(m.date) >= thisMonday && m.weightKg).map(m => m.weightKg!);
+    const lastWeekWeightMeas = measurements.filter(m => new Date(m.date) >= lastMonday && new Date(m.date) < thisMonday && m.weightKg).map(m => m.weightKg!);
     let weightChangKg: number | null = null;
-    if (thisWeekWeight.length > 0 && lastWeekWeight.length > 0) {
-      weightChangKg = parseFloat((thisWeekWeight[thisWeekWeight.length - 1] - lastWeekWeight[0]).toFixed(1));
+    // Compare latest of this week to latest of last week (most recent vs most recent)
+    if (thisWeekWeightMeas.length > 0 && lastWeekWeightMeas.length > 0) {
+      const latestThis = thisWeekWeightMeas[thisWeekWeightMeas.length - 1];
+      const latestLast = lastWeekWeightMeas[lastWeekWeightMeas.length - 1];
+      weightChangKg = parseFloat((latestThis - latestLast).toFixed(1));
     }
 
     const thisWeekSets = await db.select({
@@ -471,8 +480,8 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
       }
     }
 
-    const workoutStreak = calcStreak(thisWeekWorkouts.map(w => w.date));
-    const totalStreak = calcStreak([...thisWeekWorkouts, ...lastWeekWorkouts].map(w => w.date));
+    // Use full history for accurate streak (not just 2-week window)
+    const totalStreak = calcStreak(allWorkouts.map(w => w.date));
 
     const dailyWorkoutMap: Record<string, number> = {};
     for (const w of thisWeekWorkouts) {
