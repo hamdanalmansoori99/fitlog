@@ -443,6 +443,8 @@ export default {
     setBaseline: "أول مرة — حدد مستواك الأساسي",
     coachNoteLabel: "نصيحة",
     suggestedLabel: "مقترح",
+    lastLabel: "السابق",
+    repsUnit: "تكرار",
     reps: "تكرارات",
     weightKgLabel: "الوزن (كغ)",
     howHard: "مدى الصعوبة؟ (اختياري)",

@@ -797,43 +797,48 @@ export default function ExecuteWorkoutScreen() {
           entering={SlideInDown.duration(300)}
           style={[styles.topRestBanner, { backgroundColor: theme.card, borderColor: theme.primary + "40" }]}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <View style={[styles.restDot, { backgroundColor: theme.primary }]} />
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13, letterSpacing: 1 }}>
-                {t("workouts.restLabel")}
-              </Text>
-              <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 28 }}>
-                {fmt(restSecondsLeft)}
-              </Text>
+          <Pressable
+            onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+            style={{ gap: 8 }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View style={[styles.restDot, { backgroundColor: theme.primary }]} />
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13, letterSpacing: 1 }}>
+                  {t("workouts.restLabel")}
+                </Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 28 }}>
+                  {fmt(restSecondsLeft)}
+                </Text>
+              </View>
+              <Pressable
+                onPress={(e) => { e.stopPropagation?.(); skipRest(); }}
+                style={[styles.skipRestPillBtn, { borderColor: theme.primary, backgroundColor: theme.primaryDim }]}
+              >
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                  {t("workouts.skipRest")}
+                </Text>
+              </Pressable>
             </View>
-            <Pressable
-              onPress={skipRest}
-              style={[styles.skipRestPillBtn, { borderColor: theme.primary, backgroundColor: theme.primaryDim }]}
-            >
-              <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-                {t("workouts.skipRest")}
+            <View style={[styles.restProgressBar, { backgroundColor: theme.border }]}>
+              <View
+                style={[
+                  styles.restProgressFill,
+                  {
+                    backgroundColor: theme.primary,
+                    width: `${((currentEx?.restSec || 60) > 0 ? (restSecondsLeft / (currentEx?.restSec || 60)) * 100 : 0)}%`,
+                  },
+                ]}
+              />
+            </View>
+            {pendingRef.current && (
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, textAlign: "center" }}>
+                {pendingRef.current.exIdx !== exerciseIdx
+                  ? `${t("workouts.nextExercise")}: ${exercises[pendingRef.current.exIdx]?.name}`
+                  : t("workouts.upNextSet", { set: pendingRef.current.setIdx + 1, total: currentEx?.sets.length })}
               </Text>
-            </Pressable>
-          </View>
-          <View style={[styles.restProgressBar, { backgroundColor: theme.border }]}>
-            <View
-              style={[
-                styles.restProgressFill,
-                {
-                  backgroundColor: theme.primary,
-                  width: `${((currentEx?.restSec || 60) > 0 ? (restSecondsLeft / (currentEx?.restSec || 60)) * 100 : 0)}%`,
-                },
-              ]}
-            />
-          </View>
-          {pendingRef.current && (
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, textAlign: "center" }}>
-              {pendingRef.current.exIdx !== exerciseIdx
-                ? `${t("workouts.nextExercise")}: ${exercises[pendingRef.current.exIdx]?.name}`
-                : t("workouts.upNextSet", { set: pendingRef.current.setIdx + 1, total: currentEx?.sets.length })}
-            </Text>
-          )}
+            )}
+          </Pressable>
         </Animated.View>
       )}
 
@@ -933,11 +938,16 @@ export default function ExecuteWorkoutScreen() {
             const hasHistory = !s.completed && progression && progression.trend !== "first";
             const suggestedText = hasHistory && (progression!.suggestedWeightKg != null || progression!.suggestedReps != null)
               ? [
-                  progression!.suggestedReps != null ? `${progression!.suggestedReps} reps` : null,
-                  progression!.suggestedWeightKg != null ? `${progression!.suggestedWeightKg}kg` : null,
+                  progression!.suggestedReps != null ? `${progression!.suggestedReps} ${t("workouts.repsUnit")}` : null,
+                  progression!.suggestedWeightKg != null ? `${progression!.suggestedWeightKg}${t("common.kg")}` : null,
                 ].filter(Boolean).join(" × ")
               : null;
-            const lastText = hasHistory && progression!.previousDisplay ? progression!.previousDisplay : null;
+            const lastText = hasHistory && (progression!.prevReps != null || progression!.prevWeightKg != null)
+              ? [
+                  progression!.prevReps != null ? `${progression!.prevReps} ${t("workouts.repsUnit")}` : null,
+                  progression!.prevWeightKg != null ? `${progression!.prevWeightKg}${t("common.kg")}` : null,
+                ].filter(Boolean).join(" × ")
+              : null;
             const showHintRow = suggestedText || lastText;
 
             return (
@@ -950,7 +960,7 @@ export default function ExecuteWorkoutScreen() {
                     <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
                       {lastText && (
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
-                          Last: {lastText}
+                          {t("workouts.lastLabel")}: {lastText}
                         </Text>
                       )}
                       {suggestedText && (

@@ -23,6 +23,9 @@ export interface StrengthTarget {
   rationale: string;
   trend: "progress" | "maintain" | "deload" | "first";
   previousDisplay?: string;
+  prevWeightKg?: number;
+  prevReps?: number;
+  prevSets?: number;
 }
 
 export interface CardioSession {
@@ -114,6 +117,10 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
       ? `${currentSets}×${Math.round(avgR)} (bodyweight)`
       : null;
 
+  const prevFields = maxW > 0 || currentSets > 0
+    ? { prevWeightKg: maxW > 0 ? maxW : undefined, prevReps: Math.round(avgR), prevSets: currentSets }
+    : {};
+
   if (missed) {
     const targetW = maxW > 0 ? nearestIncrement(maxW * 0.9, 2.5) : undefined;
     return {
@@ -123,13 +130,13 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
       suggestedSets: Math.max(2, currentSets - 1),
       trend: "deload",
       previousDisplay: previousDisplay ?? undefined,
+      ...prevFields,
       rationale: `It's been ${lastDateDaysAgo} days since your last session — start at 90% of previous weight to ease back in safely.`,
     };
   }
 
   const shouldDeload = completion < 0.6 || (rpe !== null && rpe >= 9.5);
   const shouldProgress = completion >= 0.8 && (rpe === null || rpe <= 7);
-  const shouldMaintain = !shouldDeload && !shouldProgress;
 
   if (shouldDeload) {
     const targetW = maxW > 0 ? nearestIncrement(maxW * 0.9, 2.5) : undefined;
@@ -140,6 +147,7 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
       suggestedSets: currentSets,
       trend: "deload",
       previousDisplay: previousDisplay ?? undefined,
+      ...prevFields,
       rationale:
         rpe !== null && rpe >= 9.5
           ? "Last session was very hard (RPE 9–10). Drop weight by ~10% and focus on clean form."
@@ -158,6 +166,7 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
         suggestedSets: currentSets,
         trend: "progress",
         previousDisplay: previousDisplay ?? undefined,
+        ...prevFields,
         rationale: `Strong session last time — you nailed all sets at ${maxW}kg. Add ${increment}kg today.`,
       };
     } else {
@@ -167,6 +176,7 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
         suggestedSets: currentSets,
         trend: "progress",
         previousDisplay: previousDisplay ?? undefined,
+        ...prevFields,
         rationale: `Bodyweight session completed well. Add 2 more reps this time to keep progressing.`,
       };
     }
@@ -179,6 +189,7 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
     suggestedSets: currentSets,
     trend: "maintain",
     previousDisplay: previousDisplay ?? undefined,
+    ...prevFields,
     rationale: `Good effort last time. Keep the same weight and aim for clean, controlled reps.`,
   };
 }

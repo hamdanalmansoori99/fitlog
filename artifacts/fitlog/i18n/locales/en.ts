@@ -443,6 +443,8 @@ export default {
     setBaseline: "First time — set your baseline",
     coachNoteLabel: "Tip",
     suggestedLabel: "Suggested",
+    lastLabel: "Last",
+    repsUnit: "reps",
     reps: "Reps",
     weightKgLabel: "Weight (kg)",
     howHard: "How hard? (optional)",
