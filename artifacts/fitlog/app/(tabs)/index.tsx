@@ -97,7 +97,7 @@ function NutritionCard({ mealsData, theme }: { mealsData: any; theme: AppTheme }
           {t("home.nutrition")}
         </Text>
         <Pressable
-          onPress={() => router.push("/(tabs)/meals" as any)}
+          onPress={() => router.push("/meals" as any)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
         >
           <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>

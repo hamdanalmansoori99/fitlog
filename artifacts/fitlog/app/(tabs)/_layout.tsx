@@ -26,7 +26,6 @@ function NativeTabLayout() {
         <Icon sf={{ default: "figure.run", selected: "figure.run" }} />
         <Label>{t("tabs.workouts")}</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="meals" hidden />
       <NativeTabs.Trigger name="scan">
         <View style={[layoutStyles.nativeScanHero, { backgroundColor: theme.primary + "20" }]}>
           <Icon sf={{ default: "camera.viewfinder", selected: "camera.viewfinder" }} />

@@ -564,7 +564,7 @@ export default function ScanScreen() {
             </View>
 
             <Pressable
-              onPress={() => router.push("/(tabs)/meals" as any)}
+              onPress={() => router.push("/meals" as any)}
               style={styles.mealHistoryLink}
             >
               <Feather name="clock" size={14} color={theme.primary} />
