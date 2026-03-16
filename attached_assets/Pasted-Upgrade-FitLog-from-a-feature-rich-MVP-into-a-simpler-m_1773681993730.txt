@@ -1,0 +1,302 @@
+Upgrade FitLog from a feature-rich MVP into a simpler, more addictive product.
+
+Main goal:
+Make FitLog feel faster, more rewarding, and more focused around 3 core loops:
+1. Scan meals fast
+2. Log workouts fast
+3. Feel progress fast
+
+Important product direction:
+Do not add random extra features.
+Prioritize UX, retention, and simplicity.
+Keep the design premium, dark, modern, and clean.
+
+========================
+PART 1 — SIMPLIFY NAVIGATION
+========================
+
+Update the bottom navigation to:
+
+- Home
+- Workouts
+- Scan
+- Progress
+- Profile
+
+Requirements:
+1. Make “Scan” the central hero action in the nav.
+2. Move meal scan into this dedicated Scan tab.
+3. Keep navigation visually simple and premium.
+4. Reduce clutter and avoid too many competing entry points.
+
+========================
+PART 2 — REDESIGN HOME SCREEN
+========================
+
+Redesign the Home screen to focus only on the most important daily actions and rewards.
+
+Home should prominently show:
+1. Calories progress for today
+2. Today’s workout recommendation or workout status
+3. Current streak
+
+Add 3 main buttons near the top:
+- Scan Meal
+- Start Workout
+- Ask Coach
+
+Also include:
+- recent activity summary
+- one small AI insight card
+- weekly report card if available
+
+Requirements:
+1. Remove or reduce low-priority widgets that clutter the dashboard.
+2. Make the screen feel action-oriented, not just informational.
+3. Use strong visual hierarchy:
+   - biggest: calories / workout / streak
+   - medium: quick actions
+   - small: secondary insights
+
+========================
+PART 3 — ADD STREAK SYSTEM
+========================
+
+Build a lightweight but addictive streak system.
+
+Track:
+1. Workout streak
+2. Meal logging streak
+3. Active days streak
+
+Rules:
+- Workout streak counts if at least 1 workout is logged that day
+- Meal streak counts if at least 1 meal is logged that day
+- Active day streak counts if user logs either a workout or a meal
+
+Features:
+1. Show current streak clearly on Home
+2. Add milestone celebrations at:
+   - 3 days
+   - 7 days
+   - 14 days
+   - 30 days
+   - 60 days
+   - 100 days
+3. Add a streak history screen
+4. Add a “don’t break your streak” warning banner near the end of the day
+5. Make the streak system motivating, not childish
+
+Requirements:
+- Keep the UI premium and minimal
+- Do not visually overload the user
+- Store streak data reliably
+
+========================
+PART 4 — ADD PR / REWARD MOMENTS
+========================
+
+Make logging feel rewarding.
+
+Add celebration moments for:
+1. New personal records
+2. Streak milestones
+3. Weekly report completion
+4. Goal progress milestones
+
+For new PRs:
+- Show a clean full-screen celebration modal
+- Example:
+  “New Personal Record”
+  “Bench Press”
+  “85kg x 5”
+
+Requirements:
+1. Make the celebrations feel premium and motivating
+2. Avoid cheesy or childish animation
+3. Add subtle haptics/feedback where supported
+4. Add a dismiss button and “share” option
+
+========================
+PART 5 — IMPROVE ACTIVE WORKOUT MODE
+========================
+
+Improve active workout mode so it feels like a real coach.
+
+For every exercise set, show:
+- last performance
+- suggested target today
+- progression hint
+
+Example:
+- Last time: 60kg x 8
+- Suggested: 62.5kg x 8
+- Coach note: “Ready to level up”
+
+Requirements:
+1. Use previous workout history to calculate smart suggestions
+2. Suggestions should be conservative and believable
+3. Support:
+   - progress
+   - hold steady
+   - recovery / deload
+4. Keep inputs fast and easy
+5. Keep rest timer visible and clean
+
+========================
+PART 6 — MAKE MEAL SCAN THE HERO FEATURE
+========================
+
+Meal scan should become the main product hook.
+
+Improve the AI meal scan flow:
+
+Flow:
+1. User opens Scan tab
+2. Takes photo
+3. App analyzes image
+4. Show detected foods with calories/macros
+5. Let user quickly adjust portions
+6. Confirm and save
+
+Requirements:
+1. Make this flow very fast and frictionless
+2. Keep confirmation screen simple
+3. Allow portion editing with quick controls
+4. Show confidence / food guesses clearly
+5. Do not auto-save without user confirmation
+6. After save, show a satisfying success state
+
+Add a strong heading in the Scan screen:
+“Snap your meal. Log calories instantly.”
+
+========================
+PART 7 — ADD WEEKLY PROGRESS REPORT
+========================
+
+Create a Weekly Report feature.
+
+Show:
+- workouts completed this week
+- average calories
+- average protein
+- weight change
+- best lift improvement
+- streak status
+- 1 to 3 AI insights
+
+Requirements:
+1. Add a Weekly Report card to Home
+2. Create a dedicated Weekly Report screen
+3. Compare this week vs previous week when data exists
+4. Include a clean chart
+5. Add a “Share Report” button
+6. Handle missing data gracefully
+
+Tone:
+- short
+- motivating
+- useful
+- not robotic
+
+========================
+PART 8 — ADD PREMIUM SHARE CARDS
+========================
+
+Create better share cards for:
+1. Completed workout
+2. New PR
+3. Weekly report
+4. Streak milestone
+
+Requirements:
+1. Make them look premium and social-media ready
+2. Optimize for Instagram Story and TikTok portrait format
+3. Include:
+   - strong title
+   - main stat
+   - 2 to 4 secondary stats
+   - subtle FitLog branding
+4. Add preview before export
+5. Make export work on web and mobile
+6. Support both English and Arabic layouts
+
+========================
+PART 9 — HIDE OR DE-EMPHASIZE LOW-PRIORITY FEATURES
+========================
+
+Reduce clutter by hiding or de-emphasizing features that are not core to daily habit formation.
+
+Lower priority features that should be hidden from the main flow or moved deeper:
+- advanced recovery logging
+- too many achievements/badges
+- abstract consistency scores
+- secondary settings/options that distract from logging
+
+Requirements:
+1. Do not delete the systems if already implemented
+2. Move them to secondary screens or collapsible sections
+3. Keep the main experience focused on daily use
+
+========================
+PART 10 — MAKE THE AI COACH MORE USEFUL
+========================
+
+Make the AI coach feel like a real daily assistant, not just a chat page.
+
+Add:
+1. “Ask Coach” quick action on Home
+2. Suggested prompts such as:
+   - What should I train today?
+   - How can I hit my protein goal?
+   - Adjust my calories for today
+   - Give me a quick home workout
+3. One AI insight card on Home based on recent activity
+4. Better empty-state messaging if the user has no data
+
+Requirements:
+1. Coach responses should be short, useful, and contextual
+2. Use user goals, recent workouts, nutrition, and equipment if available
+3. Keep the coach productized, not like a generic chatbot
+
+========================
+PART 11 — PERFORMANCE AND UX POLISH
+========================
+
+Improve overall UX polish and responsiveness.
+
+Requirements:
+1. Make all main actions feel fast
+2. Reduce taps required for:
+   - logging a meal
+   - starting a workout
+   - saving a set
+   - duplicating a meal
+3. Improve loading states and empty states
+4. Improve spacing, alignment, and touch targets
+5. Ensure dark theme remains premium and consistent
+6. Keep Arabic RTL support working properly
+7. Ensure web version is stable and usable on desktop too
+
+========================
+PART 12 — SUCCESS CRITERIA
+========================
+
+The final product should feel like this:
+
+- simple
+- premium
+- fast
+- motivating
+- addictive
+
+The app should clearly revolve around 3 things:
+1. Log fast
+2. Improve fast
+3. Feel progress
+
+At the end:
+1. Summarize all changes made
+2. List any files/components updated
+3. Explain any important design decisions
+4. Point out anything that still needs manual setup
