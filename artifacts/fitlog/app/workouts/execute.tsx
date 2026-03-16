@@ -200,8 +200,8 @@ export default function ExecuteWorkoutScreen() {
             if (s.completed) return s;
             return {
               ...s,
-              weight: prog.suggestedWeightKg ? String(prog.suggestedWeightKg) : s.weight,
-              reps: prog.suggestedReps ? String(prog.suggestedReps) : s.reps,
+              weight: (prog.suggestedWeightKg && !s.weight) ? String(prog.suggestedWeightKg) : s.weight,
+              reps: (prog.suggestedReps && !s.reps) ? String(prog.suggestedReps) : s.reps,
             };
           }),
         };
