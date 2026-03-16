@@ -17,6 +17,7 @@ import { getFilteredExercises } from "@/lib/coachEngine";
 import { calculateStrengthTarget, ExerciseSession } from "@/lib/progressionEngine";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { ShareCard } from "@/components/ShareCard";
@@ -597,8 +598,30 @@ export default function ExecuteWorkoutScreen() {
 
   if (exercises.length === 0) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular" }}>{t("workouts.loadingWorkout")}</Text>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.navBar, { paddingTop: topPad + 8, borderBottomColor: theme.border }]}>
+          <View style={{ width: 44 }} />
+          <View style={{ alignItems: "center", flex: 1, gap: 4 }}>
+            <SkeletonBox width={100} height={12} />
+            <SkeletonBox width={60} height={18} />
+          </View>
+          <View style={{ width: 44 }} />
+        </View>
+        <View style={{ padding: 16, gap: 14 }}>
+          <SkeletonBox width="60%" height={26} />
+          <SkeletonBox width="40%" height={14} />
+          <SkeletonCard style={{ gap: 10 }}>
+            <SkeletonBox height={14} />
+            {[1, 2, 3].map(i => (
+              <View key={i} style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                <SkeletonBox width={28} height={28} borderRadius={8} />
+                <SkeletonBox width={60} height={32} borderRadius={8} />
+                <SkeletonBox width={60} height={32} borderRadius={8} />
+              </View>
+            ))}
+          </SkeletonCard>
+          <SkeletonBox width="100%" height={50} borderRadius={14} />
+        </View>
       </View>
     );
   }
@@ -709,7 +732,7 @@ export default function ExecuteWorkoutScreen() {
                   ]}
                 >
                   <Text style={{ fontSize: 18 }}>{MOOD_ICONS[i]}</Text>
-                  <Text style={{ color: mood === m ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 9, textAlign: "center" }}>
+                  <Text style={{ color: mood === m ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, textAlign: "center" }}>
                     {m}
                   </Text>
                 </Pressable>
@@ -1136,7 +1159,7 @@ export default function ExecuteWorkoutScreen() {
                     ]}
                   >
                     <Text style={{ fontSize: 15 }}>{RPE_EMOJIS[ri]}</Text>
-                    <Text style={{ color: sel ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 9, textAlign: "center" }}>
+                    <Text style={{ color: sel ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, textAlign: "center" }}>
                       {RPE_LABELS[ri]}
                     </Text>
                   </Pressable>
@@ -1242,8 +1265,9 @@ const styles = StyleSheet.create({
 
   // RPE
   rpeChip: {
-    alignItems: "center", paddingVertical: 8, paddingHorizontal: 4,
-    borderRadius: 10, borderWidth: 1, gap: 3,
+    alignItems: "center", paddingVertical: 10, paddingHorizontal: 4,
+    borderRadius: 10, borderWidth: 1, gap: 3, minHeight: 44,
+    justifyContent: "center" as const,
   },
 
   // Actions
@@ -1291,6 +1315,7 @@ const styles = StyleSheet.create({
   moodRow: { flexDirection: "row", gap: 6 },
   moodChip: {
     alignItems: "center", paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, gap: 4,
+    minHeight: 44,
   },
   prOverlay: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.7)",

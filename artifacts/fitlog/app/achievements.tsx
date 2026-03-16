@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Platform, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, Pressable, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
+import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { useTranslation } from "react-i18next";
 import { dateLocale } from "@/lib/rtl";
 
@@ -200,9 +201,38 @@ export default function AchievementsScreen() {
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+          <View style={{ gap: 10 }}>
+            <SkeletonBox width={120} height={16} />
+            <View style={styles.streaksRow}>
+              {[1, 2, 3].map(i => (
+                <SkeletonCard key={i} style={{ flex: 1, alignItems: "center", gap: 8, padding: 12, borderRadius: 14 }}>
+                  <SkeletonBox width={40} height={40} borderRadius={12} />
+                  <SkeletonBox width={40} height={28} />
+                  <SkeletonBox width={50} height={12} />
+                </SkeletonCard>
+              ))}
+            </View>
+          </View>
+          <SkeletonCard style={{ gap: 12 }}>
+            <SkeletonBox width={100} height={16} />
+            <SkeletonBox height={60} />
+          </SkeletonCard>
+          <View style={{ gap: 10 }}>
+            <SkeletonBox width={80} height={16} />
+            <View style={styles.badgeGrid}>
+              {[1, 2, 3, 4].map(i => (
+                <View key={i} style={styles.badgeCell}>
+                  <SkeletonCard style={{ padding: 12, gap: 8, borderRadius: 14 }}>
+                    <SkeletonBox width={44} height={44} borderRadius={12} />
+                    <SkeletonBox width="80%" height={13} />
+                    <SkeletonBox width="60%" height={11} />
+                  </SkeletonCard>
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -265,7 +295,7 @@ export default function AchievementsScreen() {
                   >
                     <Text style={{
                       color: filter === f.key ? "#0f0f1a" : theme.textMuted,
-                      fontFamily: "Inter_600SemiBold", fontSize: 12,
+                      fontFamily: "Inter_600SemiBold", fontSize: 13,
                     }}>
                       {f.label}
                     </Text>
@@ -367,7 +397,7 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
 
-  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
+  filterChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, minHeight: 44, justifyContent: "center" as const },
 
   badgeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 },
   badgeCell: { width: "47.5%" },
@@ -382,7 +412,7 @@ const styles = StyleSheet.create({
   progressFill: { height: "100%", borderRadius: 2 },
   progressLabel: { fontSize: 10 },
 
-  prRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 12 },
+  prRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 12, minHeight: 44 },
   prIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   prBadge: { alignItems: "center", justifyContent: "center", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
   emptyPR: { alignItems: "center", gap: 8, paddingVertical: 28 },
