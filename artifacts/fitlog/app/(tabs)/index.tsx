@@ -1,14 +1,15 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  Pressable, Platform,
+  Pressable, Platform, Modal,
 } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, ZoomIn, FadeIn } from "react-native-reanimated";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
 import { dateLocale } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
@@ -355,7 +356,7 @@ function CoachCtaCard({ theme }: { theme: AppTheme }) {
   );
 }
 
-// ─── Compact Streak Strip ─────────────────────────────────────────────────────
+// ─── Streak Card (prominent) ──────────────────────────────────────────────────
 
 function StreakSummaryCard({ data, theme }: { data: any; theme: AppTheme }) {
   const { t } = useTranslation();
@@ -371,31 +372,194 @@ function StreakSummaryCard({ data, theme }: { data: any; theme: AppTheme }) {
     { icon: "trending-up" as const, value: score, label: t("home.thisWeek"), color: scoreColor, suffix: "%" },
   ];
 
+  const hasActiveStreak = (streaks?.workout?.current ?? 0) > 0 || (streaks?.meal?.current ?? 0) > 0;
+
   return (
-    <Pressable
-      onPress={() => router.push("/achievements" as any)}
-      style={({ pressed }) => [
-        styles.streakStrip,
-        { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
-      ]}
-    >
-      {items.map((s, i) => (
-        <React.Fragment key={s.label}>
-          {i > 0 && <View style={{ width: 1, height: 28, backgroundColor: theme.border }} />}
-          <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-              <Feather name={s.icon} size={11} color={s.color} />
-              <Text style={{ color: s.color, fontFamily: "Inter_700Bold", fontSize: 16 }}>
-                {s.value}{s.suffix ?? ""}
+    <View style={{ gap: 8 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          {hasActiveStreak && <Text style={{ fontSize: 14 }}>🔥</Text>}
+          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+            {t("home.streaks")}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => router.push("/streaks" as any)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+        >
+          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+            {t("streaks.viewStreaks")}
+          </Text>
+          <Feather name="chevron-right" size={13} color={theme.primary} />
+        </Pressable>
+      </View>
+      <Pressable
+        onPress={() => router.push("/streaks" as any)}
+        style={({ pressed }) => [
+          styles.streakStrip,
+          { backgroundColor: theme.card, borderColor: hasActiveStreak ? theme.primary + "30" : theme.border, opacity: pressed ? 0.85 : 1 },
+        ]}
+      >
+        {items.map((s, i) => (
+          <React.Fragment key={s.label}>
+            {i > 0 && <View style={{ width: 1, height: 28, backgroundColor: theme.border }} />}
+            <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                {s.value > 0 && !s.suffix && <Text style={{ fontSize: 10 }}>🔥</Text>}
+                <Feather name={s.icon} size={11} color={s.color} />
+                <Text style={{ color: s.color, fontFamily: "Inter_700Bold", fontSize: 16 }}>
+                  {s.value}{s.suffix ?? ""}
+                </Text>
+              </View>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
+                {s.label}
               </Text>
             </View>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
-              {s.label}
-            </Text>
+          </React.Fragment>
+        ))}
+      </Pressable>
+    </View>
+  );
+}
+
+// ─── Don't Break Streak Banner ───────────────────────────────────────────────
+
+function DontBreakStreakBanner({
+  achievementsData, workoutsData, mealsData, theme,
+}: {
+  achievementsData: any; workoutsData: any; mealsData: any; theme: AppTheme;
+}) {
+  const { t } = useTranslation();
+  const hour = new Date().getHours();
+  if (hour < 18) return null;
+
+  const workoutStreak = achievementsData?.streaks?.workout?.current ?? 0;
+  const mealStreak = achievementsData?.streaks?.meal?.current ?? 0;
+
+  if (workoutStreak < 2 && mealStreak < 2) return null;
+
+  const now = new Date();
+  const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const workouts = workoutsData?.workouts || [];
+  const hasWorkoutToday = workouts.some((w: any) => {
+    const wDate = new Date(w.date);
+    const wLocal = `${wDate.getFullYear()}-${String(wDate.getMonth() + 1).padStart(2, "0")}-${String(wDate.getDate()).padStart(2, "0")}`;
+    return wLocal === todayLocal;
+  });
+
+  const meals = mealsData?.meals || mealsData?.todayMeals || [];
+  const mealCount = Array.isArray(meals) ? meals.length : 0;
+  const hasMealToday = mealCount > 0 || (mealsData?.dailyTotals?.calories ?? 0) > 0;
+
+  const showWorkoutBanner = workoutStreak >= 2 && !hasWorkoutToday;
+  const showMealBanner = mealStreak >= 2 && !hasMealToday;
+
+  if (!showWorkoutBanner && !showMealBanner) return null;
+
+  return (
+    <Animated.View entering={FadeInDown.duration(400)}>
+      <Pressable
+        onPress={() => {
+          if (showWorkoutBanner) router.push("/workouts/log" as any);
+          else router.push("/meals/add" as any);
+        }}
+        style={[
+          styles.streakBanner,
+          { backgroundColor: (theme.warning || "#ffab40") + "15", borderColor: (theme.warning || "#ffab40") + "40" },
+        ]}
+      >
+        <Text style={{ fontSize: 20 }}>🔥</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+            {t("streaks.dontBreakStreak")}
+          </Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+            {showWorkoutBanner
+              ? t("streaks.dontBreakWorkout", { count: workoutStreak })
+              : t("streaks.dontBreakMeal", { count: mealStreak })}
+          </Text>
+        </View>
+        <View style={[styles.logNowBtn, { backgroundColor: theme.warning || "#ffab40" }]}>
+          <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+            {t("streaks.logNow")}
+          </Text>
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// ─── Milestone Celebration Modal ─────────────────────────────────────────────
+
+const MILESTONE_THRESHOLDS = [3, 7, 14, 30, 60, 100];
+
+function MilestoneCelebrationModal({ achievementsData, theme }: { achievementsData: any; theme: AppTheme }) {
+  const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const [visible, setVisible] = useState(false);
+  const [milestoneValue, setMilestoneValue] = useState(0);
+
+  useEffect(() => {
+    if (!achievementsData?.streaks || !user?.id) return;
+
+    const checkMilestones = async () => {
+      const streakEntries: { type: string; value: number }[] = [
+        { type: "workout", value: achievementsData.streaks.workout?.current ?? 0 },
+        { type: "meal", value: achievementsData.streaks.meal?.current ?? 0 },
+        { type: "hydration", value: achievementsData.streaks.hydration?.current ?? 0 },
+      ];
+
+      for (const entry of streakEntries) {
+        if (MILESTONE_THRESHOLDS.includes(entry.value) && entry.value > 0) {
+          const key = `milestone_shown:${user.id}:${entry.type}:${entry.value}`;
+          const shown = await AsyncStorage.getItem(key);
+          if (!shown) {
+            await AsyncStorage.setItem(key, "true");
+            setMilestoneValue(entry.value);
+            setVisible(true);
+            return;
+          }
+        }
+      }
+    };
+
+    checkMilestones();
+  }, [achievementsData, user?.id]);
+
+  if (!visible) return null;
+
+  return (
+    <Modal transparent animationType="fade" visible={visible} onRequestClose={() => setVisible(false)}>
+      <View style={styles.modalOverlay}>
+        <Animated.View entering={ZoomIn.duration(400)} style={[styles.modalCard, { backgroundColor: theme.card }]}>
+          <Text style={{ fontSize: 48, textAlign: "center" }}>🔥</Text>
+          <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", marginTop: 8 }}>
+            {t("streaks.milestoneTitle")}
+          </Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14, textAlign: "center", lineHeight: 20, marginTop: 8 }}>
+            {t("streaks.milestoneMessage", { count: milestoneValue })}
+          </Text>
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
+            <Pressable
+              onPress={() => setVisible(false)}
+              style={[styles.modalBtn, { backgroundColor: theme.primary, flex: 1 }]}
+            >
+              <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                {t("streaks.awesome")}
+              </Text>
+            </Pressable>
           </View>
-        </React.Fragment>
-      ))}
-    </Pressable>
+          <Pressable
+            onPress={() => { setVisible(false); router.push("/streaks" as any); }}
+            style={{ marginTop: 10 }}
+          >
+            <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
+              {t("streaks.viewStreaks")}
+            </Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
@@ -589,6 +753,18 @@ export default function HomeScreen() {
           <QuickActions theme={theme} />
         </Animated.View>
 
+        {/* ── Don't Break Streak Banner ── */}
+        {achievementsData && (
+          <View style={styles.section}>
+            <DontBreakStreakBanner
+              achievementsData={achievementsData}
+              workoutsData={workoutsData}
+              mealsData={mealsData}
+              theme={theme}
+            />
+          </View>
+        )}
+
         {/* ── Streaks ── */}
         {achievementsData && (
           <Animated.View entering={FadeInDown.delay(220).duration(400)} style={styles.section}>
@@ -620,6 +796,10 @@ export default function HomeScreen() {
           </Pressable>
         </Animated.View>
       </ScrollView>
+
+      {achievementsData && (
+        <MilestoneCelebrationModal achievementsData={achievementsData} theme={theme} />
+      )}
     </View>
   );
 }
@@ -680,5 +860,23 @@ const styles = StyleSheet.create({
   streakStrip: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-around",
     paddingVertical: 12, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1,
+  },
+  streakBanner: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 14, borderRadius: 14, borderWidth: 1,
+  },
+  logNowBtn: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+  },
+  modalOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center", alignItems: "center", padding: 32,
+  },
+  modalCard: {
+    width: "100%", maxWidth: 340, borderRadius: 24,
+    padding: 28, alignItems: "center",
+  },
+  modalBtn: {
+    paddingVertical: 14, borderRadius: 14, alignItems: "center",
   },
 });

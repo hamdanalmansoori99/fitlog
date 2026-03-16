@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput,
-  Platform, Alert, Vibration,
+  Platform, Alert, Vibration, Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import Animated, { FadeInDown, FadeIn, SlideInUp } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, SlideInUp, ZoomIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
@@ -106,6 +106,7 @@ export default function ExecuteWorkoutScreen() {
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [templateSaved, setTemplateSaved] = useState(false);
+  const [prModal, setPrModal] = useState<{ exercise: string; weight: number; reps: number; previousBest: number } | null>(null);
 
   // Store next position when entering rest phase
   const pendingRef = useRef<{ exIdx: number; setIdx: number } | null>(null);
@@ -288,8 +289,35 @@ export default function ExecuteWorkoutScreen() {
     return -1;
   }
 
+  function checkForPR(exIdx: number, sIdx: number) {
+    const ex = exercises[exIdx];
+    const set = ex.sets[sIdx];
+    const weight = parseFloat(set.weight);
+    const reps = parseInt(set.reps);
+    if (!weight || weight <= 0 || !reps || reps <= 0) return;
+
+    const sessions = historyMap[ex.name] ?? [];
+    if (sessions.length === 0) return;
+
+    let previousBestWeight = 0;
+    for (const session of sessions) {
+      for (const s of session.sets || []) {
+        if ((s.weightKg ?? 0) > previousBestWeight) {
+          previousBestWeight = s.weightKg ?? 0;
+        }
+      }
+    }
+
+    if (weight > previousBestWeight && previousBestWeight > 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPrModal({ exercise: ex.name, weight, reps, previousBest: previousBestWeight });
+    }
+  }
+
   function completeSet() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const capturedExIdx = exerciseIdx;
+    const capturedSetIdx = setIdx;
     setExercises((prev) =>
       prev.map((e, ei) =>
         ei !== exerciseIdx ? e : {
@@ -298,6 +326,9 @@ export default function ExecuteWorkoutScreen() {
         }
       )
     );
+    if (isGym) {
+      checkForPR(capturedExIdx, capturedSetIdx);
+    }
     advance(exerciseIdx, setIdx);
   }
 
@@ -599,6 +630,36 @@ export default function ExecuteWorkoutScreen() {
             </Pressable>
           </Animated.View>
         </ScrollView>
+
+        {prModal && (
+          <Modal transparent animationType="fade" visible={!!prModal} onRequestClose={() => setPrModal(null)}>
+            <View style={styles.prOverlay}>
+              <Animated.View entering={ZoomIn.duration(400)} style={[styles.prCard, { backgroundColor: theme.card }]}>
+                <Text style={{ fontSize: 52, textAlign: "center" }}>🏆</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", marginTop: 8 }}>
+                  {t("pr.newPersonalRecord")}
+                </Text>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 18, textAlign: "center", marginTop: 12 }}>
+                  {prModal.exercise}
+                </Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 32, textAlign: "center", marginTop: 4 }}>
+                  {prModal.weight}kg × {prModal.reps}
+                </Text>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", marginTop: 8 }}>
+                  {t("pr.previousBest", { weight: prModal.previousBest })}
+                </Text>
+                <Pressable
+                  onPress={() => setPrModal(null)}
+                  style={[styles.prBtn, { backgroundColor: theme.primary }]}
+                >
+                  <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 16 }}>
+                    {t("pr.celebrate")}
+                  </Text>
+                </Pressable>
+              </Animated.View>
+            </View>
+          </Modal>
+        )}
       </View>
     );
   }
@@ -941,6 +1002,36 @@ export default function ExecuteWorkoutScreen() {
           </View>
         )}
       </ScrollView>
+
+      {prModal && (
+        <Modal transparent animationType="fade" visible={!!prModal} onRequestClose={() => setPrModal(null)}>
+          <View style={styles.prOverlay}>
+            <Animated.View entering={ZoomIn.duration(400)} style={[styles.prCard, { backgroundColor: theme.card }]}>
+              <Text style={{ fontSize: 52, textAlign: "center" }}>🏆</Text>
+              <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", marginTop: 8 }}>
+                {t("pr.newPersonalRecord")}
+              </Text>
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 18, textAlign: "center", marginTop: 12 }}>
+                {prModal.exercise}
+              </Text>
+              <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 32, textAlign: "center", marginTop: 4 }}>
+                {prModal.weight}kg × {prModal.reps}
+              </Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", marginTop: 8 }}>
+                {t("pr.previousBest", { weight: prModal.previousBest })}
+              </Text>
+              <Pressable
+                onPress={() => setPrModal(null)}
+                style={[styles.prBtn, { backgroundColor: theme.primary }]}
+              >
+                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 16 }}>
+                  {t("pr.celebrate")}
+                </Text>
+              </Pressable>
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -1026,5 +1117,17 @@ const styles = StyleSheet.create({
   moodRow: { flexDirection: "row", gap: 6 },
   moodChip: {
     alignItems: "center", paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, gap: 4,
+  },
+  prOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center", alignItems: "center", padding: 32,
+  },
+  prCard: {
+    width: "100%", maxWidth: 340, borderRadius: 24,
+    padding: 28, alignItems: "center",
+  },
+  prBtn: {
+    width: "100%", paddingVertical: 14, borderRadius: 14,
+    alignItems: "center", marginTop: 20,
   },
 });

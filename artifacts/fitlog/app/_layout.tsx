@@ -95,6 +95,7 @@ function RootLayoutNav() {
       <Stack.Screen name="auth/register" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="achievements" options={{ headerShown: false }} />
+      <Stack.Screen name="streaks" options={{ headerShown: false }} />
       <Stack.Screen name="workouts/log" options={{ headerShown: false }} />
       <Stack.Screen name="workouts/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="workouts/execute" options={{ headerShown: false }} />
