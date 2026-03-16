@@ -254,7 +254,7 @@ export default {
     viewInsights: "View all insights",
     weeklyReport: "Weekly Report",
     comingSoon: "Coming Soon",
-    weeklyReportDesc: "Your personalized weekly summary will appear here soon",
+    weeklyReportDesc: "Complete your first week of tracking to unlock your weekly report",
     workoutDone: "Workout Done",
     workoutDoneMessage: "Great job! You've completed your workout for today.",
     viewWorkout: "View Workout",

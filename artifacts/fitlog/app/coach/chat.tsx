@@ -43,16 +43,6 @@ function cleanMarkdown(text: string): string {
   return out.trim();
 }
 
-const SUGGESTIONS = [
-  "What should I train today?",
-  "I only have 20 minutes — what workout?",
-  "I only have dumbbells, what can I do?",
-  "My legs are sore, what should I train?",
-  "Give me a home workout for fat loss",
-  "What are the benefits of walking vs running for me?",
-  "How many days a week should I train?",
-  "Help me build a weekly plan",
-];
 
 export default function CoachChatScreen() {
   const { theme } = useTheme();

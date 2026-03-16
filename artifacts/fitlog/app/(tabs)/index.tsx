@@ -159,7 +159,7 @@ function HeroActions({ theme }: { theme: AppTheme }) {
     },
     {
       label: t("home.askCoach"), icon: "message-circle" as const,
-      color: "#ce93d8", onPress: () => router.push("/coach/chat" as any),
+      color: "#ce93d8", onPress: () => router.push({ pathname: "/coach/chat" as any, params: { prompt: t("home.coachChip1") } }),
     },
   ];
 
@@ -723,7 +723,7 @@ function AIInsightCard({
   );
 }
 
-function WeeklyReportCard({ theme, streaksData, workoutsData }: { theme: AppTheme; streaksData?: any; workoutsData?: any }) {
+function WeeklyReportCard({ theme, streaksData, workoutsData, mealsData }: { theme: AppTheme; streaksData?: any; workoutsData?: any; mealsData?: any }) {
   const { t } = useTranslation();
 
   const dayOfWeek = new Date().getDay();
@@ -732,6 +732,7 @@ function WeeklyReportCard({ theme, streaksData, workoutsData }: { theme: AppThem
 
   const totalWorkouts = workoutsData?.workouts?.length ?? 0;
   const workoutStreak = streaksData?.currentWorkoutStreak ?? 0;
+  const avgCalories = mealsData?.calorieGoal ?? 0;
   const hasData = totalWorkouts > 0;
 
   return (
@@ -760,6 +761,12 @@ function WeeklyReportCard({ theme, streaksData, workoutsData }: { theme: AppThem
             <View style={{ alignItems: "center" }}>
               <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 18 }}>{workoutStreak}</Text>
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("home.streaks")}</Text>
+            </View>
+          )}
+          {avgCalories > 0 && (
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ color: theme.secondary, fontFamily: "Inter_700Bold", fontSize: 18 }}>{avgCalories}</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("home.caloriesConsumed")}</Text>
             </View>
           )}
         </View>
@@ -1164,7 +1171,7 @@ export default function HomeScreen() {
         )}
 
         <Animated.View entering={FadeInDown.delay(320).duration(400)} style={styles.section}>
-          <WeeklyReportCard theme={theme} streaksData={streaksData} workoutsData={workoutsData} />
+          <WeeklyReportCard theme={theme} streaksData={streaksData} workoutsData={workoutsData} mealsData={mealsData} />
         </Animated.View>
       </ScrollView>
 

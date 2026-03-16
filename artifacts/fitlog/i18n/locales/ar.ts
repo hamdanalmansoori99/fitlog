@@ -254,7 +254,7 @@ export default {
     viewInsights: "عرض جميع الرؤى",
     weeklyReport: "التقرير الأسبوعي",
     comingSoon: "قريباً",
-    weeklyReportDesc: "سيظهر ملخصك الأسبوعي المخصص هنا قريباً",
+    weeklyReportDesc: "أكمل أسبوعك الأول من التتبع لفتح تقريرك الأسبوعي",
     workoutDone: "تم التمرين",
     workoutDoneMessage: "أحسنت! لقد أكملت تمرينك لليوم.",
     viewWorkout: "عرض التمرين",
