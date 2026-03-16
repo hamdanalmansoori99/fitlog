@@ -64,7 +64,7 @@ function StatTile({
 
 export default function WeeklyReportScreen() {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const shareCardRef = useRef<View>(null);
   const [shareModalVisible, setShareModalVisible] = useState(false);
@@ -304,6 +304,7 @@ export default function WeeklyReportScreen() {
               subline={insights[0] ?? ""}
               date={new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" })}
               stats={shareStats}
+              rtl={i18n.dir() === "rtl"}
             />
 
             <View style={{ flexDirection: "row", gap: 12 }}>

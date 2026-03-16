@@ -113,6 +113,7 @@ export default function ExecuteWorkoutScreen() {
   const [prModal, setPrModal] = useState<{ exercise: string; weight: number; reps: number; previousBest: number; previousBestReps?: number } | null>(null);
 
   const prShareRef = useRef<View>(null);
+  const completionShareRef = useRef<View>(null);
 
   // Store next position when entering rest phase
   const pendingRef = useRef<{ exIdx: number; setIdx: number } | null>(null);
@@ -347,6 +348,32 @@ export default function ExecuteWorkoutScreen() {
       if (prModal) {
         await Share.share({ message: t("pr.prSet", { exercise: prModal.exercise, weight: prModal.weight, reps: prModal.reps }) }).catch(() => {});
       }
+    }
+  }
+
+  async function shareCompletion() {
+    try {
+      if (Platform.OS === "web") {
+        const uri = await captureRef(completionShareRef, { format: "png", quality: 1, result: "data-uri" });
+        const link = document.createElement("a");
+        link.href = uri;
+        link.download = "fitlog-workout.png";
+        link.click();
+      } else {
+        const uri = await captureRef(completionShareRef, { format: "jpg", quality: 0.95 });
+        const available = await Sharing.isAvailableAsync();
+        if (available) {
+          await Sharing.shareAsync(uri, { mimeType: "image/jpeg", dialogTitle: t("workouts.shareWorkoutBtn") });
+        } else {
+          const durationMin = Math.round(elapsedSeconds / 60);
+          const completedSets = exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length;
+          await Share.share({ message: `${template?.name ?? ""} — ${durationMin} min, ${completedSets} sets done via FitLog` });
+        }
+      }
+    } catch {
+      const durationMin = Math.round(elapsedSeconds / 60);
+      const completedSets = exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length;
+      await Share.share({ message: `${template?.name ?? ""} — ${durationMin} min, ${completedSets} sets done via FitLog` }).catch(() => {});
     }
   }
 
@@ -744,6 +771,13 @@ export default function ExecuteWorkoutScreen() {
           <Animated.View entering={FadeInDown.delay(280).duration(400)} style={{ gap: 10 }}>
             <Button title={t("workouts.saveWorkout")} onPress={handleSave} loading={saveMutation.isPending} />
             <Pressable
+              onPress={shareCompletion}
+              style={[{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 12, borderWidth: 1 }, { borderColor: theme.primary + "50", backgroundColor: theme.primaryDim }]}
+            >
+              <Feather name="share-2" size={16} color={theme.primary} />
+              <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("workouts.shareWorkoutBtn")}</Text>
+            </Pressable>
+            <Pressable
               onPress={() => {
                 Alert.alert(t("workouts.discardWorkoutTitle"), t("workouts.discardWorkoutMessage"), [
                   { text: t("workouts.keepLabel"), style: "cancel" },
@@ -755,6 +789,30 @@ export default function ExecuteWorkoutScreen() {
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("workouts.discardSession")}</Text>
             </Pressable>
           </Animated.View>
+
+          {/* Hidden ShareCard for completion image capture — off-screen */}
+          <View style={{ position: "absolute", left: -2000, top: 0 }}>
+            <ShareCard
+              ref={completionShareRef}
+              type="workout"
+              headline={template.name || t("workouts.workoutComplete")}
+              stats={[
+                { label: "min", value: String(Math.round(elapsedSeconds / 60)), accent: false },
+                { label: t("workouts.setsDone"), value: String(exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length), accent: true },
+                { label: t("workouts.estCalories"), value: `~${estimateCals(Math.round(elapsedSeconds / 60), template.activityType)}`, accent: false },
+                { label: "exercises", value: String(exercises.filter((e) => !e.skipped && e.sets.some((s) => s.completed)).length), accent: false },
+              ]}
+              exercises={exercises.filter((e) => !e.skipped && e.sets.some((s) => s.completed)).map((ex) => {
+                const done = ex.sets.filter((s) => s.completed);
+                const best = done.reduce((b: any, s: any) => parseFloat(s.weight || "0") > parseFloat(b?.weight || "0") ? s : b, null);
+                const summary = best?.weight && parseFloat(best.weight) > 0
+                  ? `${best.weight} kg × ${best.reps}`
+                  : `${done.length} sets`;
+                return { name: ex.name, summary };
+              })}
+              rtl={i18n.dir() === "rtl"}
+            />
+          </View>
         </ScrollView>
 
         {renderPRModal()}
