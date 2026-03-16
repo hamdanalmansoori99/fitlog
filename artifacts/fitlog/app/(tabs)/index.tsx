@@ -358,21 +358,25 @@ function CoachCtaCard({ theme }: { theme: AppTheme }) {
 
 // ─── Streak Card (prominent) ──────────────────────────────────────────────────
 
-function StreakSummaryCard({ data, theme }: { data: any; theme: AppTheme }) {
+function StreakSummaryCard({ streaksData, achievementsData, theme }: { streaksData: any; achievementsData?: any; theme: AppTheme }) {
   const { t } = useTranslation();
-  if (!data) return null;
-  const { streaks, weeklyScore } = data;
-  const score = weeklyScore?.score ?? 0;
+  if (!streaksData) return null;
+
+  const workoutCurrent = streaksData.currentWorkoutStreak ?? 0;
+  const mealCurrent = streaksData.currentMealStreak ?? 0;
+  const hydrationCurrent = streaksData.currentHydrationStreak ?? 0;
+
+  const score = achievementsData?.weeklyScore?.score ?? 0;
   const scoreColor = score >= 70 ? theme.primary : score >= 40 ? (theme.warning || "#ffab40") : theme.danger;
 
   const items = [
-    { icon: "activity" as const, value: streaks?.workout?.current ?? 0, label: t("home.workout"), color: "#00e676" },
-    { icon: "coffee" as const, value: streaks?.meal?.current ?? 0, label: t("home.mealsLabel"), color: "#ffab40" },
-    { icon: "droplet" as const, value: streaks?.hydration?.current ?? 0, label: t("home.hydration"), color: "#448aff" },
+    { icon: "activity" as const, value: workoutCurrent, label: t("home.workout"), color: "#00e676" },
+    { icon: "coffee" as const, value: mealCurrent, label: t("home.mealsLabel"), color: "#ffab40" },
+    { icon: "droplet" as const, value: hydrationCurrent, label: t("home.hydration"), color: "#448aff" },
     { icon: "trending-up" as const, value: score, label: t("home.thisWeek"), color: scoreColor, suffix: "%" },
   ];
 
-  const hasActiveStreak = (streaks?.workout?.current ?? 0) > 0 || (streaks?.meal?.current ?? 0) > 0;
+  const hasActiveStreak = workoutCurrent > 0 || mealCurrent > 0;
 
   return (
     <View style={{ gap: 8 }}>
@@ -425,16 +429,16 @@ function StreakSummaryCard({ data, theme }: { data: any; theme: AppTheme }) {
 // ─── Don't Break Streak Banner ───────────────────────────────────────────────
 
 function DontBreakStreakBanner({
-  achievementsData, workoutsData, mealsData, theme,
+  streaksData, workoutsData, mealsData, theme,
 }: {
-  achievementsData: any; workoutsData: any; mealsData: any; theme: AppTheme;
+  streaksData: any; workoutsData: any; mealsData: any; theme: AppTheme;
 }) {
   const { t } = useTranslation();
   const hour = new Date().getHours();
   if (hour < 18) return null;
 
-  const workoutStreak = achievementsData?.streaks?.workout?.current ?? 0;
-  const mealStreak = achievementsData?.streaks?.meal?.current ?? 0;
+  const workoutStreak = streaksData?.currentWorkoutStreak ?? 0;
+  const mealStreak = streaksData?.currentMealStreak ?? 0;
 
   if (workoutStreak < 1 && mealStreak < 1) return null;
 
@@ -451,8 +455,10 @@ function DontBreakStreakBanner({
   const mealCount = Array.isArray(meals) ? meals.length : 0;
   const hasMealToday = mealCount > 0 || (mealsData?.dailyTotals?.calories ?? 0) > 0;
 
-  const showWorkoutCta = workoutStreak >= 1 && !hasWorkoutToday;
-  const showMealCta = mealStreak >= 1 && !hasMealToday;
+  if (hasWorkoutToday || hasMealToday) return null;
+
+  const showWorkoutCta = workoutStreak >= 1;
+  const showMealCta = mealStreak >= 1;
 
   if (!showWorkoutCta && !showMealCta) return null;
 
@@ -510,20 +516,20 @@ function DontBreakStreakBanner({
 
 const MILESTONE_THRESHOLDS = [3, 7, 14, 30, 60, 100];
 
-function MilestoneCelebrationModal({ achievementsData, theme }: { achievementsData: any; theme: AppTheme }) {
+function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; theme: AppTheme }) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [visible, setVisible] = useState(false);
   const [milestoneValue, setMilestoneValue] = useState(0);
 
   useEffect(() => {
-    if (!achievementsData?.streaks || !user?.id) return;
+    if (!streaksData || !user?.id) return;
 
     const checkMilestones = async () => {
       const streakEntries: { type: string; value: number }[] = [
-        { type: "workout", value: achievementsData.streaks.workout?.current ?? 0 },
-        { type: "meal", value: achievementsData.streaks.meal?.current ?? 0 },
-        { type: "hydration", value: achievementsData.streaks.hydration?.current ?? 0 },
+        { type: "workout", value: streaksData.currentWorkoutStreak ?? 0 },
+        { type: "meal", value: streaksData.currentMealStreak ?? 0 },
+        { type: "hydration", value: streaksData.currentHydrationStreak ?? 0 },
       ];
 
       for (const entry of streakEntries) {
@@ -541,7 +547,7 @@ function MilestoneCelebrationModal({ achievementsData, theme }: { achievementsDa
     };
 
     checkMilestones();
-  }, [achievementsData, user?.id]);
+  }, [streaksData, user?.id]);
 
   if (!visible) return null;
 
@@ -631,16 +637,22 @@ export default function HomeScreen() {
     staleTime: 300000,
   });
 
+  const { data: streaksData, refetch: refetchStreaks } = useQuery({
+    queryKey: ["streaks"],
+    queryFn: api.getStreaks,
+    staleTime: 60000,
+  });
+
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
       refetchMeals(), refetchProfile(), refetchWorkouts(),
-      refetchRecovery(), refetchAchievements(),
+      refetchRecovery(), refetchAchievements(), refetchStreaks(),
     ]);
     setRefreshing(false);
-  }, [refetchMeals, refetchProfile, refetchWorkouts, refetchRecovery, refetchAchievements]);
+  }, [refetchMeals, refetchProfile, refetchWorkouts, refetchRecovery, refetchAchievements, refetchStreaks]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -713,17 +725,17 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ── Streaks (prominent, right after greeting) ── */}
-        {achievementsData && (
+        {streaksData && (
           <Animated.View entering={FadeInDown.delay(40).duration(400)} style={styles.section}>
-            <StreakSummaryCard data={achievementsData} theme={theme} />
+            <StreakSummaryCard streaksData={streaksData} achievementsData={achievementsData} theme={theme} />
           </Animated.View>
         )}
 
         {/* ── Don't Break Streak Banner ── */}
-        {achievementsData && (
+        {streaksData && (
           <View style={styles.section}>
             <DontBreakStreakBanner
-              achievementsData={achievementsData}
+              streaksData={streaksData}
               workoutsData={workoutsData}
               mealsData={mealsData}
               theme={theme}
@@ -814,8 +826,8 @@ export default function HomeScreen() {
         </Animated.View>
       </ScrollView>
 
-      {achievementsData && (
-        <MilestoneCelebrationModal achievementsData={achievementsData} theme={theme} />
+      {streaksData && (
+        <MilestoneCelebrationModal streaksData={streaksData} theme={theme} />
       )}
     </View>
   );

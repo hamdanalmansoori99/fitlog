@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
+import { rtlIcon, dateLocale } from "@/lib/rtl";
 
 const MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -22,8 +23,6 @@ const MILESTONE_LABELS: Record<number, string> = {
   60: "streaks.milestone60",
   100: "streaks.milestone100",
 };
-
-const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 function StreakRing({
   current, best, label, icon, color, theme,
@@ -121,14 +120,26 @@ function toLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function getLocalizedDayLabels(locale: string): string[] {
+  const labels: string[] = [];
+  const base = new Date(2024, 0, 7);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    labels.push(d.toLocaleDateString(locale, { weekday: "narrow" }));
+  }
+  return labels;
+}
+
 function ActivityCalendar({
   workoutsData, mealsData, theme,
 }: {
   workoutsData: any; mealsData: any; theme: any;
 }) {
   const { t } = useTranslation();
+  const locale = dateLocale();
 
-  const { activeDays, weeks, monthLabel } = useMemo(() => {
+  const { activeDays, weeks, monthLabel, dayLabels } = useMemo(() => {
     const active = new Set<string>();
 
     const workouts = workoutsData?.workouts || [];
@@ -169,10 +180,11 @@ function ActivityCalendar({
       calWeeks.push(week);
     }
 
-    const label = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const label = today.toLocaleDateString(locale, { month: "long", year: "numeric" });
+    const localDayLabels = getLocalizedDayLabels(locale);
 
-    return { activeDays: active, weeks: calWeeks, monthLabel: label };
-  }, [workoutsData, mealsData]);
+    return { activeDays: active, weeks: calWeeks, monthLabel: label, dayLabels: localDayLabels };
+  }, [workoutsData, mealsData, locale]);
 
   const todayStr = toLocalDateStr(new Date());
 
@@ -189,7 +201,7 @@ function ActivityCalendar({
       </Text>
 
       <View style={{ flexDirection: "row", justifyContent: "space-around", marginBottom: 2 }}>
-        {DAY_LABELS.map((d, i) => (
+        {dayLabels.map((d, i) => (
           <Text key={i} style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11, width: 32, textAlign: "center" }}>
             {d}
           </Text>
@@ -259,9 +271,9 @@ export default function StreakHistoryScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const { data: achievementsData, isLoading } = useQuery({
-    queryKey: ["achievements"],
-    queryFn: api.getAchievements,
+  const { data: streaksData, isLoading } = useQuery({
+    queryKey: ["streaks"],
+    queryFn: api.getStreaks,
     staleTime: 60000,
   });
 
@@ -277,13 +289,12 @@ export default function StreakHistoryScreen() {
     staleTime: 60000,
   });
 
-  const streaks = achievementsData?.streaks;
-  const workoutCurrent = streaks?.workout?.current ?? 0;
-  const workoutBest = streaks?.workout?.best ?? 0;
-  const mealCurrent = streaks?.meal?.current ?? 0;
-  const mealBest = streaks?.meal?.best ?? 0;
-  const hydrationCurrent = streaks?.hydration?.current ?? 0;
-  const hydrationBest = streaks?.hydration?.best ?? 0;
+  const workoutCurrent = streaksData?.currentWorkoutStreak ?? 0;
+  const workoutBest = streaksData?.longestWorkoutStreak ?? 0;
+  const mealCurrent = streaksData?.currentMealStreak ?? 0;
+  const mealBest = streaksData?.longestMealStreak ?? 0;
+  const hydrationCurrent = streaksData?.currentHydrationStreak ?? 0;
+  const hydrationBest = streaksData?.longestHydrationStreak ?? 0;
 
   const bestOverall = Math.max(workoutBest, mealBest, hydrationBest);
 
@@ -291,7 +302,7 @@ export default function StreakHistoryScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
         </Pressable>
         <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 18 }}>
           {t("streaks.title")}
