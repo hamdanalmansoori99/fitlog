@@ -8,27 +8,24 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import Animated, { FadeInDown, FadeIn, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { dateLocale } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
-import { ActivityItem } from "@/components/ActivityItem";
 import { Card } from "@/components/ui/Card";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import {
   getTodayRecommendation,
-  getCoachInsights,
   TodayRecommendation,
-  CoachInsight,
   UserCoachProfile,
   RecoveryContext,
 } from "@/lib/coachEngine";
 
 // ─── Calorie Ring ─────────────────────────────────────────────────────────────
 
-const RING_SIZE = 130;
+const RING_SIZE = 120;
 const STROKE = 12;
 const R = (RING_SIZE - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
@@ -64,7 +61,7 @@ function CalorieRing({
           </G>
         </Svg>
         <View style={{ alignItems: "center" }}>
-          <Text style={{ color: over ? ringColor : theme.text, fontFamily: "Inter_700Bold", fontSize: 24, lineHeight: 28 }}>
+          <Text style={{ color: over ? ringColor : theme.text, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 26 }}>
             {remaining}
           </Text>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
@@ -79,28 +76,7 @@ function CalorieRing({
   );
 }
 
-// ─── Protein Bar ──────────────────────────────────────────────────────────────
-
-function MacroBar({
-  label, value, goal, color, theme,
-}: { label: string; value: number; goal: number; color: string; theme: any }) {
-  const pct = goal > 0 ? Math.min(value / goal, 1) : 0;
-  return (
-    <View style={{ gap: 4 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>{label}</Text>
-        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
-          {value}g / {goal}g
-        </Text>
-      </View>
-      <View style={{ height: 6, backgroundColor: theme.border, borderRadius: 3, overflow: "hidden" }}>
-        <View style={{ height: 6, width: `${pct * 100}%`, backgroundColor: color, borderRadius: 3 }} />
-      </View>
-    </View>
-  );
-}
-
-// ─── Nutrition Card ───────────────────────────────────────────────────────────
+// ─── Nutrition Card — calorie ring + protein ──────────────────────────────────
 
 function NutritionCard({ mealsData, theme }: { mealsData: any; theme: any }) {
   const { t } = useTranslation();
@@ -108,30 +84,45 @@ function NutritionCard({ mealsData, theme }: { mealsData: any; theme: any }) {
   const calorieGoal = mealsData?.calorieGoal ?? 2000;
   const consumed = totals?.calories ?? 0;
   const protein = totals?.proteinG ?? 0;
-  const carbs = totals?.carbsG ?? 0;
-  const fat = totals?.fatG ?? 0;
   const proteinGoal = Math.round(calorieGoal * 0.3 / 4);
-  const carbGoal = Math.round(calorieGoal * 0.45 / 4);
-  const fatGoal = Math.round(calorieGoal * 0.25 / 9);
+  const proteinPct = proteinGoal > 0 ? Math.min(protein / proteinGoal, 1) : 0;
 
   return (
-    <Card style={{ gap: 16 }}>
+    <Card style={{ gap: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
           {t("home.nutrition")}
         </Text>
-        <Pressable onPress={() => router.push("/(tabs)/meals" as any)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("home.viewAll")}</Text>
+        <Pressable
+          onPress={() => router.push("/(tabs)/meals" as any)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+        >
+          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+            {t("home.viewAll")}
+          </Text>
           <Feather name="chevron-right" size={13} color={theme.primary} />
         </Pressable>
       </View>
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
         <CalorieRing consumed={consumed} goal={calorieGoal} theme={theme} />
-        <View style={{ flex: 1, gap: 12 }}>
-          <MacroBar label={t("home.protein")} value={protein} goal={proteinGoal} color={theme.primary} theme={theme} />
-          <MacroBar label={t("home.carbs")} value={carbs} goal={carbGoal} color={theme.secondary} theme={theme} />
-          <MacroBar label={t("home.fat")} value={fat} goal={fatGoal} color={theme.warning || "#ffab40"} theme={theme} />
+        <View style={{ flex: 1, gap: 8 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+              {t("home.protein")}
+            </Text>
+            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+              {protein}g / {proteinGoal}g
+            </Text>
+          </View>
+          <View style={{ height: 8, backgroundColor: theme.border, borderRadius: 4, overflow: "hidden" }}>
+            <View style={{ height: 8, width: `${proteinPct * 100}%`, backgroundColor: theme.primary, borderRadius: 4 }} />
+          </View>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 2 }}>
+            {protein >= proteinGoal
+              ? "✓ Protein goal met!"
+              : `${proteinGoal - protein}g protein to go`}
+          </Text>
         </View>
       </View>
     </Card>
@@ -144,15 +135,29 @@ function QuickActions({ theme }: { theme: any }) {
   const { t } = useTranslation();
 
   const actions = [
-    { label: t("home.logWorkout"), icon: "activity" as const, color: theme.primary, onPress: () => router.push("/workouts/log" as any) },
-    { label: t("home.logMeal"), icon: "coffee" as const, color: theme.pink || "#f48fb1", onPress: () => router.push("/meals/add" as any) },
-    { label: t("home.scanMeal"), icon: "camera" as const, color: theme.secondary, onPress: () => router.push("/(tabs)/scan" as any) },
-    { label: t("home.startWorkout"), icon: "play" as const, color: "#00e676", onPress: () => router.push("/(tabs)/workouts" as any) },
+    {
+      label: t("home.logWorkout"), icon: "activity" as const,
+      color: theme.primary, onPress: () => router.push("/workouts/log" as any),
+    },
+    {
+      label: t("home.logMeal"), icon: "coffee" as const,
+      color: theme.pink || "#f48fb1", onPress: () => router.push("/meals/add" as any),
+    },
+    {
+      label: t("home.scanMeal"), icon: "camera" as const,
+      color: theme.secondary, onPress: () => router.push("/(tabs)/scan" as any),
+    },
+    {
+      label: t("home.startWorkout"), icon: "play" as const,
+      color: "#00e676", onPress: () => router.push("/(tabs)/workouts" as any),
+    },
   ];
 
   return (
     <View style={{ gap: 10 }}>
-      <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("home.quickActions")}</Text>
+      <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+        {t("home.quickActions")}
+      </Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         {actions.map((a) => (
           <Pressable
@@ -196,15 +201,19 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
             <Feather name="moon" size={18} color={theme.secondary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("home.aiCoach")}</Text>
-            <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>{t("home.restDay")}</Text>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+              {t("home.aiCoach")}
+            </Text>
+            <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>
+              {t("home.restDay")}
+            </Text>
           </View>
         </View>
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
           {t("home.restDayMessage")}
         </Text>
         <Pressable
-          onPress={() => router.push("/(tabs)/workouts")}
+          onPress={() => router.push("/(tabs)/workouts" as any)}
           style={[styles.secondaryBtn, { borderColor: theme.border }]}
         >
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
@@ -223,7 +232,9 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
           <Feather name="cpu" size={18} color={theme.primary} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("home.todaysRecommendedWorkout")}</Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+            {t("home.todaysRecommendedWorkout")}
+          </Text>
           <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }} numberOfLines={1}>
             {rec.template.name}
           </Text>
@@ -260,11 +271,16 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
       )}
 
       <Pressable
-        onPress={() => router.push({ pathname: "/workouts/template" as any, params: { id: rec.template.id, whyGoodForYou: rec.whyGoodForYou } })}
+        onPress={() => router.push({
+          pathname: "/workouts/template" as any,
+          params: { id: rec.template.id, whyGoodForYou: rec.whyGoodForYou },
+        })}
         style={[styles.ctaBtn, { backgroundColor: theme.primary }]}
       >
         <Feather name="play" size={15} color="#0f0f1a" />
-        <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>{t("home.startWorkout")}</Text>
+        <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>
+          {t("home.startWorkout")}
+        </Text>
       </Pressable>
     </Card>
   );
@@ -279,8 +295,12 @@ function RestDayCard({ theme }: { theme: any }) {
           <Feather name="moon" size={18} color={theme.primary} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("home.aiCoach")}</Text>
-          <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>{t("home.restAndRecover")}</Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+            {t("home.aiCoach")}
+          </Text>
+          <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>
+            {t("home.restAndRecover")}
+          </Text>
         </View>
       </View>
       <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
@@ -291,7 +311,9 @@ function RestDayCard({ theme }: { theme: any }) {
         style={[styles.ctaBtn, { backgroundColor: theme.primaryDim }]}
       >
         <Feather name="activity" size={15} color={theme.primary} />
-        <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("home.logWorkoutAnyway")}</Text>
+        <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+          {t("home.logWorkoutAnyway")}
+        </Text>
       </Pressable>
     </Card>
   );
@@ -306,8 +328,12 @@ function CoachCtaCard({ theme }: { theme: any }) {
           <Feather name="zap" size={18} color={theme.secondary} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("home.aiCoach")}</Text>
-          <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>{t("home.unlockRecommendations")}</Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+            {t("home.aiCoach")}
+          </Text>
+          <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>
+            {t("home.unlockRecommendations")}
+          </Text>
         </View>
       </View>
       <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
@@ -318,13 +344,15 @@ function CoachCtaCard({ theme }: { theme: any }) {
         style={[styles.ctaBtn, { backgroundColor: theme.secondary }]}
       >
         <Feather name="zap" size={15} color="#0f0f1a" />
-        <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>{t("home.setUpAICoach")}</Text>
+        <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>
+          {t("home.setUpAICoach")}
+        </Text>
       </Pressable>
     </Card>
   );
 }
 
-// ─── Streak Summary Card ──────────────────────────────────────────────────────
+// ─── Streak Card ──────────────────────────────────────────────────────────────
 
 function StreakSummaryCard({ data, theme }: { data: any; theme: any }) {
   const { t } = useTranslation();
@@ -338,8 +366,13 @@ function StreakSummaryCard({ data, theme }: { data: any; theme: any }) {
   return (
     <Card style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("home.streaks")}</Text>
-        <Pressable onPress={() => router.push("/achievements" as any)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+          {t("home.streaks")}
+        </Text>
+        <Pressable
+          onPress={() => router.push("/achievements" as any)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+        >
           <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
             {earned}/{total} {t("home.badges")}
           </Text>
@@ -355,22 +388,33 @@ function StreakSummaryCard({ data, theme }: { data: any; theme: any }) {
           <View key={s.label} style={{ flex: 1, alignItems: "center", gap: 3 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Feather name={s.icon} size={13} color={s.color} />
-              <Text style={{ color: s.color, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 26 }}>{s.value}</Text>
+              <Text style={{ color: s.color, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 26 }}>
+                {s.value}
+              </Text>
             </View>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{s.label}</Text>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+              {s.label}
+            </Text>
           </View>
         ))}
         <View style={{ width: 1, backgroundColor: theme.border, height: 40, marginHorizontal: 4 }} />
-        <Pressable onPress={() => router.push("/achievements" as any)} style={{ flex: 1, alignItems: "center", gap: 3 }}>
-          <Text style={{ color: scoreColor, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 26 }}>{score}%</Text>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("home.thisWeek")}</Text>
+        <Pressable
+          onPress={() => router.push("/achievements" as any)}
+          style={{ flex: 1, alignItems: "center", gap: 3 }}
+        >
+          <Text style={{ color: scoreColor, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 26 }}>
+            {score}%
+          </Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+            {t("home.thisWeek")}
+          </Text>
         </Pressable>
       </View>
     </Card>
   );
 }
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getGreeting(t: (key: string) => string) {
   const h = new Date().getHours();
@@ -380,7 +424,9 @@ function getGreeting(t: (key: string) => string) {
 }
 
 function formatDate() {
-  return new Date().toLocaleDateString(dateLocale(), { weekday: "long", month: "long", day: "numeric" });
+  return new Date().toLocaleDateString(dateLocale(), {
+    weekday: "long", month: "long", day: "numeric",
+  });
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -419,29 +465,18 @@ export default function HomeScreen() {
     staleTime: 300000,
   });
 
-  const { data: recentData, isLoading: recentLoading, refetch: refetchRecent } = useQuery({
-    queryKey: ["recentActivity"],
-    queryFn: api.getRecentActivity,
-  });
-
-  const { data: todayStats, refetch: refetchStats } = useQuery({
-    queryKey: ["todayStats"],
-    queryFn: api.getTodayStats,
-  });
-
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
       refetchMeals(), refetchProfile(), refetchWorkouts(),
-      refetchRecovery(), refetchAchievements(), refetchRecent(), refetchStats(),
+      refetchRecovery(), refetchAchievements(),
     ]);
     setRefreshing(false);
-  }, []);
+  }, [refetchMeals, refetchProfile, refetchWorkouts, refetchRecovery, refetchAchievements]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const hasCoachOnboarding = !!profile?.coachOnboardingComplete;
 
@@ -483,12 +518,12 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: 100 + bottomPad }}
+        contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
       >
-        {/* ── Header ── */}
+        {/* ── Greeting Header ── */}
         <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
           <View>
             <Text style={[styles.greeting, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -511,7 +546,7 @@ export default function HomeScreen() {
           </Pressable>
         </Animated.View>
 
-        {/* ── Nutrition Ring ── */}
+        {/* ── Nutrition (calorie ring + protein) ── */}
         <Animated.View entering={FadeInDown.delay(60).duration(400)} style={styles.section}>
           {mealsData ? (
             <NutritionCard mealsData={mealsData} theme={theme} />
@@ -522,8 +557,7 @@ export default function HomeScreen() {
                 <SkeletonBox width={RING_SIZE} height={RING_SIZE} borderRadius={RING_SIZE / 2} />
                 <View style={{ flex: 1, gap: 10 }}>
                   <SkeletonBox width="100%" height={10} borderRadius={5} />
-                  <SkeletonBox width="100%" height={10} borderRadius={5} />
-                  <SkeletonBox width="100%" height={10} borderRadius={5} />
+                  <SkeletonBox width="80%" height={10} borderRadius={5} />
                 </View>
               </View>
             </Card>
@@ -539,7 +573,9 @@ export default function HomeScreen() {
             {hasCoachOnboarding && (
               <View style={[styles.aiPill, { backgroundColor: theme.primaryDim }]}>
                 <Feather name="cpu" size={10} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 10 }}>{t("home.aiCoach")}</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 10 }}>
+                  {t("home.aiCoach")}
+                </Text>
               </View>
             )}
           </View>
@@ -575,7 +611,7 @@ export default function HomeScreen() {
           </Animated.View>
         )}
 
-        {/* ── AI Coach Shortcut ── */}
+        {/* ── AI Coach Shortcut (slim row) ── */}
         <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.section}>
           <Pressable
             onPress={() => router.push("/coach/chat" as any)}
@@ -597,63 +633,6 @@ export default function HomeScreen() {
             </View>
             <Feather name="chevron-right" size={16} color={theme.textMuted} />
           </Pressable>
-        </Animated.View>
-
-        {/* ── Recent Activity ── */}
-        <Animated.View entering={FadeInDown.delay(280).duration(400)} style={styles.section}>
-          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15, marginBottom: 10 }}>
-            {t("home.recentActivity")}
-          </Text>
-          <Card padding={0}>
-            <View style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
-              {recentLoading ? (
-                <View style={{ gap: 12, paddingVertical: 8 }}>
-                  {[0, 1, 2].map(i => (
-                    <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 6 }}>
-                      <SkeletonBox width={40} height={40} borderRadius={12} />
-                      <View style={{ flex: 1, gap: 6 }}>
-                        <SkeletonBox width="55%" height={13} />
-                        <SkeletonBox width="35%" height={11} />
-                      </View>
-                      <SkeletonBox width={30} height={11} borderRadius={4} />
-                    </View>
-                  ))}
-                </View>
-              ) : recentData?.activities?.length > 0 ? (
-                recentData.activities.map((activity: any) => (
-                  <ActivityItem
-                    key={`${activity.type}-${activity.id}`}
-                    type={activity.type}
-                    name={activity.name}
-                    date={activity.date}
-                    keyStat={activity.keyStat}
-                    activityType={activity.activityType}
-                  />
-                ))
-              ) : (
-                <Animated.View entering={ZoomIn.duration(400)} style={styles.emptyActivity}>
-                  <View style={[styles.emptyIconWrap, { backgroundColor: theme.primaryDim }]}>
-                    <Feather name="activity" size={28} color={theme.primary} />
-                  </View>
-                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>
-                    {t("home.nothingLoggedYet")}
-                  </Text>
-                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", lineHeight: 18 }}>
-                    {t("home.tapPlusToLog")}
-                  </Text>
-                  <Pressable
-                    onPress={() => router.push("/workouts/log")}
-                    style={[styles.emptyBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "50" }]}
-                  >
-                    <Feather name="plus" size={14} color={theme.primary} />
-                    <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-                      {t("home.logAWorkout")}
-                    </Text>
-                  </Pressable>
-                </Animated.View>
-              )}
-            </View>
-          </Card>
         </Animated.View>
       </ScrollView>
     </View>
@@ -712,17 +691,5 @@ const styles = StyleSheet.create({
   coachIcon: {
     width: 38, height: 38, borderRadius: 10,
     alignItems: "center", justifyContent: "center",
-  },
-  emptyActivity: {
-    alignItems: "center", gap: 10, paddingVertical: 32,
-  },
-  emptyIconWrap: {
-    width: 64, height: 64, borderRadius: 20,
-    alignItems: "center", justifyContent: "center", marginBottom: 4,
-  },
-  emptyBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 20, paddingVertical: 10,
-    borderRadius: 12, borderWidth: 1, marginTop: 4,
   },
 });
