@@ -970,6 +970,14 @@ export default function ExecuteWorkoutScreen() {
                         </Text>
                       )}
                     </View>
+                    {isActive && progression?.rationale ? (
+                      <Text
+                        numberOfLines={1}
+                        style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, opacity: 0.8, writingDirection: isRTL ? "rtl" : "ltr" }}
+                      >
+                        {progression.rationale}
+                      </Text>
+                    ) : null}
                   </View>
                 )}
                 <View
