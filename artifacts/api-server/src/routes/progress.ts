@@ -409,7 +409,7 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
     const thisWeekMeals = await db.select().from(mealsTable)
       .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, thisMonday), lte(mealsTable.date, nowDate)));
     const lastWeekMeals = await db.select().from(mealsTable)
-      .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, lastMonday), lte(mealsTable.date, thisMonday)));
+      .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, lastMonday), lt(mealsTable.date, thisMonday)));
 
     const measurements = await db.select().from(bodyMeasurementsTable)
       .where(and(eq(bodyMeasurementsTable.userId, user.id), gte(bodyMeasurementsTable.date, twoWeeksAgo)))
@@ -434,14 +434,15 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
     const thisNutrition = avgNutrition(thisWeekMeals);
     const lastNutrition = avgNutrition(lastWeekMeals);
 
-    const thisWeekWeightMeas = measurements.filter(m => new Date(m.date) >= thisMonday && m.weightKg).map(m => m.weightKg!);
-    const lastWeekWeightMeas = measurements.filter(m => new Date(m.date) >= lastMonday && new Date(m.date) < thisMonday && m.weightKg).map(m => m.weightKg!);
+    // Weight-change: compare most-recent measurement this week vs most-recent measurement before this week
+    const thisWeekWeightMeas = measurements.filter(m => new Date(m.date) >= thisMonday && m.weightKg);
+    const preWeekWeightMeas = measurements.filter(m => new Date(m.date) < thisMonday && m.weightKg);
     let weightChangKg: number | null = null;
-    // Compare latest of this week to latest of last week (most recent vs most recent)
-    if (thisWeekWeightMeas.length > 0 && lastWeekWeightMeas.length > 0) {
-      const latestThis = thisWeekWeightMeas[thisWeekWeightMeas.length - 1];
-      const latestLast = lastWeekWeightMeas[lastWeekWeightMeas.length - 1];
-      weightChangKg = parseFloat((latestThis - latestLast).toFixed(1));
+    if (thisWeekWeightMeas.length > 0 && preWeekWeightMeas.length > 0) {
+      // measurements are ordered by date asc, so last element = most recent
+      const latestThis = thisWeekWeightMeas[thisWeekWeightMeas.length - 1].weightKg!;
+      const latestPre = preWeekWeightMeas[preWeekWeightMeas.length - 1].weightKg!;
+      weightChangKg = parseFloat((latestThis - latestPre).toFixed(1));
     }
 
     const thisWeekSets = await db.select({
