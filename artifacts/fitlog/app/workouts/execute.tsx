@@ -182,6 +182,7 @@ export default function ExecuteWorkoutScreen() {
     return m;
   }, [historyData]);
 
+  const touchedSetsRef = useRef<Set<string>>(new Set());
   const autoPopulatedRef = useRef(false);
   useEffect(() => {
     if (autoPopulatedRef.current || !isGym) return;
@@ -189,19 +190,21 @@ export default function ExecuteWorkoutScreen() {
     if (keys.length === 0 || exercises.length === 0) return;
     autoPopulatedRef.current = true;
     setExercises((prev) =>
-      prev.map((ex) => {
+      prev.map((ex, exI) => {
         const sessions = historyMap[ex.name];
         if (!sessions || sessions.length === 0) return ex;
         const prog = calculateStrengthTarget(sessions);
         if (!prog.suggestedWeightKg && !prog.suggestedReps) return ex;
         return {
           ...ex,
-          sets: ex.sets.map((s) => {
+          sets: ex.sets.map((s, si) => {
             if (s.completed) return s;
+            const key = `${exI}-${si}`;
+            if (touchedSetsRef.current.has(key)) return s;
             return {
               ...s,
-              weight: (prog.suggestedWeightKg && !s.weight) ? String(prog.suggestedWeightKg) : s.weight,
-              reps: (prog.suggestedReps && !s.reps) ? String(prog.suggestedReps) : s.reps,
+              weight: prog.suggestedWeightKg ? String(prog.suggestedWeightKg) : s.weight,
+              reps: prog.suggestedReps ? String(prog.suggestedReps) : s.reps,
             };
           }),
         };
@@ -255,6 +258,7 @@ export default function ExecuteWorkoutScreen() {
   // ── Event handlers ─────────────────────────────────────────────────────────
 
   const updateSet = useCallback((exI: number, sI: number, field: "reps" | "weight", val: string) => {
+    touchedSetsRef.current.add(`${exI}-${sI}`);
     setExercises((prev) => {
       const next = prev.map((e, ei) =>
         ei !== exI ? e : {
