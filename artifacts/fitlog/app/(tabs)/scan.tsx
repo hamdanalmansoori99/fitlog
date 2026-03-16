@@ -1,0 +1,990 @@
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  KeyboardAvoidingView,
+  Image,
+} from "react-native";
+import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  SlideInDown,
+  SlideOutDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+  interpolate,
+} from "react-native-reanimated";
+import { Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
+import { useTheme } from "@/hooks/useTheme";
+import { api, ScanMealItem, MacroTotals } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import { useTranslation } from "react-i18next";
+
+type ScreenState = "camera" | "scanning" | "results";
+type MealCategory = "Breakfast" | "Lunch" | "Dinner" | "Snacks";
+
+const CATEGORIES: MealCategory[] = ["Breakfast", "Lunch", "Dinner", "Snacks"];
+
+function MacroPill({
+  label,
+  value,
+  unit,
+  color,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  color: string;
+}) {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.macroPill, { backgroundColor: color + "18" }]}>
+      <Text style={[styles.macroPillValue, { color, fontFamily: "Inter_700Bold" }]}>
+        {Math.round(value)}
+      </Text>
+      <Text style={[styles.macroPillUnit, { color, fontFamily: "Inter_500Medium" }]}>
+        {unit}
+      </Text>
+      <Text style={[styles.macroPillLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function ScanningOverlay({ capturedUri }: { capturedUri: string }) {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+  const pulse = useSharedValue(0);
+  const scanLine = useSharedValue(0);
+
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 900, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+    scanLine.value = withRepeat(
+      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, []);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.4, 1]),
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [0.95, 1.05]) }],
+  }));
+
+  const scanLineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: interpolate(scanLine.value, [0, 1], [0, 180]) }],
+  }));
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(200)}
+      exiting={FadeOut.duration(200)}
+      style={StyleSheet.absoluteFillObject}
+    >
+      {capturedUri ? (
+        <Image source={{ uri: capturedUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+      ) : null}
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.65)" }]} />
+      <View style={styles.scanCenter}>
+        <Animated.View style={[styles.scanFrame, pulseStyle]}>
+          <View style={[styles.scanCorner, styles.scanCornerTL, { borderColor: theme.primary }]} />
+          <View style={[styles.scanCorner, styles.scanCornerTR, { borderColor: theme.primary }]} />
+          <View style={[styles.scanCorner, styles.scanCornerBL, { borderColor: theme.primary }]} />
+          <View style={[styles.scanCorner, styles.scanCornerBR, { borderColor: theme.primary }]} />
+          <View style={styles.scanLineContainer}>
+            <Animated.View
+              style={[styles.scanLine, scanLineStyle, { backgroundColor: theme.primary + "cc" }]}
+            />
+          </View>
+        </Animated.View>
+        <View style={styles.scanTextRow}>
+          <ActivityIndicator color={theme.primary} size="small" />
+          <Text style={[styles.scanningText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
+            {t("scan.analyzing")}
+          </Text>
+        </View>
+        <Text style={[styles.scanSubText, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" }]}>
+          {t("scan.analyzingSubtitle")}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+function EditPortionModal({
+  item,
+  onSave,
+  onClose,
+}: {
+  item: ScanMealItem;
+  onSave: (updated: ScanMealItem) => void;
+  onClose: () => void;
+}) {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+  const [portionSize, setPortionSize] = useState(String(item.portionSize));
+
+  const handleSave = () => {
+    const newSize = parseFloat(portionSize);
+    if (!newSize || isNaN(newSize) || newSize <= 0) {
+      Alert.alert(t("common.error"), t("scan.invalidPortion"));
+      return;
+    }
+    const ratio = newSize / item.portionSize;
+    onSave({
+      ...item,
+      portionSize: newSize,
+      calories: Math.round(item.calories * ratio),
+      proteinG: Math.round(item.proteinG * ratio * 10) / 10,
+      carbsG: Math.round(item.carbsG * ratio * 10) / 10,
+      fatG: Math.round(item.fatG * ratio * 10) / 10,
+    });
+  };
+
+  return (
+    <Modal transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.modalBackdrop}
+      >
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        <Animated.View
+          entering={SlideInDown.springify().damping(18)}
+          style={[styles.editModal, { backgroundColor: theme.card, borderColor: theme.border }]}
+        >
+          <Text style={[styles.editTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            {item.name}
+          </Text>
+          <Text style={[styles.editSubtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {t("scan.adjustPortion")}
+          </Text>
+          <View style={[styles.portionRow, { borderColor: theme.border }]}>
+            <TextInput
+              style={[styles.portionInput, { color: theme.text, fontFamily: "Inter_500Medium" }]}
+              value={portionSize}
+              onChangeText={setPortionSize}
+              keyboardType="decimal-pad"
+              selectTextOnFocus
+              placeholderTextColor={theme.textMuted}
+            />
+            <Text style={[styles.portionUnitLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {item.portionUnit}
+            </Text>
+          </View>
+          <View style={styles.editButtons}>
+            <Pressable onPress={onClose} style={[styles.editBtn, { borderColor: theme.border }]}>
+              <Text style={[styles.editBtnText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                {t("common.cancel")}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={handleSave}
+              style={[styles.editBtn, styles.editBtnPrimary, { backgroundColor: theme.primary }]}
+            >
+              <Text style={[styles.editBtnText, { color: "#000", fontFamily: "Inter_600SemiBold" }]}>
+                {t("common.save")}
+              </Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+export default function ScanScreen() {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
+  const cameraRef = useRef<CameraView>(null);
+
+  const [permission, requestPermission] = useCameraPermissions();
+  const [facing, setFacing] = useState<CameraType>("back");
+  const [screenState, setScreenState] = useState<ScreenState>("camera");
+  const [capturedUri, setCapturedUri] = useState("");
+  const [items, setItems] = useState<ScanMealItem[]>([]);
+  const [totals, setTotals] = useState<MacroTotals>({ calories: 0, proteinG: 0, carbsG: 0, fatG: 0 });
+  const [mealDescription, setMealDescription] = useState("");
+  const [category, setCategory] = useState<MealCategory>("Lunch");
+  const [editingItem, setEditingItem] = useState<ScanMealItem | null>(null);
+  const [isLogging, setIsLogging] = useState(false);
+
+  const captureButtonScale = useSharedValue(1);
+  const captureStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: captureButtonScale.value }],
+  }));
+
+  const recalcTotals = (currentItems: ScanMealItem[]) => {
+    const t = currentItems.reduce(
+      (acc, i) => ({
+        calories: acc.calories + i.calories,
+        proteinG: acc.proteinG + i.proteinG,
+        carbsG: acc.carbsG + i.carbsG,
+        fatG: acc.fatG + i.fatG,
+      }),
+      { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
+    );
+    setTotals({
+      calories: Math.round(t.calories),
+      proteinG: Math.round(t.proteinG * 10) / 10,
+      carbsG: Math.round(t.carbsG * 10) / 10,
+      fatG: Math.round(t.fatG * 10) / 10,
+    });
+  };
+
+  const handleCapture = useCallback(async () => {
+    if (!cameraRef.current || screenState !== "camera") return;
+
+    captureButtonScale.value = withSequence(
+      withTiming(0.88, { duration: 100 }),
+      withTiming(1, { duration: 100 })
+    );
+
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.55,
+        base64: true,
+        skipProcessing: false,
+      });
+
+      if (!photo) throw new Error("No photo captured");
+
+      setCapturedUri(photo.uri);
+      setScreenState("scanning");
+
+      let base64Data = photo.base64;
+
+      if (!base64Data) {
+        if (photo.uri && photo.uri.startsWith("data:")) {
+          base64Data = photo.uri.split(",")[1];
+        } else {
+          throw new Error("Could not get image data. Please try again.");
+        }
+      }
+
+      const result = await api.scanMealAnalyze({ imageBase64: base64Data, mimeType: "image/jpeg" });
+
+      setItems(result.items);
+      setTotals(result.totals);
+      setMealDescription(result.mealDescription);
+      setScreenState("results");
+
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (err: any) {
+      console.error("Scan error:", err);
+      setScreenState("camera");
+      showToast(t("scan.analyzeFailed"), "error");
+    }
+  }, [screenState, captureButtonScale, t, showToast]);
+
+  const handleLogMeal = async () => {
+    if (items.length === 0) return;
+    setIsLogging(true);
+    try {
+      await api.scanMealLog({
+        items,
+        category,
+        name: mealDescription || t("scan.scannedMeal"),
+        photoUrl: capturedUri || undefined,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["meals"] });
+      queryClient.invalidateQueries({ queryKey: ["today-nutrition"] });
+
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      showToast(t("scan.mealLogged"), "success");
+      handleRetake();
+    } catch (err) {
+      showToast(t("scan.logFailed"), "error");
+    } finally {
+      setIsLogging(false);
+    }
+  };
+
+  const handleRetake = () => {
+    setScreenState("camera");
+    setCapturedUri("");
+    setItems([]);
+    setTotals({ calories: 0, proteinG: 0, carbsG: 0, fatG: 0 });
+    setMealDescription("");
+  };
+
+  const handleItemEdit = (updatedItem: ScanMealItem) => {
+    const newItems = items.map((it) =>
+      it.name === editingItem?.name && it.portionSize === editingItem?.portionSize ? updatedItem : it
+    );
+    setItems(newItems);
+    recalcTotals(newItems);
+    setEditingItem(null);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    const newItems = items.filter((_, i) => i !== index);
+    setItems(newItems);
+    recalcTotals(newItems);
+  };
+
+  if (!permission) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <ActivityIndicator color={theme.primary} style={{ flex: 1 }} />
+      </View>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={[styles.container, styles.permissionContainer, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+        <View style={[styles.permissionIcon, { backgroundColor: theme.primary + "18" }]}>
+          <Feather name="camera" size={40} color={theme.primary} />
+        </View>
+        <Text style={[styles.permissionTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+          {t("scan.cameraPermissionTitle")}
+        </Text>
+        <Text style={[styles.permissionDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          {t("scan.cameraPermissionDesc")}
+        </Text>
+        <Pressable
+          style={[styles.permissionBtn, { backgroundColor: theme.primary }]}
+          onPress={requestPermission}
+        >
+          <Text style={[styles.permissionBtnText, { fontFamily: "Inter_600SemiBold" }]}>
+            {t("scan.allowCamera")}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: "#000" }]}>
+      {(screenState === "camera" || screenState === "scanning") && (
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFillObject}
+          facing={facing}
+        />
+      )}
+
+      {screenState === "camera" && (
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          style={StyleSheet.absoluteFillObject}
+        >
+          <View style={[styles.cameraTopBar, { paddingTop: insets.top + 12 }]}>
+            <Text style={[styles.cameraTitle, { fontFamily: "Inter_700Bold" }]}>
+              {t("scan.title")}
+            </Text>
+          </View>
+
+          <View style={styles.cameraHint}>
+            <View style={[styles.hintPill, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
+              <Feather name="info" size={12} color="rgba(255,255,255,0.8)" />
+              <Text style={[styles.hintText, { fontFamily: "Inter_400Regular" }]}>
+                {t("scan.hintText")}
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.cameraBottom, { paddingBottom: insets.bottom + 24 }]}>
+            <Pressable
+              style={styles.flipBtn}
+              onPress={() => setFacing((f) => (f === "back" ? "front" : "back"))}
+            >
+              <Feather name="refresh-cw" size={22} color="#fff" />
+            </Pressable>
+
+            <Animated.View style={captureStyle}>
+              <Pressable onPress={handleCapture} style={styles.captureOuter}>
+                <View style={styles.captureInner} />
+              </Pressable>
+            </Animated.View>
+
+            <View style={styles.flipBtn} />
+          </View>
+        </Animated.View>
+      )}
+
+      {screenState === "scanning" && (
+        <ScanningOverlay capturedUri={capturedUri} />
+      )}
+
+      {screenState === "results" && (
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: theme.background }]}
+        >
+          {capturedUri ? (
+            <View style={[styles.resultImageContainer, { paddingTop: insets.top }]}>
+              <Image source={{ uri: capturedUri }} style={styles.resultImage} resizeMode="cover" />
+              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.4)" }]} />
+              <Pressable
+                style={[styles.retakeBtn, { top: insets.top + 12 }]}
+                onPress={handleRetake}
+              >
+                <Feather name="x" size={20} color="#fff" />
+              </Pressable>
+            </View>
+          ) : null}
+
+          <Animated.View
+            entering={SlideInDown.springify().damping(16).delay(100)}
+            style={[styles.resultsSheet, { backgroundColor: theme.background, borderColor: theme.border }]}
+          >
+            <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
+
+            <View style={styles.macroRow}>
+              <MacroPill label={t("common.calories")} value={totals.calories} unit="kcal" color={theme.primary} />
+              <MacroPill label={t("common.protein")} value={totals.proteinG} unit="g" color="#448aff" />
+              <MacroPill label={t("common.carbs")} value={totals.carbsG} unit="g" color="#ffab40" />
+              <MacroPill label={t("common.fat")} value={totals.fatG} unit="g" color="#ff5252" />
+            </View>
+
+            {mealDescription ? (
+              <Text style={[styles.mealDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                {mealDescription}
+              </Text>
+            ) : null}
+
+            <ScrollView
+              style={styles.itemsList}
+              contentContainerStyle={{ paddingBottom: 16 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {items.map((item, idx) => (
+                <Animated.View
+                  key={`${item.name}-${idx}`}
+                  entering={FadeIn.delay(idx * 60).duration(250)}
+                  style={[styles.foodItem, { borderColor: theme.border, backgroundColor: theme.card }]}
+                >
+                  <View style={styles.foodItemLeft}>
+                    <Text style={[styles.foodItemName, { color: theme.text, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text style={[styles.foodItemPortion, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {item.portionSize} {item.portionUnit}
+                      {"  ·  "}
+                      <Text style={{ color: "#448aff" }}>{item.proteinG}g P</Text>
+                      {"  "}
+                      <Text style={{ color: "#ffab40" }}>{item.carbsG}g C</Text>
+                      {"  "}
+                      <Text style={{ color: "#ff5252" }}>{item.fatG}g F</Text>
+                    </Text>
+                  </View>
+                  <View style={styles.foodItemRight}>
+                    <Text style={[styles.foodItemCal, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
+                      {item.calories}
+                    </Text>
+                    <Text style={[styles.foodItemCalUnit, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      kcal
+                    </Text>
+                    <Pressable
+                      onPress={() => setEditingItem(item)}
+                      style={[styles.editIconBtn, { backgroundColor: theme.cardAlt }]}
+                    >
+                      <Feather name="edit-2" size={13} color={theme.textMuted} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleRemoveItem(idx)}
+                      style={[styles.editIconBtn, { backgroundColor: theme.cardAlt }]}
+                    >
+                      <Feather name="trash-2" size={13} color={theme.danger} />
+                    </Pressable>
+                  </View>
+                </Animated.View>
+              ))}
+            </ScrollView>
+
+            <View style={[styles.categoryRow, { borderTopColor: theme.border }]}>
+              {CATEGORIES.map((cat) => (
+                <Pressable
+                  key={cat}
+                  onPress={() => setCategory(cat)}
+                  style={[
+                    styles.catChip,
+                    {
+                      backgroundColor: category === cat ? theme.primary : theme.cardAlt,
+                      borderColor: category === cat ? theme.primary : theme.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.catChipText,
+                      {
+                        color: category === cat ? "#000" : theme.textMuted,
+                        fontFamily: category === cat ? "Inter_600SemiBold" : "Inter_400Regular",
+                      },
+                    ]}
+                  >
+                    {t(`scan.categories.${cat.toLowerCase()}`)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <View style={[styles.footerRow, { paddingBottom: insets.bottom + 8 }]}>
+              <Pressable
+                onPress={handleRetake}
+                style={[styles.retakeTextBtn, { borderColor: theme.border }]}
+              >
+                <Feather name="camera" size={16} color={theme.textMuted} />
+                <Text style={[styles.retakeBtnText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                  {t("scan.retake")}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleLogMeal}
+                disabled={isLogging || items.length === 0}
+                style={[
+                  styles.logBtn,
+                  {
+                    backgroundColor: items.length === 0 ? theme.textMuted : theme.primary,
+                    opacity: isLogging ? 0.7 : 1,
+                  },
+                ]}
+              >
+                {isLogging ? (
+                  <ActivityIndicator color="#000" size="small" />
+                ) : (
+                  <>
+                    <Feather name="check" size={18} color="#000" />
+                    <Text style={[styles.logBtnText, { fontFamily: "Inter_700Bold" }]}>
+                      {t("scan.logMeal")}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </Animated.View>
+        </Animated.View>
+      )}
+
+      {editingItem && (
+        <EditPortionModal
+          item={editingItem}
+          onSave={handleItemEdit}
+          onClose={() => setEditingItem(null)}
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  permissionContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  permissionIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  permissionTitle: {
+    fontSize: 22,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  permissionDesc: {
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  permissionBtn: {
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 28,
+  },
+  permissionBtnText: {
+    color: "#000",
+    fontSize: 16,
+  },
+  cameraTopBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  cameraTitle: {
+    color: "#fff",
+    fontSize: 18,
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  cameraHint: {
+    position: "absolute",
+    top: "35%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  hintPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  hintText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 13,
+  },
+  cameraBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    paddingHorizontal: 32,
+  },
+  flipBtn: {
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  captureOuter: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#fff",
+  },
+  captureInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#fff",
+  },
+  scanCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 24,
+  },
+  scanFrame: {
+    width: 220,
+    height: 220,
+    position: "relative",
+  },
+  scanLineContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 180,
+    overflow: "hidden",
+  },
+  scanLine: {
+    height: 2,
+    borderRadius: 1,
+    opacity: 0.8,
+  },
+  scanCorner: {
+    position: "absolute",
+    width: 24,
+    height: 24,
+    borderWidth: 3,
+  },
+  scanCornerTL: {
+    top: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+  },
+  scanCornerTR: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+  },
+  scanCornerBL: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+  },
+  scanCornerBR: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+  },
+  scanTextRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  scanningText: {
+    fontSize: 17,
+    letterSpacing: 0.2,
+  },
+  scanSubText: {
+    fontSize: 13,
+    textAlign: "center",
+    maxWidth: 220,
+  },
+  resultImageContainer: {
+    height: 200,
+    position: "relative",
+  },
+  resultImage: {
+    width: "100%",
+    height: "100%",
+  },
+  retakeBtn: {
+    position: "absolute",
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resultsSheet: {
+    flex: 1,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -24,
+    borderTopWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  macroRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  macroPill: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+  macroPillValue: {
+    fontSize: 18,
+  },
+  macroPillUnit: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  macroPillLabel: {
+    fontSize: 10,
+    marginTop: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  mealDesc: {
+    fontSize: 13,
+    marginBottom: 12,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  itemsList: {
+    flex: 1,
+  },
+  foodItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  foodItemLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  foodItemName: {
+    fontSize: 15,
+    marginBottom: 4,
+  },
+  foodItemPortion: {
+    fontSize: 12,
+  },
+  foodItemRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  foodItemCal: {
+    fontSize: 17,
+  },
+  foodItemCalUnit: {
+    fontSize: 11,
+    marginRight: 4,
+  },
+  editIconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  categoryRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+  },
+  catChip: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  catChipText: {
+    fontSize: 11,
+  },
+  footerRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingTop: 4,
+  },
+  retakeTextBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  retakeBtnText: {
+    fontSize: 14,
+  },
+  logBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  logBtnText: {
+    color: "#000",
+    fontSize: 16,
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  editModal: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    padding: 24,
+    paddingBottom: 36,
+  },
+  editTitle: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  editSubtitle: {
+    fontSize: 13,
+    marginBottom: 20,
+  },
+  portionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 24,
+  },
+  portionInput: {
+    flex: 1,
+    fontSize: 22,
+  },
+  portionUnitLabel: {
+    fontSize: 15,
+  },
+  editButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  editBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  editBtnPrimary: {
+    borderWidth: 0,
+  },
+  editBtnText: {
+    fontSize: 15,
+  },
+  invalidPortion: {},
+});

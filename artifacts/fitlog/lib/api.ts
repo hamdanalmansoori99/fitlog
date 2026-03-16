@@ -197,4 +197,33 @@ export const api = {
     request<any>(`/meals/favorites/${id}/log`, { method: "POST", body: JSON.stringify({ category }) }),
   duplicateDayMeals: (fromDate: string, toDate?: string) =>
     request<any>("/meals/favorites/duplicate-day", { method: "POST", body: JSON.stringify({ fromDate, toDate }) }),
+
+  // Scan Meal (AI Vision)
+  scanMealAnalyze: (body: { imageBase64: string; mimeType?: string }) =>
+    request<{ items: ScanMealItem[]; mealDescription: string; totals: MacroTotals }>("/scan-meal/analyze", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  scanMealLog: (body: { items: ScanMealItem[]; category: string; name?: string; photoUrl?: string }) =>
+    request<{ success: boolean; mealId: number }>("/scan-meal/log", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };
+
+export interface ScanMealItem {
+  name: string;
+  portionSize: number;
+  portionUnit: string;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+}
+
+export interface MacroTotals {
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+}

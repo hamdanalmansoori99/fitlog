@@ -25,6 +25,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
         <Label>{t("tabs.meals")}</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="scan">
+        <Icon sf={{ default: "camera.viewfinder", selected: "camera.viewfinder" }} />
+        <Label>{t("tabs.scan")}</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="progress">
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
         <Label>{t("tabs.progress")}</Label>
@@ -107,6 +111,18 @@ function ClassicTabLayout() {
               <SymbolView name="fork.knife" tintColor={color} size={24} />
             ) : (
               <Feather name="coffee" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="scan"
+        options={{
+          title: t("tabs.scan"),
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="camera.viewfinder" tintColor={color} size={24} />
+            ) : (
+              <Feather name="camera" size={22} color={color} />
             ),
         }}
       />
