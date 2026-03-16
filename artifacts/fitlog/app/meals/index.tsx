@@ -348,25 +348,7 @@ export default function MealsScreen() {
   }
 
   function handleDuplicateMeal(meal: any) {
-    if (isToday) {
-      Alert.alert(
-        t("meals.duplicateMeal"),
-        t("meals.duplicateMealMessage", { name: meal.name }),
-        [
-          { text: t("common.cancel"), style: "cancel" },
-          { text: t("common.add"), onPress: () => duplicateMealMutation.mutate({ id: meal.id }) },
-        ]
-      );
-    } else {
-      Alert.alert(
-        t("meals.copyMealToToday"),
-        t("meals.copyMealMessage", { name: meal.name }),
-        [
-          { text: t("common.cancel"), style: "cancel" },
-          { text: t("common.copy"), onPress: () => duplicateMealMutation.mutate({ id: meal.id }) },
-        ]
-      );
-    }
+    duplicateMealMutation.mutate({ id: meal.id });
   }
 
   const changeDate = (delta: number) => {

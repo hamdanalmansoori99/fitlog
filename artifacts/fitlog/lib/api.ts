@@ -129,6 +129,7 @@ export const api = {
   getCardioHistory: (type: string, limit = 10) =>
     request<any>(`/progress/cardio-history?type=${encodeURIComponent(type)}&limit=${limit}`),
   getConsistency: () => request<any>("/progress/consistency"),
+  getWeeklyReport: () => request<any>("/progress/weekly-report"),
 
   // Water tracking
   getWaterToday: () => request<any>("/water/today"),

@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable, profilesTable, waterLogsTable } from "@workspace/db";
-import { eq, and, gte, desc, inArray } from "drizzle-orm";
+import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable, profilesTable, waterLogsTable, bodyMeasurementsTable } from "@workspace/db";
+import { eq, and, gte, desc, inArray, lte } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
 const router = Router();
@@ -374,6 +374,160 @@ router.get("/consistency", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("consistency error:", err);
     res.status(500).json({ error: "Failed to get consistency data" });
+  }
+});
+
+router.get("/weekly-report", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const thisMonday = new Date(now);
+    thisMonday.setDate(now.getDate() + mondayOffset);
+    thisMonday.setHours(0, 0, 0, 0);
+    const lastMonday = new Date(thisMonday);
+    lastMonday.setDate(thisMonday.getDate() - 7);
+    const twoWeeksAgo = new Date(lastMonday);
+
+    const [thisWeekWorkouts, lastWeekWorkouts] = await Promise.all([
+      db.select().from(workoutsTable)
+        .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, thisMonday)))
+        .orderBy(desc(workoutsTable.date)),
+      db.select().from(workoutsTable)
+        .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, lastMonday), lte(workoutsTable.date, thisMonday)))
+        .orderBy(desc(workoutsTable.date)),
+    ]);
+
+    const thisWeekMeals = await db.select().from(mealsTable)
+      .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, thisMonday)));
+    const lastWeekMeals = await db.select().from(mealsTable)
+      .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, lastMonday), lte(mealsTable.date, thisMonday)));
+
+    const measurements = await db.select().from(bodyMeasurementsTable)
+      .where(and(eq(bodyMeasurementsTable.userId, user.id), gte(bodyMeasurementsTable.date, twoWeeksAgo)))
+      .orderBy(bodyMeasurementsTable.date);
+
+    function avgNutrition(meals: any[]) {
+      if (meals.length === 0) return { avgCalories: 0, avgProtein: 0 };
+      const dayMap: Record<string, { calories: number; protein: number }> = {};
+      for (const m of meals) {
+        const d = m.date instanceof Date ? m.date.toISOString().slice(0, 10) : String(m.date).slice(0, 10);
+        if (!dayMap[d]) dayMap[d] = { calories: 0, protein: 0 };
+        dayMap[d].calories += m.totalCalories ?? 0;
+        dayMap[d].protein += m.totalProteinG ?? 0;
+      }
+      const days = Object.values(dayMap);
+      return {
+        avgCalories: Math.round(days.reduce((s, d) => s + d.calories, 0) / days.length),
+        avgProtein: Math.round(days.reduce((s, d) => s + d.protein, 0) / days.length),
+      };
+    }
+
+    const thisNutrition = avgNutrition(thisWeekMeals);
+    const lastNutrition = avgNutrition(lastWeekMeals);
+
+    const thisWeekWeight = measurements.filter(m => new Date(m.date) >= thisMonday && m.weightKg).map(m => m.weightKg!);
+    const lastWeekWeight = measurements.filter(m => new Date(m.date) >= lastMonday && new Date(m.date) < thisMonday && m.weightKg).map(m => m.weightKg!);
+    let weightChangKg: number | null = null;
+    if (thisWeekWeight.length > 0 && lastWeekWeight.length > 0) {
+      weightChangKg = parseFloat((thisWeekWeight[thisWeekWeight.length - 1] - lastWeekWeight[0]).toFixed(1));
+    }
+
+    const thisWeekSets = await db.select({
+      exerciseName: workoutExercisesTable.name,
+      weightKg: workoutSetsTable.weightKg,
+    }).from(workoutSetsTable)
+      .innerJoin(workoutExercisesTable, eq(workoutSetsTable.exerciseId, workoutExercisesTable.id))
+      .innerJoin(workoutsTable, eq(workoutExercisesTable.workoutId, workoutsTable.id))
+      .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, thisMonday), eq(workoutSetsTable.completed, true)));
+
+    const lastWeekSets = await db.select({
+      exerciseName: workoutExercisesTable.name,
+      weightKg: workoutSetsTable.weightKg,
+    }).from(workoutSetsTable)
+      .innerJoin(workoutExercisesTable, eq(workoutSetsTable.exerciseId, workoutExercisesTable.id))
+      .innerJoin(workoutsTable, eq(workoutExercisesTable.workoutId, workoutsTable.id))
+      .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, lastMonday), lte(workoutsTable.date, thisMonday), eq(workoutSetsTable.completed, true)));
+
+    const thisMaxByExercise: Record<string, number> = {};
+    for (const s of thisWeekSets) {
+      if (s.weightKg && s.weightKg > (thisMaxByExercise[s.exerciseName] ?? 0)) thisMaxByExercise[s.exerciseName] = s.weightKg;
+    }
+    const lastMaxByExercise: Record<string, number> = {};
+    for (const s of lastWeekSets) {
+      if (s.weightKg && s.weightKg > (lastMaxByExercise[s.exerciseName] ?? 0)) lastMaxByExercise[s.exerciseName] = s.weightKg;
+    }
+
+    let bestLiftImprovement: { exerciseName: string; prevKg: number; newKg: number; deltaKg: number } | null = null;
+    for (const [name, newKg] of Object.entries(thisMaxByExercise)) {
+      const prevKg = lastMaxByExercise[name] ?? 0;
+      if (prevKg > 0) {
+        const delta = newKg - prevKg;
+        if (delta > 0 && (!bestLiftImprovement || delta > bestLiftImprovement.deltaKg)) {
+          bestLiftImprovement = { exerciseName: name, prevKg, newKg, deltaKg: delta };
+        }
+      }
+    }
+
+    const workoutStreak = calcStreak(thisWeekWorkouts.map(w => w.date));
+    const totalStreak = calcStreak([...thisWeekWorkouts, ...lastWeekWorkouts].map(w => w.date));
+
+    const dailyWorkoutMap: Record<string, number> = {};
+    for (const w of thisWeekWorkouts) {
+      const d = w.date instanceof Date ? w.date.toISOString().slice(0, 10) : String(w.date).slice(0, 10);
+      dailyWorkoutMap[d] = (dailyWorkoutMap[d] ?? 0) + (w.durationMinutes ?? 30);
+    }
+
+    const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    const barData = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(thisMonday);
+      d.setDate(thisMonday.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      const isToday = key === now.toISOString().slice(0, 10);
+      return { dayLabel: days[i], activeMinutes: dailyWorkoutMap[key] ?? 0, isToday };
+    });
+
+    const insights: string[] = [];
+    if (thisWeekWorkouts.length >= lastWeekWorkouts.length + 1) {
+      insights.push(`You completed ${thisWeekWorkouts.length} workouts this week — ${thisWeekWorkouts.length - lastWeekWorkouts.length} more than last week. Keep the momentum going.`);
+    } else if (thisWeekWorkouts.length === 0) {
+      insights.push("No workouts logged yet this week. Even a single session resets your momentum.");
+    } else {
+      insights.push(`${thisWeekWorkouts.length} workout${thisWeekWorkouts.length !== 1 ? "s" : ""} logged this week. Solid consistency builds the foundation.`);
+    }
+    if (bestLiftImprovement) {
+      insights.push(`New PR on ${bestLiftImprovement.exerciseName}: +${bestLiftImprovement.deltaKg.toFixed(1)}kg vs last week (${bestLiftImprovement.newKg}kg). Progressive overload is working.`);
+    }
+    if (thisNutrition.avgProtein > 0) {
+      if (thisNutrition.avgProtein >= lastNutrition.avgProtein && lastNutrition.avgProtein > 0) {
+        insights.push(`Avg protein up to ${thisNutrition.avgProtein}g/day vs ${lastNutrition.avgProtein}g last week. Great for recovery and muscle.`);
+      } else {
+        insights.push(`Avg protein: ${thisNutrition.avgProtein}g/day. Aim for 0.8–1g per lb bodyweight to maximize gains.`);
+      }
+    }
+
+    res.json({
+      thisWeek: {
+        workoutsCompleted: thisWeekWorkouts.length,
+        avgCalories: thisNutrition.avgCalories,
+        avgProtein: thisNutrition.avgProtein,
+        streak: totalStreak,
+        barData,
+      },
+      lastWeek: {
+        workoutsCompleted: lastWeekWorkouts.length,
+        avgCalories: lastNutrition.avgCalories,
+        avgProtein: lastNutrition.avgProtein,
+      },
+      weightChangeKg: weightChangKg,
+      bestLiftImprovement,
+      insights: insights.slice(0, 3),
+    });
+  } catch (err) {
+    console.error("weekly-report error:", err);
+    res.status(500).json({ error: "Failed to get weekly report" });
   }
 });
 

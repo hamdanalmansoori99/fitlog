@@ -747,7 +747,7 @@ function WeeklyReportCard({ theme, streaksData, workoutsData, mealsData }: { the
             {t("home.weeklyReport")}
           </Text>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-            {t("home.comingSoon")}
+            {t("home.weeklyReportSummary")}
           </Text>
         </View>
       </View>

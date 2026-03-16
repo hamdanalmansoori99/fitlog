@@ -559,6 +559,21 @@ export default function ProfileScreen() {
               <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
             </Pressable>
 
+            {/* ── Recovery & Wellness ── */}
+            <Pressable
+              onPress={() => router.push("/recovery" as any)}
+              style={[styles.achieveRow, { backgroundColor: theme.card, borderColor: theme.border }]}
+            >
+              <View style={[styles.achieveIcon, { backgroundColor: "#00bcd4" + "18" }]}>
+                <Feather name="heart" size={18} color="#00bcd4" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("profile.recoveryWellness")}</Text>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("profile.sleepEnergyStress")}</Text>
+              </View>
+              <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
+            </Pressable>
+
             {/* ── Notifications ── */}
             <Card>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: globalEnabled ? 16 : 0 }}>

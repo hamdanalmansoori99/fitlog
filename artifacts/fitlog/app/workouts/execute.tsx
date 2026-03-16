@@ -477,6 +477,7 @@ export default function ExecuteWorkoutScreen() {
   }
 
   const restTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   function handleSave() {
     if (!template) return;
@@ -791,6 +792,7 @@ export default function ExecuteWorkoutScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + (isResting ? 150 : 20) }]}
         keyboardShouldPersistTaps="handled"
@@ -882,43 +884,62 @@ export default function ExecuteWorkoutScreen() {
               : isActive
               ? theme.background
               : theme.card;
+            const showHint = !s.completed && progression && progression.trend !== "first" &&
+              (progression.suggestedWeightKg != null || progression.suggestedReps != null);
+            const hintText = showHint
+              ? [
+                  progression!.suggestedReps != null ? `${progression!.suggestedReps} reps` : null,
+                  progression!.suggestedWeightKg != null ? `${progression!.suggestedWeightKg}kg` : null,
+                ].filter(Boolean).join(" × ")
+              : null;
 
             return (
-              <View
-                key={si}
-                style={[
-                  styles.setRow,
-                  { backgroundColor: rowBg, borderBottomColor: theme.border },
-                  si < currentEx.sets.length - 1 && { borderBottomWidth: 1 },
-                ]}
-              >
-                <View style={[
-                  styles.setNumBadge,
-                  { backgroundColor: s.completed ? theme.primary : isActive ? theme.primaryDim : theme.card, flex: 1 }
-                ]}>
-                  {s.completed
-                    ? <Feather name="check" size={13} color="#0f0f1a" />
-                    : <Text style={{ color: isActive ? theme.primary : theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 12 }}>{si + 1}</Text>
-                  }
-                </View>
-                <TextInput
-                  value={s.reps}
-                  onChangeText={(t) => updateSet(exerciseIdx, si, "reps", t)}
-                  editable={!s.completed}
-                  keyboardType="numeric"
-                  style={[styles.setInput, { color: s.completed ? theme.textMuted : theme.text, borderColor: isActive ? theme.primary + "50" : theme.border, flex: 2 }]}
-                />
-                <TextInput
-                  value={s.weight}
-                  onChangeText={(t) => updateSet(exerciseIdx, si, "weight", t)}
-                  editable={!s.completed}
-                  keyboardType="decimal-pad"
-                  placeholder="—"
-                  placeholderTextColor={theme.textMuted}
-                  style={[styles.setInput, { color: s.completed ? theme.textMuted : theme.text, borderColor: isActive ? theme.primary + "50" : theme.border, flex: 2 }]}
-                />
-                <View style={{ width: 32, alignItems: "center" }}>
-                  {s.completed && <Feather name="check-circle" size={16} color={theme.primary} />}
+              <View key={si}>
+                {hintText && (
+                  <View style={[
+                    styles.perSetHint,
+                    { backgroundColor: isActive ? trendColor + "12" : trendColor + "06", borderBottomColor: theme.border },
+                  ]}>
+                    <Text style={{ color: isActive ? trendColor : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
+                      {t("workouts.suggestedLabel")}: {hintText}
+                    </Text>
+                  </View>
+                )}
+                <View
+                  style={[
+                    styles.setRow,
+                    { backgroundColor: rowBg, borderBottomColor: theme.border },
+                    si < currentEx.sets.length - 1 && { borderBottomWidth: 1 },
+                  ]}
+                >
+                  <View style={[
+                    styles.setNumBadge,
+                    { backgroundColor: s.completed ? theme.primary : isActive ? theme.primaryDim : theme.card, flex: 1 }
+                  ]}>
+                    {s.completed
+                      ? <Feather name="check" size={13} color="#0f0f1a" />
+                      : <Text style={{ color: isActive ? theme.primary : theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 12 }}>{si + 1}</Text>
+                    }
+                  </View>
+                  <TextInput
+                    value={s.reps}
+                    onChangeText={(t) => updateSet(exerciseIdx, si, "reps", t)}
+                    editable={!s.completed}
+                    keyboardType="numeric"
+                    style={[styles.setInput, { color: s.completed ? theme.textMuted : theme.text, borderColor: isActive ? theme.primary + "50" : theme.border, flex: 2 }]}
+                  />
+                  <TextInput
+                    value={s.weight}
+                    onChangeText={(t) => updateSet(exerciseIdx, si, "weight", t)}
+                    editable={!s.completed}
+                    keyboardType="decimal-pad"
+                    placeholder="—"
+                    placeholderTextColor={theme.textMuted}
+                    style={[styles.setInput, { color: s.completed ? theme.textMuted : theme.text, borderColor: isActive ? theme.primary + "50" : theme.border, flex: 2 }]}
+                  />
+                  <View style={{ width: 32, alignItems: "center" }}>
+                    {s.completed && <Feather name="check-circle" size={16} color={theme.primary} />}
+                  </View>
                 </View>
               </View>
             );
@@ -1013,6 +1034,10 @@ export default function ExecuteWorkoutScreen() {
           entering={SlideInUp.duration(300)}
           style={[styles.floatingRestPill, { backgroundColor: theme.card, borderColor: theme.primary + "40", paddingBottom: insets.bottom + 16 }]}
         >
+          <Pressable
+            onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+          />
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <View style={[styles.restDot, { backgroundColor: theme.primary }]} />
@@ -1081,6 +1106,9 @@ const styles = StyleSheet.create({
   },
 
   // Sets table
+  perSetHint: {
+    paddingHorizontal: 12, paddingVertical: 3, borderBottomWidth: 1,
+  },
   setHeaderRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1 },
   setHeaderCell: { fontFamily: "Inter_500Medium", fontSize: 11 },
   setRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
