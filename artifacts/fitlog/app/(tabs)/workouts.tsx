@@ -18,6 +18,7 @@ import { WORKOUT_TEMPLATES, WorkoutTemplate } from "@/lib/workoutTemplates";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { useTranslation } from "react-i18next";
+import { EXERCISE_CATEGORIES, EXERCISES, ExerciseCategory } from "@/lib/exerciseLibrary";
 
 const GOAL_KEY: Record<string, string> = {
   "Stay active": "stayActive",
@@ -267,6 +268,8 @@ export default function WorkoutsScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [templateSearch, setTemplateSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory | null>(null);
+  const [exerciseSearch, setExerciseSearch] = useState("");
   const { showToast } = useToast();
 
   const { data: profileData, refetch: refetchProfile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
@@ -679,6 +682,141 @@ export default function WorkoutsScreen() {
           })()}
         </Animated.View>
 
+        {/* ── EXERCISE LIBRARY ── */}
+        <Animated.View entering={FadeInDown.delay(230).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 12 }]}>
+            {t("workouts.browseExercises")}
+          </Text>
+          {/* Search */}
+          <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border, marginBottom: 10 }]}>
+            <Feather name="search" size={15} color={theme.textMuted} />
+            <TextInput
+              value={exerciseSearch}
+              onChangeText={(v) => { setExerciseSearch(v); setSelectedCategory(null); }}
+              placeholder={t("workouts.searchExercises")}
+              placeholderTextColor={theme.textMuted}
+              style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 14, paddingVertical: 0 }}
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+            />
+            {exerciseSearch.length > 0 && (
+              <Pressable onPress={() => setExerciseSearch("")} hitSlop={8}>
+                <Feather name="x" size={14} color={theme.textMuted} />
+              </Pressable>
+            )}
+          </View>
+          {/* Category chips */}
+          {!exerciseSearch && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              <View style={{ flexDirection: "row", gap: 8, paddingRight: 8 }}>
+                <Pressable
+                  onPress={() => setSelectedCategory(null)}
+                  style={[
+                    styles.catChip,
+                    selectedCategory === null
+                      ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                      : { backgroundColor: theme.card, borderColor: theme.border },
+                  ]}
+                >
+                  <Text style={{
+                    fontFamily: "Inter_600SemiBold", fontSize: 12,
+                    color: selectedCategory === null ? "#0f0f1a" : theme.text,
+                  }}>All</Text>
+                </Pressable>
+                {EXERCISE_CATEGORIES.map((cat) => (
+                  <Pressable
+                    key={cat.id}
+                    onPress={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                    style={[
+                      styles.catChip,
+                      selectedCategory === cat.id
+                        ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                        : { backgroundColor: theme.card, borderColor: theme.border },
+                    ]}
+                  >
+                    <Feather
+                      name={cat.icon as any}
+                      size={12}
+                      color={selectedCategory === cat.id ? "#0f0f1a" : theme.textMuted}
+                    />
+                    <Text style={{
+                      fontFamily: "Inter_600SemiBold", fontSize: 12,
+                      color: selectedCategory === cat.id ? "#0f0f1a" : theme.text,
+                    }}>{cat.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+          )}
+          {/* Exercise List */}
+          {(() => {
+            const q = exerciseSearch.toLowerCase().trim();
+            const filtered = q
+              ? EXERCISES.filter(e =>
+                  e.name.toLowerCase().includes(q) ||
+                  e.primaryMuscles.some(m => m.toLowerCase().includes(q)) ||
+                  e.category.includes(q)
+                ).slice(0, 8)
+              : selectedCategory
+                ? EXERCISES.filter(e => e.category === selectedCategory).slice(0, 8)
+                : EXERCISES.slice(0, 6);
+            return (
+              <View style={{ gap: 8 }}>
+                {filtered.map((ex) => {
+                  const diffColors: Record<string, string> = {
+                    Beginner: theme.primary,
+                    Intermediate: theme.secondary,
+                    Advanced: theme.warning || "#ffab40",
+                  };
+                  const dColor = diffColors[ex.difficulty] || theme.primary;
+                  return (
+                    <Pressable
+                      key={ex.id}
+                      onPress={() => router.push({ pathname: "/workouts/exercise/[id]" as any, params: { id: ex.id } })}
+                      style={({ pressed }) => [
+                        styles.exerciseRow,
+                        { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
+                      ]}
+                    >
+                      <View style={[styles.exIcon, { backgroundColor: dColor + "18" }]}>
+                        <Feather
+                          name={(EXERCISE_CATEGORIES.find(c => c.id === ex.category)?.icon ?? "activity") as any}
+                          size={16}
+                          color={dColor}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>
+                          {ex.name}
+                        </Text>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+                          {ex.primaryMuscles.slice(0, 2).join(" · ")}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end", gap: 4 }}>
+                        <View style={[{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: dColor + "18" }]}>
+                          <Text style={{ color: dColor, fontFamily: "Inter_500Medium", fontSize: 11 }}>{ex.difficulty}</Text>
+                        </View>
+                        <Feather name="chevron-right" size={14} color={theme.textMuted} />
+                      </View>
+                    </Pressable>
+                  );
+                })}
+                {!q && EXERCISES.length > 6 && (
+                  <Pressable
+                    onPress={() => setSelectedCategory(selectedCategory ?? "chest")}
+                    style={{ alignItems: "center", paddingTop: 4 }}
+                  >
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                      {t("workouts.viewAllExercises", { count: EXERCISES.length })}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            );
+          })()}
+        </Animated.View>
+
         {/* ── WORKOUT HISTORY ── */}
         <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.history")}</Text>
@@ -869,5 +1007,17 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 16, paddingVertical: 10,
     borderRadius: 10, borderWidth: 1, marginTop: 4,
+  },
+  catChip: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1,
+  },
+  exerciseRow: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    borderWidth: 1, borderRadius: 14, padding: 12,
+  },
+  exIcon: {
+    width: 38, height: 38, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
   },
 });
