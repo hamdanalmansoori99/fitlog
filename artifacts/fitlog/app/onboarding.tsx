@@ -203,10 +203,11 @@ export default function OnboardingScreen() {
         fitnessGoals: [data.fitnessGoal],
         activityLevel: data.activityLevel,
         availableEquipment: data.availableEquipment.length > 0 ? data.availableEquipment : ["none"],
+        gender: undefined,
         workoutLocation: "Mixed",
         weeklyWorkoutDays: 3,
-        preferredWorkoutDuration: "45 minutes",
-        experienceLevel: "Intermediate",
+        preferredWorkoutDuration: "45",
+        experienceLevel: "intermediate",
         coachOnboardingComplete: true,
       });
     } else if (step < 3) {
