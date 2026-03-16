@@ -255,6 +255,11 @@ export default {
     weeklyReport: "التقرير الأسبوعي",
     comingSoon: "قريباً",
     weeklyReportDesc: "سيظهر ملخصك الأسبوعي المخصص هنا قريباً",
+    workoutDone: "تم التمرين",
+    workoutDoneMessage: "أحسنت! لقد أكملت تمرينك لليوم.",
+    viewWorkout: "عرض التمرين",
+    noInsightsYet: "تابع التتبع لفتح الرؤى",
+    noInsightsMessage: "حدد أهداف لياقتك وسجل التمارين للحصول على رؤى مخصصة مدعومة ببياناتك.",
   },
   workouts: {
     title: "التمارين",

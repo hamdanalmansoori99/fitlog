@@ -389,6 +389,145 @@ function CoachCtaCard({ theme }: { theme: AppTheme }) {
   );
 }
 
+function WorkoutDoneCard({ workout, theme }: { workout: any; theme: AppTheme }) {
+  const { t } = useTranslation();
+  return (
+    <Card style={{ borderColor: theme.primary + "30", gap: 10 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View style={[styles.todayIcon, { backgroundColor: theme.primaryDim }]}>
+          <Feather name="check-circle" size={18} color={theme.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 16 }}>
+            {t("home.workoutDone")} ✓
+          </Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+            {workout.name || workout.activityType}
+            {workout.durationMinutes ? ` · ${workout.durationMinutes} min` : ""}
+          </Text>
+        </View>
+      </View>
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
+        {t("home.workoutDoneMessage")}
+      </Text>
+      <Pressable
+        onPress={() => router.push("/(tabs)/workouts" as any)}
+        style={[styles.ctaBtn, { backgroundColor: theme.primaryDim }]}
+      >
+        <Feather name="eye" size={15} color={theme.primary} />
+        <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+          {t("home.viewWorkout")}
+        </Text>
+      </Pressable>
+    </Card>
+  );
+}
+
+function AIInsightEmptyState({ theme }: { theme: AppTheme }) {
+  const { t } = useTranslation();
+  return (
+    <Card style={{ gap: 10, borderColor: theme.primary + "15" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <View style={[styles.insightIconWrap, { backgroundColor: theme.primaryDim }]}>
+          <Feather name="target" size={16} color={theme.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+            {t("home.noInsightsYet")}
+          </Text>
+        </View>
+      </View>
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 17 }}>
+        {t("home.noInsightsMessage")}
+      </Text>
+      <Pressable
+        onPress={() => router.push("/(tabs)/progress" as any)}
+        style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}
+      >
+        <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+          {t("home.viewInsights")}
+        </Text>
+        <Feather name={rtlIcon("chevron-right")} size={12} color={theme.primary} />
+      </Pressable>
+    </Card>
+  );
+}
+
+function RecentActivitySection({ workoutsData, mealsData, theme }: { workoutsData: any; mealsData: any; theme: AppTheme }) {
+  const { t } = useTranslation();
+
+  const items = useMemo(() => {
+    const result: { type: "workout" | "meal"; name: string; detail: string; date: string; icon: string; color: string }[] = [];
+
+    const workouts: any[] = workoutsData?.workouts || [];
+    for (const w of workouts.slice(0, 2)) {
+      result.push({
+        type: "workout",
+        name: w.name || w.activityType || "Workout",
+        detail: w.durationMinutes ? `${w.durationMinutes} min` : "",
+        date: w.date || "",
+        icon: "activity",
+        color: theme.primary,
+      });
+    }
+
+    const meals: any[] = mealsData?.todayMeals || [];
+    for (const m of meals.slice(0, 2)) {
+      result.push({
+        type: "meal",
+        name: m.name || m.mealType || "Meal",
+        detail: m.totalCalories ? `${Math.round(m.totalCalories)} kcal` : "",
+        date: m.date || "",
+        icon: "coffee",
+        color: theme.secondary,
+      });
+    }
+
+    return result.slice(0, 3);
+  }, [workoutsData, mealsData, theme]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <Feather name="clock" size={14} color={theme.textMuted} />
+        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+          {t("home.recentActivity")}
+        </Text>
+      </View>
+      <Card style={{ gap: 0, paddingVertical: 4, paddingHorizontal: 0 }}>
+        {items.map((item, idx) => (
+          <View
+            key={`${item.type}-${idx}`}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 10,
+              paddingVertical: 10, paddingHorizontal: 14,
+              borderBottomWidth: idx < items.length - 1 ? 1 : 0,
+              borderBottomColor: theme.border,
+            }}
+          >
+            <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: item.color + "18", alignItems: "center", justifyContent: "center" }}>
+              <Feather name={item.icon as any} size={14} color={item.color} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 13 }} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {item.detail ? (
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                  {item.detail}
+                </Text>
+              ) : null}
+            </View>
+            <Feather name={rtlIcon("chevron-right")} size={14} color={theme.textMuted} />
+          </View>
+        ))}
+      </Card>
+    </View>
+  );
+}
+
 function StreakSummaryCard({ streaksData, achievementsData, theme }: { streaksData: any; achievementsData?: any; theme: AppTheme }) {
   const { t } = useTranslation();
   if (!streaksData) return null;
@@ -807,6 +946,12 @@ export default function HomeScreen() {
 
   const hasCoachOnboarding = !!profile?.coachOnboardingComplete;
 
+  const todayWorkout = useMemo(() => {
+    const workouts: any[] = workoutsData?.workouts || [];
+    const today = new Date().toISOString().slice(0, 10);
+    return workouts.find((w: any) => w.date?.startsWith(today)) || null;
+  }, [workoutsData]);
+
   const recentWorkoutsList = useMemo(() => {
     const workouts: any[] = workoutsData?.workouts || [];
     return workouts.slice(0, 10).map((w: any) => ({
@@ -937,6 +1082,8 @@ export default function HomeScreen() {
               </View>
               <SkeletonBox width="100%" height={42} borderRadius={12} />
             </SkeletonCard>
+          ) : todayWorkout ? (
+            <WorkoutDoneCard workout={todayWorkout} theme={theme} />
           ) : hasCoachOnboarding && todayRecommendation ? (
             <TodayWorkoutCard todayRec={todayRecommendation} theme={theme} />
           ) : hasCoachOnboarding ? (
@@ -975,19 +1122,27 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {topInsight && (
-          <Animated.View entering={FadeInDown.delay(240).duration(400)} style={styles.section}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <Feather name="target" size={14} color={theme.primary} />
-              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-                {t("home.goalInsight")}
-              </Text>
-            </View>
+        <Animated.View entering={FadeInDown.delay(240).duration(400)} style={styles.section}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <Feather name="target" size={14} color={theme.primary} />
+            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+              {t("home.goalInsight")}
+            </Text>
+          </View>
+          {topInsight ? (
             <AIInsightCard insight={topInsight} theme={theme} />
+          ) : (
+            <AIInsightEmptyState theme={theme} />
+          )}
+        </Animated.View>
+
+        {(workoutsData || mealsData) && (
+          <Animated.View entering={FadeInDown.delay(280).duration(400)} style={styles.section}>
+            <RecentActivitySection workoutsData={workoutsData} mealsData={mealsData} theme={theme} />
           </Animated.View>
         )}
 
-        <Animated.View entering={FadeInDown.delay(280).duration(400)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(320).duration(400)} style={styles.section}>
           <WeeklyReportCard theme={theme} />
         </Animated.View>
       </ScrollView>
