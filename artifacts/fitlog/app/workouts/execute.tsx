@@ -168,7 +168,7 @@ export default function ExecuteWorkoutScreen() {
     () => (isGym ? exercises.map((e) => e.name) : []),
     [exercises, isGym]
   );
-  const { data: historyData } = useQuery({
+  const { data: historyData, isLoading: historyLoading } = useQuery({
     queryKey: ["execHistory", gymNames],
     queryFn: () => api.getExerciseHistory(gymNames),
     enabled: gymNames.length > 0,
@@ -911,7 +911,7 @@ export default function ExecuteWorkoutScreen() {
               </View>
             </Animated.View>
           )}
-          {(!progression || progression.trend === "first") && prevSessions.length === 0 && isGym && (
+          {(!progression || progression.trend === "first") && prevSessions.length === 0 && isGym && !historyLoading && (
             <View style={[styles.coachHintCard, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "25" }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Feather name="star" size={12} color={theme.primary} />
