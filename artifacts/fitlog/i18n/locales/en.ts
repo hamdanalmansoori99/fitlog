@@ -35,6 +35,8 @@ export default {
     goBack: "Go Back",
     continueText: "Continue",
     requestFailed: "Request failed",
+    dismiss: "Dismiss",
+    share: "Share",
   },
   tabs: {
     home: "Home",
@@ -1724,6 +1726,7 @@ export default {
     today: "Today",
     milestoneTitle: "🔥 Streak Milestone!",
     milestoneMessage: "You've hit a {{count}}-day streak! Amazing consistency — keep the momentum going!",
+    shareMessage: "I just hit a {{count}}-day streak on FitLog! 🔥💪",
     milestone3: "Three Peat",
     milestone7: "Week Warrior",
     milestone14: "Two Weeks Solid",

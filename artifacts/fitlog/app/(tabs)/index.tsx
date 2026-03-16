@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  Pressable, Platform, Modal,
+  Pressable, Platform, Modal, Share,
 } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,7 +12,7 @@ import Animated, { FadeInDown, ZoomIn, FadeIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
-import { dateLocale } from "@/lib/rtl";
+import { dateLocale, rtlIcon } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
@@ -395,7 +395,7 @@ function StreakSummaryCard({ streaksData, achievementsData, theme }: { streaksDa
           <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
             {t("streaks.viewStreaks")}
           </Text>
-          <Feather name="chevron-right" size={13} color={theme.primary} />
+          <Feather name={rtlIcon("chevron-right")} size={13} color={theme.primary} />
         </Pressable>
       </View>
       <Pressable
@@ -551,13 +551,42 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
     checkMilestones();
   }, [streaksData, user?.id]);
 
+  const handleShare = useCallback(async () => {
+    try {
+      await Share.share({
+        message: t("streaks.shareMessage", { count: milestoneValue }),
+      });
+    } catch (_) {}
+  }, [milestoneValue, t]);
+
   if (!visible) return null;
+
+  const ringSize = 100;
+  const strokeWidth = 6;
+  const radius = (ringSize - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
 
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={() => setVisible(false)}>
       <View style={styles.modalOverlay}>
         <Animated.View entering={ZoomIn.duration(400)} style={[styles.modalCard, { backgroundColor: theme.card }]}>
-          <Text style={{ fontSize: 48, textAlign: "center" }}>🔥</Text>
+          <View style={{ alignItems: "center", marginBottom: 8 }}>
+            <Svg width={ringSize} height={ringSize}>
+              <Circle
+                cx={ringSize / 2} cy={ringSize / 2} r={radius}
+                stroke={theme.border} strokeWidth={strokeWidth} fill="none"
+              />
+              <Circle
+                cx={ringSize / 2} cy={ringSize / 2} r={radius}
+                stroke={theme.primary} strokeWidth={strokeWidth} fill="none"
+                strokeDasharray={`${circumference} ${circumference}`}
+                strokeDashoffset={0}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
+              />
+            </Svg>
+            <Text style={{ position: "absolute", top: ringSize / 2 - 16, fontSize: 32, textAlign: "center" }}>🔥</Text>
+          </View>
           <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", marginTop: 8 }}>
             {t("streaks.milestoneTitle")}
           </Text>
@@ -567,10 +596,19 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
           <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
             <Pressable
               onPress={() => setVisible(false)}
+              style={[styles.modalBtn, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border, flex: 1 }]}
+            >
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+                {t("common.dismiss")}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={handleShare}
               style={[styles.modalBtn, { backgroundColor: theme.primary, flex: 1 }]}
             >
+              <Feather name="share-2" size={14} color="#0f0f1a" style={{ marginRight: 4 }} />
               <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 15 }}>
-                {t("streaks.awesome")}
+                {t("common.share")}
               </Text>
             </Pressable>
           </View>
@@ -909,6 +947,6 @@ const styles = StyleSheet.create({
     padding: 28, alignItems: "center",
   },
   modalBtn: {
-    paddingVertical: 14, borderRadius: 14, alignItems: "center",
+    paddingVertical: 14, borderRadius: 14, alignItems: "center", justifyContent: "center", flexDirection: "row",
   },
 });

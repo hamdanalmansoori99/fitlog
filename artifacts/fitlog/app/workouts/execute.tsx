@@ -238,7 +238,7 @@ export default function ExecuteWorkoutScreen() {
     });
   }, []);
 
-  const setRpe = useCallback((exI: number, sI: number, rpe: number) => {
+  const setRpe = useCallback((exI: number, sI: number, rpe: number | undefined) => {
     setExercises((prev) =>
       prev.map((e, ei) =>
         ei !== exI ? e : {
@@ -732,7 +732,7 @@ export default function ExecuteWorkoutScreen() {
               <Animated.View
                 style={[
                   styles.restBarFill,
-                  { backgroundColor: theme.primary, width: `${restPct * 100}%` as any },
+                  { backgroundColor: theme.primary, width: `${restPct * 100}%` as `${number}%` },
                 ]}
               />
             </View>
@@ -966,7 +966,7 @@ export default function ExecuteWorkoutScreen() {
                 return (
                   <Pressable
                     key={val}
-                    onPress={() => setRpe(exerciseIdx, setIdx, sel ? undefined as any : val)}
+                    onPress={() => setRpe(exerciseIdx, setIdx, sel ? undefined : val)}
                     style={[
                       styles.rpeChip,
                       { backgroundColor: sel ? theme.primary + "20" : theme.card, borderColor: sel ? theme.primary : theme.border, flex: 1 },

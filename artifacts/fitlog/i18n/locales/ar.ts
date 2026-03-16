@@ -35,6 +35,8 @@ export default {
     goBack: "العودة",
     continueText: "متابعة",
     requestFailed: "فشل الطلب",
+    dismiss: "إغلاق",
+    share: "مشاركة",
   },
   tabs: {
     home: "الرئيسية",
@@ -1650,6 +1652,7 @@ export default {
     today: "اليوم",
     milestoneTitle: "🔥 إنجاز سلسلة!",
     milestoneMessage: "وصلت لسلسلة {{count}} يوم! ثبات مذهل — استمر بالزخم!",
+    shareMessage: "وصلت لسلسلة {{count}} يوم على FitLog! 🔥💪",
     milestone3: "ثلاثة متتالية",
     milestone7: "محارب الأسبوع",
     milestone14: "أسبوعان ثابتان",

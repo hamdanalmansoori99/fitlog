@@ -59,7 +59,7 @@ function StreakRing({
       </View>
 
       <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-        <View style={[styles.progressFill, { backgroundColor: color, width: `${pct * 100}%` as any }]} />
+        <View style={[styles.progressFill, { backgroundColor: color, width: `${pct * 100}%` as `${number}%` }]} />
       </View>
 
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
