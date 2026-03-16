@@ -1649,7 +1649,9 @@ export default {
   },
   scan: {
     title: "Scan Meal",
+    tagline: "Snap your meal. Log calories instantly.",
     hintText: "Point camera at your meal",
+    viewMealHistory: "View Meal History",
     analyzing: "AI is analyzing your meal...",
     analyzingSubtitle: "Identifying food items & estimating nutrition",
     analyzeFailed: "Could not analyze image. Please try again.",

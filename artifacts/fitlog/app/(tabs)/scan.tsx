@@ -31,6 +31,7 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useQueryClient } from "@tanstack/react-query";
+import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import { api, ScanMealItem, MacroTotals } from "@/lib/api";
@@ -411,6 +412,9 @@ export default function ScanScreen() {
             <Text style={[styles.cameraTitle, { fontFamily: "Inter_700Bold" }]}>
               {t("scan.title")}
             </Text>
+            <Text style={[styles.cameraTagline, { fontFamily: "Inter_400Regular" }]}>
+              {t("scan.tagline")}
+            </Text>
           </View>
 
           <View style={styles.cameraHint}>
@@ -559,6 +563,17 @@ export default function ScanScreen() {
               ))}
             </View>
 
+            <Pressable
+              onPress={() => router.push("/(tabs)/meals" as any)}
+              style={styles.mealHistoryLink}
+            >
+              <Feather name="clock" size={14} color={theme.primary} />
+              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                {t("scan.viewMealHistory")}
+              </Text>
+              <Feather name="chevron-right" size={14} color={theme.primary} />
+            </Pressable>
+
             <View style={[styles.footerRow, { paddingBottom: tabBarHeight + 8 }]}>
               <Pressable
                 onPress={handleRetake}
@@ -660,6 +675,14 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.6)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  cameraTagline: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 13,
+    marginTop: 4,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   cameraHint: {
     position: "absolute",
@@ -902,6 +925,13 @@ const styles = StyleSheet.create({
   },
   catChipText: {
     fontSize: 11,
+  },
+  mealHistoryLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
   },
   footerRow: {
     flexDirection: "row",

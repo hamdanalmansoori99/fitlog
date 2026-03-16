@@ -21,10 +21,6 @@ function NativeTabLayout() {
         <Icon sf={{ default: "figure.run", selected: "figure.run" }} />
         <Label>{t("tabs.workouts")}</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="meals">
-        <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
-        <Label>{t("tabs.meals")}</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scan">
         <Icon sf={{ default: "camera.viewfinder", selected: "camera.viewfinder" }} />
         <Label>{t("tabs.scan")}</Label>
@@ -105,25 +101,36 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="meals"
         options={{
-          title: t("tabs.meals"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="fork.knife" tintColor={color} size={24} />
-            ) : (
-              <Feather name="coffee" size={22} color={color} />
-            ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="scan"
         options={{
           title: t("tabs.scan"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="camera.viewfinder" tintColor={color} size={24} />
-            ) : (
-              <Feather name="camera" size={22} color={color} />
-            ),
+          tabBarIcon: ({ focused }) => (
+            <View
+              style={[
+                layoutStyles.scanHero,
+                { backgroundColor: focused ? theme.primary : theme.primary + "20" },
+              ]}
+            >
+              {isIOS ? (
+                <SymbolView
+                  name="camera.viewfinder"
+                  tintColor={focused ? "#000" : theme.primary}
+                  size={26}
+                />
+              ) : (
+                <Feather
+                  name="camera"
+                  size={24}
+                  color={focused ? "#000" : theme.primary}
+                />
+              )}
+            </View>
+          ),
+          tabBarLabel: () => null,
         }}
       />
       <Tabs.Screen
@@ -153,6 +160,17 @@ function ClassicTabLayout() {
     </Tabs>
   );
 }
+
+const layoutStyles = StyleSheet.create({
+  scanHero: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+});
 
 export default function TabLayout() {
   if (isLiquidGlassAvailable()) {
