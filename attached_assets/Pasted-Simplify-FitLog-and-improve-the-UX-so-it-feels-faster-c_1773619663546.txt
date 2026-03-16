@@ -1,0 +1,103 @@
+Simplify FitLog and improve the UX so it feels faster, cleaner, and easier for first-time users.
+
+Goals:
+1. Reduce clutter across the app
+2. Make logging workouts and meals faster
+3. Improve navigation and readability
+4. Add a much larger exercise library
+5. Keep the app modern, minimal, and mobile-first
+
+Please make these product changes:
+
+HOME / DASHBOARD
+- Simplify the home screen
+- Show only the most important information first:
+  - calories remaining
+  - protein progress
+  - today’s workout
+  - quick log buttons
+- Remove any unnecessary cards, duplicate stats, or crowded sections
+- Make the dashboard feel clean and premium
+
+NAVIGATION
+- Make navigation extremely simple and obvious
+- Prioritize these main sections:
+  - Home
+  - Workouts
+  - Meals
+  - Progress
+  - Profile
+- Ensure users can reach the main actions in 1 tap
+
+QUICK ACTIONS
+- Add large quick action buttons:
+  - Log Workout
+  - Log Meal
+  - Scan Meal
+  - Start Workout
+- These should be easy to tap and visible immediately
+
+WORKOUTS
+- Expand the workout database significantly
+- Add more exercises across all major categories:
+  - chest
+  - back
+  - shoulders
+  - biceps
+  - triceps
+  - legs
+  - glutes
+  - abs
+  - forearms
+  - cardio
+  - mobility
+  - bodyweight
+- For each exercise include:
+  - exercise name
+  - primary muscle group
+  - secondary muscles
+  - equipment
+  - beginner/intermediate/advanced level
+  - short form instructions
+- Add search, filtering, and category browsing
+- Make exercise selection fast and user-friendly
+
+EXERCISE DETAIL PAGE
+- Create a clean exercise detail screen
+- Include:
+  - exercise name
+  - muscles worked
+  - correct form tips
+  - common mistakes
+  - animation placeholder area for future 3D exercise animation
+- Make this page ready for future animated exercise visuals
+
+ONBOARDING
+- Simplify onboarding
+- Ask only the essential questions:
+  - goal
+  - age
+  - weight
+  - height
+  - activity level
+- Remove friction and unnecessary inputs
+
+DESIGN
+- Keep the UI minimal, modern, dark, and premium
+- Use more spacing
+- Reduce visual noise
+- Improve typography hierarchy
+- Make buttons and cards more consistent
+- Keep everything responsive for mobile
+
+PERFORMANCE
+- Clean up unnecessary renders and repeated components
+- Improve speed when opening screens
+- Make logging actions feel instant
+
+PLEASE ALSO:
+- audit the current app for clutter and confusing flows
+- remove anything that is not helping the user
+- preserve existing core functionality
+- keep the codebase organized and reusable
+- add placeholder support for future per-exercise animation files
