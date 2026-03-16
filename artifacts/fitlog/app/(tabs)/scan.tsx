@@ -39,6 +39,8 @@ import { useTranslation } from "react-i18next";
 type ScreenState = "camera" | "scanning" | "results";
 type MealCategory = "Breakfast" | "Lunch" | "Dinner" | "Snacks";
 
+const TAB_BAR_HEIGHT = Platform.OS === "web" ? 84 : 56;
+
 const CATEGORIES: MealCategory[] = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
 function MacroPill({
@@ -557,7 +559,7 @@ export default function ScanScreen() {
               ))}
             </View>
 
-            <View style={[styles.footerRow, { paddingBottom: insets.bottom + 8 }]}>
+            <View style={[styles.footerRow, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 8 }]}>
               <Pressable
                 onPress={handleRetake}
                 style={[styles.retakeTextBtn, { borderColor: theme.border }]}
