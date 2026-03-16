@@ -57,6 +57,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "@react-navigation/bottom-tabs": "^7.15.5",
     "expo-device": "^55.0.9",
     "expo-localization": "^55.0.8",
     "expo-notifications": "^55.0.12",
