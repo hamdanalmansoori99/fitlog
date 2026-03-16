@@ -14,7 +14,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { getTemplateById } from "@/lib/workoutTemplates";
 import { getFilteredExercises } from "@/lib/coachEngine";
-import { calculateStrengthTarget } from "@/lib/progressionEngine";
+import { calculateStrengthTarget, ExerciseSession } from "@/lib/progressionEngine";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
@@ -174,8 +174,8 @@ export default function ExecuteWorkoutScreen() {
     enabled: gymNames.length > 0,
     staleTime: 120000,
   });
-  const historyMap = useMemo<Record<string, any[]>>(() => {
-    const m: Record<string, any[]> = {};
+  const historyMap = useMemo<Record<string, ExerciseSession[]>>(() => {
+    const m: Record<string, ExerciseSession[]> = {};
     if (historyData?.exercises) {
       for (const e of historyData.exercises) m[e.name] = e.sessions ?? [];
     }
@@ -970,10 +970,10 @@ export default function ExecuteWorkoutScreen() {
                         </Text>
                       )}
                     </View>
-                    {isActive && progression?.rationale ? (
+                    {progression?.rationale ? (
                       <Text
                         numberOfLines={1}
-                        style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, opacity: 0.8, writingDirection: isRTL ? "rtl" : "ltr" }}
+                        style={{ color: isActive ? trendColor : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, opacity: 0.75, writingDirection: isRTL ? "rtl" : "ltr" }}
                       >
                         {progression.rationale}
                       </Text>
