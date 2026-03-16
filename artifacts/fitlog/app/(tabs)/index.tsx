@@ -22,6 +22,9 @@ import {
   UserCoachProfile,
   RecoveryContext,
 } from "@/lib/coachEngine";
+import { useTheme as useThemeImpl } from "@/hooks/useTheme";
+
+type AppTheme = ReturnType<typeof useThemeImpl>["theme"];
 
 // ─── Calorie Ring ─────────────────────────────────────────────────────────────
 
@@ -32,7 +35,7 @@ const CIRC = 2 * Math.PI * R;
 
 function CalorieRing({
   consumed, goal, theme,
-}: { consumed: number; goal: number; theme: any }) {
+}: { consumed: number; goal: number; theme: AppTheme }) {
   const { t } = useTranslation();
   const remaining = Math.max(0, goal - consumed);
   const pct = goal > 0 ? Math.min(consumed / goal, 1) : 0;
@@ -78,7 +81,7 @@ function CalorieRing({
 
 // ─── Nutrition Card — calorie ring + protein ──────────────────────────────────
 
-function NutritionCard({ mealsData, theme }: { mealsData: any; theme: any }) {
+function NutritionCard({ mealsData, theme }: { mealsData: any; theme: AppTheme }) {
   const { t } = useTranslation();
   const totals = mealsData?.dailyTotals;
   const calorieGoal = mealsData?.calorieGoal ?? 2000;
@@ -131,7 +134,7 @@ function NutritionCard({ mealsData, theme }: { mealsData: any; theme: any }) {
 
 // ─── Quick Actions ────────────────────────────────────────────────────────────
 
-function QuickActions({ theme }: { theme: any }) {
+function QuickActions({ theme }: { theme: AppTheme }) {
   const { t } = useTranslation();
 
   const actions = [
@@ -183,13 +186,13 @@ function QuickActions({ theme }: { theme: any }) {
 
 // ─── Today's Workout Card ─────────────────────────────────────────────────────
 
-function diffColor(d: string | undefined, theme: any) {
+function diffColor(d: string | undefined, theme: AppTheme) {
   if (d === "Beginner") return theme.primary;
   if (d === "Intermediate") return theme.secondary;
   return theme.warning || "#ffab40";
 }
 
-function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; theme: any }) {
+function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; theme: AppTheme }) {
   const { t } = useTranslation();
   const { recommendation: rec, reasonPills, contextSummary, isRestDayRecommended } = todayRec;
 
@@ -286,7 +289,7 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
   );
 }
 
-function RestDayCard({ theme }: { theme: any }) {
+function RestDayCard({ theme }: { theme: AppTheme }) {
   const { t } = useTranslation();
   return (
     <Card style={{ borderColor: theme.primary + "20", gap: 10 }}>
@@ -319,7 +322,7 @@ function RestDayCard({ theme }: { theme: any }) {
   );
 }
 
-function CoachCtaCard({ theme }: { theme: any }) {
+function CoachCtaCard({ theme }: { theme: AppTheme }) {
   const { t } = useTranslation();
   return (
     <Card style={{ borderColor: theme.secondary + "30", gap: 12 }}>
@@ -352,65 +355,47 @@ function CoachCtaCard({ theme }: { theme: any }) {
   );
 }
 
-// ─── Streak Card ──────────────────────────────────────────────────────────────
+// ─── Compact Streak Strip ─────────────────────────────────────────────────────
 
-function StreakSummaryCard({ data, theme }: { data: any; theme: any }) {
+function StreakSummaryCard({ data, theme }: { data: any; theme: AppTheme }) {
   const { t } = useTranslation();
   if (!data) return null;
-  const { streaks, weeklyScore, achievements } = data;
-  const earned = (achievements ?? []).filter((a: any) => a.earned).length;
-  const total = (achievements ?? []).length;
+  const { streaks, weeklyScore } = data;
   const score = weeklyScore?.score ?? 0;
   const scoreColor = score >= 70 ? theme.primary : score >= 40 ? (theme.warning || "#ffab40") : theme.danger;
 
+  const items = [
+    { icon: "activity" as const, value: streaks?.workout?.current ?? 0, label: t("home.workout"), color: "#00e676" },
+    { icon: "coffee" as const, value: streaks?.meal?.current ?? 0, label: t("home.mealsLabel"), color: "#ffab40" },
+    { icon: "droplet" as const, value: streaks?.hydration?.current ?? 0, label: t("home.hydration"), color: "#448aff" },
+    { icon: "trending-up" as const, value: score, label: t("home.thisWeek"), color: scoreColor, suffix: "%" },
+  ];
+
   return (
-    <Card style={{ gap: 12 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-          {t("home.streaks")}
-        </Text>
-        <Pressable
-          onPress={() => router.push("/achievements" as any)}
-          style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-        >
-          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-            {earned}/{total} {t("home.badges")}
-          </Text>
-          <Feather name="chevron-right" size={13} color={theme.primary} />
-        </Pressable>
-      </View>
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        {[
-          { icon: "activity" as const, value: streaks?.workout?.current ?? 0, label: t("home.workout"), color: "#00e676" },
-          { icon: "coffee" as const, value: streaks?.meal?.current ?? 0, label: t("home.mealsLabel"), color: "#ffab40" },
-          { icon: "droplet" as const, value: streaks?.hydration?.current ?? 0, label: t("home.hydration"), color: "#448aff" },
-        ].map((s) => (
-          <View key={s.label} style={{ flex: 1, alignItems: "center", gap: 3 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Feather name={s.icon} size={13} color={s.color} />
-              <Text style={{ color: s.color, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 26 }}>
-                {s.value}
+    <Pressable
+      onPress={() => router.push("/achievements" as any)}
+      style={({ pressed }) => [
+        styles.streakStrip,
+        { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
+      ]}
+    >
+      {items.map((s, i) => (
+        <React.Fragment key={s.label}>
+          {i > 0 && <View style={{ width: 1, height: 28, backgroundColor: theme.border }} />}
+          <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+              <Feather name={s.icon} size={11} color={s.color} />
+              <Text style={{ color: s.color, fontFamily: "Inter_700Bold", fontSize: 16 }}>
+                {s.value}{s.suffix ?? ""}
               </Text>
             </View>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
               {s.label}
             </Text>
           </View>
-        ))}
-        <View style={{ width: 1, backgroundColor: theme.border, height: 40, marginHorizontal: 4 }} />
-        <Pressable
-          onPress={() => router.push("/achievements" as any)}
-          style={{ flex: 1, alignItems: "center", gap: 3 }}
-        >
-          <Text style={{ color: scoreColor, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 26 }}>
-            {score}%
-          </Text>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-            {t("home.thisWeek")}
-          </Text>
-        </Pressable>
-      </View>
-    </Card>
+        </React.Fragment>
+      ))}
+    </Pressable>
   );
 }
 
@@ -691,5 +676,9 @@ const styles = StyleSheet.create({
   coachIcon: {
     width: 38, height: 38, borderRadius: 10,
     alignItems: "center", justifyContent: "center",
+  },
+  streakStrip: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-around",
+    paddingVertical: 12, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1,
   },
 });
