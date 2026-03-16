@@ -732,7 +732,7 @@ function WeeklyReportCard({ theme, streaksData, workoutsData, mealsData }: { the
 
   const totalWorkouts = workoutsData?.workouts?.length ?? 0;
   const workoutStreak = streaksData?.currentWorkoutStreak ?? 0;
-  const avgCalories = mealsData?.calorieGoal ?? 0;
+  const avgCalories = mealsData?.dailyTotals?.calories ?? 0;
   const hasData = totalWorkouts > 0;
 
   return (
