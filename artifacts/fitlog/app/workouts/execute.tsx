@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput,
-  Platform, Alert, Vibration, Modal,
+  Platform, Alert, Vibration, Modal, Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
@@ -106,7 +106,7 @@ export default function ExecuteWorkoutScreen() {
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [templateSaved, setTemplateSaved] = useState(false);
-  const [prModal, setPrModal] = useState<{ exercise: string; weight: number; reps: number; previousBest: number } | null>(null);
+  const [prModal, setPrModal] = useState<{ exercise: string; weight: number; reps: number; previousBest: number; previousBestReps?: number } | null>(null);
 
   // Store next position when entering rest phase
   const pendingRef = useRef<{ exIdx: number; setIdx: number } | null>(null);
@@ -289,6 +289,59 @@ export default function ExecuteWorkoutScreen() {
     return -1;
   }
 
+  async function sharePR(pr: { exercise: string; weight: number; reps: number }) {
+    try {
+      await Share.share({
+        message: t("pr.prSet", { exercise: pr.exercise, weight: pr.weight, reps: pr.reps }),
+      });
+    } catch {}
+  }
+
+  function renderPRModal() {
+    if (!prModal) return null;
+    return (
+      <Modal transparent animationType="fade" visible={!!prModal} onRequestClose={() => setPrModal(null)}>
+        <View style={styles.prOverlay}>
+          <Animated.View entering={ZoomIn.duration(400)} style={[styles.prCard, { backgroundColor: theme.card }]}>
+            <Text style={{ fontSize: 52, textAlign: "center" }}>🏆</Text>
+            <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", marginTop: 8 }}>
+              {t("pr.newPersonalRecord")}
+            </Text>
+            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 18, textAlign: "center", marginTop: 12 }}>
+              {prModal.exercise}
+            </Text>
+            <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 32, textAlign: "center", marginTop: 4 }}>
+              {prModal.weight}kg × {prModal.reps}
+            </Text>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", marginTop: 8 }}>
+              {t("pr.previousBest", { weight: prModal.previousBest })}
+              {prModal.previousBestReps ? ` × ${prModal.previousBestReps}` : ""}
+            </Text>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 16, width: "100%" }}>
+              <Pressable
+                onPress={() => { sharePR(prModal); setPrModal(null); }}
+                style={[styles.prBtn, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.primary, flex: 1 }]}
+              >
+                <Feather name="share-2" size={14} color={theme.primary} style={{ marginRight: 4 }} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                  {t("pr.share")}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setPrModal(null)}
+                style={[styles.prBtn, { backgroundColor: theme.primary, flex: 1 }]}
+              >
+                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                  {t("pr.dismiss")}
+                </Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  }
+
   function checkForPR(exIdx: number, sIdx: number) {
     const ex = exercises[exIdx];
     const set = ex.sets[sIdx];
@@ -296,21 +349,27 @@ export default function ExecuteWorkoutScreen() {
     const reps = parseInt(set.reps);
     if (!weight || weight <= 0 || !reps || reps <= 0) return;
 
+    const volume = weight * reps;
     const sessions = historyMap[ex.name] ?? [];
     if (sessions.length === 0) return;
 
+    let previousBestVolume = 0;
     let previousBestWeight = 0;
+    let previousBestReps = 0;
     for (const session of sessions) {
       for (const s of session.sets || []) {
-        if ((s.weightKg ?? 0) > previousBestWeight) {
+        const sVol = (s.weightKg ?? 0) * (s.reps ?? 0);
+        if (sVol > previousBestVolume) {
+          previousBestVolume = sVol;
           previousBestWeight = s.weightKg ?? 0;
+          previousBestReps = s.reps ?? 0;
         }
       }
     }
 
-    if (weight > previousBestWeight && previousBestWeight > 0) {
+    if (volume > previousBestVolume && previousBestVolume > 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setPrModal({ exercise: ex.name, weight, reps, previousBest: previousBestWeight });
+      setPrModal({ exercise: ex.name, weight, reps, previousBest: previousBestWeight, previousBestReps });
     }
   }
 
@@ -631,35 +690,7 @@ export default function ExecuteWorkoutScreen() {
           </Animated.View>
         </ScrollView>
 
-        {prModal && (
-          <Modal transparent animationType="fade" visible={!!prModal} onRequestClose={() => setPrModal(null)}>
-            <View style={styles.prOverlay}>
-              <Animated.View entering={ZoomIn.duration(400)} style={[styles.prCard, { backgroundColor: theme.card }]}>
-                <Text style={{ fontSize: 52, textAlign: "center" }}>🏆</Text>
-                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", marginTop: 8 }}>
-                  {t("pr.newPersonalRecord")}
-                </Text>
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 18, textAlign: "center", marginTop: 12 }}>
-                  {prModal.exercise}
-                </Text>
-                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 32, textAlign: "center", marginTop: 4 }}>
-                  {prModal.weight}kg × {prModal.reps}
-                </Text>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", marginTop: 8 }}>
-                  {t("pr.previousBest", { weight: prModal.previousBest })}
-                </Text>
-                <Pressable
-                  onPress={() => setPrModal(null)}
-                  style={[styles.prBtn, { backgroundColor: theme.primary }]}
-                >
-                  <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 16 }}>
-                    {t("pr.celebrate")}
-                  </Text>
-                </Pressable>
-              </Animated.View>
-            </View>
-          </Modal>
-        )}
+        {renderPRModal()}
       </View>
     );
   }
@@ -1003,35 +1034,7 @@ export default function ExecuteWorkoutScreen() {
         )}
       </ScrollView>
 
-      {prModal && (
-        <Modal transparent animationType="fade" visible={!!prModal} onRequestClose={() => setPrModal(null)}>
-          <View style={styles.prOverlay}>
-            <Animated.View entering={ZoomIn.duration(400)} style={[styles.prCard, { backgroundColor: theme.card }]}>
-              <Text style={{ fontSize: 52, textAlign: "center" }}>🏆</Text>
-              <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", marginTop: 8 }}>
-                {t("pr.newPersonalRecord")}
-              </Text>
-              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 18, textAlign: "center", marginTop: 12 }}>
-                {prModal.exercise}
-              </Text>
-              <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 32, textAlign: "center", marginTop: 4 }}>
-                {prModal.weight}kg × {prModal.reps}
-              </Text>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", marginTop: 8 }}>
-                {t("pr.previousBest", { weight: prModal.previousBest })}
-              </Text>
-              <Pressable
-                onPress={() => setPrModal(null)}
-                style={[styles.prBtn, { backgroundColor: theme.primary }]}
-              >
-                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 16 }}>
-                  {t("pr.celebrate")}
-                </Text>
-              </Pressable>
-            </Animated.View>
-          </View>
-        </Modal>
-      )}
+      {renderPRModal()}
     </View>
   );
 }
@@ -1127,7 +1130,7 @@ const styles = StyleSheet.create({
     padding: 28, alignItems: "center",
   },
   prBtn: {
-    width: "100%", paddingVertical: 14, borderRadius: 14,
-    alignItems: "center", marginTop: 20,
+    flexDirection: "row", paddingVertical: 14, borderRadius: 14,
+    alignItems: "center", justifyContent: "center",
   },
 });

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
 } from "react-native";
@@ -22,6 +22,8 @@ const MILESTONE_LABELS: Record<number, string> = {
   60: "streaks.milestone60",
   100: "streaks.milestone100",
 };
+
+const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 function StreakRing({
   current, best, label, icon, color, theme,
@@ -115,6 +117,142 @@ function MilestoneBadge({
   );
 }
 
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function ActivityCalendar({
+  workoutsData, mealsData, theme,
+}: {
+  workoutsData: any; mealsData: any; theme: any;
+}) {
+  const { t } = useTranslation();
+
+  const { activeDays, weeks, monthLabel } = useMemo(() => {
+    const active = new Set<string>();
+
+    const workouts = workoutsData?.workouts || [];
+    for (const w of workouts) {
+      const d = new Date(w.date);
+      active.add(toLocalDateStr(d));
+    }
+
+    const meals = mealsData?.meals || mealsData?.todayMeals || [];
+    for (const m of meals) {
+      if (m.date || m.loggedAt || m.createdAt) {
+        const d = new Date(m.date || m.loggedAt || m.createdAt);
+        active.add(toLocalDateStr(d));
+      }
+    }
+
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDow = firstDay.getDay();
+
+    const calWeeks: (Date | null)[][] = [];
+    let week: (Date | null)[] = [];
+    for (let i = 0; i < startDow; i++) week.push(null);
+
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      const date = new Date(year, month, d);
+      week.push(date);
+      if (week.length === 7) {
+        calWeeks.push(week);
+        week = [];
+      }
+    }
+    if (week.length > 0) {
+      while (week.length < 7) week.push(null);
+      calWeeks.push(week);
+    }
+
+    const label = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+    return { activeDays: active, weeks: calWeeks, monthLabel: label };
+  }, [workoutsData, mealsData]);
+
+  const todayStr = toLocalDateStr(new Date());
+
+  return (
+    <Card style={{ gap: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Feather name="calendar" size={16} color={theme.primary} />
+        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+          {t("streaks.activityCalendar")}
+        </Text>
+      </View>
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
+        {monthLabel}
+      </Text>
+
+      <View style={{ flexDirection: "row", justifyContent: "space-around", marginBottom: 2 }}>
+        {DAY_LABELS.map((d, i) => (
+          <Text key={i} style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11, width: 32, textAlign: "center" }}>
+            {d}
+          </Text>
+        ))}
+      </View>
+
+      {weeks.map((week, wi) => (
+        <View key={wi} style={{ flexDirection: "row", justifyContent: "space-around" }}>
+          {week.map((day, di) => {
+            if (!day) {
+              return <View key={di} style={styles.calDay} />;
+            }
+            const ds = toLocalDateStr(day);
+            const isActive = activeDays.has(ds);
+            const isToday = ds === todayStr;
+
+            return (
+              <View
+                key={di}
+                style={[
+                  styles.calDay,
+                  {
+                    backgroundColor: isActive ? theme.primary + "30" : "transparent",
+                    borderColor: isToday ? theme.primary : "transparent",
+                    borderWidth: isToday ? 1.5 : 0,
+                    borderRadius: 8,
+                  },
+                ]}
+              >
+                <Text style={{
+                  color: isActive ? theme.primary : theme.textMuted,
+                  fontFamily: isActive ? "Inter_700Bold" : "Inter_400Regular",
+                  fontSize: 13,
+                }}>
+                  {day.getDate()}
+                </Text>
+                {isActive && (
+                  <View style={[styles.calDot, { backgroundColor: theme.primary }]} />
+                )}
+              </View>
+            );
+          })}
+        </View>
+      ))}
+
+      <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.primary + "30" }} />
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+            {t("streaks.activeDay")}
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: theme.primary }} />
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+            {t("streaks.today")}
+          </Text>
+        </View>
+      </View>
+    </Card>
+  );
+}
+
 export default function StreakHistoryScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -124,6 +262,18 @@ export default function StreakHistoryScreen() {
   const { data: achievementsData, isLoading } = useQuery({
     queryKey: ["achievements"],
     queryFn: api.getAchievements,
+    staleTime: 60000,
+  });
+
+  const { data: workoutsData } = useQuery({
+    queryKey: ["workouts"],
+    queryFn: () => api.getWorkouts({ limit: 50 }),
+    staleTime: 60000,
+  });
+
+  const { data: mealsData } = useQuery({
+    queryKey: ["mealsToday"],
+    queryFn: () => api.getMeals(),
     staleTime: 60000,
   });
 
@@ -162,6 +312,10 @@ export default function StreakHistoryScreen() {
         ) : (
           <>
             <Animated.View entering={FadeInDown.duration(400)}>
+              <ActivityCalendar workoutsData={workoutsData} mealsData={mealsData} theme={theme} />
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(80).duration(400)}>
               <StreakRing
                 current={workoutCurrent}
                 best={workoutBest}
@@ -172,7 +326,7 @@ export default function StreakHistoryScreen() {
               />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(80).duration(400)}>
+            <Animated.View entering={FadeInDown.delay(160).duration(400)}>
               <StreakRing
                 current={mealCurrent}
                 best={mealBest}
@@ -183,7 +337,7 @@ export default function StreakHistoryScreen() {
               />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(160).duration(400)}>
+            <Animated.View entering={FadeInDown.delay(240).duration(400)}>
               <StreakRing
                 current={hydrationCurrent}
                 best={hydrationBest}
@@ -194,13 +348,13 @@ export default function StreakHistoryScreen() {
               />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(240).duration(400)}>
+            <Animated.View entering={FadeInDown.delay(320).duration(400)}>
               <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15, marginBottom: 4 }}>
                 {t("streaks.milestones")}
               </Text>
               <View style={styles.milestoneGrid}>
                 {MILESTONES.map((m, i) => (
-                  <Animated.View key={m} entering={ZoomIn.delay(300 + i * 60).duration(300)} style={{ width: "30%" }}>
+                  <Animated.View key={m} entering={ZoomIn.delay(380 + i * 60).duration(300)} style={{ width: "30%" }}>
                     <MilestoneBadge
                       milestone={m}
                       achieved={bestOverall >= m}
@@ -241,5 +395,11 @@ const styles = StyleSheet.create({
   milestoneBadge: {
     alignItems: "center", gap: 4, paddingVertical: 14, paddingHorizontal: 8,
     borderRadius: 14, borderWidth: 1,
+  },
+  calDay: {
+    width: 32, height: 36, alignItems: "center", justifyContent: "center",
+  },
+  calDot: {
+    width: 4, height: 4, borderRadius: 2, marginTop: 1,
   },
 });

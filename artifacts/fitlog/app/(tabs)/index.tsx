@@ -436,7 +436,7 @@ function DontBreakStreakBanner({
   const workoutStreak = achievementsData?.streaks?.workout?.current ?? 0;
   const mealStreak = achievementsData?.streaks?.meal?.current ?? 0;
 
-  if (workoutStreak < 2 && mealStreak < 2) return null;
+  if (workoutStreak < 1 && mealStreak < 1) return null;
 
   const now = new Date();
   const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -451,40 +451,57 @@ function DontBreakStreakBanner({
   const mealCount = Array.isArray(meals) ? meals.length : 0;
   const hasMealToday = mealCount > 0 || (mealsData?.dailyTotals?.calories ?? 0) > 0;
 
-  const showWorkoutBanner = workoutStreak >= 2 && !hasWorkoutToday;
-  const showMealBanner = mealStreak >= 2 && !hasMealToday;
+  const showWorkoutCta = workoutStreak >= 1 && !hasWorkoutToday;
+  const showMealCta = mealStreak >= 1 && !hasMealToday;
 
-  if (!showWorkoutBanner && !showMealBanner) return null;
+  if (!showWorkoutCta && !showMealCta) return null;
 
   return (
     <Animated.View entering={FadeInDown.duration(400)}>
-      <Pressable
-        onPress={() => {
-          if (showWorkoutBanner) router.push("/workouts/log" as any);
-          else router.push("/meals/add" as any);
-        }}
+      <View
         style={[
           styles.streakBanner,
           { backgroundColor: (theme.warning || "#ffab40") + "15", borderColor: (theme.warning || "#ffab40") + "40" },
         ]}
       >
         <Text style={{ fontSize: 20 }}>🔥</Text>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, gap: 6 }}>
           <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
             {t("streaks.dontBreakStreak")}
           </Text>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-            {showWorkoutBanner
-              ? t("streaks.dontBreakWorkout", { count: workoutStreak })
-              : t("streaks.dontBreakMeal", { count: mealStreak })}
+            {showWorkoutCta && showMealCta
+              ? t("streaks.dontBreakBoth", { workoutCount: workoutStreak, mealCount: mealStreak })
+              : showWorkoutCta
+                ? t("streaks.dontBreakWorkout", { count: workoutStreak })
+                : t("streaks.dontBreakMeal", { count: mealStreak })}
           </Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+            {showWorkoutCta && (
+              <Pressable
+                onPress={() => router.push("/workouts/log" as any)}
+                style={[styles.logNowBtn, { backgroundColor: theme.primary }]}
+              >
+                <Feather name="activity" size={12} color="#0f0f1a" />
+                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+                  {t("streaks.logWorkout")}
+                </Text>
+              </Pressable>
+            )}
+            {showMealCta && (
+              <Pressable
+                onPress={() => router.push("/(tabs)/scan" as any)}
+                style={[styles.logNowBtn, { backgroundColor: theme.warning || "#ffab40" }]}
+              >
+                <Feather name="camera" size={12} color="#0f0f1a" />
+                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+                  {t("streaks.logMeal")}
+                </Text>
+              </Pressable>
+            )}
+          </View>
         </View>
-        <View style={[styles.logNowBtn, { backgroundColor: theme.warning || "#ffab40" }]}>
-          <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
-            {t("streaks.logNow")}
-          </Text>
-        </View>
-      </Pressable>
+      </View>
     </Animated.View>
   );
 }
@@ -695,8 +712,27 @@ export default function HomeScreen() {
           </Pressable>
         </Animated.View>
 
+        {/* ── Streaks (prominent, right after greeting) ── */}
+        {achievementsData && (
+          <Animated.View entering={FadeInDown.delay(40).duration(400)} style={styles.section}>
+            <StreakSummaryCard data={achievementsData} theme={theme} />
+          </Animated.View>
+        )}
+
+        {/* ── Don't Break Streak Banner ── */}
+        {achievementsData && (
+          <View style={styles.section}>
+            <DontBreakStreakBanner
+              achievementsData={achievementsData}
+              workoutsData={workoutsData}
+              mealsData={mealsData}
+              theme={theme}
+            />
+          </View>
+        )}
+
         {/* ── Nutrition (calorie ring + protein) ── */}
-        <Animated.View entering={FadeInDown.delay(60).duration(400)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.section}>
           {mealsData ? (
             <NutritionCard mealsData={mealsData} theme={theme} />
           ) : (
@@ -749,28 +785,9 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ── Quick Actions ── */}
-        <Animated.View entering={FadeInDown.delay(180).duration(400)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
           <QuickActions theme={theme} />
         </Animated.View>
-
-        {/* ── Don't Break Streak Banner ── */}
-        {achievementsData && (
-          <View style={styles.section}>
-            <DontBreakStreakBanner
-              achievementsData={achievementsData}
-              workoutsData={workoutsData}
-              mealsData={mealsData}
-              theme={theme}
-            />
-          </View>
-        )}
-
-        {/* ── Streaks ── */}
-        {achievementsData && (
-          <Animated.View entering={FadeInDown.delay(220).duration(400)} style={styles.section}>
-            <StreakSummaryCard data={achievementsData} theme={theme} />
-          </Animated.View>
-        )}
 
         {/* ── AI Coach Shortcut (slim row) ── */}
         <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.section}>
@@ -866,7 +883,8 @@ const styles = StyleSheet.create({
     padding: 14, borderRadius: 14, borderWidth: 1,
   },
   logNowBtn: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
   },
   modalOverlay: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.7)",
