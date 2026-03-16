@@ -33,8 +33,8 @@ import type Colors from "@/constants/colors";
 
 type AppTheme = (typeof Colors)["dark"];
 
-const HERO_RING = 150;
-const HERO_STROKE = 14;
+const HERO_RING = 110;
+const HERO_STROKE = 12;
 const HERO_R = (HERO_RING - HERO_STROKE) / 2;
 const HERO_CIRC = 2 * Math.PI * HERO_R;
 
@@ -69,10 +69,10 @@ function CalorieRingHero({
           </G>
         </Svg>
         <View style={{ alignItems: "center" }}>
-          <Text style={{ color: over ? ringColor : theme.text, fontFamily: "Inter_700Bold", fontSize: 28, lineHeight: 34 }}>
+          <Text style={{ color: over ? ringColor : theme.text, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 26 }}>
             {remaining}
           </Text>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
             {t("home.kcalLeft")}
           </Text>
         </View>
@@ -735,7 +735,7 @@ function WeeklyReportCard({ theme, streaksData, workoutsData }: { theme: AppThem
   const hasData = totalWorkouts > 0;
 
   return (
-    <Pressable onPress={() => router.push("/(tabs)/progress" as any)}>
+    <Pressable onPress={() => router.push("/weekly-report" as any)}>
     <Card style={{ gap: 10, borderColor: theme.secondary + "20" }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <View style={[styles.weeklyIcon, { backgroundColor: theme.secondary + "18" }]}>
@@ -1065,57 +1065,53 @@ export default function HomeScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(40).duration(400)} style={styles.section}>
-          {mealsData ? (
-            <NutritionHero mealsData={mealsData} theme={theme} />
-          ) : (
-            <Card style={{ gap: 12, alignItems: "center" }}>
-              <SkeletonBox width="40%" height={14} borderRadius={6} />
-              <SkeletonBox width={HERO_RING} height={HERO_RING} borderRadius={HERO_RING / 2} />
-              <View style={{ flexDirection: "row", gap: 12, width: "100%" }}>
-                {[1, 2, 3].map((i) => (
-                  <View key={i} style={{ flex: 1, gap: 4 }}>
-                    <SkeletonBox width="100%" height={6} borderRadius={3} />
+          <View style={styles.heroRow}>
+            <View style={styles.heroLeft}>
+              {mealsData ? (
+                <NutritionHero mealsData={mealsData} theme={theme} />
+              ) : (
+                <Card style={{ gap: 12, alignItems: "center" }}>
+                  <SkeletonBox width={HERO_RING} height={HERO_RING} borderRadius={HERO_RING / 2} />
+                  <View style={{ flexDirection: "row", gap: 8, width: "100%" }}>
+                    {[1, 2, 3].map((i) => (
+                      <View key={i} style={{ flex: 1, gap: 4 }}>
+                        <SkeletonBox width="100%" height={6} borderRadius={3} />
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </View>
-            </Card>
-          )}
-        </Animated.View>
+                </Card>
+              )}
+            </View>
 
-        <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.section}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-              {t("home.todaysWorkout")}
-            </Text>
-            {hasCoachOnboarding && (
-              <View style={[styles.aiPill, { backgroundColor: theme.primaryDim }]}>
-                <Feather name="cpu" size={10} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 10 }}>
-                  {t("home.aiCoach")}
+            <View style={styles.heroRight}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                  {t("home.todaysWorkout")}
                 </Text>
+                {hasCoachOnboarding && (
+                  <View style={[styles.aiPill, { backgroundColor: theme.primaryDim }]}>
+                    <Feather name="cpu" size={9} color={theme.primary} />
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 9 }}>
+                      {t("home.aiCoach")}
+                    </Text>
+                  </View>
+                )}
               </View>
-            )}
+              {profileLoading ? (
+                <SkeletonCard>
+                  <SkeletonBox width="100%" height={42} borderRadius={12} />
+                </SkeletonCard>
+              ) : todayWorkout ? (
+                <WorkoutDoneCard workout={todayWorkout} theme={theme} />
+              ) : hasCoachOnboarding && todayRecommendation ? (
+                <TodayWorkoutCard todayRec={todayRecommendation} theme={theme} />
+              ) : hasCoachOnboarding ? (
+                <RestDayCard theme={theme} />
+              ) : (
+                <CoachCtaCard theme={theme} />
+              )}
+            </View>
           </View>
-          {profileLoading ? (
-            <SkeletonCard>
-              <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-                <SkeletonBox width={40} height={40} borderRadius={12} />
-                <View style={{ flex: 1, gap: 6 }}>
-                  <SkeletonBox width="60%" height={13} />
-                  <SkeletonBox width="80%" height={18} />
-                </View>
-              </View>
-              <SkeletonBox width="100%" height={42} borderRadius={12} />
-            </SkeletonCard>
-          ) : todayWorkout ? (
-            <WorkoutDoneCard workout={todayWorkout} theme={theme} />
-          ) : hasCoachOnboarding && todayRecommendation ? (
-            <TodayWorkoutCard todayRec={todayRecommendation} theme={theme} />
-          ) : hasCoachOnboarding ? (
-            <RestDayCard theme={theme} />
-          ) : (
-            <CoachCtaCard theme={theme} />
-          )}
         </Animated.View>
 
         {/* ═══ ZONE 2 — QUICK ACTIONS ═══ */}
@@ -1197,6 +1193,11 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
   },
+  heroRow: {
+    flexDirection: "row", gap: 12,
+  },
+  heroLeft: { flex: 1 },
+  heroRight: { flex: 1 },
   section: { paddingHorizontal: 20, marginBottom: 20 },
   aiPill: {
     flexDirection: "row", alignItems: "center", gap: 4,
