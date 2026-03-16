@@ -11,8 +11,13 @@ import { useTheme } from "@/hooks/useTheme";
 
 function NativeTabLayout() {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   return (
-    <NativeTabs>
+    <NativeTabs
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>{t("tabs.home")}</Label>
@@ -21,8 +26,11 @@ function NativeTabLayout() {
         <Icon sf={{ default: "figure.run", selected: "figure.run" }} />
         <Label>{t("tabs.workouts")}</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="meals" hidden />
       <NativeTabs.Trigger name="scan">
-        <Icon sf={{ default: "camera.viewfinder", selected: "camera.viewfinder" }} />
+        <View style={[layoutStyles.nativeScanHero, { backgroundColor: theme.primary + "20" }]}>
+          <Icon sf={{ default: "camera.viewfinder", selected: "camera.viewfinder" }} />
+        </View>
         <Label>{t("tabs.scan")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="progress">
@@ -119,12 +127,12 @@ function ClassicTabLayout() {
                 <SymbolView
                   name="camera.viewfinder"
                   tintColor={focused ? "#000" : theme.primary}
-                  size={26}
+                  size={28}
                 />
               ) : (
                 <Feather
                   name="camera"
-                  size={24}
+                  size={28}
                   color={focused ? "#000" : theme.primary}
                 />
               )}
@@ -169,6 +177,13 @@ const layoutStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 6,
+  },
+  nativeScanHero: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
 
