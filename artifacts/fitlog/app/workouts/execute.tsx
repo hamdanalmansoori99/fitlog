@@ -76,7 +76,8 @@ const RPE_LABELS = ["Easy", "Moderate", "Hard", "V.Hard", "Max"];
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ExecuteWorkoutScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.dir() === "rtl";
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { id: templateId } = useLocalSearchParams<{ id: string }>();
@@ -801,8 +802,8 @@ export default function ExecuteWorkoutScreen() {
             onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
             style={{ gap: 8 }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", gap: 10 }}>
                 <View style={[styles.restDot, { backgroundColor: theme.primary }]} />
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13, letterSpacing: 1 }}>
                   {t("workouts.restLabel")}
@@ -957,14 +958,14 @@ export default function ExecuteWorkoutScreen() {
                     styles.perSetHint,
                     { backgroundColor: isActive ? trendColor + "12" : trendColor + "06", borderBottomColor: theme.border },
                   ]}>
-                    <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
+                    <View style={{ flexDirection: isRTL ? "row-reverse" : "row", gap: 10, flexWrap: "wrap" }}>
                       {lastText && (
-                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, writingDirection: isRTL ? "rtl" : "ltr" }}>
                           {t("workouts.lastLabel")}: {lastText}
                         </Text>
                       )}
                       {suggestedText && (
-                        <Text style={{ color: isActive ? trendColor : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10 }}>
+                        <Text style={{ color: isActive ? trendColor : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, writingDirection: isRTL ? "rtl" : "ltr" }}>
                           {t("workouts.suggestedLabel")}: {suggestedText}
                         </Text>
                       )}
