@@ -844,7 +844,7 @@ export default function ExecuteWorkoutScreen() {
                 </View>
                 <View style={[styles.coachHintRow, { marginTop: 2 }]}>
                   <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11, width: 52 }}>
-                    {t("workouts.coachTip")}
+                    {t("workouts.coachNoteLabel")}
                   </Text>
                   <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, flex: 1 }}>
                     {progression.rationale}
