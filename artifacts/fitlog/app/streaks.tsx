@@ -132,29 +132,15 @@ function getLocalizedDayLabels(locale: string): string[] {
 }
 
 function ActivityCalendar({
-  workoutsData, mealsData, theme,
+  activityDates, theme,
 }: {
-  workoutsData: any; mealsData: any; theme: any;
+  activityDates: string[]; theme: any;
 }) {
   const { t } = useTranslation();
   const locale = dateLocale();
 
   const { activeDays, weeks, monthLabel, dayLabels } = useMemo(() => {
-    const active = new Set<string>();
-
-    const workouts = workoutsData?.workouts || [];
-    for (const w of workouts) {
-      const d = new Date(w.date);
-      active.add(toLocalDateStr(d));
-    }
-
-    const meals = mealsData?.meals || mealsData?.todayMeals || [];
-    for (const m of meals) {
-      if (m.date || m.loggedAt || m.createdAt) {
-        const d = new Date(m.date || m.loggedAt || m.createdAt);
-        active.add(toLocalDateStr(d));
-      }
-    }
+    const active = new Set<string>(activityDates || []);
 
     const today = new Date();
     const year = today.getFullYear();
@@ -184,7 +170,7 @@ function ActivityCalendar({
     const localDayLabels = getLocalizedDayLabels(locale);
 
     return { activeDays: active, weeks: calWeeks, monthLabel: label, dayLabels: localDayLabels };
-  }, [workoutsData, mealsData, locale]);
+  }, [activityDates, locale]);
 
   const todayStr = toLocalDateStr(new Date());
 
@@ -277,18 +263,6 @@ export default function StreakHistoryScreen() {
     staleTime: 60000,
   });
 
-  const { data: workoutsData } = useQuery({
-    queryKey: ["workouts"],
-    queryFn: () => api.getWorkouts({ limit: 50 }),
-    staleTime: 60000,
-  });
-
-  const { data: mealsData } = useQuery({
-    queryKey: ["mealsToday"],
-    queryFn: () => api.getMeals(),
-    staleTime: 60000,
-  });
-
   const workoutCurrent = streaksData?.currentWorkoutStreak ?? 0;
   const workoutBest = streaksData?.longestWorkoutStreak ?? 0;
   const mealCurrent = streaksData?.currentMealStreak ?? 0;
@@ -323,7 +297,7 @@ export default function StreakHistoryScreen() {
         ) : (
           <>
             <Animated.View entering={FadeInDown.duration(400)}>
-              <ActivityCalendar workoutsData={workoutsData} mealsData={mealsData} theme={theme} />
+              <ActivityCalendar activityDates={streaksData?.activityDates ?? []} theme={theme} />
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(80).duration(400)}>

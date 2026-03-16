@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable, profilesTable } from "@workspace/db";
+import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable, profilesTable, waterLogsTable } from "@workspace/db";
 import { eq, and, gte, desc, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
@@ -8,23 +8,25 @@ const router = Router();
 function calcStreak(dates: Date[]): number {
   if (dates.length === 0) return 0;
   
-  const sorted = [...dates].sort((a, b) => b.getTime() - a.getTime());
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  const dateDays = [...new Set(sorted.map(d => {
+  const dateDays = [...new Set(dates.map(d => {
     const copy = new Date(d);
     copy.setHours(0, 0, 0, 0);
     return copy.getTime();
   }))].sort((a, b) => b - a);
   
   let streak = 0;
-  let currentDay = today.getTime();
+  let expectedDay = today.getTime();
   
   for (const dayTime of dateDays) {
-    if (dayTime === currentDay || dayTime === currentDay - 86400000) {
+    if (dayTime === expectedDay) {
       streak++;
-      currentDay = dayTime - 86400000;
+      expectedDay = dayTime - 86400000;
+    } else if (streak === 0 && dayTime === expectedDay - 86400000) {
+      streak = 1;
+      expectedDay = dayTime - 86400000;
     } else {
       break;
     }
@@ -68,15 +70,45 @@ router.get("/streaks", requireAuth, async (req, res) => {
     
     const meals = await db.select({ date: mealsTable.date })
       .from(mealsTable).where(eq(mealsTable.userId, user.id));
+
+    const waterLogs = await db.select({ loggedAt: waterLogsTable.loggedAt })
+      .from(waterLogsTable).where(eq(waterLogsTable.userId, user.id));
     
     const workoutDates = workouts.map(w => w.date);
     const mealDates = meals.map(m => m.date);
+    const hydrationDates = waterLogs.map(w => new Date(w.loggedAt));
     
     const currentWorkoutStreak = calcStreak(workoutDates);
     const currentMealStreak = calcStreak(mealDates);
+    const currentHydrationStreak = calcStreak(hydrationDates);
     const longestWorkoutStreak = Math.max(calcLongestStreak(workoutDates), currentWorkoutStreak);
+    const longestMealStreak = Math.max(calcLongestStreak(mealDates), currentMealStreak);
+    const longestHydrationStreak = Math.max(calcLongestStreak(hydrationDates), currentHydrationStreak);
+
+    function toLocalDateStr(d: Date): string {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    const allDates = new Set<string>();
+    for (const d of workoutDates) {
+      allDates.add(toLocalDateStr(d));
+    }
+    for (const d of mealDates) {
+      allDates.add(toLocalDateStr(d));
+    }
+    for (const d of hydrationDates) {
+      allDates.add(toLocalDateStr(d));
+    }
     
-    res.json({ currentWorkoutStreak, longestWorkoutStreak, currentMealStreak });
+    res.json({
+      currentWorkoutStreak, longestWorkoutStreak,
+      currentMealStreak, longestMealStreak,
+      currentHydrationStreak, longestHydrationStreak,
+      activityDates: Array.from(allDates).sort(),
+    });
   } catch (err) {
     res.status(500).json({ error: "Failed to get streaks" });
   }

@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInDown, ZoomIn, FadeIn } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
 import { dateLocale } from "@/lib/rtl";
@@ -540,6 +541,7 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
             await AsyncStorage.setItem(key, "true");
             setMilestoneValue(entry.value);
             setVisible(true);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             return;
           }
         }
