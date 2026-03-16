@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import Animated, { FadeInDown, FadeIn, SlideInUp, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, SlideInDown, ZoomIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
@@ -791,10 +791,56 @@ export default function ExecuteWorkoutScreen() {
         </Text>
       </View>
 
+      {/* ── Top rest timer (sticky above scroll content when resting) ── */}
+      {isResting && (
+        <Animated.View
+          entering={SlideInDown.duration(300)}
+          style={[styles.topRestBanner, { backgroundColor: theme.card, borderColor: theme.primary + "40" }]}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View style={[styles.restDot, { backgroundColor: theme.primary }]} />
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13, letterSpacing: 1 }}>
+                {t("workouts.restLabel")}
+              </Text>
+              <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 28 }}>
+                {fmt(restSecondsLeft)}
+              </Text>
+            </View>
+            <Pressable
+              onPress={skipRest}
+              style={[styles.skipRestPillBtn, { borderColor: theme.primary, backgroundColor: theme.primaryDim }]}
+            >
+              <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                {t("workouts.skipRest")}
+              </Text>
+            </Pressable>
+          </View>
+          <View style={[styles.restProgressBar, { backgroundColor: theme.border }]}>
+            <View
+              style={[
+                styles.restProgressFill,
+                {
+                  backgroundColor: theme.primary,
+                  width: `${((currentEx?.restSec || 60) > 0 ? (restSecondsLeft / (currentEx?.restSec || 60)) * 100 : 0)}%`,
+                },
+              ]}
+            />
+          </View>
+          {pendingRef.current && (
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, textAlign: "center" }}>
+              {pendingRef.current.exIdx !== exerciseIdx
+                ? `${t("workouts.nextExercise")}: ${exercises[pendingRef.current.exIdx]?.name}`
+                : t("workouts.upNextSet", { set: pendingRef.current.setIdx + 1, total: currentEx?.sets.length })}
+            </Text>
+          )}
+        </Animated.View>
+      )}
+
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + (isResting ? 150 : 20) }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Exercise header ── */}
@@ -884,25 +930,35 @@ export default function ExecuteWorkoutScreen() {
               : isActive
               ? theme.background
               : theme.card;
-            const showHint = !s.completed && progression && progression.trend !== "first" &&
-              (progression.suggestedWeightKg != null || progression.suggestedReps != null);
-            const hintText = showHint
+            const hasHistory = !s.completed && progression && progression.trend !== "first";
+            const suggestedText = hasHistory && (progression!.suggestedWeightKg != null || progression!.suggestedReps != null)
               ? [
                   progression!.suggestedReps != null ? `${progression!.suggestedReps} reps` : null,
                   progression!.suggestedWeightKg != null ? `${progression!.suggestedWeightKg}kg` : null,
                 ].filter(Boolean).join(" × ")
               : null;
+            const lastText = hasHistory && progression!.previousDisplay ? progression!.previousDisplay : null;
+            const showHintRow = suggestedText || lastText;
 
             return (
               <View key={si}>
-                {hintText && (
+                {showHintRow && (
                   <View style={[
                     styles.perSetHint,
                     { backgroundColor: isActive ? trendColor + "12" : trendColor + "06", borderBottomColor: theme.border },
                   ]}>
-                    <Text style={{ color: isActive ? trendColor : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
-                      {t("workouts.suggestedLabel")}: {hintText}
-                    </Text>
+                    <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
+                      {lastText && (
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
+                          Last: {lastText}
+                        </Text>
+                      )}
+                      {suggestedText && (
+                        <Text style={{ color: isActive ? trendColor : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10 }}>
+                          {t("workouts.suggestedLabel")}: {suggestedText}
+                        </Text>
+                      )}
+                    </View>
                   </View>
                 )}
                 <View
@@ -1028,55 +1084,6 @@ export default function ExecuteWorkoutScreen() {
         )}
       </ScrollView>
 
-      {/* ── Floating rest timer ── */}
-      {isResting && (
-        <Animated.View
-          entering={SlideInUp.duration(300)}
-          style={[styles.floatingRestPill, { backgroundColor: theme.card, borderColor: theme.primary + "40", paddingBottom: insets.bottom + 16 }]}
-        >
-          <Pressable
-            onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <View style={[styles.restDot, { backgroundColor: theme.primary }]} />
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13, letterSpacing: 1 }}>
-                {t("workouts.restLabel")}
-              </Text>
-              <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 28 }}>
-                {fmt(restSecondsLeft)}
-              </Text>
-            </View>
-            <Pressable
-              onPress={skipRest}
-              style={[styles.skipRestPillBtn, { borderColor: theme.primary, backgroundColor: theme.primaryDim }]}
-            >
-              <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-                {t("workouts.skipRest")}
-              </Text>
-            </Pressable>
-          </View>
-          <View style={[styles.restProgressBar, { backgroundColor: theme.border }]}>
-            <View
-              style={[
-                styles.restProgressFill,
-                {
-                  backgroundColor: theme.primary,
-                  width: `${((currentEx?.restSec || 60) > 0 ? (restSecondsLeft / (currentEx?.restSec || 60)) * 100 : 0)}%`,
-                },
-              ]}
-            />
-          </View>
-          {pendingRef.current && (
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textAlign: "center" }}>
-              {pendingRef.current.exIdx !== exerciseIdx
-                ? `${t("workouts.nextExercise")}: ${exercises[pendingRef.current.exIdx]?.name}`
-                : t("workouts.upNextSet", { set: pendingRef.current.setIdx + 1, total: currentEx?.sets.length })}
-            </Text>
-          )}
-        </Animated.View>
-      )}
 
       {renderPRModal()}
     </View>
@@ -1140,13 +1147,13 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 14, padding: 14,
   },
 
-  // Floating rest timer
-  floatingRestPill: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 20, paddingTop: 16, gap: 10,
-    borderTopWidth: 1.5,
-    shadowColor: "#000", shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
+  // Top sticky rest timer (appears between header and scroll content)
+  topRestBanner: {
+    marginHorizontal: 0,
+    paddingHorizontal: 16, paddingVertical: 12, gap: 8,
+    borderBottomWidth: 1.5,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
   },
   restDot: { width: 8, height: 8, borderRadius: 4 },
   skipRestPillBtn: {
