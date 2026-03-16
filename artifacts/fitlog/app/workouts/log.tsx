@@ -103,8 +103,6 @@ export default function LogWorkoutScreen() {
     }
     return map;
   }, [exerciseHistoryData]);
-  const [exerciseSearch, setExerciseSearch] = useState<string[]>([""]); 
-  
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);

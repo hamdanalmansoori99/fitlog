@@ -1184,6 +1184,41 @@ export const EXERCISES: Exercise[] = [
     instructions: ["Wrap a towel around dumbbell handles or use fat grips", "Curl as normal with the thicker grip", "Focus on squeezing the handle throughout", "Lower with control"],
     commonMistakes: ["Going too heavy with the thicker grip", "Not squeezing grip throughout", "Using momentum"],
   },
+  {
+    id: "finger-curls", name: "Finger Curls", category: "forearms",
+    primaryMuscle: "Forearm Flexors", secondaryMuscles: [],
+    equipment: ["barbell"], difficulty: "Beginner", animationPlaceholder: "finger-curls",
+    instructions: ["Sit on a bench with forearms resting on your thighs", "Let the barbell roll down to your fingertips", "Curl your fingers up to close your fist around the bar", "Squeeze briefly and lower"],
+    commonMistakes: ["Lifting forearms off thighs", "Using too much weight", "Not full range of motion"],
+  },
+  {
+    id: "plate-pinch", name: "Plate Pinch Hold", category: "forearms",
+    primaryMuscle: "Forearm Extensors", secondaryMuscles: ["Forearm Flexors"],
+    equipment: ["none"], difficulty: "Intermediate", animationPlaceholder: "plate-pinch",
+    instructions: ["Pinch two weight plates together smooth-side out", "Hold them at your side with fingers and thumb only", "Maintain the pinch grip for time", "Switch hands and repeat"],
+    commonMistakes: ["Resting plates against leg", "Starting too heavy", "Not timing the holds"],
+  },
+  {
+    id: "dumbbell-step-up", name: "Dumbbell Step-Up", category: "legs",
+    primaryMuscle: "Quadriceps", secondaryMuscles: ["Glutes", "Hamstrings"],
+    equipment: ["dumbbells", "bench"], difficulty: "Intermediate", animationPlaceholder: "db-step-up",
+    instructions: ["Hold dumbbells at your sides", "Step onto a bench with one foot", "Drive through the heel to stand fully on the bench", "Lower back down with control and repeat"],
+    commonMistakes: ["Pushing off the back foot", "Leaning forward", "Box too high for mobility"],
+  },
+  {
+    id: "incline-hammer-curl", name: "Incline Hammer Curl", category: "biceps",
+    primaryMuscle: "Brachialis", secondaryMuscles: ["Biceps", "Brachioradialis"],
+    equipment: ["dumbbells", "bench"], difficulty: "Intermediate", animationPlaceholder: "incline-hammer-curl",
+    instructions: ["Set a bench to 45 degrees and sit back", "Hold dumbbells at your sides with neutral grip", "Curl both dumbbells up keeping palms facing each other", "Lower with control to full extension"],
+    commonMistakes: ["Bench angle too upright", "Swinging the weights", "Not going to full extension"],
+  },
+  {
+    id: "cable-kickback", name: "Cable Glute Kickback", category: "glutes",
+    primaryMuscle: "Gluteus Maximus", secondaryMuscles: ["Hamstrings"],
+    equipment: ["cable_machine"], difficulty: "Beginner", animationPlaceholder: "cable-kickback",
+    instructions: ["Attach an ankle cuff to a low cable", "Face the machine and hold for balance", "Kick the working leg straight back squeezing glutes at top", "Return slowly and repeat all reps before switching"],
+    commonMistakes: ["Arching the lower back", "Swinging the leg", "Using too much weight"],
+  },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CARDIO (15)
