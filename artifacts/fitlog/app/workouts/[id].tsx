@@ -16,6 +16,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
+import { ShareCard } from "@/components/ShareCard";
 
 function getActivityColor(type: string, theme: any) {
   const map: Record<string, string> = {
@@ -102,100 +103,9 @@ function SetRow({ set, idx, theme, useImperial }: { set: any; idx: number; theme
   );
 }
 
-function ShareCard({ workout, theme, useImperial }: { workout: any; theme: any; useImperial: boolean }) {
-  const color = getActivityColor(workout.activityType, theme);
-  const icon = getActivityIcon(workout.activityType);
-  const exercises: any[] = workout.exercises || [];
-  const dateStr = new Date(workout.date).toLocaleDateString(dateLocale(), {
-    weekday: "short", month: "short", day: "numeric",
-  });
-
-  const stats: { icon: keyof typeof Feather.glyphMap; value: string; label: string }[] = [];
-  if (workout.durationMinutes != null) stats.push({ icon: "clock", value: `${workout.durationMinutes}`, label: "min" });
-  if (workout.distanceKm != null) {
-    const d = useImperial ? (workout.distanceKm * 0.621371).toFixed(1) : workout.distanceKm.toFixed(1);
-    stats.push({ icon: "map-pin", value: d, label: useImperial ? "mi" : "km" });
-  }
-  if (workout.caloriesBurned != null) stats.push({ icon: "zap", value: `${workout.caloriesBurned}`, label: "kcal" });
-  if (exercises.length > 0) stats.push({ icon: "layers", value: `${exercises.length}`, label: "exercises" });
-
-  const totalSets = exercises.reduce((sum: number, ex: any) => sum + (ex.sets?.length || 0), 0);
-  if (totalSets > 0) stats.push({ icon: "repeat", value: `${totalSets}`, label: "sets" });
-
-  return (
-    <View style={[shareStyles.card, { backgroundColor: "#0f0f1a" }]}>
-      <View style={[shareStyles.gradientTop, { backgroundColor: color + "12" }]} />
-      <View style={shareStyles.cardInner}>
-        <View style={shareStyles.headerRow}>
-          <View style={[shareStyles.iconCircle, { backgroundColor: color + "25" }]}>
-            <Feather name={icon} size={22} color={color} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[shareStyles.name, { color: "#ffffff" }]}>
-              {workout.name || (workout.activityType.charAt(0).toUpperCase() + workout.activityType.slice(1))}
-            </Text>
-            <Text style={[shareStyles.date, { color: "#9e9eb8" }]}>{dateStr}</Text>
-          </View>
-        </View>
-
-        <View style={shareStyles.statsGrid}>
-          {stats.map((s, i) => (
-            <View key={i} style={[shareStyles.statBox, { backgroundColor: "#1a1a2e", borderColor: "#2a2a3e" }]}>
-              <Feather name={s.icon} size={14} color={color} style={{ marginBottom: 4 }} />
-              <Text style={[shareStyles.statValue, { color: "#ffffff" }]}>{s.value}</Text>
-              <Text style={[shareStyles.statUnit, { color: "#9e9eb8" }]}>{s.label}</Text>
-            </View>
-          ))}
-        </View>
-
-        {exercises.length > 0 && (
-          <View style={[shareStyles.exerciseList, { borderColor: "#2a2a3e" }]}>
-            {exercises.slice(0, 6).map((ex: any, i: number) => {
-              const setsCount = ex.sets?.length || 0;
-              const bestSet = ex.sets?.reduce((best: any, s: any) => {
-                const w = s.weightKg || 0;
-                return w > (best?.weightKg || 0) ? s : best;
-              }, null);
-              const bestStr = bestSet?.weightKg
-                ? useImperial
-                  ? `${(bestSet.weightKg * 2.20462).toFixed(0)} lbs × ${bestSet.reps || "?"}`
-                  : `${bestSet.weightKg} kg × ${bestSet.reps || "?"}`
-                : setsCount > 0 ? `${setsCount} sets` : "";
-
-              return (
-                <View key={i} style={shareStyles.exRow}>
-                  <View style={[shareStyles.exDot, { backgroundColor: color }]} />
-                  <Text style={[shareStyles.exName, { color: "#e0e0f0" }]} numberOfLines={1}>{ex.name}</Text>
-                  {bestStr ? (
-                    <Text style={[shareStyles.exBest, { color: "#9e9eb8" }]}>{bestStr}</Text>
-                  ) : null}
-                </View>
-              );
-            })}
-            {exercises.length > 6 && (
-              <Text style={[shareStyles.moreExercises, { color: "#9e9eb8" }]}>+{exercises.length - 6} more</Text>
-            )}
-          </View>
-        )}
-
-        {workout.mood && (
-          <View style={shareStyles.moodRow}>
-            <Text style={[shareStyles.moodLabel, { color: "#9e9eb8" }]}>Feeling</Text>
-            <Text style={[shareStyles.moodValue, { color }]}>{workout.mood}</Text>
-          </View>
-        )}
-
-        <View style={shareStyles.brandRow}>
-          <View style={[shareStyles.brandDot, { backgroundColor: color }]} />
-          <Text style={[shareStyles.brandText, { color: "#5a5a7a" }]}>FitLog</Text>
-        </View>
-      </View>
-    </View>
-  );
-}
 
 export default function WorkoutDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -419,9 +329,28 @@ export default function WorkoutDetailScreen() {
       <Modal visible={shareOpen} transparent animationType="fade" onRequestClose={() => setShareOpen(false)}>
         <Pressable style={shareStyles.overlay} onPress={() => setShareOpen(false)}>
           <Pressable onPress={(e) => e.stopPropagation()}>
-            <View ref={cardRef} collapsable={false}>
-              <ShareCard workout={workout} theme={theme} useImperial={useImperial} />
-            </View>
+            <ShareCard
+              ref={cardRef}
+              type="workout"
+              headline={workout.name || (workout.activityType.charAt(0).toUpperCase() + workout.activityType.slice(1))}
+              subline={new Date(workout.date).toLocaleDateString(dateLocale(), { weekday: "short", month: "short", day: "numeric" })}
+              stats={[
+                ...(workout.durationMinutes != null ? [{ label: "min", value: `${workout.durationMinutes}` }] : []),
+                ...(workout.distanceKm != null ? [{ label: useImperial ? "mi" : "km", value: useImperial ? (workout.distanceKm * 0.621371).toFixed(1) : workout.distanceKm.toFixed(1) }] : []),
+                ...(workout.caloriesBurned != null ? [{ label: "kcal", value: `${workout.caloriesBurned}` }] : []),
+                ...((workout.exercises ?? []).length > 0 ? [{ label: "exercises", value: `${workout.exercises.length}` }] : []),
+              ]}
+              exercises={(workout.exercises ?? []).map((ex: any) => {
+                const bestSet = (ex.sets ?? []).reduce((best: any, s: any) => s.weightKg > (best?.weightKg ?? 0) ? s : best, null);
+                const summary = bestSet?.weightKg
+                  ? useImperial
+                    ? `${(bestSet.weightKg * 2.20462).toFixed(0)} lbs × ${bestSet.reps ?? "?"}`
+                    : `${bestSet.weightKg} kg × ${bestSet.reps ?? "?"}`
+                  : (ex.sets ?? []).length > 0 ? `${ex.sets.length} sets` : "";
+                return { name: ex.name, summary };
+              })}
+              rtl={i18n.dir() === "rtl"}
+            />
             <View style={shareStyles.actions}>
               <Pressable
                 onPress={async () => {
@@ -482,39 +411,10 @@ const shareStyles = StyleSheet.create({
     flex: 1, backgroundColor: "rgba(0,0,0,0.85)",
     justifyContent: "center", alignItems: "center", padding: 24,
   },
-  card: {
-    width: 320, borderRadius: 20, overflow: "hidden",
-    borderWidth: 1, borderColor: "#2a2a3e",
-  },
-  gradientTop: { height: 6 },
-  cardInner: { padding: 20, gap: 16 },
-  headerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  iconCircle: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  name: { fontFamily: "Inter_700Bold", fontSize: 18 },
-  date: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  statBox: {
-    flex: 1, minWidth: 80, alignItems: "center",
-    paddingVertical: 10, borderRadius: 12, borderWidth: 1,
-  },
-  statValue: { fontFamily: "Inter_700Bold", fontSize: 18 },
-  statUnit: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 },
-  exerciseList: { borderTopWidth: 1, paddingTop: 12, gap: 8 },
-  exRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  exDot: { width: 6, height: 6, borderRadius: 3 },
-  exName: { fontFamily: "Inter_500Medium", fontSize: 13, flex: 1 },
-  exBest: { fontFamily: "Inter_400Regular", fontSize: 12 },
-  moreExercises: { fontFamily: "Inter_400Regular", fontSize: 12, textAlign: "center", marginTop: 4 },
-  moodRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  moodLabel: { fontFamily: "Inter_400Regular", fontSize: 12 },
-  moodValue: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
-  brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 },
-  brandDot: { width: 8, height: 8, borderRadius: 4 },
-  brandText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
   actions: { gap: 8, marginTop: 16 },
   actionBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 8, paddingVertical: 14, borderRadius: 14,
+    gap: 8, paddingVertical: 14, borderRadius: 14, width: 340,
   },
 });
 

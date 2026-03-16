@@ -17,6 +17,9 @@ import { getFilteredExercises } from "@/lib/coachEngine";
 import { calculateStrengthTarget, ExerciseSession } from "@/lib/progressionEngine";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
+import { ShareCard } from "@/components/ShareCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -108,6 +111,8 @@ export default function ExecuteWorkoutScreen() {
   const [templateName, setTemplateName] = useState("");
   const [templateSaved, setTemplateSaved] = useState(false);
   const [prModal, setPrModal] = useState<{ exercise: string; weight: number; reps: number; previousBest: number; previousBestReps?: number } | null>(null);
+
+  const prShareRef = useRef<View>(null);
 
   // Store next position when entering rest phase
   const pendingRef = useRef<{ exIdx: number; setIdx: number } | null>(null);
@@ -321,12 +326,28 @@ export default function ExecuteWorkoutScreen() {
     return -1;
   }
 
-  async function sharePR(pr: { exercise: string; weight: number; reps: number }) {
+  async function sharePR() {
     try {
-      await Share.share({
-        message: t("pr.prSet", { exercise: pr.exercise, weight: pr.weight, reps: pr.reps }),
-      });
-    } catch {}
+      if (Platform.OS === "web") {
+        const uri = await captureRef(prShareRef, { format: "png", quality: 1, result: "data-uri" });
+        const link = document.createElement("a");
+        link.href = uri;
+        link.download = "fitlog-pr.png";
+        link.click();
+      } else {
+        const uri = await captureRef(prShareRef, { format: "jpg", quality: 0.95 });
+        const available = await Sharing.isAvailableAsync();
+        if (available) {
+          await Sharing.shareAsync(uri, { mimeType: "image/jpeg", dialogTitle: t("pr.share") });
+        } else {
+          await Share.share({ message: prModal ? t("pr.prSet", { exercise: prModal.exercise, weight: prModal.weight, reps: prModal.reps }) : "" });
+        }
+      }
+    } catch {
+      if (prModal) {
+        await Share.share({ message: t("pr.prSet", { exercise: prModal.exercise, weight: prModal.weight, reps: prModal.reps }) }).catch(() => {});
+      }
+    }
   }
 
   function renderPRModal() {
@@ -351,7 +372,7 @@ export default function ExecuteWorkoutScreen() {
             </Text>
             <View style={{ flexDirection: "row", gap: 10, marginTop: 16, width: "100%" }}>
               <Pressable
-                onPress={() => { sharePR(prModal); setPrModal(null); }}
+                onPress={() => { sharePR(); setPrModal(null); }}
                 style={[styles.prBtn, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.primary, flex: 1 }]}
               >
                 <Feather name="share-2" size={14} color={theme.primary} style={{ marginRight: 4 }} />
@@ -369,6 +390,21 @@ export default function ExecuteWorkoutScreen() {
               </Pressable>
             </View>
           </Animated.View>
+          {/* Hidden ShareCard for image capture */}
+          <View style={{ position: "absolute", left: -2000, top: 0 }}>
+            <ShareCard
+              ref={prShareRef}
+              type="pr"
+              headline={prModal.exercise}
+              subline={`${prModal.weight} kg × ${prModal.reps} reps`}
+              stats={[
+                { label: "weight", value: `${prModal.weight} kg`, accent: true },
+                { label: "reps", value: `${prModal.reps}`, accent: false },
+                { label: "prev best", value: `${prModal.previousBest} kg`, accent: false },
+              ]}
+              rtl={i18n.dir() === "rtl"}
+            />
+          </View>
         </View>
       </Modal>
     );

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable, profilesTable, waterLogsTable, bodyMeasurementsTable } from "@workspace/db";
-import { eq, and, gte, desc, inArray, lte } from "drizzle-orm";
+import { eq, and, gte, lte, lt, desc, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
 const router = Router();
@@ -397,9 +397,9 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
       db.select().from(workoutsTable)
         .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, thisMonday), lte(workoutsTable.date, nowDate)))
         .orderBy(desc(workoutsTable.date)),
-      // Use lt(thisMonday) to avoid boundary overlap on exact Monday midnight
+      // Use lt(thisMonday) — strict less-than to avoid boundary overlap at Monday 00:00
       db.select().from(workoutsTable)
-        .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, lastMonday), lte(workoutsTable.date, thisMonday)))
+        .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, lastMonday), lt(workoutsTable.date, thisMonday)))
         .orderBy(desc(workoutsTable.date)),
       // Full history for accurate streak calculation
       db.select({ date: workoutsTable.date }).from(workoutsTable)
@@ -452,26 +452,28 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
       .innerJoin(workoutsTable, eq(workoutExercisesTable.workoutId, workoutsTable.id))
       .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, thisMonday), eq(workoutSetsTable.completed, true)));
 
-    const lastWeekSets = await db.select({
+    // All-time PRs before this week (for bestLiftImprovement comparison)
+    const historicalSets = await db.select({
       exerciseName: workoutExercisesTable.name,
       weightKg: workoutSetsTable.weightKg,
     }).from(workoutSetsTable)
       .innerJoin(workoutExercisesTable, eq(workoutSetsTable.exerciseId, workoutExercisesTable.id))
       .innerJoin(workoutsTable, eq(workoutExercisesTable.workoutId, workoutsTable.id))
-      .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, lastMonday), lte(workoutsTable.date, thisMonday), eq(workoutSetsTable.completed, true)));
+      .where(and(eq(workoutsTable.userId, user.id), lt(workoutsTable.date, thisMonday), eq(workoutSetsTable.completed, true)));
 
     const thisMaxByExercise: Record<string, number> = {};
     for (const s of thisWeekSets) {
       if (s.weightKg && s.weightKg > (thisMaxByExercise[s.exerciseName] ?? 0)) thisMaxByExercise[s.exerciseName] = s.weightKg;
     }
-    const lastMaxByExercise: Record<string, number> = {};
-    for (const s of lastWeekSets) {
-      if (s.weightKg && s.weightKg > (lastMaxByExercise[s.exerciseName] ?? 0)) lastMaxByExercise[s.exerciseName] = s.weightKg;
+    // All-time historical PRs (pre this week)
+    const historicalMaxByExercise: Record<string, number> = {};
+    for (const s of historicalSets) {
+      if (s.weightKg && s.weightKg > (historicalMaxByExercise[s.exerciseName] ?? 0)) historicalMaxByExercise[s.exerciseName] = s.weightKg;
     }
 
     let bestLiftImprovement: { exerciseName: string; prevKg: number; newKg: number; deltaKg: number } | null = null;
     for (const [name, newKg] of Object.entries(thisMaxByExercise)) {
-      const prevKg = lastMaxByExercise[name] ?? 0;
+      const prevKg = historicalMaxByExercise[name] ?? 0;
       if (prevKg > 0) {
         const delta = newKg - prevKg;
         if (delta > 0 && (!bestLiftImprovement || delta > bestLiftImprovement.deltaKg)) {

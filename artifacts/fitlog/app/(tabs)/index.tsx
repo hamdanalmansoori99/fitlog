@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from "react";
+import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
   Pressable, Platform, Modal, Share,
@@ -30,6 +30,9 @@ import {
   GoalInsight,
 } from "@/lib/goalInsights";
 import type Colors from "@/constants/colors";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
+import { ShareCard } from "@/components/ShareCard";
 
 type AppTheme = (typeof Colors)["dark"];
 
@@ -732,7 +735,7 @@ function WeeklyReportCard({ theme, streaksData, workoutsData, mealsData }: { the
   const hasData = totalWorkouts > 0;
 
   return (
-    <Pressable onPress={() => router.push("/weekly-report" as any)}>
+    <Pressable onPress={() => router.push("/progress/weekly-report" as any)}>
     <Card style={{ gap: 10, borderColor: theme.secondary + "20" }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <View style={[styles.weeklyIcon, { backgroundColor: theme.secondary + "18" }]}>
@@ -785,10 +788,11 @@ function WeeklyReportCard({ theme, streaksData, workoutsData, mealsData }: { the
 const MILESTONE_THRESHOLDS = [3, 7, 14, 30, 60, 100];
 
 function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; theme: AppTheme }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
   const [visible, setVisible] = useState(false);
   const [milestoneValue, setMilestoneValue] = useState(0);
+  const milestoneShareRef = useRef<View>(null);
 
   useEffect(() => {
     if (!streaksData || !user?.id) return;
@@ -820,11 +824,25 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
 
   const handleShare = useCallback(async () => {
     try {
-      await Share.share({
-        message: t("streaks.shareMessage", { count: milestoneValue }),
-      });
-    } catch (_) {}
-  }, [milestoneValue, t]);
+      if (Platform.OS === "web") {
+        const uri = await captureRef(milestoneShareRef, { format: "png", quality: 1, result: "data-uri" });
+        const link = document.createElement("a");
+        link.href = uri;
+        link.download = "fitlog-streak.png";
+        link.click();
+      } else {
+        const uri = await captureRef(milestoneShareRef, { format: "jpg", quality: 0.95 });
+        const available = await Sharing.isAvailableAsync();
+        if (available) {
+          await Sharing.shareAsync(uri, { mimeType: "image/jpeg", dialogTitle: t("streaks.milestoneTitle") });
+        } else {
+          await Share.share({ message: t("streaks.shareMessage", { count: milestoneValue }) });
+        }
+      }
+    } catch (_) {
+      await Share.share({ message: t("streaks.shareMessage", { count: milestoneValue }) }).catch(() => {});
+    }
+  }, [milestoneValue, milestoneShareRef, t, i18n]);
 
   if (!visible) return null;
 
@@ -836,6 +854,19 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={() => setVisible(false)}>
       <View style={styles.modalOverlay}>
+        {/* Hidden ShareCard for image capture — off-screen */}
+        <View style={{ position: "absolute", left: -2000, top: 0 }}>
+          <ShareCard
+            ref={milestoneShareRef}
+            type="streak"
+            headline={`${milestoneValue}-Day Streak!`}
+            subline={t("streaks.shareMessage", { count: milestoneValue })}
+            stats={[
+              { label: "day streak", value: `${milestoneValue}`, accent: true },
+            ]}
+            rtl={i18n.dir() === "rtl"}
+          />
+        </View>
         <Animated.View entering={ZoomIn.duration(400)} style={[styles.modalCard, { backgroundColor: theme.card }]}>
           <View style={{ alignItems: "center", marginBottom: 8 }}>
             <Svg width={ringSize} height={ringSize}>
