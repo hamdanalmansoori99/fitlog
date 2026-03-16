@@ -786,7 +786,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", marginHorizontal: 20, marginBottom: 4,
     borderRadius: 12, padding: 4, borderWidth: 1,
   },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center" },
+  tab: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center", minHeight: 44 },
   avatarSection: { alignItems: "center", gap: 8, paddingVertical: 8 },
   avatar: {
     width: 80, height: 80, borderRadius: 40, borderWidth: 2,
@@ -800,11 +800,12 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 13, marginBottom: 6 },
   row: { flexDirection: "row", gap: 10 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5 },
+  chip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderWidth: 1.5, minHeight: 44, justifyContent: "center" as const },
   goalsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   goalChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderWidth: 1.5,
+    minHeight: 44,
   },
   levelRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
@@ -812,7 +813,7 @@ const styles = StyleSheet.create({
   },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   radioDot: { width: 10, height: 10, borderRadius: 5 },
-  settingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12 },
+  settingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, minHeight: 44 },
   settingLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
   logoutBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,

@@ -531,7 +531,7 @@ function RecentActivitySection({ workoutsData, mealsData, theme }: { workoutsDat
   );
 }
 
-function StreakSummaryCard({ streaksData, achievementsData, theme }: { streaksData: any; achievementsData?: any; theme: AppTheme }) {
+function StreakSummaryCard({ streaksData, theme }: { streaksData: any; theme: AppTheme }) {
   const { t } = useTranslation();
   if (!streaksData) return null;
 
@@ -539,14 +539,10 @@ function StreakSummaryCard({ streaksData, achievementsData, theme }: { streaksDa
   const mealCurrent = streaksData.currentMealStreak ?? 0;
   const hydrationCurrent = streaksData.currentHydrationStreak ?? 0;
 
-  const score = achievementsData?.weeklyScore?.score ?? 0;
-  const scoreColor = score >= 70 ? theme.primary : score >= 40 ? (theme.warning || "#ffab40") : theme.danger;
-
   const items = [
     { icon: "activity" as const, value: workoutCurrent, label: t("home.workout"), color: "#00e676" },
     { icon: "coffee" as const, value: mealCurrent, label: t("home.mealsLabel"), color: "#ffab40" },
     { icon: "droplet" as const, value: hydrationCurrent, label: t("home.hydration"), color: "#448aff" },
-    { icon: "trending-up" as const, value: score, label: t("home.thisWeek"), color: scoreColor, suffix: "%" },
   ];
 
   const hasActiveStreak = workoutCurrent > 0 || mealCurrent > 0;
@@ -562,9 +558,9 @@ function StreakSummaryCard({ streaksData, achievementsData, theme }: { streaksDa
         </View>
         <Pressable
           onPress={() => router.push("/streaks" as any)}
-          style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+          style={{ flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, paddingHorizontal: 4 }}
         >
-          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
             {t("streaks.viewStreaks")}
           </Text>
           <Feather name={rtlIcon("chevron-right")} size={13} color={theme.primary} />
@@ -582,10 +578,10 @@ function StreakSummaryCard({ streaksData, achievementsData, theme }: { streaksDa
             {i > 0 && <View style={{ width: 1, height: 28, backgroundColor: theme.border }} />}
             <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                {s.value > 0 && !s.suffix && <Text style={{ fontSize: 10 }}>🔥</Text>}
+                {s.value > 0 && <Text style={{ fontSize: 10 }}>🔥</Text>}
                 <Feather name={s.icon} size={11} color={s.color} />
                 <Text style={{ color: s.color, fontFamily: "Inter_700Bold", fontSize: 16 }}>
-                  {s.value}{s.suffix ?? ""}
+                  {s.value}
                 </Text>
               </View>
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
@@ -1162,7 +1158,7 @@ export default function HomeScreen() {
 
         {streaksData && (
           <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
-            <StreakSummaryCard streaksData={streaksData} achievementsData={achievementsData} theme={theme} />
+            <StreakSummaryCard streaksData={streaksData} theme={theme} />
           </Animated.View>
         )}
 
@@ -1249,11 +1245,11 @@ const styles = StyleSheet.create({
   pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   ctaBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 8, paddingVertical: 13, borderRadius: 12,
+    gap: 8, paddingVertical: 14, borderRadius: 12, minHeight: 44,
   },
   secondaryBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 11, borderRadius: 12, borderWidth: 1,
+    gap: 6, paddingVertical: 12, borderRadius: 12, borderWidth: 1, minHeight: 44,
   },
   heroBtn: {
     flex: 1, alignItems: "center", justifyContent: "center", gap: 8,
@@ -1265,7 +1261,8 @@ const styles = StyleSheet.create({
   },
   coachChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderWidth: 1,
+    minHeight: 44,
   },
   insightIconWrap: {
     width: 34, height: 34, borderRadius: 10,
@@ -1277,7 +1274,8 @@ const styles = StyleSheet.create({
   },
   streakStrip: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-around",
-    paddingVertical: 12, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1,
+    paddingVertical: 14, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1,
+    minHeight: 44,
   },
   streakBanner: {
     flexDirection: "row", alignItems: "center", gap: 12,
@@ -1285,7 +1283,8 @@ const styles = StyleSheet.create({
   },
   logNowBtn: {
     flexDirection: "row", alignItems: "center", gap: 5,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10,
+    minHeight: 44,
   },
   modalOverlay: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.7)",
