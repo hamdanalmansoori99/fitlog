@@ -415,7 +415,7 @@ export default function MealsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 16 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
       >
         {/* ── Quick Log (Favourites + Frequent) ── */}
         {showQuickLog && (
@@ -682,7 +682,7 @@ export default function MealsScreen() {
                         onPress={(e) => { e.stopPropagation(); handleSaveAsFavorite(meal); }}
                         disabled={isSavingThis}
                         hitSlop={8}
-                        style={{ padding: 4 }}
+                        style={{ padding: 10, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
                       >
                         <Feather name="star" size={17} color={isSavingThis ? theme.warning : theme.textMuted} />
                       </Pressable>
@@ -691,7 +691,7 @@ export default function MealsScreen() {
                         onPress={(e) => { e.stopPropagation(); handleDuplicateMeal(meal); }}
                         disabled={isDuplicating}
                         hitSlop={8}
-                        style={{ padding: 4 }}
+                        style={{ padding: 10, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
                       >
                         <Feather name="copy" size={16} color={theme.secondary} />
                       </Pressable>
@@ -705,7 +705,7 @@ export default function MealsScreen() {
                           ]);
                         }}
                         hitSlop={8}
-                        style={{ padding: 4 }}
+                        style={{ padding: 10, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
                       >
                         <Feather name="trash-2" size={16} color={theme.danger} />
                       </Pressable>
@@ -748,16 +748,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 20, marginBottom: 8, borderWidth: 1, borderRadius: 12,
     paddingVertical: 8, paddingHorizontal: 12, gap: 10, flexWrap: "wrap",
   },
-  dateArrow: { padding: 4 },
+  dateArrow: { padding: 10, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   dateText: { fontSize: 16, minWidth: 100, textAlign: "center" },
-  copyBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
+  copyBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, borderWidth: 1, minHeight: 44 },
 
   quickLogHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   quickLogTitle: { fontSize: 16 },
   quickLogSub: { fontSize: 12 },
   favCard: { width: 155, borderRadius: 16, borderWidth: 1, padding: 12 },
   favIcon: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  logNowBtn: { marginTop: 10, paddingVertical: 7, borderRadius: 8, alignItems: "center" },
+  logNowBtn: { marginTop: 10, paddingVertical: 10, borderRadius: 8, alignItems: "center", minHeight: 44 },
 
   macroBreakdownCard: { gap: 0 },
   macroBreakdownRow: { flexDirection: "row", alignItems: "center", gap: 14 },

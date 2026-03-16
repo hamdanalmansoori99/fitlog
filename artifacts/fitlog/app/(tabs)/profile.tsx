@@ -354,7 +354,7 @@ export default function ProfileScreen() {
       
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 16 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
         keyboardShouldPersistTaps="handled"
       >
         {tab === "profile" ? (

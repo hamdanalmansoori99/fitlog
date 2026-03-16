@@ -637,7 +637,7 @@ export default function ExecuteWorkoutScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ScrollView
-          contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + 32, padding: 20, gap: 20 }}
+          contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + 32, padding: 20, gap: 20, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
           showsVerticalScrollIndicator={false}
         >
           {/* Trophy */}
@@ -965,7 +965,7 @@ export default function ExecuteWorkoutScreen() {
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20, maxWidth: 600, width: "100%", alignSelf: "center" as const }]}
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Exercise header ── */}

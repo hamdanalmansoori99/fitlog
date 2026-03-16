@@ -11,6 +11,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useTranslation } from "react-i18next";
 import { dateLocale } from "@/lib/rtl";
 
@@ -201,7 +202,7 @@ export default function AchievementsScreen() {
       </View>
 
       {isLoading ? (
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32, maxWidth: 600, width: "100%", alignSelf: "center" }]} showsVerticalScrollIndicator={false}>
           <View style={{ gap: 10 }}>
             <SkeletonBox width={120} height={16} />
             <View style={styles.streaksRow}>
@@ -236,7 +237,7 @@ export default function AchievementsScreen() {
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
+          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32, maxWidth: 600, width: "100%", alignSelf: "center" as const }]}
         >
           <Animated.View entering={FadeInDown.duration(350)} style={{ gap: 10 }}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("achievements.currentStreaks")}</Text>
@@ -349,13 +350,13 @@ export default function AchievementsScreen() {
           )}
 
           {recentPRs.length === 0 && (
-            <Card style={styles.emptyPR}>
-              <Feather name="trending-up" size={32} color={theme.textMuted} />
-              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15, textAlign: "center" }}>{t("achievements.noPRsYet")}</Text>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", lineHeight: 18 }}>
-                {t("achievements.logExercisesForPRs")}
-              </Text>
-            </Card>
+            <EmptyState
+              icon="trending-up"
+              title={t("achievements.noPRsYet")}
+              subtitle={t("achievements.logExercisesForPRs")}
+              action={{ label: t("workouts.startWorkout"), onPress: () => router.push("/(tabs)/workouts") }}
+              compact
+            />
           )}
         </ScrollView>
       )}
