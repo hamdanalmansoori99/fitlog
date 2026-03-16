@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/store/authStore";
@@ -59,6 +59,8 @@ export default function CoachChatScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const token = useAuthStore((s) => s.token);
+  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
+  const promptSentRef = useRef(false);
 
   const suggestions = [
     t("coach.suggestion1"),
@@ -85,6 +87,20 @@ export default function CoachChatScreen() {
   useEffect(() => {
     loadConversation();
   }, []);
+
+  useEffect(() => {
+    if (prompt && !loading && !promptSentRef.current) {
+      promptSentRef.current = true;
+      const promptText = Array.isArray(prompt) ? prompt[0] : prompt;
+      if (promptText) {
+        if (messages.length === 0) {
+          sendMessage(promptText);
+        } else {
+          setInput(promptText);
+        }
+      }
+    }
+  }, [prompt, loading]);
 
   const loadConversation = async () => {
     try {

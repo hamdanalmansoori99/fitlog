@@ -24,41 +24,44 @@ import {
   UserCoachProfile,
   RecoveryContext,
 } from "@/lib/coachEngine";
+import {
+  computeGoalInsights,
+  GoalInsightsInput,
+  GoalInsight,
+} from "@/lib/goalInsights";
 import type Colors from "@/constants/colors";
 
 type AppTheme = (typeof Colors)["dark"];
 
-// ─── Calorie Ring ─────────────────────────────────────────────────────────────
+const HERO_RING = 150;
+const HERO_STROKE = 14;
+const HERO_R = (HERO_RING - HERO_STROKE) / 2;
+const HERO_CIRC = 2 * Math.PI * HERO_R;
 
-const RING_SIZE = 120;
-const STROKE = 12;
-const R = (RING_SIZE - STROKE) / 2;
-const CIRC = 2 * Math.PI * R;
-
-function CalorieRing({
+function CalorieRingHero({
   consumed, goal, theme,
 }: { consumed: number; goal: number; theme: AppTheme }) {
   const { t } = useTranslation();
   const remaining = Math.max(0, goal - consumed);
   const pct = goal > 0 ? Math.min(consumed / goal, 1) : 0;
-  const dash = pct * CIRC;
-  const gap = CIRC - dash;
+  const dash = pct * HERO_CIRC;
+  const gap = HERO_CIRC - dash;
   const over = consumed > goal;
   const ringColor = over ? (theme.warning || "#ffab40") : theme.primary;
 
   return (
     <View style={{ alignItems: "center" }}>
-      <View style={{ width: RING_SIZE, height: RING_SIZE, alignItems: "center", justifyContent: "center" }}>
-        <Svg width={RING_SIZE} height={RING_SIZE} style={{ position: "absolute" }}>
-          <G rotation="-90" origin={`${RING_SIZE / 2},${RING_SIZE / 2}`}>
+      <View style={{ width: HERO_RING, height: HERO_RING, alignItems: "center", justifyContent: "center" }}>
+        <Svg width={HERO_RING} height={HERO_RING} style={{ position: "absolute" }}>
+          <G rotation="-90" origin={`${HERO_RING / 2},${HERO_RING / 2}`}>
             <Circle
-              cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={R}
-              stroke={theme.border} strokeWidth={STROKE} fill="none"
+              cx={HERO_RING / 2} cy={HERO_RING / 2} r={HERO_R}
+              stroke={theme.border} strokeWidth={HERO_STROKE} fill="none"
             />
             <Circle
-              cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={R}
+              cx={HERO_RING / 2} cy={HERO_RING / 2} r={HERO_R}
               stroke={ringColor}
-              strokeWidth={STROKE}
+              strokeWidth={HERO_STROKE}
               strokeDasharray={`${dash} ${gap}`}
               strokeLinecap="round"
               fill="none"
@@ -66,35 +69,42 @@ function CalorieRing({
           </G>
         </Svg>
         <View style={{ alignItems: "center" }}>
-          <Text style={{ color: over ? ringColor : theme.text, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 26 }}>
+          <Text style={{ color: over ? ringColor : theme.text, fontFamily: "Inter_700Bold", fontSize: 28, lineHeight: 34 }}>
             {remaining}
           </Text>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
             {t("home.kcalLeft")}
           </Text>
         </View>
       </View>
-      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4 }}>
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 6 }}>
         {consumed} / {goal} {t("common.kcal")}
       </Text>
     </View>
   );
 }
 
-// ─── Nutrition Card — calorie ring + protein ──────────────────────────────────
-
-function NutritionCard({ mealsData, theme }: { mealsData: any; theme: AppTheme }) {
+function NutritionHero({ mealsData, theme }: { mealsData: any; theme: AppTheme }) {
   const { t } = useTranslation();
   const totals = mealsData?.dailyTotals;
   const calorieGoal = mealsData?.calorieGoal ?? 2000;
   const consumed = totals?.calories ?? 0;
   const protein = totals?.proteinG ?? 0;
+  const carbs = totals?.carbsG ?? 0;
+  const fat = totals?.fatG ?? 0;
   const proteinGoal = Math.round(calorieGoal * 0.3 / 4);
-  const proteinPct = proteinGoal > 0 ? Math.min(protein / proteinGoal, 1) : 0;
+  const carbsGoal = Math.round(calorieGoal * 0.45 / 4);
+  const fatGoal = Math.round(calorieGoal * 0.25 / 9);
+
+  const macros = [
+    { label: t("home.protein"), value: protein, goal: proteinGoal, color: theme.primary },
+    { label: t("home.carbs"), value: carbs, goal: carbsGoal, color: theme.secondary },
+    { label: t("home.fat"), value: fat, goal: fatGoal, color: theme.warning || "#ffab40" },
+  ];
 
   return (
-    <Card style={{ gap: 14 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+    <Card style={{ gap: 16, alignItems: "center" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
         <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
           {t("home.nutrition")}
         </Text>
@@ -105,88 +115,110 @@ function NutritionCard({ mealsData, theme }: { mealsData: any; theme: AppTheme }
           <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
             {t("home.viewAll")}
           </Text>
-          <Feather name="chevron-right" size={13} color={theme.primary} />
+          <Feather name={rtlIcon("chevron-right")} size={13} color={theme.primary} />
         </Pressable>
       </View>
 
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
-        <CalorieRing consumed={consumed} goal={calorieGoal} theme={theme} />
-        <View style={{ flex: 1, gap: 8 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-              {t("home.protein")}
-            </Text>
-            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
-              {protein}g / {proteinGoal}g
-            </Text>
-          </View>
-          <View style={{ height: 8, backgroundColor: theme.border, borderRadius: 4, overflow: "hidden" }}>
-            <View style={{ height: 8, width: `${proteinPct * 100}%`, backgroundColor: theme.primary, borderRadius: 4 }} />
-          </View>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 2 }}>
-            {protein >= proteinGoal
-              ? t("home.proteinGoalMet")
-              : t("home.proteinToGo", { count: proteinGoal - protein })}
-          </Text>
-        </View>
+      <CalorieRingHero consumed={consumed} goal={calorieGoal} theme={theme} />
+
+      <View style={{ flexDirection: "row", gap: 12, width: "100%" }}>
+        {macros.map((m) => {
+          const pct = m.goal > 0 ? Math.min(m.value / m.goal, 1) : 0;
+          return (
+            <View key={m.label} style={{ flex: 1, gap: 4 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11 }}>
+                  {m.label}
+                </Text>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>
+                  {m.value}g
+                </Text>
+              </View>
+              <View style={{ height: 6, backgroundColor: theme.border, borderRadius: 3, overflow: "hidden" }}>
+                <View style={{ height: 6, width: `${pct * 100}%` as `${number}%`, backgroundColor: m.color, borderRadius: 3 }} />
+              </View>
+            </View>
+          );
+        })}
       </View>
     </Card>
   );
 }
 
-// ─── Quick Actions ────────────────────────────────────────────────────────────
-
-function QuickActions({ theme }: { theme: AppTheme }) {
+function HeroActions({ theme }: { theme: AppTheme }) {
   const { t } = useTranslation();
 
   const actions = [
-    {
-      label: t("home.logWorkout"), icon: "activity" as const,
-      color: theme.primary, onPress: () => router.push("/workouts/log" as any),
-    },
-    {
-      label: t("home.logMeal"), icon: "coffee" as const,
-      color: theme.pink || "#f48fb1", onPress: () => router.push("/meals/add" as any),
-    },
     {
       label: t("home.scanMeal"), icon: "camera" as const,
       color: theme.secondary, onPress: () => router.push("/(tabs)/scan" as any),
     },
     {
       label: t("home.startWorkout"), icon: "play" as const,
-      color: "#00e676", onPress: () => router.push("/(tabs)/workouts" as any),
+      color: theme.primary, onPress: () => router.push("/(tabs)/workouts" as any),
+    },
+    {
+      label: t("home.askCoach"), icon: "message-circle" as const,
+      color: "#ce93d8", onPress: () => router.push("/coach/chat" as any),
     },
   ];
 
   return (
-    <View style={{ gap: 10 }}>
-      <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-        {t("home.quickActions")}
-      </Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-        {actions.map((a) => (
-          <Pressable
-            key={a.label}
-            onPress={a.onPress}
-            style={({ pressed }) => [
-              styles.quickBtn,
-              { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <View style={[styles.quickBtnIcon, { backgroundColor: a.color + "20" }]}>
-              <Feather name={a.icon} size={20} color={a.color} />
-            </View>
-            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 12, textAlign: "center" }}>
-              {a.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+    <View style={{ flexDirection: "row", gap: 10 }}>
+      {actions.map((a) => (
+        <Pressable
+          key={a.label}
+          onPress={a.onPress}
+          style={({ pressed }) => [
+            styles.heroBtn,
+            { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <View style={[styles.heroBtnIcon, { backgroundColor: a.color + "20" }]}>
+            <Feather name={a.icon} size={20} color={a.color} />
+          </View>
+          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 12, textAlign: "center" }}>
+            {a.label}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
 
-// ─── Today's Workout Card ─────────────────────────────────────────────────────
+function CoachPromptChips({ theme }: { theme: AppTheme }) {
+  const { t } = useTranslation();
+  const chips = [
+    t("home.coachChip1"),
+    t("home.coachChip2"),
+    t("home.coachChip3"),
+    t("home.coachChip4"),
+  ];
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: 8 }}
+    >
+      {chips.map((chip) => (
+        <Pressable
+          key={chip}
+          onPress={() => router.push({ pathname: "/coach/chat" as any, params: { prompt: chip } })}
+          style={({ pressed }) => [
+            styles.coachChip,
+            { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Feather name="message-circle" size={12} color={theme.secondary} />
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }} numberOfLines={1}>
+            {chip}
+          </Text>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+}
 
 function diffColor(d: string | undefined, theme: AppTheme) {
   if (d === "Beginner") return theme.primary;
@@ -224,7 +256,7 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
             {t("home.browseWorkoutsAnyway")}
           </Text>
-          <Feather name="chevron-right" size={14} color={theme.textMuted} />
+          <Feather name={rtlIcon("chevron-right")} size={14} color={theme.textMuted} />
         </Pressable>
       </Card>
     );
@@ -357,8 +389,6 @@ function CoachCtaCard({ theme }: { theme: AppTheme }) {
   );
 }
 
-// ─── Streak Card (prominent) ──────────────────────────────────────────────────
-
 function StreakSummaryCard({ streaksData, achievementsData, theme }: { streaksData: any; achievementsData?: any; theme: AppTheme }) {
   const { t } = useTranslation();
   if (!streaksData) return null;
@@ -426,8 +456,6 @@ function StreakSummaryCard({ streaksData, achievementsData, theme }: { streaksDa
     </View>
   );
 }
-
-// ─── Don't Break Streak Banner ───────────────────────────────────────────────
 
 function DontBreakStreakBanner({
   streaksData, workoutsData, mealsData, theme,
@@ -513,7 +541,92 @@ function DontBreakStreakBanner({
   );
 }
 
-// ─── Milestone Celebration Modal ─────────────────────────────────────────────
+function AIInsightCard({
+  insight, theme,
+}: { insight: GoalInsight; theme: AppTheme }) {
+  const { t } = useTranslation();
+
+  const trendIcon = insight.trend === "up" ? "trending-up" : insight.trend === "down" ? "trending-down" : null;
+  const trendGood = trendIcon ? (insight.trend === "up") === insight.trendPositive : false;
+  const pct = Math.max(0, Math.min(1, insight.progress)) * 100;
+
+  return (
+    <Card style={{ gap: 10, borderColor: insight.accentColor + "30" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={[styles.insightIconWrap, { backgroundColor: insight.accentColor + "22" }]}>
+            <Feather name={insight.icon as any} size={16} color={insight.accentColor} />
+          </View>
+          <View>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 }}>
+              {insight.goalLabel}
+            </Text>
+            <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>
+              {insight.headline}
+            </Text>
+          </View>
+        </View>
+        {trendIcon && (
+          <Feather name={trendIcon} size={14} color={trendGood ? "#00e676" : "#ef5350"} />
+        )}
+      </View>
+
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Text style={{ color: insight.accentColor, fontFamily: "Inter_700Bold", fontSize: 18 }}>
+          {insight.value}
+        </Text>
+      </View>
+
+      <View style={{ height: 5, backgroundColor: theme.border, borderRadius: 3, overflow: "hidden" }}>
+        <View style={{ height: 5, width: `${pct}%` as `${number}%`, backgroundColor: insight.accentColor, borderRadius: 3 }} />
+      </View>
+
+      {insight.progressLabel && (
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11 }}>
+          {insight.progressLabel}
+        </Text>
+      )}
+
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 17 }}>
+        {insight.detail}
+      </Text>
+
+      <Pressable
+        onPress={() => router.push("/(tabs)/progress" as any)}
+        style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}
+      >
+        <Text style={{ color: insight.accentColor, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+          {t("home.viewInsights")}
+        </Text>
+        <Feather name={rtlIcon("chevron-right")} size={12} color={insight.accentColor} />
+      </Pressable>
+    </Card>
+  );
+}
+
+function WeeklyReportCard({ theme }: { theme: AppTheme }) {
+  const { t } = useTranslation();
+  return (
+    <Card style={{ gap: 10, borderColor: theme.secondary + "20" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <View style={[styles.weeklyIcon, { backgroundColor: theme.secondary + "18" }]}>
+          <Feather name="bar-chart-2" size={18} color={theme.secondary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 15 }}>
+            {t("home.weeklyReport")}
+          </Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+            {t("home.comingSoon")}
+          </Text>
+        </View>
+      </View>
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
+        {t("home.weeklyReportDesc")}
+      </Text>
+    </Card>
+  );
+}
 
 const MILESTONE_THRESHOLDS = [3, 7, 14, 30, 60, 100];
 
@@ -626,8 +739,6 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function getGreeting(t: (key: string) => string) {
   const h = new Date().getHours();
   if (h < 12) return t("home.goodMorning");
@@ -640,8 +751,6 @@ function formatDate() {
     weekday: "long", month: "long", day: "numeric",
   });
 }
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const { theme } = useTheme();
@@ -732,6 +841,26 @@ export default function HomeScreen() {
     return getTodayRecommendation(coachProfile, recentWorkoutsList, recoveryCtx);
   }, [profile, recentWorkoutsList, hasCoachOnboarding, recoveryTodayData]);
 
+  const topInsight = useMemo<GoalInsight | null>(() => {
+    if (!profile?.fitnessGoals?.length) return null;
+    const input: GoalInsightsInput = {
+      goals: profile.fitnessGoals,
+      profile: {
+        calorieGoal: mealsData?.calorieGoal ?? undefined,
+        proteinGoalG: undefined,
+        weeklyWorkoutDays: profile.weeklyWorkoutDays ?? undefined,
+      },
+      workouts: recentWorkoutsList,
+      streaks: streaksData ? {
+        currentWorkoutStreak: streaksData.currentWorkoutStreak ?? 0,
+        longestWorkoutStreak: streaksData.longestWorkoutStreak ?? 0,
+        currentMealStreak: streaksData.currentMealStreak ?? 0,
+      } : undefined,
+    };
+    const all = computeGoalInsights(input);
+    return all.length > 0 ? all[0] : null;
+  }, [profile, mealsData, recentWorkoutsList, streaksData]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
@@ -741,7 +870,8 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
       >
-        {/* ── Greeting Header ── */}
+        {/* ═══ ZONE 1 — HERO ═══ */}
+
         <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
           <View>
             <Text style={[styles.greeting, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -764,45 +894,25 @@ export default function HomeScreen() {
           </Pressable>
         </Animated.View>
 
-        {/* ── Streaks (prominent, right after greeting) ── */}
-        {streaksData && (
-          <Animated.View entering={FadeInDown.delay(40).duration(400)} style={styles.section}>
-            <StreakSummaryCard streaksData={streaksData} achievementsData={achievementsData} theme={theme} />
-          </Animated.View>
-        )}
-
-        {/* ── Don't Break Streak Banner ── */}
-        {streaksData && (
-          <View style={styles.section}>
-            <DontBreakStreakBanner
-              streaksData={streaksData}
-              workoutsData={workoutsData}
-              mealsData={mealsData}
-              theme={theme}
-            />
-          </View>
-        )}
-
-        {/* ── Nutrition (calorie ring + protein) ── */}
-        <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(40).duration(400)} style={styles.section}>
           {mealsData ? (
-            <NutritionCard mealsData={mealsData} theme={theme} />
+            <NutritionHero mealsData={mealsData} theme={theme} />
           ) : (
-            <Card style={{ gap: 12 }}>
+            <Card style={{ gap: 12, alignItems: "center" }}>
               <SkeletonBox width="40%" height={14} borderRadius={6} />
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
-                <SkeletonBox width={RING_SIZE} height={RING_SIZE} borderRadius={RING_SIZE / 2} />
-                <View style={{ flex: 1, gap: 10 }}>
-                  <SkeletonBox width="100%" height={10} borderRadius={5} />
-                  <SkeletonBox width="80%" height={10} borderRadius={5} />
-                </View>
+              <SkeletonBox width={HERO_RING} height={HERO_RING} borderRadius={HERO_RING / 2} />
+              <View style={{ flexDirection: "row", gap: 12, width: "100%" }}>
+                {[1, 2, 3].map((i) => (
+                  <View key={i} style={{ flex: 1, gap: 4 }}>
+                    <SkeletonBox width="100%" height={6} borderRadius={3} />
+                  </View>
+                ))}
               </View>
             </Card>
           )}
         </Animated.View>
 
-        {/* ── Today's Workout ── */}
-        <Animated.View entering={FadeInDown.delay(120).duration(400)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.section}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
               {t("home.todaysWorkout")}
@@ -836,33 +946,49 @@ export default function HomeScreen() {
           )}
         </Animated.View>
 
-        {/* ── Quick Actions ── */}
-        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
-          <QuickActions theme={theme} />
+        {/* ═══ ZONE 2 — QUICK ACTIONS ═══ */}
+
+        <Animated.View entering={FadeInDown.delay(120).duration(400)} style={styles.section}>
+          <HeroActions theme={theme} />
         </Animated.View>
 
-        {/* ── AI Coach Shortcut (slim row) ── */}
-        <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.section}>
-          <Pressable
-            onPress={() => router.push("/coach/chat" as any)}
-            style={({ pressed }) => [
-              styles.coachRow,
-              { backgroundColor: theme.card, borderColor: theme.secondary + "50", opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <View style={[styles.coachIcon, { backgroundColor: theme.secondary + "20" }]}>
-              <Feather name="message-circle" size={20} color={theme.secondary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                {t("home.chatWithCoach")}
+        <Animated.View entering={FadeInDown.delay(160).duration(400)} style={styles.section}>
+          <CoachPromptChips theme={theme} />
+        </Animated.View>
+
+        {/* ═══ ZONE 3 — SECONDARY FEED ═══ */}
+
+        {streaksData && (
+          <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
+            <StreakSummaryCard streaksData={streaksData} achievementsData={achievementsData} theme={theme} />
+          </Animated.View>
+        )}
+
+        {streaksData && (
+          <View style={styles.section}>
+            <DontBreakStreakBanner
+              streaksData={streaksData}
+              workoutsData={workoutsData}
+              mealsData={mealsData}
+              theme={theme}
+            />
+          </View>
+        )}
+
+        {topInsight && (
+          <Animated.View entering={FadeInDown.delay(240).duration(400)} style={styles.section}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <Feather name="target" size={14} color={theme.primary} />
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+                {t("home.goalInsight")}
               </Text>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }} numberOfLines={1}>
-                {t("home.chatWithCoachSubtitle")}
-              </Text>
             </View>
-            <Feather name="chevron-right" size={16} color={theme.textMuted} />
-          </Pressable>
+            <AIInsightCard insight={topInsight} theme={theme} />
+          </Animated.View>
+        )}
+
+        <Animated.View entering={FadeInDown.delay(280).duration(400)} style={styles.section}>
+          <WeeklyReportCard theme={theme} />
         </Animated.View>
       </ScrollView>
 
@@ -910,20 +1036,24 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 6, paddingVertical: 11, borderRadius: 12, borderWidth: 1,
   },
-  quickBtn: {
-    width: "47.5%", alignItems: "center", justifyContent: "center", gap: 10,
-    paddingVertical: 18, borderRadius: 16, borderWidth: 1,
+  heroBtn: {
+    flex: 1, alignItems: "center", justifyContent: "center", gap: 8,
+    paddingVertical: 16, borderRadius: 16, borderWidth: 1,
   },
-  quickBtnIcon: {
+  heroBtnIcon: {
     width: 44, height: 44, borderRadius: 12,
     alignItems: "center", justifyContent: "center",
   },
-  coachRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    padding: 14, borderRadius: 16, borderWidth: 1,
+  coachChip: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
   },
-  coachIcon: {
-    width: 38, height: 38, borderRadius: 10,
+  insightIconWrap: {
+    width: 34, height: 34, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+  },
+  weeklyIcon: {
+    width: 40, height: 40, borderRadius: 12,
     alignItems: "center", justifyContent: "center",
   },
   streakStrip: {
