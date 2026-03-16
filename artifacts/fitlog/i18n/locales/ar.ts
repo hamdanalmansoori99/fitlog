@@ -422,6 +422,8 @@ export default {
     chooseAlternative: "اختر بديلاً:",
     replaceExerciseTitle: "استبدال التمرين",
     firstTimeExercise: "أول مرة تسجل هذا التمرين",
+    setBaseline: "أول مرة — حدد مستواك الأساسي",
+    coachTip: "نصيحة",
     reps: "تكرارات",
     weightKgLabel: "الوزن (كغ)",
     howHard: "مدى الصعوبة؟ (اختياري)",

@@ -181,6 +181,33 @@ export default function ExecuteWorkoutScreen() {
     return m;
   }, [historyData]);
 
+  const autoPopulatedRef = useRef(false);
+  useEffect(() => {
+    if (autoPopulatedRef.current || !isGym) return;
+    const keys = Object.keys(historyMap);
+    if (keys.length === 0 || exercises.length === 0) return;
+    autoPopulatedRef.current = true;
+    setExercises((prev) =>
+      prev.map((ex) => {
+        const sessions = historyMap[ex.name];
+        if (!sessions || sessions.length === 0) return ex;
+        const prog = calculateStrengthTarget(sessions);
+        if (!prog.suggestedWeightKg && !prog.suggestedReps) return ex;
+        return {
+          ...ex,
+          sets: ex.sets.map((s) => {
+            if (s.completed) return s;
+            return {
+              ...s,
+              weight: prog.suggestedWeightKg ? String(prog.suggestedWeightKg) : s.weight,
+              reps: prog.suggestedReps ? String(prog.suggestedReps) : s.reps,
+            };
+          }),
+        };
+      })
+    );
+  }, [historyMap]);
+
   // ── Mutation ───────────────────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: api.createWorkout,
@@ -695,84 +722,9 @@ export default function ExecuteWorkoutScreen() {
     );
   }
 
-  // ── Rest screen ────────────────────────────────────────────────────────────
+  // ── Active exercise screen (also renders during rest with floating timer) ──
 
-  if (phase === "rest") {
-    const nextPending = pendingRef.current;
-    const upNextEx = nextPending ? exercises[nextPending.exIdx] : null;
-    const isNewExercise = nextPending && nextPending.setIdx === 0 && nextPending.exIdx !== exerciseIdx;
-    const restPct = exercises[exerciseIdx]?.restSec > 0
-      ? restSecondsLeft / exercises[exerciseIdx].restSec
-      : 0;
-
-    return (
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <View style={[styles.navBar, { paddingTop: topPad + 8 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-              {template.name}
-            </Text>
-          </View>
-          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-            {fmt(elapsedSeconds)}
-          </Text>
-        </View>
-
-        <View style={[styles.restBody, { paddingBottom: insets.bottom + 24 }]}>
-          <Animated.View entering={FadeIn.duration(300)} style={{ alignItems: "center", gap: 8 }}>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 14, letterSpacing: 1 }}>
-              {t("workouts.restLabel")}
-            </Text>
-            {/* Big timer */}
-            <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 72, lineHeight: 80 }}>
-              {fmt(restSecondsLeft)}
-            </Text>
-            {/* Progress ring (simple bar) */}
-            <View style={[styles.restBar, { backgroundColor: theme.border }]}>
-              <Animated.View
-                style={[
-                  styles.restBarFill,
-                  { backgroundColor: theme.primary, width: `${restPct * 100}%` as `${number}%` },
-                ]}
-              />
-            </View>
-          </Animated.View>
-
-          {/* Up next */}
-          {upNextEx && (
-            <Animated.View entering={FadeInDown.delay(100).duration(300)}>
-              <Card style={{ borderColor: theme.border }}>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginBottom: 4 }}>
-                  {isNewExercise ? t("workouts.nextExercise") : t("workouts.upNextSet", { set: (nextPending?.setIdx ?? 0) + 1, total: upNextEx.sets.length })}
-                </Text>
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>
-                  {upNextEx.name}
-                </Text>
-                {isNewExercise && (
-                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 }}>
-                    {upNextEx.targetSets} sets × {upNextEx.targetReps || upNextEx.targetDuration}
-                  </Text>
-                )}
-              </Card>
-            </Animated.View>
-          )}
-
-          {/* Skip rest */}
-          <Pressable
-            onPress={skipRest}
-            style={[styles.skipRestBtn, { borderColor: theme.primary, backgroundColor: theme.primaryDim }]}
-          >
-            <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-              {t("workouts.skipRest")}
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  // ── Active exercise screen ─────────────────────────────────────────────────
-
+  const isResting = phase === "rest";
   const currentEx = exercises[exerciseIdx];
   const currentSet = currentEx?.sets[setIdx];
   const nextExIdx = findNextExercise(exerciseIdx + 1);
@@ -840,7 +792,7 @@ export default function ExecuteWorkoutScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + (isResting ? 150 : 20) }]}
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Exercise header ── */}
@@ -861,35 +813,54 @@ export default function ExecuteWorkoutScreen() {
             </Text>
           </View>
 
-          {/* Previous performance */}
+          {/* Coaching hint */}
           {progression && progression.trend !== "first" && (
             <Animated.View entering={FadeInDown.delay(80).duration(300)}>
-              <View style={[styles.progressionRow, { backgroundColor: trendColor + "12", borderColor: trendColor + "30" }]}>
-                <Feather name="trending-up" size={13} color={trendColor} />
-                <View style={{ flex: 1 }}>
-                  {progression.previousDisplay && (
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                      {t("workouts.last")}: {progression.previousDisplay}
+              <View style={[styles.coachHintCard, { backgroundColor: trendColor + "08", borderColor: trendColor + "25" }]}>
+                {progression.previousDisplay && (
+                  <View style={styles.coachHintRow}>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11, width: 52 }}>
+                      {t("workouts.last")}
                     </Text>
-                  )}
-                  <Text style={{ color: trendColor, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
-                    {t("workouts.target")}: {progression.suggestedSets != null && progression.suggestedReps != null
+                    <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 12, flex: 1 }}>
+                      {progression.previousDisplay}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.coachHintRow}>
+                  <Text style={{ color: trendColor, fontFamily: "Inter_600SemiBold", fontSize: 11, width: 52 }}>
+                    {t("workouts.target")}
+                  </Text>
+                  <Text style={{ color: trendColor, fontFamily: "Inter_600SemiBold", fontSize: 12, flex: 1 }}>
+                    {progression.suggestedSets != null && progression.suggestedReps != null
                       ? `${progression.suggestedSets}×${progression.suggestedReps}${progression.suggestedWeightKg ? ` @ ${progression.suggestedWeightKg}kg` : ""}`
                       : t("workouts.matchPrevious")}
                   </Text>
+                  <View style={{ backgroundColor: trendColor + "20", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                    <Text style={{ color: trendColor, fontFamily: "Inter_600SemiBold", fontSize: 10 }}>
+                      {progression.trend === "progress" ? t("workouts.levelUpArrow") : progression.trend === "deload" ? t("workouts.recoveryArrow") : t("workouts.holdArrow")}
+                    </Text>
+                  </View>
                 </View>
-                <View style={{ backgroundColor: trendColor + "20", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ color: trendColor, fontFamily: "Inter_600SemiBold", fontSize: 10 }}>
-                    {progression.trend === "progress" ? t("workouts.levelUpArrow") : progression.trend === "deload" ? t("workouts.recoveryArrow") : t("workouts.holdArrow")}
+                <View style={[styles.coachHintRow, { marginTop: 2 }]}>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11, width: 52 }}>
+                    {t("workouts.coachTip")}
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, flex: 1 }}>
+                    {progression.rationale}
                   </Text>
                 </View>
               </View>
             </Animated.View>
           )}
           {(!progression || progression.trend === "first") && prevSessions.length === 0 && isGym && (
-            <View style={[styles.firstTimeBadge, { backgroundColor: theme.primaryDim }]}>
-              <Feather name="star" size={11} color={theme.primary} />
-              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 11 }}>{t("workouts.firstTimeExercise")}</Text>
+            <View style={[styles.coachHintCard, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "25" }]}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Feather name="star" size={12} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                  {t("workouts.setBaseline")}
+                </Text>
+              </View>
             </View>
           )}
         </Animated.View>
@@ -983,29 +954,31 @@ export default function ExecuteWorkoutScreen() {
           </Animated.View>
         )}
 
-        {/* ── Action buttons ── */}
-        <View style={styles.actionRow}>
-          <Pressable
-            onPress={skipSet}
-            style={[styles.secondaryBtn, { borderColor: theme.border }]}
-          >
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 14 }}>{t("workouts.skipSet")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={completeSet}
-            style={[styles.completeBtn, { backgroundColor: theme.primary, flex: 2 }]}
-          >
-            <Feather name="check" size={18} color="#0f0f1a" />
-            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 16 }}>{t("workouts.doneBtn")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={skipExercise}
-            style={[styles.secondaryBtn, { borderColor: theme.border }]}
-          >
-            <Feather name="skip-forward" size={14} color={theme.textMuted} />
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("workouts.skipBtn")}</Text>
-          </Pressable>
-        </View>
+        {/* ── Action buttons (hidden during rest) ── */}
+        {!isResting && (
+          <View style={styles.actionRow}>
+            <Pressable
+              onPress={skipSet}
+              style={[styles.secondaryBtn, { borderColor: theme.border }]}
+            >
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 14 }}>{t("workouts.skipSet")}</Text>
+            </Pressable>
+            <Pressable
+              onPress={completeSet}
+              style={[styles.completeBtn, { backgroundColor: theme.primary, flex: 2 }]}
+            >
+              <Feather name="check" size={18} color="#0f0f1a" />
+              <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 16 }}>{t("workouts.doneBtn")}</Text>
+            </Pressable>
+            <Pressable
+              onPress={skipExercise}
+              style={[styles.secondaryBtn, { borderColor: theme.border }]}
+            >
+              <Feather name="skip-forward" size={14} color={theme.textMuted} />
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("workouts.skipBtn")}</Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* ── Next exercise preview ── */}
         {nextEx && (
@@ -1034,6 +1007,52 @@ export default function ExecuteWorkoutScreen() {
         )}
       </ScrollView>
 
+      {/* ── Floating rest timer ── */}
+      {isResting && (
+        <Animated.View
+          entering={SlideInUp.duration(300)}
+          style={[styles.floatingRestPill, { backgroundColor: theme.card, borderColor: theme.primary + "40", paddingBottom: insets.bottom + 16 }]}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View style={[styles.restDot, { backgroundColor: theme.primary }]} />
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13, letterSpacing: 1 }}>
+                {t("workouts.restLabel")}
+              </Text>
+              <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 28 }}>
+                {fmt(restSecondsLeft)}
+              </Text>
+            </View>
+            <Pressable
+              onPress={skipRest}
+              style={[styles.skipRestPillBtn, { borderColor: theme.primary, backgroundColor: theme.primaryDim }]}
+            >
+              <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                {t("workouts.skipRest")}
+              </Text>
+            </Pressable>
+          </View>
+          <View style={[styles.restProgressBar, { backgroundColor: theme.border }]}>
+            <View
+              style={[
+                styles.restProgressFill,
+                {
+                  backgroundColor: theme.primary,
+                  width: `${((currentEx?.restSec || 60) > 0 ? (restSecondsLeft / (currentEx?.restSec || 60)) * 100 : 0)}%`,
+                },
+              ]}
+            />
+          </View>
+          {pendingRef.current && (
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textAlign: "center" }}>
+              {pendingRef.current.exIdx !== exerciseIdx
+                ? `${t("workouts.nextExercise")}: ${exercises[pendingRef.current.exIdx]?.name}`
+                : t("workouts.upNextSet", { set: pendingRef.current.setIdx + 1, total: currentEx?.sets.length })}
+            </Text>
+          )}
+        </Animated.View>
+      )}
+
       {renderPRModal()}
     </View>
   );
@@ -1053,15 +1072,12 @@ const styles = StyleSheet.create({
   progressDot: { height: 4, borderRadius: 2 },
   content: { padding: 16, gap: 14 },
 
-  // Progression badge
-  progressionRow: {
-    flexDirection: "row", alignItems: "flex-start", gap: 8,
-    padding: 10, borderRadius: 10, borderWidth: 1, marginTop: 6,
+  // Coaching hint
+  coachHintCard: {
+    borderWidth: 1, borderRadius: 12, padding: 12, gap: 4, marginTop: 6,
   },
-  firstTimeBadge: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
-    alignSelf: "flex-start", marginTop: 6,
+  coachHintRow: {
+    flexDirection: "row", alignItems: "center", gap: 8,
   },
 
   // Sets table
@@ -1096,16 +1112,21 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 14, padding: 14,
   },
 
-  // Rest screen
-  restBody: {
-    flex: 1, alignItems: "center", justifyContent: "center", gap: 32, padding: 24,
+  // Floating rest timer
+  floatingRestPill: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 20, paddingTop: 16, gap: 10,
+    borderTopWidth: 1.5,
+    shadowColor: "#000", shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
   },
-  restBar: { width: "80%", height: 6, borderRadius: 3, overflow: "hidden", marginTop: 8 },
-  restBarFill: { height: "100%", borderRadius: 3 },
-  skipRestBtn: {
-    paddingHorizontal: 32, paddingVertical: 14,
-    borderRadius: 14, borderWidth: 1.5,
+  restDot: { width: 8, height: 8, borderRadius: 4 },
+  skipRestPillBtn: {
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderRadius: 10, borderWidth: 1,
   },
+  restProgressBar: { height: 4, borderRadius: 2, overflow: "hidden" },
+  restProgressFill: { height: "100%", borderRadius: 2 },
 
   // Done / summary
   trophyCircle: {

@@ -422,6 +422,8 @@ export default {
     chooseAlternative: "Choose an alternative:",
     replaceExerciseTitle: "Replace Exercise",
     firstTimeExercise: "First time logging this exercise",
+    setBaseline: "First time — set your baseline",
+    coachTip: "Tip",
     reps: "Reps",
     weightKgLabel: "Weight (kg)",
     howHard: "How hard? (optional)",
