@@ -267,6 +267,9 @@ export default {
     noInsightsMessage: "حدد أهداف لياقتك وسجل التمارين للحصول على رؤى مخصصة مدعومة ببياناتك.",
     letsGetStarted: "لنبدأ",
     dayStreak: "يوم متواصل",
+    coachCardTitle: "اسأل المدرب الذكي",
+    coachCardCta: "تحدث مع المدرب ←",
+    coachCardTeaser: "اضغط للحصول على نصائح مخصصة ←",
   },
   weeklyReport: {
     title: "التقرير الأسبوعي",
@@ -290,6 +293,7 @@ export default {
     shareLabel: "التقرير الأسبوعي",
     shareTagline: "تتبّع. تحسّن. كرّر.",
     shareSite: "fitlog.app",
+    shareMyWeek: "شارك أسبوعي",
   },
   workouts: {
     title: "التمارين",

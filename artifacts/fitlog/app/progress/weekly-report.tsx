@@ -20,6 +20,25 @@ import { ShareCard } from "@/components/ShareCard";
 const isWeb = Platform.OS === "web";
 const WEB_TOP = 67;
 
+function buildHeroSummary(thisWeek: any, t: (k: string, opts?: any) => string): string {
+  if (!thisWeek) return "";
+  const workouts = thisWeek.workoutsCompleted ?? 0;
+  const kcal = thisWeek.avgCalories ?? 0;
+  const protein = thisWeek.avgProtein ?? 0;
+  const proteinGoal = thisWeek.proteinGoal ?? 0;
+  const proteinPct = proteinGoal > 0 ? Math.round((protein / proteinGoal) * 100) : null;
+
+  const parts: string[] = [];
+  if (workouts > 0) parts.push(`trained ${workouts} time${workouts !== 1 ? "s" : ""}`);
+  if (kcal > 0) parts.push(`averaged ${Math.round(kcal)} kcal/day`);
+  if (proteinPct != null) parts.push(`hit ${proteinPct}% of your protein goal`);
+
+  if (parts.length === 0) return t("weeklyReport.noDataDesc");
+  if (parts.length === 1) return `This week you ${parts[0]}.`;
+  if (parts.length === 2) return `This week you ${parts[0]} and ${parts[1]}.`;
+  return `This week you ${parts[0]}, ${parts[1]}, and ${parts[2]}.`;
+}
+
 function DeltaBadge({ prev, curr, unit = "" }: { prev: number; curr: number; unit?: string }) {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -189,7 +208,32 @@ export default function WeeklyReportScreen() {
             </View>
           ) : (
             <>
-              {/* Stats Grid */}
+              {/* ── Hero summary card ── */}
+              <Card style={{ borderColor: theme.primary + "30", gap: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: theme.primaryDim, alignItems: "center", justifyContent: "center" }}>
+                    <Feather name="bar-chart-2" size={18} color={theme.primary} />
+                  </View>
+                  <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 14 }}>
+                    {t("weeklyReport.title")}
+                  </Text>
+                </View>
+                <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 15, lineHeight: 22 }}>
+                  {buildHeroSummary(thisWeek, t)}
+                </Text>
+                {/* Share my week CTA */}
+                <Pressable
+                  onPress={() => setShareModalVisible(true)}
+                  style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: theme.primary, paddingVertical: 12, borderRadius: 12, marginTop: 4 }}
+                >
+                  <Feather name="share-2" size={15} color="#0f0f1a" />
+                  <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>
+                    {t("weeklyReport.shareMyWeek")}
+                  </Text>
+                </Pressable>
+              </Card>
+
+              {/* Stats Grid — 2×2 */}
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <StatTile
                   label={t("weeklyReport.workoutsCompleted")}

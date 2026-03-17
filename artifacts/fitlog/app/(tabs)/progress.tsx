@@ -342,6 +342,34 @@ export default function ProgressScreen() {
           <WorkoutCalendar />
         </Animated.View>
 
+        {/* Weekly Report entry point */}
+        <Animated.View entering={FadeInDown.delay(10).duration(350)}>
+          <Pressable
+            onPress={() => router.push("/progress/weekly-report" as any)}
+            style={({ pressed }) => [
+              {
+                flexDirection: "row", alignItems: "center", gap: 12,
+                backgroundColor: theme.card, borderRadius: 16, padding: 16, borderWidth: 1,
+                borderColor: theme.primary + "40",
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: theme.primaryDim, alignItems: "center", justifyContent: "center" }}>
+              <Feather name="bar-chart-2" size={20} color={theme.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                {t("home.weeklyReport")}
+              </Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 1 }}>
+                {t("home.weeklyReportSummary")}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={theme.primary} />
+          </Pressable>
+        </Animated.View>
+
         {/* Goal-based insights */}
         <Animated.View entering={FadeInDown.delay(20).duration(350)}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.goalInsights")}</Text>

@@ -267,6 +267,9 @@ export default {
     noInsightsMessage: "Set your fitness goals and log workouts to get personalized insights powered by your data.",
     letsGetStarted: "Let's get started",
     dayStreak: "day streak",
+    coachCardTitle: "Ask AI Coach",
+    coachCardCta: "Talk to Coach →",
+    coachCardTeaser: "Tap to get personalised advice →",
   },
   weeklyReport: {
     title: "Weekly Report",
@@ -290,6 +293,7 @@ export default {
     shareLabel: "Weekly Report",
     shareTagline: "Track. Improve. Repeat.",
     shareSite: "fitlog.app",
+    shareMyWeek: "Share My Week",
   },
   workouts: {
     title: "Workouts",

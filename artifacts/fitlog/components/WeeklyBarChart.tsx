@@ -15,7 +15,7 @@ interface WeeklyBarChartProps {
   emptyMessage?: string;
 }
 
-const BAR_TRACK_H = 100;
+const BAR_TRACK_H = 150;
 
 export function WeeklyBarChart({ data, emptyMessage }: WeeklyBarChartProps) {
   const { theme } = useTheme();
@@ -97,7 +97,7 @@ export function WeeklyBarChart({ data, emptyMessage }: WeeklyBarChartProps) {
 
 const styles = StyleSheet.create({
   container: { gap: 8 },
-  bars: { flexDirection: "row", alignItems: "flex-end", height: 130, gap: 6 },
+  bars: { flexDirection: "row", alignItems: "flex-end", height: 185, gap: 6 },
   barWrap: { flex: 1, alignItems: "center", gap: 4, height: "100%" },
   barContainer: { flex: 1, width: "100%", alignItems: "center", justifyContent: "flex-end" },
   barTrack: {

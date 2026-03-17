@@ -39,10 +39,16 @@ export const ShareCard = forwardRef<View, ShareCardProps>(function ShareCard(
   const meta = TYPE_META[type];
   const dir = rtl ? "rtl" : "ltr";
   const rowReverse = rtl ? "row-reverse" : "row";
+  const isWeekly = type === "weekly";
 
   return (
-    <View ref={ref} style={styles.card} collapsable={false}>
+    <View ref={ref} style={[styles.card, isWeekly && styles.cardWeekly]} collapsable={false}>
+      {/* Accent bar — top edge */}
       <View style={[styles.accentBar, { backgroundColor: meta.accent }]} />
+      {/* Weekly: decorative corner accent */}
+      {isWeekly && (
+        <View style={[styles.weeklyCorner, { backgroundColor: BLUE + "15" }]} />
+      )}
 
       <View style={[styles.topRow, { flexDirection: rowReverse }]}>
         <View style={[styles.iconWrap, { backgroundColor: meta.accent + "22" }]}>
@@ -122,12 +128,24 @@ const styles = StyleSheet.create({
       android: { elevation: 12 },
     }),
   },
+  cardWeekly: {
+    borderWidth: 1,
+    borderColor: BLUE + "30",
+  },
+  weeklyCorner: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 120,
+    height: 120,
+    borderTopLeftRadius: 120,
+  },
   accentBar: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: 3,
+    height: 4,
   },
   topRow: {
     alignItems: "center",

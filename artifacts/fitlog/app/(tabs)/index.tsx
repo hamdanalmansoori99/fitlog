@@ -155,10 +155,6 @@ function HeroActions({ theme }: { theme: AppTheme }) {
       label: t("home.scanMeal"), icon: "camera" as const,
       color: theme.secondary, onPress: () => router.push("/(tabs)/scan" as any),
     },
-    {
-      label: t("home.askCoach"), icon: "message-circle" as const,
-      color: "#ce93d8", onPress: () => router.push({ pathname: "/coach/chat" as any, params: { prompt: t("home.coachChip1") } }),
-    },
   ];
 
   return (
@@ -184,7 +180,9 @@ function HeroActions({ theme }: { theme: AppTheme }) {
   );
 }
 
-function CoachPromptChips({ theme }: { theme: AppTheme }) {
+function CoachCard({
+  theme, teaser,
+}: { theme: AppTheme; teaser?: string }) {
   const { t } = useTranslation();
   const chips = [
     t("home.coachChip1"),
@@ -192,29 +190,52 @@ function CoachPromptChips({ theme }: { theme: AppTheme }) {
     t("home.coachChip3"),
     t("home.coachChip4"),
   ];
+  const defaultPrompt = chips[0];
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: 8 }}
-    >
-      {chips.map((chip) => (
-        <Pressable
-          key={chip}
-          onPress={() => router.push({ pathname: "/coach/chat" as any, params: { prompt: chip } })}
-          style={({ pressed }) => [
-            styles.coachChip,
-            { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
-          ]}
-        >
-          <Feather name="message-circle" size={12} color={theme.secondary} />
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }} numberOfLines={1}>
-            {chip}
+    <Card style={{ borderColor: theme.secondary + "30", gap: 12 }}>
+      {/* Header row */}
+      <Pressable
+        onPress={() => router.push({ pathname: "/coach/chat" as any, params: { prompt: defaultPrompt } })}
+        style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+      >
+        <View style={[styles.todayIcon, { backgroundColor: theme.secondaryDim }]}>
+          <Feather name="message-circle" size={18} color={theme.secondary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+            {t("home.aiCoach")}
           </Text>
-        </Pressable>
-      ))}
-    </ScrollView>
+          <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 15 }} numberOfLines={1}>
+            {teaser || t("home.coachCardTitle")}
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={16} color={theme.secondary} />
+      </Pressable>
+
+      {/* Prompt chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8 }}
+      >
+        {chips.map((chip) => (
+          <Pressable
+            key={chip}
+            onPress={() => router.push({ pathname: "/coach/chat" as any, params: { prompt: chip } })}
+            style={({ pressed }) => [
+              styles.coachChip,
+              { backgroundColor: theme.background, borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Feather name="zap" size={11} color={theme.secondary} />
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }} numberOfLines={1}>
+              {chip}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </Card>
   );
 }
 
@@ -946,13 +967,10 @@ export default function HomeScreen() {
           </Animated.View>
         )}
 
-        {/* ═══ ZONE 7 — AI COACH PROMPTS (subtle) ═══ */}
+        {/* ═══ ZONE 7 — AI COACH CARD ═══ */}
 
         <Animated.View entering={FadeInDown.delay(320).duration(400)} style={styles.section}>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 8 }}>
-            {t("home.askCoach")}
-          </Text>
-          <CoachPromptChips theme={theme} />
+          <CoachCard theme={theme} />
         </Animated.View>
       </ScrollView>
 
