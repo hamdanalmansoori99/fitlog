@@ -580,41 +580,37 @@ export default function ScanScreen() {
                 <MacroPill label={t("common.fat")} value={totals.fatG} unit="g" color="#ff5252" />
               </View>
 
-              {/* CTA row */}
-              <View style={styles.footerRow}>
-                <Pressable
-                  onPress={handleRetake}
-                  style={[styles.retakeTextBtn, { borderColor: theme.border }]}
-                >
-                  <Feather name="camera" size={16} color={theme.textMuted} />
-                  <Text style={[styles.retakeBtnText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-                    {t("scan.retake")}
-                  </Text>
-                </Pressable>
+              {/* Full-width Log Meal CTA */}
+              <Pressable
+                onPress={handleLogMeal}
+                disabled={isLogging || items.length === 0}
+                style={[
+                  styles.logBtnFull,
+                  {
+                    backgroundColor: items.length === 0 ? theme.textMuted : theme.primary,
+                    opacity: isLogging ? 0.7 : 1,
+                  },
+                ]}
+              >
+                {isLogging ? (
+                  <ActivityIndicator color="#000" size="small" />
+                ) : (
+                  <>
+                    <Feather name="check" size={20} color="#000" />
+                    <Text style={[styles.logBtnText, { fontFamily: "Inter_700Bold", fontSize: 17 }]}>
+                      {t("scan.logMeal")}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
 
-                <Pressable
-                  onPress={handleLogMeal}
-                  disabled={isLogging || items.length === 0}
-                  style={[
-                    styles.logBtn,
-                    {
-                      backgroundColor: items.length === 0 ? theme.textMuted : theme.primary,
-                      opacity: isLogging ? 0.7 : 1,
-                    },
-                  ]}
-                >
-                  {isLogging ? (
-                    <ActivityIndicator color="#000" size="small" />
-                  ) : (
-                    <>
-                      <Feather name="check" size={18} color="#000" />
-                      <Text style={[styles.logBtnText, { fontFamily: "Inter_700Bold" }]}>
-                        {t("scan.logMeal")}
-                      </Text>
-                    </>
-                  )}
-                </Pressable>
-              </View>
+              {/* Secondary retake link */}
+              <Pressable onPress={handleRetake} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <Feather name="camera" size={14} color={theme.textMuted} />
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                  {t("scan.retake")}
+                </Text>
+              </Pressable>
             </View>
           </Animated.View>
         </Animated.View>
@@ -968,6 +964,14 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     borderRadius: 14,
+  },
+  logBtnFull: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 17,
+    borderRadius: 16,
   },
   logBtnText: {
     color: "#000",

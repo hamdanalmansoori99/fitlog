@@ -467,16 +467,15 @@ export default function ExecuteWorkoutScreen() {
     }
 
     if (volume > previousBestVolume && previousBestVolume > 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Show inline 2-second badge if not already celebrated this session
+      // Only celebrate once per exercise per session
       if (!prCelebratedRef.current.has(ex.name)) {
         prCelebratedRef.current.add(ex.name);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setPrBadgeText(`🏆 ${t("pr.newPersonalRecord")}!`);
         setPrBadgeVisible(true);
         setTimeout(() => setPrBadgeVisible(false), 2400);
+        setPrModal({ exercise: ex.name, weight, reps, previousBest: previousBestWeight, previousBestReps });
       }
-      // Always update the modal data (for sharing)
-      setPrModal({ exercise: ex.name, weight, reps, previousBest: previousBestWeight, previousBestReps });
     }
   }
 
@@ -1279,7 +1278,7 @@ export default function ExecuteWorkoutScreen() {
         <Animated.View
           entering={ZoomIn.duration(300)}
           style={styles.prBadgeOverlay}
-          pointerEvents="none"
+          pointerEvents="none" // Safe on Animated.View, avoids style type issues
         >
           <View style={[styles.prBadge, { backgroundColor: theme.primary }]}>
             <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 18 }}>
@@ -1378,8 +1377,7 @@ const styles = StyleSheet.create({
   prBadgeOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center", justifyContent: "center",
-    pointerEvents: "none",
-  } as any,
+  },
   prBadge: {
     paddingHorizontal: 24, paddingVertical: 14, borderRadius: 20,
     shadowColor: "#00e676", shadowOffset: { width: 0, height: 4 },
