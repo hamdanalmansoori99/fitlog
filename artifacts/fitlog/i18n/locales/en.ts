@@ -265,6 +265,8 @@ export default {
     viewWorkout: "View Workout",
     noInsightsYet: "Keep tracking to unlock insights",
     noInsightsMessage: "Set your fitness goals and log workouts to get personalized insights powered by your data.",
+    letsGetStarted: "Let's get started",
+    dayStreak: "day streak",
   },
   weeklyReport: {
     title: "Weekly Report",

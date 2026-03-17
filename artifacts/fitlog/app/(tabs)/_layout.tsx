@@ -137,12 +137,12 @@ function ClassicTabLayout() {
                 <SymbolView
                   name="camera.viewfinder"
                   tintColor={focused ? "#000" : theme.primary}
-                  size={28}
+                  size={22}
                 />
               ) : (
                 <Feather
                   name="camera"
-                  size={28}
+                  size={22}
                   color={focused ? "#000" : theme.primary}
                 />
               )}

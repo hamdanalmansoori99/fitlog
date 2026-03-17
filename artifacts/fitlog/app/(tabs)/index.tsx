@@ -1094,13 +1094,7 @@ export default function HomeScreen() {
           </Animated.View>
         )}
 
-        {/* ═══ ZONE 7 — WEEKLY REPORT ═══ */}
-
-        <Animated.View entering={FadeInDown.delay(280).duration(400)} style={styles.section}>
-          <WeeklyReportCard theme={theme} streaksData={streaksData} workoutsData={workoutsData} mealsData={mealsData} />
-        </Animated.View>
-
-        {/* ═══ ZONE 8 — AI COACH PROMPTS (subtle) ═══ */}
+        {/* ═══ ZONE 7 — AI COACH PROMPTS (subtle) ═══ */}
 
         <Animated.View entering={FadeInDown.delay(320).duration(400)} style={styles.section}>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 8 }}>

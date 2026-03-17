@@ -265,6 +265,8 @@ export default {
     viewWorkout: "عرض التمرين",
     noInsightsYet: "تابع التتبع لفتح الرؤى",
     noInsightsMessage: "حدد أهداف لياقتك وسجل التمارين للحصول على رؤى مخصصة مدعومة ببياناتك.",
+    letsGetStarted: "لنبدأ",
+    dayStreak: "يوم متواصل",
   },
   weeklyReport: {
     title: "التقرير الأسبوعي",
