@@ -99,6 +99,7 @@ export default function AddMealScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -317,11 +318,13 @@ export default function AddMealScreen() {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
     if (text.trim().length < 2) {
       setSearchResults([]);
+      setSearchError(false);
       setShowSearchResults(false);
       setSearching(false);
       return;
     }
     setSearching(true);
+    setSearchError(false);
     setShowSearchResults(true);
     const seq = ++searchSeq.current;
     searchTimeout.current = setTimeout(async () => {
@@ -329,13 +332,21 @@ export default function AddMealScreen() {
         const data = await api.foodSearch(text.trim());
         if (seq !== searchSeq.current) return;
         setSearchResults(data.results || []);
+        setSearchError(false);
       } catch {
         if (seq !== searchSeq.current) return;
         setSearchResults([]);
+        setSearchError(true);
       } finally {
         if (seq === searchSeq.current) setSearching(false);
       }
     }, 300);
+  }
+
+  function retrySearch() {
+    if (searchQuery.trim().length >= 2) {
+      handleSearchChange(searchQuery);
+    }
   }
 
   function selectSearchResult(result: any) {
@@ -581,7 +592,7 @@ export default function AddMealScreen() {
                 returnKeyType="search"
               />
               {searchQuery.length > 0 && (
-                <Pressable onPress={() => { setSearchQuery(""); setSearchResults([]); setShowSearchResults(false); }} hitSlop={8}>
+                <Pressable onPress={() => { setSearchQuery(""); setSearchResults([]); setSearchError(false); setShowSearchResults(false); }} hitSlop={8}>
                   <Feather name="x" size={16} color={theme.textMuted} />
                 </Pressable>
               )}
@@ -595,9 +606,16 @@ export default function AddMealScreen() {
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 6 }}>{t("meals.searchingEllipsis")}</Text>
                   </View>
                 )}
-                {!searching && searchResults.length === 0 && searchQuery.length >= 2 && (
+                {!searching && searchError && (
+                  <Pressable onPress={retrySearch} style={{ padding: 16, alignItems: "center", gap: 6 }}>
+                    <Feather name="wifi-off" size={18} color={theme.danger} />
+                    <Text style={{ color: theme.danger, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("common.error")}</Text>
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("common.retry")}</Text>
+                  </Pressable>
+                )}
+                {!searching && !searchError && searchResults.length === 0 && searchQuery.length >= 2 && (
                   <View style={{ padding: 16, alignItems: "center" }}>
-                    <Feather name="info" size={18} color={theme.textMuted} />
+                    <Feather name="search" size={18} color={theme.textMuted} />
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 6 }}>{t("meals.noResultsManual")}</Text>
                   </View>
                 )}

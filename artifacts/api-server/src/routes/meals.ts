@@ -474,7 +474,7 @@ router.get("/food-search", requireAuth, async (req, res) => {
     let response: Response;
     try {
       response = await fetch(
-        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=product_name,product_name_en,brands,nutriments,serving_size,serving_quantity`,
+        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=en&fields=product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,completeness`,
         { headers: { "User-Agent": "FitLog/1.0 (fitness-tracker-app)" }, signal: controller.signal }
       );
     } catch (e: any) {
@@ -493,12 +493,30 @@ router.get("/food-search", requireAuth, async (req, res) => {
     const products: any[] = data.products || [];
 
     const results = products
-      .filter((p: any) => p.product_name || p.product_name_en)
+      .filter((p: any) => {
+        const name = p.product_name_en || p.product_name;
+        if (!name || name.trim().length < 2) return false;
+        const n = p.nutriments || {};
+        const cal = Number(n["energy-kcal_100g"]) || 0;
+        // Require at least some calorie data to be useful
+        return cal > 0;
+      })
+      .sort((a: any, b: any) => {
+        // Prefer English-named products
+        const aEn = !!(a.product_name_en);
+        const bEn = !!(b.product_name_en);
+        if (aEn !== bEn) return aEn ? -1 : 1;
+        // Then prefer more complete entries
+        return (b.completeness || 0) - (a.completeness || 0);
+      })
       .map((p: any) => {
         const n = p.nutriments || {};
+        const name = p.product_name_en || p.product_name || "Unknown";
+        // Trim brand from name if it appears there
+        const brand = p.brands ? p.brands.split(",")[0].trim() : null;
         return {
-          name: p.product_name || p.product_name_en || "Unknown",
-          brand: p.brands || null,
+          name,
+          brand,
           servingSize: p.serving_size || "100g",
           calories: Math.round(Number(n["energy-kcal_100g"]) || 0),
           proteinG: Math.round(Number(n.proteins_100g) || 0),
@@ -506,7 +524,7 @@ router.get("/food-search", requireAuth, async (req, res) => {
           fatG: Math.round(Number(n.fat_100g) || 0),
         };
       })
-      .slice(0, 8);
+      .slice(0, 10);
 
     res.json({ results });
   } catch (err: any) {
