@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import Animated, { FadeInDown, FadeIn, SlideInDown, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, FadeOut, SlideInDown, ZoomIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
@@ -903,7 +903,7 @@ export default function ExecuteWorkoutScreen() {
             {currentEx.name}
           </Text>
           <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13, marginTop: 1 }}>
-            {t("workouts.setLabel")} {completedSetsInExercise < currentEx.sets.length ? completedSetsInExercise + 1 : currentEx.sets.length} / {currentEx.sets.length}
+            {t("workouts.setLabel")} {Math.min(setIdx + 1, currentEx.sets.length)} / {currentEx.sets.length}
           </Text>
         </View>
         {currentEx.alternatives.length > 0 && (
@@ -1277,8 +1277,9 @@ export default function ExecuteWorkoutScreen() {
       {prBadgeVisible && (
         <Animated.View
           entering={ZoomIn.duration(300)}
+          exiting={FadeOut.duration(500)}
           style={styles.prBadgeOverlay}
-          pointerEvents="none" // Safe on Animated.View, avoids style type issues
+          pointerEvents="none"
         >
           <View style={[styles.prBadge, { backgroundColor: theme.primary }]}>
             <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 18 }}>
