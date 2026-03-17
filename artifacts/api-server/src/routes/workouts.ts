@@ -252,16 +252,18 @@ router.get("/calendar", requireAuth, async (req, res) => {
         )),
     ]);
 
-    const byDate: Record<string, any[]> = {};
-    for (const w of workouts) {
-      const key = new Date(w.date).toISOString().split("T")[0];
-      if (!byDate[key]) byDate[key] = [];
-      byDate[key].push({
-        id: w.id,
-        name: w.name,
-        activityType: w.activityType,
-        durationMinutes: w.durationMinutes,
-      });
+    const workoutEntries = workouts.map((w) => ({
+      id: w.id,
+      date: new Date(w.date).toISOString().split("T")[0],
+      name: w.name,
+      activityType: w.activityType,
+      durationMinutes: w.durationMinutes,
+    }));
+
+    const byDate: Record<string, typeof workoutEntries> = {};
+    for (const entry of workoutEntries) {
+      if (!byDate[entry.date]) byDate[entry.date] = [];
+      byDate[entry.date].push(entry);
     }
 
     const mealDays = new Set<string>();
@@ -269,7 +271,7 @@ router.get("/calendar", requireAuth, async (req, res) => {
       mealDays.add(new Date(m.date).toISOString().split("T")[0]);
     }
 
-    res.json({ year, month, days: byDate, mealDays: Array.from(mealDays) });
+    res.json({ year, month, workouts: workoutEntries, days: byDate, mealDays: Array.from(mealDays) });
   } catch (err) {
     res.status(500).json({ error: "Failed to get calendar data" });
   }
