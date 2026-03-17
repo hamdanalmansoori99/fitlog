@@ -27,10 +27,21 @@ function NativeTabLayout() {
         <Label>{t("tabs.workouts")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scan">
-        <View style={[layoutStyles.nativeScanHero, { backgroundColor: theme.primary + "20" }]}>
-          <Icon sf={{ default: "camera.viewfinder", selected: "camera.viewfinder" }} />
+        <View
+          style={[
+            layoutStyles.nativeScanHero,
+            {
+              backgroundColor: theme.primary,
+              elevation: 4,
+              shadowColor: "#00e676",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 6,
+            },
+          ]}
+        >
+          <Icon sf={{ default: "camera.viewfinder", selected: "camera.viewfinder" }} selectedColor="#000" />
         </View>
-        <Label>{t("tabs.scan")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="progress">
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
@@ -183,9 +194,9 @@ const layoutStyles = StyleSheet.create({
     shadowRadius: 6,
   },
   nativeScanHero: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
   },
