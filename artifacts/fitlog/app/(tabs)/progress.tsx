@@ -173,9 +173,14 @@ export default function ProgressScreen() {
   const [photoViewer, setPhotoViewer] = useState<{ uri: string; note: string } | null>(null);
   const [pendingPhoto, setPendingPhoto] = useState<{ uri: string } | null>(null);
   const [pendingNote, setPendingNote] = useState("");
+  const [compareOpen, setCompareOpen] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { photos, addPhoto, deletePhoto } = usePhotoStore();
+  const sortedPhotos = useMemo(() =>
+    [...photos].sort((a, b) => a.date.localeCompare(b.date)),
+    [photos]
+  );
 
   function openNoteModal(uri: string) {
     setPendingNote("");
@@ -420,98 +425,6 @@ export default function ProgressScreen() {
           )}
         </Animated.View>
         
-        {/* Progress Photos */}
-        <Animated.View entering={FadeInDown.delay(45).duration(350)}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("progress.progressPhotos")}</Text>
-            <Pressable
-              onPress={handleAddPhoto}
-              style={[styles.addBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
-            >
-              <Feather name="camera" size={14} color={theme.primary} />
-              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("progress.addPhoto")}</Text>
-            </Pressable>
-          </View>
-
-          {photos.length === 0 ? (
-            <View style={[styles.emptyPhotoCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <View style={[styles.emptyPhotoIcon, { backgroundColor: theme.cardAlt }]}>
-                <Feather name="camera" size={22} color={theme.textMuted} />
-              </View>
-              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("progress.noPhotosYet")}</Text>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", lineHeight: 18, maxWidth: 230 }}>
-                {t("progress.trackTransformation")}
-              </Text>
-              <Pressable
-                onPress={handleAddPhoto}
-                style={[{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, marginTop: 4, borderColor: theme.primary + "50", backgroundColor: theme.primary + "15" }]}
-              >
-                <Feather name="camera" size={14} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("progress.takePhoto")}</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View>
-              {/* Compare strip: oldest vs newest */}
-              {photos.length >= 2 && (
-                <View style={[styles.compareRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                  <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("progress.first")}</Text>
-                    <Pressable onPress={() => setPhotoViewer({ uri: photos[0].uri, note: photos[0].note })}>
-                      <Image
-                        source={{ uri: photos[0].uri }}
-                        style={[styles.compareThumb, { borderColor: theme.border }]}
-                        resizeMode="cover"
-                      />
-                    </Pressable>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                      {new Date(photos[0].date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric", year: "2-digit" })}
-                    </Text>
-                  </View>
-                  <View style={{ width: 1, backgroundColor: theme.border, marginVertical: 8 }} />
-                  <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("progress.latest")}</Text>
-                    <Pressable onPress={() => setPhotoViewer({ uri: photos[photos.length - 1].uri, note: photos[photos.length - 1].note })}>
-                      <Image
-                        source={{ uri: photos[photos.length - 1].uri }}
-                        style={[styles.compareThumb, { borderColor: theme.border }]}
-                        resizeMode="cover"
-                      />
-                    </Pressable>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                      {new Date(photos[photos.length - 1].date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric", year: "2-digit" })}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {/* All photos grid */}
-              <View style={styles.photoGrid}>
-                {[...photos].reverse().map((photo) => (
-                  <Pressable key={photo.id} onPress={() => setPhotoViewer({ uri: photo.uri, note: photo.note })} style={styles.photoCell}>
-                    <Image source={{ uri: photo.uri }} style={[styles.photoThumb, { borderColor: theme.border }]} resizeMode="cover" />
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4, textAlign: "center" }}>
-                      {new Date(photo.date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
-                    </Text>
-                    {!!photo.note && (
-                      <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 11, textAlign: "center", marginTop: 1 }} numberOfLines={1}>
-                        {photo.note}
-                      </Text>
-                    )}
-                    <Pressable
-                      onPress={() => handleDeletePhoto(photo.id)}
-                      style={[styles.photoDeleteBtn, { backgroundColor: theme.danger + "dd" }]}
-                      hitSlop={4}
-                    >
-                      <Feather name="x" size={11} color="#fff" />
-                    </Pressable>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          )}
-        </Animated.View>
-
         {/* Workout Stats */}
         <Animated.View entering={FadeInDown.delay(50).duration(350)}>
           {summaryLoading ? (
@@ -754,6 +667,73 @@ export default function ProgressScreen() {
             </Animated.View>
           )}
         </View>
+
+        {/* Progress Photos — below measurements as specified */}
+        <Animated.View entering={FadeInDown.delay(45).duration(350)}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("progress.progressPhotos")}</Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {sortedPhotos.length >= 2 && (
+                <Pressable
+                  onPress={() => setCompareOpen(true)}
+                  style={[styles.addBtn, { backgroundColor: theme.secondaryDim ?? theme.cardAlt, borderColor: theme.secondary + "50" }]}
+                >
+                  <Feather name="columns" size={14} color={theme.secondary} />
+                  <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("progress.compare")}</Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={handleAddPhoto}
+                style={[styles.addBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+              >
+                <Feather name="camera" size={14} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("progress.addPhoto")}</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {sortedPhotos.length === 0 ? (
+            <View style={[styles.emptyPhotoCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View style={[styles.emptyPhotoIcon, { backgroundColor: theme.cardAlt }]}>
+                <Feather name="camera" size={22} color={theme.textMuted} />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("progress.noPhotosYet")}</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", lineHeight: 18, maxWidth: 230 }}>
+                {t("progress.trackTransformation")}
+              </Text>
+              <Pressable
+                onPress={handleAddPhoto}
+                style={[{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, marginTop: 4, borderColor: theme.primary + "50", backgroundColor: theme.primary + "15" }]}
+              >
+                <Feather name="camera" size={14} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("progress.takePhoto")}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.photoGrid}>
+              {[...sortedPhotos].reverse().map((photo) => (
+                <Pressable key={photo.id} onPress={() => setPhotoViewer({ uri: photo.uri, note: photo.note })} style={styles.photoCell}>
+                  <Image source={{ uri: photo.uri }} style={[styles.photoThumb, { borderColor: theme.border }]} resizeMode="cover" />
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4, textAlign: "center" }}>
+                    {new Date(photo.date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
+                  </Text>
+                  {!!photo.note && (
+                    <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 11, textAlign: "center", marginTop: 1 }} numberOfLines={1}>
+                      {photo.note}
+                    </Text>
+                  )}
+                  <Pressable
+                    onPress={() => handleDeletePhoto(photo.id)}
+                    style={[styles.photoDeleteBtn, { backgroundColor: theme.danger + "dd" }]}
+                    hitSlop={4}
+                  >
+                    <Feather name="x" size={11} color="#fff" />
+                  </Pressable>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </Animated.View>
         
         {/* Nutrition Stats */}
         {nutritionLoading ? (
@@ -931,6 +911,46 @@ export default function ProgressScreen() {
             </View>
           )}
           <Text style={{ color: "#ffffff99", fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 12 }}>{t("progress.tapToClose")}</Text>
+        </Pressable>
+      </Modal>
+
+      {/* Compare modal: oldest vs newest side by side */}
+      <Modal visible={compareOpen} transparent animationType="fade" onRequestClose={() => setCompareOpen(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: "#000000ee", justifyContent: "center", padding: 20 }} onPress={() => setCompareOpen(false)}>
+          <View style={{ backgroundColor: theme.card, borderRadius: 20, padding: 20, gap: 16 }} onStartShouldSetResponder={() => true}>
+            <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 17, textAlign: "center" }}>{t("progress.compareTitle")}</Text>
+            {sortedPhotos.length >= 2 && (
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.5 }}>{t("progress.first")}</Text>
+                  <Pressable onPress={() => { setCompareOpen(false); setPhotoViewer({ uri: sortedPhotos[0].uri, note: sortedPhotos[0].note }); }}>
+                    <Image source={{ uri: sortedPhotos[0].uri }} style={{ width: "100%", aspectRatio: 0.75, borderRadius: 12, borderWidth: 1, borderColor: theme.border }} resizeMode="cover" />
+                  </Pressable>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                    {new Date(sortedPhotos[0].date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric", year: "2-digit" })}
+                  </Text>
+                  {!!sortedPhotos[0].note && (
+                    <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 11, textAlign: "center" }} numberOfLines={1}>{sortedPhotos[0].note}</Text>
+                  )}
+                </View>
+                <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.5 }}>{t("progress.latest")}</Text>
+                  <Pressable onPress={() => { setCompareOpen(false); setPhotoViewer({ uri: sortedPhotos[sortedPhotos.length - 1].uri, note: sortedPhotos[sortedPhotos.length - 1].note }); }}>
+                    <Image source={{ uri: sortedPhotos[sortedPhotos.length - 1].uri }} style={{ width: "100%", aspectRatio: 0.75, borderRadius: 12, borderWidth: 1, borderColor: theme.border }} resizeMode="cover" />
+                  </Pressable>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                    {new Date(sortedPhotos[sortedPhotos.length - 1].date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric", year: "2-digit" })}
+                  </Text>
+                  {!!sortedPhotos[sortedPhotos.length - 1].note && (
+                    <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 11, textAlign: "center" }} numberOfLines={1}>{sortedPhotos[sortedPhotos.length - 1].note}</Text>
+                  )}
+                </View>
+              </View>
+            )}
+            <Pressable onPress={() => setCompareOpen(false)} style={{ alignItems: "center", paddingVertical: 10 }}>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("progress.tapToClose")}</Text>
+            </Pressable>
+          </View>
         </Pressable>
       </Modal>
 

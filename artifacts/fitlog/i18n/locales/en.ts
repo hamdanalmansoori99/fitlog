@@ -1050,6 +1050,8 @@ export default {
     addNoteOptional: "Add a note (optional)",
     notePlaceholder: "e.g. Front view, Week 4",
     savePhoto: "Save Photo",
+    compare: "Compare",
+    compareTitle: "Before & After",
   },
   coach: {
     aiCoach: "AI Coach",

@@ -967,6 +967,8 @@ export default {
     addNoteOptional: "أضف ملاحظة (اختياري)",
     notePlaceholder: "مثل: منظر أمامي، الأسبوع ٤",
     savePhoto: "حفظ الصورة",
+    compare: "مقارنة",
+    compareTitle: "قبل وبعد",
   },
   coach: {
     aiCoach: "المدرب الذكي",
