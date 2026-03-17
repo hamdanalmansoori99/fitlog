@@ -1,5 +1,13 @@
 import app from "./app";
 
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception:", err);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled rejection:", reason);
+});
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {

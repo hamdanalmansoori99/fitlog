@@ -54,10 +54,11 @@ export default function LoginScreen() {
       }
     } catch (err: any) {
       const msg = err.message || "";
-      const known = ["Invalid credentials", "Email and password required"];
-      if (known.some(k => msg.includes(k))) {
-        setError(t("auth.loginFailed"));
-      } else if (msg.includes("Network") || msg.includes("fetch") || msg.includes("Failed")) {
+      if (msg.includes("Invalid credentials")) {
+        setError(t("auth.invalidCredentials"));
+      } else if (msg.includes("Email and password required")) {
+        setError(t("auth.fillAllFields"));
+      } else if (msg.includes("Network") || msg.includes("fetch")) {
         setError(t("common.networkError"));
       } else {
         setError(t("auth.loginFailed"));
