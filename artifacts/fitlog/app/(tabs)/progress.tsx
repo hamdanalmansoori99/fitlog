@@ -195,26 +195,22 @@ export default function ProgressScreen() {
   }
 
   async function handleAddPhoto() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      const cam = await ImagePicker.requestCameraPermissionsAsync();
-      if (!cam.granted) return;
-      const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
-      if (!result.canceled && result.assets[0]) openNoteModal(result.assets[0].uri);
-      return;
-    }
     Alert.alert(t("progress.addProgressPhoto"), t("progress.chooseSource"), [
       {
         text: t("progress.camera"), onPress: async () => {
+          const cam = await ImagePicker.requestCameraPermissionsAsync();
+          if (!cam.granted) return;
           const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
           if (!result.canceled && result.assets[0]) openNoteModal(result.assets[0].uri);
-        }
+        },
       },
       {
         text: t("progress.photoLibrary"), onPress: async () => {
+          const lib = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!lib.granted) return;
           const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
           if (!result.canceled && result.assets[0]) openNoteModal(result.assets[0].uri);
-        }
+        },
       },
       { text: t("common.cancel"), style: "cancel" },
     ]);
@@ -711,7 +707,7 @@ export default function ProgressScreen() {
             </View>
           ) : (
             <View style={styles.photoGrid}>
-              {[...sortedPhotos].reverse().map((photo) => (
+              {sortedPhotos.map((photo) => (
                 <Pressable key={photo.id} onPress={() => setPhotoViewer({ uri: photo.uri, note: photo.note })} style={styles.photoCell}>
                   <Image source={{ uri: photo.uri }} style={[styles.photoThumb, { borderColor: theme.border }]} resizeMode="cover" />
                   <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4, textAlign: "center" }}>
