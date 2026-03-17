@@ -98,7 +98,7 @@ export default function ProfileScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ["profile"],
     queryFn: api.getProfile,
   });
@@ -357,6 +357,33 @@ export default function ProfileScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── PROFILE ERROR RETRY ── */}
+        {tab === "profile" && profileError && (
+          <View style={{ padding: 14, borderRadius: 12, backgroundColor: theme.danger + "18", borderWidth: 1, borderColor: theme.danger + "40", flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Feather name="alert-circle" size={18} color={theme.danger} />
+            <Text style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("common.error")}</Text>
+            <Pressable onPress={() => refetchProfile()} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.danger + "25" }}>
+              <Text style={{ color: theme.danger, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("common.retry")}</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* ── PROFILE LOADING SKELETONS ── */}
+        {tab === "profile" && profileLoading && !profile && (
+          <View style={{ gap: 16 }}>
+            <View style={{ alignItems: "center", gap: 12, paddingVertical: 16 }}>
+              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: theme.card }} />
+              <View style={{ width: 140, height: 16, borderRadius: 8, backgroundColor: theme.card }} />
+            </View>
+            {[1, 2, 3].map((i) => (
+              <View key={i} style={{ gap: 8, padding: 16, borderRadius: 16, backgroundColor: theme.card }}>
+                <View style={{ width: 100, height: 14, borderRadius: 7, backgroundColor: theme.border }} />
+                <View style={{ height: 44, borderRadius: 10, backgroundColor: theme.border + "88" }} />
+              </View>
+            ))}
+          </View>
+        )}
+
         {tab === "profile" ? (
           <>
             {/* Avatar section */}

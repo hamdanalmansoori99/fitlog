@@ -80,7 +80,7 @@ function BenefitRow({ benefit, index }: { benefit: string; index: number }) {
   const tip = key ? t(`workouts.template.tips.${key}`, { defaultValue: "" }) : "";
 
   return (
-    <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
+    <Animated.View entering={FadeInDown.duration(250)}>
       <Pressable
         onPress={() => tip && setExpanded(!expanded)}
         style={[styles.benefitRow, { borderBottomColor: theme.border }]}
@@ -243,7 +243,7 @@ export default function WorkoutTemplateScreen() {
         </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100, maxWidth: 600, width: "100%", alignSelf: "center" as const }]}>
         {/* Hero */}
         <Animated.View entering={FadeIn.duration(400)} style={styles.hero}>
           <Animated.View entering={ZoomIn.delay(100).duration(400)} style={[styles.heroIcon, { backgroundColor: theme.primaryDim }]}>
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1,
   },
-  content: { paddingHorizontal: 20, gap: 14, paddingTop: 4 },
+  content: { paddingHorizontal: 16, gap: 14, paddingTop: 4 },
   hero: { alignItems: "center", gap: 10, paddingVertical: 16 },
   heroIcon: { width: 72, height: 72, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   heroTitle: { fontSize: 22, textAlign: "center" },

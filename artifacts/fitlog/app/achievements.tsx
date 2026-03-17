@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   navBar: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingBottom: 12 },
   backBtn: { width: 44, height: 44, justifyContent: "center" },
   navTitle: { fontSize: 22 },
-  content: { padding: 20, gap: 20 },
+  content: { paddingHorizontal: 16, paddingTop: 16, gap: 16 },
   sectionTitle: { fontSize: 16, marginBottom: 10 },
 
   streaksRow: { flexDirection: "row", gap: 10 },

@@ -120,7 +120,7 @@ export default function WorkoutDetailScreen() {
   const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, staleTime: 60000 });
   const useImperial = settings?.unitSystem === "imperial";
 
-  const { data: workout, isLoading, isError } = useQuery({
+  const { data: workout, isLoading, isError, refetch: refetchWorkout } = useQuery({
     queryKey: ["workout", id],
     queryFn: () => api.getWorkout(Number(id)),
     enabled: !!id,
@@ -165,8 +165,13 @@ export default function WorkoutDetailScreen() {
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <Feather name="alert-circle" size={40} color={theme.danger} />
         <Text style={[styles.errorText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          {t("workouts.workoutNotFound")}
+          {isError ? t("common.error") : t("workouts.workoutNotFound")}
         </Text>
+        {isError && (
+          <Pressable onPress={() => refetchWorkout()} style={[styles.backLink, { backgroundColor: theme.danger + "20", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 }]}>
+            <Text style={[{ color: theme.danger, fontFamily: "Inter_600SemiBold" }]}>{t("common.retry")}</Text>
+          </Pressable>
+        )}
         <Pressable onPress={() => router.back()} style={styles.backLink}>
           <Text style={[{ color: theme.primary, fontFamily: "Inter_500Medium" }]}>{t("workouts.goBackLabel")}</Text>
         </Pressable>
@@ -211,7 +216,7 @@ export default function WorkoutDetailScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 40 + bottomPad, gap: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
       >
         {/* Header card */}
         <Animated.View entering={FadeInDown.duration(350)}>
