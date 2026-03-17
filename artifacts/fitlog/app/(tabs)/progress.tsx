@@ -217,8 +217,8 @@ export default function ProgressScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const { data: workoutSummary, isLoading: summaryLoading, isError: summaryError, refetch: refetchSummary } = useQuery({ queryKey: ["workoutSummary"], queryFn: api.getWorkoutSummary });
-  const { data: nutritionStats, isLoading: nutritionLoading, refetch: refetchNutrition } = useQuery({ queryKey: ["nutritionStats"], queryFn: api.getNutritionStats });
-  const { data: streaks, isLoading: streaksLoading, refetch: refetchStreaks2 } = useQuery({ queryKey: ["streaks"], queryFn: api.getStreaks });
+  const { data: nutritionStats, isLoading: nutritionLoading, isError: nutritionError, refetch: refetchNutrition } = useQuery({ queryKey: ["nutritionStats"], queryFn: api.getNutritionStats });
+  const { data: streaks, isLoading: streaksLoading, isError: streaksError, refetch: refetchStreaks2 } = useQuery({ queryKey: ["streaks"], queryFn: api.getStreaks });
   const { data: records, isLoading: recordsLoading } = useQuery({ queryKey: ["records"], queryFn: api.getPersonalRecords });
   const { data: measurements, isLoading: measurementsLoading } = useQuery({ queryKey: ["measurements", measureDays], queryFn: () => api.getMeasurements(measureDays) });
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
@@ -337,7 +337,7 @@ export default function ProgressScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
       >
         {/* ── ERROR RETRY BANNER ── */}
-        {summaryError && (
+        {(summaryError || nutritionError || streaksError) && (
           <View style={{ padding: 14, borderRadius: 12, backgroundColor: theme.danger + "18", borderWidth: 1, borderColor: theme.danger + "40", flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Feather name="alert-circle" size={18} color={theme.danger} />
             <Text style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("common.error")}</Text>
