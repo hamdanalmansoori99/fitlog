@@ -206,11 +206,16 @@ function CoachCard({
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
             {t("home.aiCoach")}
           </Text>
-          <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 15 }} numberOfLines={1}>
+          <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 15 }} numberOfLines={2}>
             {teaser || t("home.coachCardTitle")}
           </Text>
         </View>
-        <Feather name="chevron-right" size={16} color={theme.secondary} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+          <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+            {t("home.coachCardCta")}
+          </Text>
+          <Feather name="chevron-right" size={14} color={theme.secondary} />
+        </View>
       </Pressable>
 
       {/* Prompt chips */}

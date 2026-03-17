@@ -76,7 +76,7 @@ function StatTile({
       <Text style={{ color, fontFamily: "Inter_700Bold", fontSize: 22 }}>
         {Math.round(value)}{unit}
       </Text>
-      {prev ? <DeltaBadge prev={prev} curr={value} unit={unit} /> : null}
+      {prev != null ? <DeltaBadge prev={prev} curr={value} unit={unit} /> : null}
     </View>
   );
 }
