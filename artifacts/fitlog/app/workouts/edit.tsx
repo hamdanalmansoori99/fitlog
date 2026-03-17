@@ -50,7 +50,7 @@ export default function EditWorkoutScreen() {
   const [error, setError] = useState("");
   const [prefilled, setPrefilled] = useState(false);
 
-  const { data: workout, isLoading, isError } = useQuery({
+  const { data: workout, isLoading, isError, refetch } = useQuery({
     queryKey: ["workout", id],
     queryFn: () => api.getWorkout(workoutId),
     enabled: workoutId > 0 && !prefilled,
@@ -114,8 +114,19 @@ export default function EditWorkoutScreen() {
 
   if (isLoading && !prefilled) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.navBar, { paddingTop: topPad + 8, borderBottomColor: theme.border }]}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+            <Feather name="arrow-left" size={24} color={theme.text} />
+          </Pressable>
+          <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.editWorkout")}</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ paddingHorizontal: 16, paddingTop: 20, gap: 16 }}>
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={{ height: 52, borderRadius: 12, backgroundColor: theme.card }} />
+          ))}
+        </View>
       </View>
     );
   }
@@ -123,7 +134,16 @@ export default function EditWorkoutScreen() {
   if (isError || !workoutId) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular" }}>{t("workouts.workoutNotFoundMsg")}</Text>
+        <Feather name="alert-circle" size={40} color={theme.danger} />
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 8 }}>{t("workouts.workoutNotFoundMsg")}</Text>
+        {isError && (
+          <Pressable onPress={() => refetch()} style={{ marginTop: 12, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.danger + "20" }}>
+            <Text style={{ color: theme.danger, fontFamily: "Inter_600SemiBold" }}>{t("common.retry")}</Text>
+          </Pressable>
+        )}
+        <Pressable onPress={() => router.back()} style={{ marginTop: 8 }}>
+          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium" }}>{t("workouts.goBackLabel")}</Text>
+        </Pressable>
       </View>
     );
   }
@@ -143,7 +163,7 @@ export default function EditWorkoutScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 36 }]}
+          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 36, maxWidth: 600, width: "100%", alignSelf: "center" as const }]}
           keyboardShouldPersistTaps="handled"
         >
           <Input label={t("workouts.workoutName")} value={name} onChangeText={setName} placeholder="Morning Run" />
@@ -269,7 +289,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   navTitle: { flex: 1, fontSize: 17, textAlign: "center" },
-  content: { padding: 20, gap: 14 },
+  content: { paddingHorizontal: 16, paddingTop: 16, gap: 14 },
   fieldLabel: { fontSize: 13, marginBottom: 8 },
   activityGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   activityChip: {

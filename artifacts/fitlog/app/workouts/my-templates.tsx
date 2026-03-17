@@ -148,7 +148,7 @@ export default function MyTemplatesScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40, gap: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: insets.bottom + 40, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
       >
         {/* Template limit warning */}
         {templateLimit !== null && templates.length >= templateLimit - 1 && (
@@ -234,14 +234,19 @@ export default function MyTemplatesScreen() {
         )}
 
         {isLoading && (
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 20 }}>
-            {t("workouts.loadingText")}
-          </Text>
+          <View style={{ gap: 10, marginTop: 8 }}>
+            {[1, 2, 3].map((i) => (
+              <View key={i} style={{ height: 72, borderRadius: 14, backgroundColor: theme.card, padding: 16, gap: 8 }}>
+                <View style={{ width: 120, height: 13, borderRadius: 6, backgroundColor: theme.border }} />
+                <View style={{ width: 80, height: 10, borderRadius: 5, backgroundColor: theme.border + "88" }} />
+              </View>
+            ))}
+          </View>
         )}
 
         {/* Starred */}
         {favorites.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(50).duration(400)} style={{ gap: 8 }}>
+          <Animated.View entering={FadeInDown.duration(250)} style={{ gap: 8 }}>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, letterSpacing: 0.5 }}>
               {t("workouts.favourites")}
             </Text>
@@ -251,7 +256,7 @@ export default function MyTemplatesScreen() {
 
         {/* Rest */}
         {rest.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(100).duration(400)} style={{ gap: 8 }}>
+          <Animated.View entering={FadeInDown.duration(250)} style={{ gap: 8 }}>
             {favorites.length > 0 && (
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, letterSpacing: 0.5 }}>
                 {t("workouts.allTemplatesLabel")}

@@ -120,7 +120,12 @@ export default function UserTemplateScreen() {
             <Feather name="arrow-left" size={24} color={theme.text} />
           </Pressable>
         </View>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 16, gap: 14 }}>
+          <View style={{ height: 80, borderRadius: 16, backgroundColor: theme.card }} />
+          <View style={{ height: 52, borderRadius: 12, backgroundColor: theme.card }} />
+          <View style={{ height: 120, borderRadius: 12, backgroundColor: theme.card }} />
+        </View>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", opacity: 0 }}>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular" }}>{t("workouts.loadingText")}</Text>
         </View>
       </View>
@@ -152,7 +157,7 @@ export default function UserTemplateScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 32, gap: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: insets.bottom + 32, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
       >
         {/* Hero card */}
         <Animated.View entering={FadeInDown.duration(400)}>
@@ -242,7 +247,7 @@ export default function UserTemplateScreen() {
 
         {/* Exercises */}
         {exercises.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(80).duration(400)}>
+          <Animated.View entering={FadeInDown.duration(250)}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
               {t("workouts.exercisesLabel")} ({exercises.length})
             </Text>
@@ -276,7 +281,7 @@ export default function UserTemplateScreen() {
         )}
 
         {/* Actions */}
-        <Animated.View entering={FadeInDown.delay(160).duration(400)} style={{ gap: 10, marginTop: 8 }}>
+        <Animated.View entering={FadeInDown.duration(250)} style={{ gap: 10, marginTop: 8 }}>
           <Button title={t("workouts.startWorkoutBtn")} onPress={handleStartWorkout} />
           <Pressable
             onPress={handleDelete}

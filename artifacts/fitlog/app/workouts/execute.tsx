@@ -1039,7 +1039,7 @@ export default function ExecuteWorkoutScreen() {
 
           {/* Coaching hint */}
           {progression && progression.trend !== "first" && (
-            <Animated.View entering={FadeInDown.delay(80).duration(300)}>
+            <Animated.View entering={FadeInDown.duration(250)}>
               <View style={[styles.coachHintCard, { backgroundColor: trendColor + "08", borderColor: trendColor + "25" }]}>
                 {progression.previousDisplay && (
                   <View style={styles.coachHintRow}>
@@ -1256,7 +1256,7 @@ export default function ExecuteWorkoutScreen() {
 
         {/* ── Next exercise preview ── */}
         {nextEx && (
-          <Animated.View entering={FadeInDown.delay(100).duration(300)}>
+          <Animated.View entering={FadeInDown.duration(250)}>
             <View style={[styles.nextPreview, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
                 <Feather name="arrow-right" size={12} color={theme.textMuted} />

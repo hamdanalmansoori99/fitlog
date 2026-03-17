@@ -377,7 +377,7 @@ export default function LogWorkoutScreen() {
       >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32, maxWidth: 600, width: "100%", alignSelf: "center" }]}
         keyboardShouldPersistTaps="handled"
       >
         {step === "select" ? (
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 44, height: 44, justifyContent: "center" },
   navTitle: { fontSize: 17 },
-  content: { padding: 20, gap: 16 },
+  content: { paddingHorizontal: 16, paddingTop: 16, gap: 16 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   actCard: {
     width: "47%", padding: 16, borderRadius: 16, borderWidth: 1, gap: 10,

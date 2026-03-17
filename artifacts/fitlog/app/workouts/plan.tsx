@@ -304,7 +304,7 @@ export default function WeeklyPlanScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100, maxWidth: 600, width: "100%", alignSelf: "center" as const }]}
       >
         {/* Summary card */}
         <Card style={styles.summaryCard}>
@@ -365,7 +365,7 @@ export default function WeeklyPlanScreen() {
           const isDone = !!day.completed;
 
           return (
-            <Animated.View key={day.day} entering={FadeInDown.delay(idx * 55).duration(280)}>
+            <Animated.View key={day.day} entering={FadeInDown.duration(250)}>
               <View style={[
                 styles.dayCard,
                 {

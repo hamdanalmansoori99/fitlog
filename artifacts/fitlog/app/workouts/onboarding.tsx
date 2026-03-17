@@ -199,7 +199,7 @@ export default function WorkoutOnboardingScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20, maxWidth: 600, width: "100%", alignSelf: "center" as const }]}
         keyboardShouldPersistTaps="handled"
       >
         <Animated.View entering={FadeInRight.duration(300)} key={step}>
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   progressBar: { flex: 1, height: 4, borderRadius: 2, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 2 },
   stepCount: { fontSize: 12, minWidth: 36, textAlign: "right" },
-  content: { paddingHorizontal: 20, paddingTop: 8 },
+  content: { paddingHorizontal: 16, paddingTop: 8 },
   questionHeader: { marginBottom: 28 },
   questionTitle: { fontSize: 28, lineHeight: 36, marginBottom: 8 },
   questionSub: { fontSize: 15 },

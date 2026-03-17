@@ -270,7 +270,7 @@ export default function WorkoutDetailScreen() {
 
         {/* Exercises */}
         {exercises.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(80).duration(350)}>
+          <Animated.View entering={FadeInDown.duration(250)}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
               {t("workouts.exercisesLabel")} · {exercises.length}
             </Text>
@@ -318,7 +318,7 @@ export default function WorkoutDetailScreen() {
         )}
 
         {exercises.length === 0 && !isGym && (
-          <Animated.View entering={FadeInDown.delay(80).duration(350)}>
+          <Animated.View entering={FadeInDown.duration(250)}>
             <Card>
               <View style={[styles.noExWrap, { borderColor: theme.border }]}>
                 <Feather name={icon} size={32} color={color} />
