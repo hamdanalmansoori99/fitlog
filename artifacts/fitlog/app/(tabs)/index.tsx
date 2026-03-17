@@ -974,7 +974,7 @@ export default function HomeScreen() {
 
         <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
           <View style={{ flex: 1, marginRight: 10 }}>
-            <Text style={[styles.greeting, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.name, { color: theme.text, fontFamily: "Inter_700Bold", marginBottom: 2 }]}>
               {getGreeting(t)}, {user?.firstName || t("home.friend")}!
             </Text>
             {streaksData ? (

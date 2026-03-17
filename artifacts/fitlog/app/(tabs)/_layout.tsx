@@ -127,24 +127,11 @@ function ClassicTabLayout() {
         options={{
           title: t("tabs.scan"),
           tabBarIcon: ({ focused }) => (
-            <View
-              style={[
-                layoutStyles.scanHero,
-                { backgroundColor: focused ? theme.primary : theme.primary + "20" },
-              ]}
-            >
+            <View style={[layoutStyles.scanHero, { backgroundColor: theme.primary }]}>
               {isIOS ? (
-                <SymbolView
-                  name="camera.viewfinder"
-                  tintColor={focused ? "#000" : theme.primary}
-                  size={22}
-                />
+                <SymbolView name="camera.viewfinder" tintColor="#000" size={22} />
               ) : (
-                <Feather
-                  name="camera"
-                  size={22}
-                  color={focused ? "#000" : theme.primary}
-                />
+                <Feather name="camera" size={22} color="#000" />
               )}
             </View>
           ),
