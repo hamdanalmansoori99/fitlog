@@ -902,9 +902,9 @@ export default function HomeScreen() {
 
         {/* ═══ ZONE 2 — TODAY'S FOCUS ═══ */}
 
-        <Animated.View entering={FadeInDown.delay(40).duration(400)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(40).duration(400)} style={[styles.section, { marginBottom: 28 }]}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
-            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15, marginBottom: 8 }}>
               {t("home.todaysWorkout")}
             </Text>
             {hasCoachOnboarding && (
