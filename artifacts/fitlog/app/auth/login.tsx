@@ -53,7 +53,15 @@ export default function LoginScreen() {
         router.replace("/(tabs)");
       }
     } catch (err: any) {
-      setError(err.message || t("auth.loginFailed"));
+      const msg = err.message || "";
+      const known = ["Invalid credentials", "Email and password required"];
+      if (known.some(k => msg.includes(k))) {
+        setError(t("auth.loginFailed"));
+      } else if (msg.includes("Network") || msg.includes("fetch") || msg.includes("Failed")) {
+        setError(t("common.networkError"));
+      } else {
+        setError(t("auth.loginFailed"));
+      }
     } finally {
       setLoading(false);
     }
@@ -100,7 +108,7 @@ export default function LoginScreen() {
               value={email}
               onChangeText={setEmail}
               placeholder={t("auth.emailPlaceholder")}
-              keyboardType="email-address"
+              keyboardType={Platform.OS === "web" ? "default" : "email-address"}
               autoCapitalize="none"
               autoComplete="email"
               returnKeyType="next"

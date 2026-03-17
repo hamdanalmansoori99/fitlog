@@ -52,7 +52,20 @@ export default function RegisterScreen() {
       setAuth(res.token, res.user);
       router.replace("/onboarding");
     } catch (err: any) {
-      setError(err.message || t("auth.registerFailed"));
+      const msg = err.message || "";
+      if (msg.includes("already registered")) {
+        setError(t("auth.emailAlreadyRegistered"));
+      } else if (msg.includes("valid email")) {
+        setError(t("auth.validEmail"));
+      } else if (msg.includes("Password must")) {
+        setError(t("auth.passwordMin6"));
+      } else if (msg.includes("All fields")) {
+        setError(t("auth.fillAllFields"));
+      } else if (msg.includes("Network") || msg.includes("fetch") || msg.includes("Failed")) {
+        setError(t("common.networkError"));
+      } else {
+        setError(t("auth.registerFailed"));
+      }
     } finally {
       setLoading(false);
     }
@@ -125,7 +138,7 @@ export default function RegisterScreen() {
               value={email}
               onChangeText={setEmail}
               placeholder={t("auth.emailPlaceholder")}
-              keyboardType="email-address"
+              keyboardType={Platform.OS === "web" ? "default" : "email-address"}
               autoCapitalize="none"
               autoComplete="email"
               returnKeyType="next"
