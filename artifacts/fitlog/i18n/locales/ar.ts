@@ -964,6 +964,9 @@ export default {
     thirtyDayAvgKcal: "متوسط ٣٠ يوم (سعرة)",
     weightOverTime: "الوزن عبر الزمن",
     workoutsPerWeek: "التمارين أسبوعياً",
+    addNoteOptional: "أضف ملاحظة (اختياري)",
+    notePlaceholder: "مثل: منظر أمامي، الأسبوع ٤",
+    savePhoto: "حفظ الصورة",
   },
   coach: {
     aiCoach: "المدرب الذكي",

@@ -1047,6 +1047,9 @@ export default {
     workoutsPerWeek: "Workouts per Week",
     tapToClose: "Tap anywhere to close",
     chooseSource: "Choose source",
+    addNoteOptional: "Add a note (optional)",
+    notePlaceholder: "e.g. Front view, Week 4",
+    savePhoto: "Save Photo",
   },
   coach: {
     aiCoach: "AI Coach",

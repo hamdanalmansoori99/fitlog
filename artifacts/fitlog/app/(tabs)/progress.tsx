@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
-  Modal, Image, Alert,
+  Modal, Image, Alert, TextInput, KeyboardAvoidingView,
 } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -170,11 +170,24 @@ export default function ProgressScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [measureDays, setMeasureDays] = useState(60);
-  const [photoViewer, setPhotoViewer] = useState<string | null>(null);
-  const [addPhotoNote, setAddPhotoNote] = useState("");
+  const [photoViewer, setPhotoViewer] = useState<{ uri: string; note: string } | null>(null);
+  const [pendingPhoto, setPendingPhoto] = useState<{ uri: string } | null>(null);
+  const [pendingNote, setPendingNote] = useState("");
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { photos, addPhoto, deletePhoto } = usePhotoStore();
+
+  function openNoteModal(uri: string) {
+    setPendingNote("");
+    setPendingPhoto({ uri });
+  }
+
+  function savePendingPhoto() {
+    if (!pendingPhoto) return;
+    addPhoto({ uri: pendingPhoto.uri, date: new Date().toISOString().split("T")[0], note: pendingNote.trim() });
+    setPendingPhoto(null);
+    setPendingNote("");
+  }
 
   async function handleAddPhoto() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -182,26 +195,20 @@ export default function ProgressScreen() {
       const cam = await ImagePicker.requestCameraPermissionsAsync();
       if (!cam.granted) return;
       const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
-      if (!result.canceled && result.assets[0]) {
-        addPhoto({ uri: result.assets[0].uri, date: new Date().toISOString().split("T")[0], note: "" });
-      }
+      if (!result.canceled && result.assets[0]) openNoteModal(result.assets[0].uri);
       return;
     }
     Alert.alert(t("progress.addProgressPhoto"), t("progress.chooseSource"), [
       {
         text: t("progress.camera"), onPress: async () => {
           const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
-          if (!result.canceled && result.assets[0]) {
-            addPhoto({ uri: result.assets[0].uri, date: new Date().toISOString().split("T")[0], note: "" });
-          }
+          if (!result.canceled && result.assets[0]) openNoteModal(result.assets[0].uri);
         }
       },
       {
         text: t("progress.photoLibrary"), onPress: async () => {
           const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
-          if (!result.canceled && result.assets[0]) {
-            addPhoto({ uri: result.assets[0].uri, date: new Date().toISOString().split("T")[0], note: "" });
-          }
+          if (!result.canceled && result.assets[0]) openNoteModal(result.assets[0].uri);
         }
       },
       { text: t("common.cancel"), style: "cancel" },
@@ -450,7 +457,7 @@ export default function ProgressScreen() {
                 <View style={[styles.compareRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
                   <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("progress.first")}</Text>
-                    <Pressable onPress={() => setPhotoViewer(photos[0].uri)}>
+                    <Pressable onPress={() => setPhotoViewer({ uri: photos[0].uri, note: photos[0].note })}>
                       <Image
                         source={{ uri: photos[0].uri }}
                         style={[styles.compareThumb, { borderColor: theme.border }]}
@@ -464,7 +471,7 @@ export default function ProgressScreen() {
                   <View style={{ width: 1, backgroundColor: theme.border, marginVertical: 8 }} />
                   <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("progress.latest")}</Text>
-                    <Pressable onPress={() => setPhotoViewer(photos[photos.length - 1].uri)}>
+                    <Pressable onPress={() => setPhotoViewer({ uri: photos[photos.length - 1].uri, note: photos[photos.length - 1].note })}>
                       <Image
                         source={{ uri: photos[photos.length - 1].uri }}
                         style={[styles.compareThumb, { borderColor: theme.border }]}
@@ -481,11 +488,16 @@ export default function ProgressScreen() {
               {/* All photos grid */}
               <View style={styles.photoGrid}>
                 {[...photos].reverse().map((photo) => (
-                  <Pressable key={photo.id} onPress={() => setPhotoViewer(photo.uri)} style={styles.photoCell}>
+                  <Pressable key={photo.id} onPress={() => setPhotoViewer({ uri: photo.uri, note: photo.note })} style={styles.photoCell}>
                     <Image source={{ uri: photo.uri }} style={[styles.photoThumb, { borderColor: theme.border }]} resizeMode="cover" />
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4, textAlign: "center" }}>
                       {new Date(photo.date + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
                     </Text>
+                    {!!photo.note && (
+                      <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 11, textAlign: "center", marginTop: 1 }} numberOfLines={1}>
+                        {photo.note}
+                      </Text>
+                    )}
                     <Pressable
                       onPress={() => handleDeletePhoto(photo.id)}
                       style={[styles.photoDeleteBtn, { backgroundColor: theme.danger + "dd" }]}
@@ -911,10 +923,62 @@ export default function ProgressScreen() {
       <Modal visible={!!photoViewer} transparent animationType="fade" onRequestClose={() => setPhotoViewer(null)}>
         <Pressable style={{ flex: 1, backgroundColor: "#000000ee", alignItems: "center", justifyContent: "center" }} onPress={() => setPhotoViewer(null)}>
           {photoViewer && (
-            <Image source={{ uri: photoViewer }} style={{ width: "100%", height: "80%" }} resizeMode="contain" />
+            <Image source={{ uri: photoViewer.uri }} style={{ width: "100%", height: "80%" }} resizeMode="contain" />
           )}
-          <Text style={{ color: "#ffffff99", fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 16 }}>{t("progress.tapToClose")}</Text>
+          {!!photoViewer?.note && (
+            <View style={{ backgroundColor: "#ffffff18", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6, marginTop: 12 }}>
+              <Text style={{ color: "#ffffffcc", fontFamily: "Inter_500Medium", fontSize: 14 }}>{photoViewer.note}</Text>
+            </View>
+          )}
+          <Text style={{ color: "#ffffff99", fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 12 }}>{t("progress.tapToClose")}</Text>
         </Pressable>
+      </Modal>
+
+      {/* Note input modal shown after picking a photo */}
+      <Modal visible={!!pendingPhoto} transparent animationType="slide" onRequestClose={() => setPendingPhoto(null)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+          <Pressable style={{ flex: 1, backgroundColor: "#000000bb" }} onPress={() => setPendingPhoto(null)} />
+          <View style={{ backgroundColor: theme.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 36, gap: 16 }}>
+            {pendingPhoto && (
+              <Image source={{ uri: pendingPhoto.uri }} style={{ width: "100%", height: 200, borderRadius: 12 }} resizeMode="cover" />
+            )}
+            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("progress.addNoteOptional")}</Text>
+            <TextInput
+              value={pendingNote}
+              onChangeText={setPendingNote}
+              placeholder={t("progress.notePlaceholder")}
+              placeholderTextColor={theme.textMuted}
+              style={{
+                backgroundColor: theme.background,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: theme.border,
+                color: theme.text,
+                fontFamily: "Inter_400Regular",
+                fontSize: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+              }}
+              maxLength={60}
+              returnKeyType="done"
+              onSubmitEditing={savePendingPhoto}
+            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={() => setPendingPhoto(null)}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.border, alignItems: "center" }}
+              >
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 14 }}>{t("common.cancel")}</Text>
+              </Pressable>
+              <Pressable
+                onPress={savePendingPhoto}
+                style={{ flex: 2, paddingVertical: 12, borderRadius: 10, backgroundColor: theme.primary, alignItems: "center" }}
+              >
+                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>{t("progress.savePhoto")}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
