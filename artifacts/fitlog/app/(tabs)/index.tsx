@@ -977,14 +977,14 @@ export default function HomeScreen() {
             <Text style={[styles.greeting, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               {getGreeting(t)}, {user?.firstName || t("home.friend")}!
             </Text>
-            {streaksData && (streaksData.currentWorkoutStreak ?? 0) > 0 ? (
+            {streaksData && Math.max(streaksData.currentWorkoutStreak ?? 0, streaksData.currentMealStreak ?? 0) > 0 ? (
               <Pressable
                 onPress={() => router.push("/streaks" as any)}
                 style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2, marginBottom: 2 }}
               >
                 <Text style={{ fontSize: 18 }}>🔥</Text>
                 <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 28 }}>
-                  {streaksData.currentWorkoutStreak}
+                  {Math.max(streaksData.currentWorkoutStreak ?? 0, streaksData.currentMealStreak ?? 0)}
                 </Text>
                 <Text style={{ color: theme.primary, fontFamily: "Inter_400Regular", fontSize: 14 }}>
                   {t("home.dayStreak")}
