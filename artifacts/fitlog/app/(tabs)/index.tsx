@@ -977,22 +977,30 @@ export default function HomeScreen() {
             <Text style={[styles.greeting, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               {getGreeting(t)}, {user?.firstName || t("home.friend")}!
             </Text>
-            {streaksData && Math.max(streaksData.currentWorkoutStreak ?? 0, streaksData.currentMealStreak ?? 0) > 0 ? (
+            {streaksData ? (
               <Pressable
                 onPress={() => router.push("/streaks" as any)}
                 style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2, marginBottom: 2 }}
               >
                 <Text style={{ fontSize: 18 }}>🔥</Text>
-                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 28 }}>
-                  {Math.max(streaksData.currentWorkoutStreak ?? 0, streaksData.currentMealStreak ?? 0)}
-                </Text>
-                <Text style={{ color: theme.primary, fontFamily: "Inter_400Regular", fontSize: 14 }}>
-                  {t("home.dayStreak")}
-                </Text>
+                {Math.max(streaksData.currentWorkoutStreak ?? 0, streaksData.currentMealStreak ?? 0) > 0 ? (
+                  <>
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 28 }}>
+                      {Math.max(streaksData.currentWorkoutStreak ?? 0, streaksData.currentMealStreak ?? 0)}
+                    </Text>
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_400Regular", fontSize: 14 }}>
+                      {t("home.dayStreak")}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14 }}>
+                    {t("home.letsGetStarted")}
+                  </Text>
+                )}
               </Pressable>
             ) : (
               <Text style={[styles.name, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-                {t("home.letsGetStarted")}
+                {user?.firstName || t("home.friend")} {user?.lastName || ""}
               </Text>
             )}
             <Text style={[styles.date, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -1008,19 +1016,6 @@ export default function HomeScreen() {
             </Text>
           </Pressable>
         </Animated.View>
-
-        {/* ═══ ZONE 1 — STREAK ALERT (evening only) ═══ */}
-
-        {streaksData && (
-          <View style={styles.section}>
-            <DontBreakStreakBanner
-              streaksData={streaksData}
-              workoutsData={workoutsData}
-              mealsData={mealsData}
-              theme={theme}
-            />
-          </View>
-        )}
 
         {/* ═══ ZONE 2 — TODAY'S FOCUS ═══ */}
 
