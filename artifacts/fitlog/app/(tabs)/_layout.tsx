@@ -176,6 +176,11 @@ const layoutStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 6,
+    elevation: 4,
+    shadowColor: "#00e676",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   nativeScanHero: {
     width: 48,
