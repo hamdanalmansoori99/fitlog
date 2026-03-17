@@ -174,6 +174,7 @@ export default {
     nutritionTracking: "Nutrition tracking & coaching",
     progressInsightsGoals: "Progress insights & goals",
     letsGetStarted: "Let's get started",
+    dayStreak: "day streak",
     welcomeDescription: "Let's build your personalised fitness plan. This takes about 2 minutes and unlocks everything — from AI coaching to custom workouts.",
     allSetMessage: "Your personalised plan is ready. Time to start your fitness journey.",
     letsGo: "Let's go!",

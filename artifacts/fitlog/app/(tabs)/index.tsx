@@ -459,11 +459,22 @@ function RecentActivitySection({ workoutsData, mealsData, theme }: { workoutsDat
 
   return (
     <View>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <Feather name="clock" size={14} color={theme.textMuted} />
-        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-          {t("home.recentActivity")}
-        </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Feather name="clock" size={14} color={theme.textMuted} />
+          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+            {t("home.recentActivity")}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => router.push("/(tabs)/workouts" as any)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, paddingHorizontal: 4 }}
+        >
+          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+            {t("home.viewAll")}
+          </Text>
+          <Feather name={rtlIcon("chevron-right")} size={13} color={theme.primary} />
+        </Pressable>
       </View>
       <Card style={{ gap: 0, paddingVertical: 4, paddingHorizontal: 0 }}>
         {items.map((item, idx) => (
@@ -503,12 +514,10 @@ function StreakSummaryCard({ streaksData, theme }: { streaksData: any; theme: Ap
 
   const workoutCurrent = streaksData.currentWorkoutStreak ?? 0;
   const mealCurrent = streaksData.currentMealStreak ?? 0;
-  const hydrationCurrent = streaksData.currentHydrationStreak ?? 0;
 
   const items = [
     { icon: "activity" as const, value: workoutCurrent, label: t("home.workout"), color: "#00e676" },
     { icon: "coffee" as const, value: mealCurrent, label: t("home.mealsLabel"), color: "#ffab40" },
-    { icon: "droplet" as const, value: hydrationCurrent, label: t("home.hydration"), color: "#448aff" },
   ];
 
   const hasActiveStreak = workoutCurrent > 0 || mealCurrent > 0;
@@ -964,38 +973,40 @@ export default function HomeScreen() {
         {/* ═══ ZONE 1 — HERO ═══ */}
 
         <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
-          <View>
+          <View style={{ flex: 1, marginRight: 10 }}>
             <Text style={[styles.greeting, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-              {getGreeting(t)},
+              {getGreeting(t)}, {user?.firstName || t("home.friend")}!
             </Text>
-            <Text style={[styles.name, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-              {user?.firstName || t("home.friend")} {user?.lastName || ""}
-            </Text>
+            {streaksData && (streaksData.currentWorkoutStreak ?? 0) > 0 ? (
+              <Pressable
+                onPress={() => router.push("/streaks" as any)}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2, marginBottom: 2 }}
+              >
+                <Text style={{ fontSize: 18 }}>🔥</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 28 }}>
+                  {streaksData.currentWorkoutStreak}
+                </Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_400Regular", fontSize: 14 }}>
+                  {t("home.dayStreak")}
+                </Text>
+              </Pressable>
+            ) : (
+              <Text style={[styles.name, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                {t("home.letsGetStarted")}
+              </Text>
+            )}
             <Text style={[styles.date, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               {formatDate()}
             </Text>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            {streaksData && (streaksData.currentWorkoutStreak ?? 0) > 0 && (
-              <Pressable
-                onPress={() => router.push("/streaks" as any)}
-                style={[styles.streakHeroBadge, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "40" }]}
-              >
-                <Text style={{ fontSize: 14 }}>🔥</Text>
-                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 14 }}>
-                  {streaksData.currentWorkoutStreak}
-                </Text>
-              </Pressable>
-            )}
-            <Pressable
-              onPress={() => router.push("/(tabs)/profile")}
-              style={[styles.avatarBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}
-            >
-              <Text style={[styles.avatarText, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
-                {user?.firstName?.[0] || "U"}
-              </Text>
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={() => router.push("/(tabs)/profile")}
+            style={[styles.avatarBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}
+          >
+            <Text style={[styles.avatarText, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
+              {user?.firstName?.[0] || "U"}
+            </Text>
+          </Pressable>
         </Animated.View>
 
         {/* ═══ ZONE 1 — STREAK ALERT (evening only) ═══ */}

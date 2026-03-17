@@ -87,7 +87,7 @@ function ClassicTabLayout() {
           title: t("tabs.home"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="house" tintColor={color} size={24} />
+              <SymbolView name="house" tintColor={color} size={22} />
             ) : (
               <Feather name="home" size={22} color={color} />
             ),
@@ -99,7 +99,7 @@ function ClassicTabLayout() {
           title: t("tabs.workouts"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="figure.run" tintColor={color} size={24} />
+              <SymbolView name="figure.run" tintColor={color} size={22} />
             ) : (
               <Feather name="activity" size={22} color={color} />
             ),
@@ -146,7 +146,7 @@ function ClassicTabLayout() {
           title: t("tabs.progress"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="chart.bar" tintColor={color} size={24} />
+              <SymbolView name="chart.bar" tintColor={color} size={22} />
             ) : (
               <Feather name="trending-up" size={22} color={color} />
             ),
@@ -158,7 +158,7 @@ function ClassicTabLayout() {
           title: t("tabs.profile"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="person" tintColor={color} size={24} />
+              <SymbolView name="person" tintColor={color} size={22} />
             ) : (
               <Feather name="user" size={22} color={color} />
             ),

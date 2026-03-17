@@ -174,6 +174,7 @@ export default {
     nutritionTracking: "تتبع التغذية والتدريب",
     progressInsightsGoals: "رؤى التقدم والأهداف",
     letsGetStarted: "لنبدأ",
+    dayStreak: "يوم متواصل",
     welcomeDescription: "دعنا نبني خطة لياقتك المخصصة. يستغرق هذا حوالي دقيقتين ويفتح كل شيء — من التدريب الذكي إلى التمارين المخصصة.",
     allSetMessage: "خطتك المخصصة جاهزة. حان وقت بدء رحلتك في اللياقة.",
     letsGo: "هيا بنا!",
