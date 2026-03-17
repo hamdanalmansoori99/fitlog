@@ -61,7 +61,7 @@ export default function RegisterScreen() {
         setError(t("auth.passwordMin6"));
       } else if (msg.includes("All fields")) {
         setError(t("auth.fillAllFields"));
-      } else if (msg.includes("Network") || msg.includes("fetch") || msg.includes("Failed")) {
+      } else if (msg.includes("Network") || msg.includes("fetch")) {
         setError(t("common.networkError"));
       } else {
         setError(t("auth.registerFailed"));
