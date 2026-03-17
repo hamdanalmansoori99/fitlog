@@ -334,7 +334,7 @@ export default function ProgressScreen() {
       
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 16 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
       >
         {/* Workout History Calendar */}
         <Animated.View entering={FadeInDown.duration(350)}>

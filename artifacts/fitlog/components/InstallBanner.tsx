@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   left: { flexDirection: "row", alignItems: "center", flex: 1, gap: 12 },
   iconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   textBlock: { flex: 1 },
-  title: { fontSize: 14, fontWeight: "600" },
+  title: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   sub: { fontSize: 12, marginTop: 1 },
   actions: { flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 8 },
   installBtn: {
@@ -108,6 +108,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  installText: { fontSize: 13, fontWeight: "700" },
+  installText: { fontSize: 13, fontFamily: "Inter_700Bold" },
   dismissBtn: { padding: 4 },
 });

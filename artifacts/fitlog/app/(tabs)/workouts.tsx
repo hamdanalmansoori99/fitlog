@@ -389,7 +389,7 @@ export default function WorkoutsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 + bottomPad, gap: 0 }}
+        contentContainerStyle={{ paddingBottom: 100 + bottomPad, gap: 0, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
         {/* ── COACH ONBOARDING PROMPT ── */}

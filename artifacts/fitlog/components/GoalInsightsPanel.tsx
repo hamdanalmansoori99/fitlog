@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   goalLabel: {
     flex: 1,
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
   },
   insightGrid: {
     flexDirection: "row",
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   },
   insightHeadline: {
     fontSize: 10,
-    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
     textTransform: "uppercase",
     letterSpacing: 0.4,
     marginBottom: 2,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   },
   insightValue: {
     fontSize: 13,
-    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
     flex: 1,
   },
   progressTrack: {
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     fontSize: 10,
-    fontWeight: "500",
+    fontFamily: "Inter_500Medium",
   },
   insightDetail: {
     fontSize: 11,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
   },
   emptyDesc: {
     fontSize: 13,
