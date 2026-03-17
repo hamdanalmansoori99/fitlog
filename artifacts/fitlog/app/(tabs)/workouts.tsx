@@ -273,7 +273,7 @@ export default function WorkoutsScreen() {
   const { showToast } = useToast();
 
   const { data: profileData, refetch: refetchProfile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
-  const { data: workoutsData, refetch: refetchWorkouts, isLoading: workoutsLoading } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts() });
+  const { data: workoutsData, refetch: refetchWorkouts, isLoading: workoutsLoading, isError: workoutsError } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts() });
   const { data: userTemplatesData, refetch: refetchTemplates } = useQuery({ queryKey: ["userTemplates"], queryFn: api.getUserTemplates });
 
   const deleteMutation = useMutation({
@@ -389,9 +389,20 @@ export default function WorkoutsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 + bottomPad, gap: 0, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100 + bottomPad, gap: 0, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
+        {/* ── ERROR RETRY BANNER ── */}
+        {workoutsError && (
+          <View style={{ margin: 16, padding: 14, borderRadius: 12, backgroundColor: theme.danger + "18", borderWidth: 1, borderColor: theme.danger + "40", flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Feather name="alert-circle" size={18} color={theme.danger} />
+            <Text style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("common.error")}</Text>
+            <Pressable onPress={() => { refetchWorkouts(); refetchProfile(); refetchTemplates(); }} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.danger + "25" }}>
+              <Text style={{ color: theme.danger, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("common.retry")}</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* ── COACH ONBOARDING PROMPT ── */}
         {!hasCompletedOnboarding && (
           <Animated.View entering={FadeInDown.duration(400)} style={styles.section}>

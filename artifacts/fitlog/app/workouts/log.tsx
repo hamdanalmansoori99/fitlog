@@ -170,7 +170,6 @@ export default function LogWorkoutScreen() {
               : [{ reps: "", weight: "" }],
             rpe: ex.sets?.[0]?.rpe,
           })));
-          setExerciseSearch(parsed.map(() => ""));
         }
       } catch {}
     }

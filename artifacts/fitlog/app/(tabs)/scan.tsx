@@ -518,7 +518,7 @@ export default function ScanScreen() {
               {items.map((item, idx) => (
                 <Animated.View
                   key={`${item.name}-${idx}`}
-                  entering={FadeIn.delay(idx * 60).duration(250)}
+                  entering={FadeIn.duration(200)}
                   style={[styles.foodItem, { borderColor: theme.border, backgroundColor: theme.card }]}
                 >
                   <View style={styles.foodItemLeft}>

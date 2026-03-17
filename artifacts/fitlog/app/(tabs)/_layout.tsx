@@ -13,11 +13,7 @@ function NativeTabLayout() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   return (
-    <NativeTabs
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>{t("tabs.home")}</Label>

@@ -22,6 +22,19 @@ import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { ShareCard } from "@/components/ShareCard";
 
+// ─── Isolated elapsed timer display — only this component re-renders per tick ─
+function ElapsedTimer({ elapsedRef }: { elapsedRef: React.MutableRefObject<number> }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setDisplay(elapsedRef.current), 1000);
+    return () => clearInterval(id);
+  }, [elapsedRef]);
+  const mins = Math.floor(display / 60);
+  const secs = display % 60;
+  const str = `${mins}:${secs.toString().padStart(2, "0")}`;
+  return <Text style={{ color: "#e0e0f0", fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{str}</Text>;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SetData {
@@ -106,7 +119,7 @@ export default function ExecuteWorkoutScreen() {
   const [setIdx, setSetIdx] = useState(0);
   const [phase, setPhase] = useState<"active" | "rest" | "done">("active");
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const elapsedSecondsRef = useRef(0);
   const [mood, setMood] = useState("");
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
@@ -145,9 +158,9 @@ export default function ExecuteWorkoutScreen() {
     }
   }, [filteredExercises]);
 
-  // Elapsed timer
+  // Elapsed timer — increments ref only, no re-render on parent
   useEffect(() => {
-    elapsedRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    elapsedRef.current = setInterval(() => { elapsedSecondsRef.current += 1; }, 1000);
     return () => { if (elapsedRef.current) clearInterval(elapsedRef.current); };
   }, []);
 
@@ -242,7 +255,7 @@ export default function ExecuteWorkoutScreen() {
     mutationFn: (name: string) => api.createUserTemplate({
       name: name || template?.name || "My Template",
       activityType: template?.activityType || "gym",
-      estimatedMinutes: Math.round(elapsedSeconds / 60) || undefined,
+      estimatedMinutes: Math.round(elapsedSecondsRef.current / 60) || undefined,
       exercises: exercises
         .filter((e) => !e.skipped && e.sets.some((s) => s.completed))
         .map((e, i) => ({
@@ -369,13 +382,13 @@ export default function ExecuteWorkoutScreen() {
         if (available) {
           await Sharing.shareAsync(uri, { mimeType: "image/jpeg", dialogTitle: t("workouts.shareWorkoutBtn") });
         } else {
-          const durationMin = Math.round(elapsedSeconds / 60);
+          const durationMin = Math.round(elapsedSecondsRef.current / 60);
           const completedSets = exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length;
           await Share.share({ message: `${template?.name ?? ""} — ${durationMin} min, ${completedSets} sets done via FitLog` });
         }
       }
     } catch {
-      const durationMin = Math.round(elapsedSeconds / 60);
+      const durationMin = Math.round(elapsedSecondsRef.current / 60);
       const completedSets = exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length;
       await Share.share({ message: `${template?.name ?? ""} — ${durationMin} min, ${completedSets} sets done via FitLog` }).catch(() => {});
     }
@@ -558,7 +571,7 @@ export default function ExecuteWorkoutScreen() {
 
   function handleSave() {
     if (!template) return;
-    const durationMin = Math.round(elapsedSeconds / 60);
+    const durationMin = Math.round(elapsedSecondsRef.current / 60);
     const gymExercises = isGym
       ? exercises
           .filter((e) => !e.skipped)
@@ -639,7 +652,7 @@ export default function ExecuteWorkoutScreen() {
   // ── Done screen ────────────────────────────────────────────────────────────
 
   if (phase === "done") {
-    const durationMin = Math.round(elapsedSeconds / 60);
+    const durationMin = Math.round(elapsedSecondsRef.current / 60);
     const completedSets = exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length;
     const completedExercises = exercises.filter((e) => !e.skipped && e.sets.some((s) => s.completed)).length;
     const cals = estimateCals(durationMin, template.activityType);
@@ -647,7 +660,7 @@ export default function ExecuteWorkoutScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ScrollView
-          contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + 32, padding: 20, gap: 20, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
+          contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + 32, paddingHorizontal: 16, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
           showsVerticalScrollIndicator={false}
         >
           {/* Trophy */}
@@ -666,7 +679,7 @@ export default function ExecuteWorkoutScreen() {
           {/* Stats row */}
           <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.summaryRow}>
             {[
-              { icon: "clock", label: t("workouts.durationLabel"), value: fmt(elapsedSeconds) + " min", color: theme.secondary },
+              { icon: "clock", label: t("workouts.durationLabel"), value: fmt(elapsedSecondsRef.current) + " min", color: theme.secondary },
               { icon: "check-circle", label: t("workouts.setsDone"), value: String(completedSets), color: theme.primary },
               { icon: "zap", label: t("workouts.estCalories"), value: `~${cals}`, color: theme.orange },
             ].map((s) => (
@@ -830,9 +843,9 @@ export default function ExecuteWorkoutScreen() {
               type="workout"
               headline={template.name || t("workouts.workoutComplete")}
               stats={[
-                { label: "min", value: String(Math.round(elapsedSeconds / 60)), accent: false },
+                { label: "min", value: String(Math.round(elapsedSecondsRef.current / 60)), accent: false },
                 { label: t("workouts.setsDone"), value: String(exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length), accent: true },
-                { label: t("workouts.estCalories"), value: `~${estimateCals(Math.round(elapsedSeconds / 60), template.activityType)}`, accent: false },
+                { label: t("workouts.estCalories"), value: `~${estimateCals(Math.round(elapsedSecondsRef.current / 60), template.activityType)}`, accent: false },
                 { label: "exercises", value: String(exercises.filter((e) => !e.skipped && e.sets.some((s) => s.completed)).length), accent: false },
               ]}
               exercises={exercises.filter((e) => !e.skipped && e.sets.some((s) => s.completed)).map((ex) => {
@@ -889,9 +902,7 @@ export default function ExecuteWorkoutScreen() {
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }} numberOfLines={1}>
             {template.name}
           </Text>
-          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>
-            {fmt(elapsedSeconds)}
-          </Text>
+          <ElapsedTimer elapsedRef={elapsedSecondsRef} />
         </View>
         <View style={{ width: 44 }} />
       </View>

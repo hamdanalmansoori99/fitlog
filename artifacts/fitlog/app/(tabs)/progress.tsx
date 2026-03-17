@@ -216,9 +216,9 @@ export default function ProgressScreen() {
   }
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
-  const { data: workoutSummary, isLoading: summaryLoading } = useQuery({ queryKey: ["workoutSummary"], queryFn: api.getWorkoutSummary });
-  const { data: nutritionStats, isLoading: nutritionLoading } = useQuery({ queryKey: ["nutritionStats"], queryFn: api.getNutritionStats });
-  const { data: streaks, isLoading: streaksLoading } = useQuery({ queryKey: ["streaks"], queryFn: api.getStreaks });
+  const { data: workoutSummary, isLoading: summaryLoading, isError: summaryError, refetch: refetchSummary } = useQuery({ queryKey: ["workoutSummary"], queryFn: api.getWorkoutSummary });
+  const { data: nutritionStats, isLoading: nutritionLoading, refetch: refetchNutrition } = useQuery({ queryKey: ["nutritionStats"], queryFn: api.getNutritionStats });
+  const { data: streaks, isLoading: streaksLoading, refetch: refetchStreaks2 } = useQuery({ queryKey: ["streaks"], queryFn: api.getStreaks });
   const { data: records, isLoading: recordsLoading } = useQuery({ queryKey: ["records"], queryFn: api.getPersonalRecords });
   const { data: measurements, isLoading: measurementsLoading } = useQuery({ queryKey: ["measurements", measureDays], queryFn: () => api.getMeasurements(measureDays) });
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
@@ -334,8 +334,19 @@ export default function ProgressScreen() {
       
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
       >
+        {/* ── ERROR RETRY BANNER ── */}
+        {summaryError && (
+          <View style={{ padding: 14, borderRadius: 12, backgroundColor: theme.danger + "18", borderWidth: 1, borderColor: theme.danger + "40", flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Feather name="alert-circle" size={18} color={theme.danger} />
+            <Text style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("common.error")}</Text>
+            <Pressable onPress={() => { refetchSummary(); refetchNutrition(); refetchStreaks2(); }} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.danger + "25" }}>
+              <Text style={{ color: theme.danger, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("common.retry")}</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Workout History Calendar */}
         <Animated.View entering={FadeInDown.duration(350)}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.workoutHistory")}</Text>

@@ -998,7 +998,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start",
-    paddingHorizontal: 20, marginBottom: 20,
+    paddingHorizontal: 16, marginBottom: 16,
   },
   greeting: { fontSize: 14, marginBottom: 2 },
   name: { fontSize: 26, lineHeight: 32 },
@@ -1012,7 +1012,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
   },
-  section: { paddingHorizontal: 20, marginBottom: 20 },
+  section: { paddingHorizontal: 16, marginBottom: 16 },
   aiPill: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
