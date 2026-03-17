@@ -67,7 +67,7 @@ function ClassicTabLayout() {
         },
         tabBarLabelStyle: {
           fontFamily: "Inter_500Medium",
-          fontSize: 11,
+          fontSize: 10,
         },
         tabBarBackground: () =>
           isIOS ? (
@@ -170,17 +170,17 @@ function ClassicTabLayout() {
 
 const layoutStyles = StyleSheet.create({
   scanHero: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 6,
   },
   nativeScanHero: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
   },
