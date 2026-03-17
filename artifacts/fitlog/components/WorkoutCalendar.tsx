@@ -59,6 +59,7 @@ export function WorkoutCalendar() {
   });
 
   const days: Record<string, any[]> = data?.days ?? {};
+  const mealDaySet = new Set<string>(data?.mealDays ?? []);
 
   const goMonth = useCallback((delta: number) => {
     setSelected(null);
@@ -143,6 +144,7 @@ export function WorkoutCalendar() {
             const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
             const workouts: any[] = days[dateStr] ?? [];
             const hasWorkout = workouts.length > 0;
+            const hasMeal = mealDaySet.has(dateStr);
             const isToday = dateStr === todayStr;
             const primaryType = workouts[0]?.activityType ?? "other";
             const dotColor = activityColor(primaryType, theme);
@@ -166,16 +168,17 @@ export function WorkoutCalendar() {
                 ]}>
                   {day}
                 </Text>
-                {hasWorkout && (
-                  <View style={{ flexDirection: "row", gap: 2, marginTop: 2, justifyContent: "center" }}>
-                    {workouts.slice(0, 3).map((w: any, i: number) => (
-                      <View
-                        key={i}
-                        style={[s.dot, { backgroundColor: activityColor(w.activityType, theme) }]}
-                      />
-                    ))}
-                  </View>
-                )}
+                <View style={{ flexDirection: "row", gap: 2, marginTop: 2, justifyContent: "center", minHeight: 7 }}>
+                  {hasWorkout && workouts.slice(0, 3).map((w: any, i: number) => (
+                    <View
+                      key={i}
+                      style={[s.dot, { backgroundColor: activityColor(w.activityType, theme) }]}
+                    />
+                  ))}
+                  {hasMeal && (
+                    <View style={[s.dot, { backgroundColor: theme.warning ?? "#ffab40" }]} />
+                  )}
+                </View>
               </Pressable>
             );
           })}

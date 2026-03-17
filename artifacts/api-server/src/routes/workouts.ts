@@ -228,19 +228,29 @@ router.get("/calendar", requireAuth, async (req, res) => {
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 1);
 
-    const workouts = await db.select({
-      id: workoutsTable.id,
-      name: workoutsTable.name,
-      activityType: workoutsTable.activityType,
-      date: workoutsTable.date,
-      durationMinutes: workoutsTable.durationMinutes,
-    }).from(workoutsTable)
-      .where(and(
-        eq(workoutsTable.userId, user.id),
-        gte(workoutsTable.date, start),
-        lt(workoutsTable.date, end)
-      ))
-      .orderBy(workoutsTable.date);
+    const [workouts, meals] = await Promise.all([
+      db.select({
+        id: workoutsTable.id,
+        name: workoutsTable.name,
+        activityType: workoutsTable.activityType,
+        date: workoutsTable.date,
+        durationMinutes: workoutsTable.durationMinutes,
+      }).from(workoutsTable)
+        .where(and(
+          eq(workoutsTable.userId, user.id),
+          gte(workoutsTable.date, start),
+          lt(workoutsTable.date, end)
+        ))
+        .orderBy(workoutsTable.date),
+
+      db.select({ date: mealsTable.date })
+        .from(mealsTable)
+        .where(and(
+          eq(mealsTable.userId, user.id),
+          gte(mealsTable.date, start),
+          lt(mealsTable.date, end)
+        )),
+    ]);
 
     const byDate: Record<string, any[]> = {};
     for (const w of workouts) {
@@ -254,7 +264,12 @@ router.get("/calendar", requireAuth, async (req, res) => {
       });
     }
 
-    res.json({ year, month, days: byDate });
+    const mealDays = new Set<string>();
+    for (const m of meals) {
+      mealDays.add(new Date(m.date).toISOString().split("T")[0]);
+    }
+
+    res.json({ year, month, days: byDate, mealDays: Array.from(mealDays) });
   } catch (err) {
     res.status(500).json({ error: "Failed to get calendar data" });
   }
