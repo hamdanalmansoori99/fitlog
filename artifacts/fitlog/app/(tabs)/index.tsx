@@ -181,8 +181,8 @@ function HeroActions({ theme }: { theme: AppTheme }) {
 }
 
 function CoachCard({
-  theme, teaser,
-}: { theme: AppTheme; teaser?: string }) {
+  theme, teaser, recommendedPrompt,
+}: { theme: AppTheme; teaser?: string; recommendedPrompt?: string }) {
   const { t } = useTranslation();
   const chips = [
     t("home.coachChip1"),
@@ -190,13 +190,13 @@ function CoachCard({
     t("home.coachChip3"),
     t("home.coachChip4"),
   ];
-  const defaultPrompt = chips[0];
+  const ctaPrompt = recommendedPrompt ?? chips[0];
 
   return (
     <Card style={{ borderColor: theme.secondary + "30", gap: 12 }}>
-      {/* Header row */}
+      {/* Header row — "Talk to Coach →" */}
       <Pressable
-        onPress={() => router.push({ pathname: "/coach/chat" as any, params: { prompt: defaultPrompt } })}
+        onPress={() => router.push({ pathname: "/coach/chat" as any, params: { prompt: ctaPrompt } })}
         style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
       >
         <View style={[styles.todayIcon, { backgroundColor: theme.secondaryDim }]}>
@@ -970,7 +970,15 @@ export default function HomeScreen() {
         {/* ═══ ZONE 7 — AI COACH CARD ═══ */}
 
         <Animated.View entering={FadeInDown.delay(320).duration(400)} style={styles.section}>
-          <CoachCard theme={theme} />
+          <CoachCard
+            theme={theme}
+            teaser={todayRecommendation?.contextSummary}
+            recommendedPrompt={
+              todayRecommendation
+                ? `Tell me more about today's ${todayRecommendation.recommendation.template.name} workout recommendation`
+                : undefined
+            }
+          />
         </Animated.View>
       </ScrollView>
 

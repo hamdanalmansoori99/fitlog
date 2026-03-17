@@ -1,6 +1,7 @@
 import React, { forwardRef } from "react";
 import { View, Text, StyleSheet, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 export type ShareCardType = "workout" | "pr" | "weekly" | "streak";
 
@@ -41,13 +42,19 @@ export const ShareCard = forwardRef<View, ShareCardProps>(function ShareCard(
   const rowReverse = rtl ? "row-reverse" : "row";
   const isWeekly = type === "weekly";
 
-  return (
-    <View ref={ref} style={[styles.card, isWeekly && styles.cardWeekly]} collapsable={false}>
-      {/* Accent bar — top edge */}
+  const inner = (
+    <>
+      {/* Top accent bar */}
       <View style={[styles.accentBar, { backgroundColor: meta.accent }]} />
-      {/* Weekly: decorative corner accent */}
+
+      {/* Weekly: decorative corner gradient */}
       {isWeekly && (
-        <View style={[styles.weeklyCorner, { backgroundColor: BLUE + "15" }]} />
+        <View style={styles.weeklyCorner} pointerEvents="none">
+          <LinearGradient
+            colors={[BLUE + "22", "transparent"]}
+            style={{ width: "100%", height: "100%", borderTopLeftRadius: 120 }}
+          />
+        </View>
       )}
 
       <View style={[styles.topRow, { flexDirection: rowReverse }]}>
@@ -71,7 +78,7 @@ export const ShareCard = forwardRef<View, ShareCardProps>(function ShareCard(
       {stats.length > 0 && (
         <View style={styles.statsGrid}>
           {stats.slice(0, 4).map((s, i) => (
-            <View key={i} style={[styles.statCell, { backgroundColor: CARD_BG }]}>
+            <View key={i} style={[styles.statCell, { backgroundColor: isWeekly ? BLUE + "18" : CARD_BG }]}>
               <Text style={[styles.statValue, s.accent && { color: meta.accent }, { textAlign: rtl ? "right" : "left" }]}>
                 {s.value}
               </Text>
@@ -110,6 +117,26 @@ export const ShareCard = forwardRef<View, ShareCardProps>(function ShareCard(
         <View style={[styles.footerDot, { backgroundColor: meta.accent }]} />
         <Text style={styles.footerText}>Track. Improve. Repeat.</Text>
       </View>
+    </>
+  );
+
+  if (isWeekly) {
+    return (
+      <View ref={ref} style={[styles.card, styles.cardWeekly]} collapsable={false}>
+        <LinearGradient
+          colors={["#0d1b3e", "#0f0f1a"]}
+          style={StyleSheet.absoluteFillObject}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        {inner}
+      </View>
+    );
+  }
+
+  return (
+    <View ref={ref} style={styles.card} collapsable={false}>
+      {inner}
     </View>
   );
 });
@@ -138,7 +165,6 @@ const styles = StyleSheet.create({
     right: 0,
     width: 120,
     height: 120,
-    borderTopLeftRadius: 120,
   },
   accentBar: {
     position: "absolute",
