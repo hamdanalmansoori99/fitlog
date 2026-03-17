@@ -22,25 +22,41 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-function activityColor(type: string, theme: any) {
-  const map: Record<string, string> = {
-    running: theme.primary,
-    cycling: theme.secondary,
-    walking: theme.cyan,
-    gym: theme.purple,
-    swimming: "#4fc3f7",
-    tennis: theme.warning,
-    yoga: theme.pink,
-    other: theme.textMuted,
-  };
-  return map[type] ?? theme.primary;
+interface WorkoutEntry {
+  id: number;
+  name: string;
+  activityType: string;
+  durationMinutes: number;
 }
 
 interface DayDetail {
   date: string;
-  workouts: { id: number; name: string; activityType: string; durationMinutes: number }[];
-  x: number;
-  y: number;
+  workouts: WorkoutEntry[];
+}
+
+interface AppTheme {
+  primary: string;
+  secondary: string;
+  cyan?: string;
+  purple?: string;
+  warning?: string;
+  pink?: string;
+  textMuted: string;
+  [key: string]: string | undefined;
+}
+
+function activityColor(type: string, theme: AppTheme): string {
+  const map: Record<string, string> = {
+    running: theme.primary,
+    cycling: theme.secondary,
+    walking: theme.cyan ?? theme.primary,
+    gym: theme.purple ?? theme.primary,
+    swimming: "#4fc3f7",
+    tennis: theme.warning ?? "#ffab40",
+    yoga: theme.pink ?? theme.primary,
+    other: theme.textMuted,
+  };
+  return map[type] ?? theme.primary;
 }
 
 export function WorkoutCalendar() {
@@ -58,7 +74,7 @@ export function WorkoutCalendar() {
     staleTime: 60000,
   });
 
-  const days: Record<string, any[]> = data?.days ?? {};
+  const days: Record<string, WorkoutEntry[]> = data?.days ?? {};
   const mealDaySet = new Set<string>(data?.mealDays ?? []);
 
   const goMonth = useCallback((delta: number) => {
@@ -87,7 +103,7 @@ export function WorkoutCalendar() {
     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const workouts = days[dateStr] ?? [];
     if (workouts.length === 0) return;
-    setSelected({ date: dateStr, workouts, x: 0, y: 0 });
+    setSelected({ date: dateStr, workouts });
     setDetailModal(true);
   }
 
@@ -142,7 +158,7 @@ export function WorkoutCalendar() {
               return <View key={`empty-${idx}`} style={s.cell} />;
             }
             const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            const workouts: any[] = days[dateStr] ?? [];
+            const workouts: WorkoutEntry[] = days[dateStr] ?? [];
             const hasWorkout = workouts.length > 0;
             const hasMeal = mealDaySet.has(dateStr);
             const isToday = dateStr === todayStr;
@@ -169,7 +185,7 @@ export function WorkoutCalendar() {
                   {day}
                 </Text>
                 <View style={{ flexDirection: "row", gap: 2, marginTop: 2, justifyContent: "center", minHeight: 7 }}>
-                  {hasWorkout && workouts.slice(0, 3).map((w: any, i: number) => (
+                  {hasWorkout && workouts.slice(0, 3).map((w: WorkoutEntry, i: number) => (
                     <View
                       key={i}
                       style={[s.dot, { backgroundColor: activityColor(w.activityType, theme) }]}
