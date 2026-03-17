@@ -453,6 +453,7 @@ export default function ScanScreen() {
           entering={FadeIn.duration(200)}
           style={[StyleSheet.absoluteFillObject, { backgroundColor: theme.background }]}
         >
+          {/* Food photo hero */}
           {capturedUri ? (
             <View style={[styles.resultImageContainer, { paddingTop: insets.top }]}>
               <Image source={{ uri: capturedUri }} style={styles.resultImage} resizeMode="cover" />
@@ -466,17 +467,40 @@ export default function ScanScreen() {
             </View>
           ) : null}
 
+          {/* Results slide-up sheet */}
           <Animated.View
             entering={SlideInDown.springify().damping(16).delay(100)}
             style={[styles.resultsSheet, { backgroundColor: theme.background, borderColor: theme.border }]}
           >
             <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
 
-            <View style={styles.macroRow}>
-              <MacroPill label={t("common.calories")} value={totals.calories} unit="kcal" color={theme.primary} />
-              <MacroPill label={t("common.protein")} value={totals.proteinG} unit="g" color="#448aff" />
-              <MacroPill label={t("common.carbs")} value={totals.carbsG} unit="g" color="#ffab40" />
-              <MacroPill label={t("common.fat")} value={totals.fatG} unit="g" color="#ff5252" />
+            {/* ── Category selector (MOVED TO TOP) ── */}
+            <View style={[styles.categoryRow, { borderBottomColor: theme.border, borderBottomWidth: 1, marginBottom: 12 }]}>
+              {CATEGORIES.map((cat) => (
+                <Pressable
+                  key={cat}
+                  onPress={() => setCategory(cat)}
+                  style={[
+                    styles.catChip,
+                    {
+                      backgroundColor: category === cat ? theme.primary : theme.cardAlt,
+                      borderColor: category === cat ? theme.primary : theme.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.catChipText,
+                      {
+                        color: category === cat ? "#000" : theme.textMuted,
+                        fontFamily: category === cat ? "Inter_600SemiBold" : "Inter_400Regular",
+                      },
+                    ]}
+                  >
+                    {t(`scan.categories.${cat.toLowerCase()}`)}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
 
             {mealDescription ? (
@@ -485,6 +509,7 @@ export default function ScanScreen() {
               </Text>
             ) : null}
 
+            {/* Food items list */}
             <ScrollView
               style={styles.itemsList}
               contentContainerStyle={{ paddingBottom: 16 }}
@@ -532,80 +557,64 @@ export default function ScanScreen() {
                   </View>
                 </Animated.View>
               ))}
+
+              <Pressable
+                onPress={() => router.push("/meals" as any)}
+                style={styles.mealHistoryLink}
+              >
+                <Feather name="clock" size={14} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                  {t("scan.viewMealHistory")}
+                </Text>
+                <Feather name="chevron-right" size={14} color={theme.primary} />
+              </Pressable>
             </ScrollView>
 
-            <View style={[styles.categoryRow, { borderTopColor: theme.border }]}>
-              {CATEGORIES.map((cat) => (
+            {/* ── Sticky macro + CTA footer ── */}
+            <View style={[styles.stickyFooter, { borderTopColor: theme.border, paddingBottom: tabBarHeight + 8, backgroundColor: theme.background }]}>
+              {/* Macro pills row */}
+              <View style={styles.macroRow}>
+                <MacroPill label={t("common.calories")} value={totals.calories} unit="kcal" color={theme.primary} />
+                <MacroPill label={t("common.protein")} value={totals.proteinG} unit="g" color="#448aff" />
+                <MacroPill label={t("common.carbs")} value={totals.carbsG} unit="g" color="#ffab40" />
+                <MacroPill label={t("common.fat")} value={totals.fatG} unit="g" color="#ff5252" />
+              </View>
+
+              {/* CTA row */}
+              <View style={styles.footerRow}>
                 <Pressable
-                  key={cat}
-                  onPress={() => setCategory(cat)}
+                  onPress={handleRetake}
+                  style={[styles.retakeTextBtn, { borderColor: theme.border }]}
+                >
+                  <Feather name="camera" size={16} color={theme.textMuted} />
+                  <Text style={[styles.retakeBtnText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                    {t("scan.retake")}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={handleLogMeal}
+                  disabled={isLogging || items.length === 0}
                   style={[
-                    styles.catChip,
+                    styles.logBtn,
                     {
-                      backgroundColor: category === cat ? theme.primary : theme.cardAlt,
-                      borderColor: category === cat ? theme.primary : theme.border,
+                      backgroundColor: items.length === 0 ? theme.textMuted : theme.primary,
+                      opacity: isLogging ? 0.7 : 1,
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.catChipText,
-                      {
-                        color: category === cat ? "#000" : theme.textMuted,
-                        fontFamily: category === cat ? "Inter_600SemiBold" : "Inter_400Regular",
-                      },
-                    ]}
-                  >
-                    {t(`scan.categories.${cat.toLowerCase()}`)}
-                  </Text>
+                  {isLogging ? (
+                    <ActivityIndicator color="#000" size="small" />
+                  ) : (
+                    <>
+                      <Feather name="check" size={18} color="#000" />
+                      <Text style={[styles.logBtnText, { fontFamily: "Inter_700Bold" }]}>
+                        {t("scan.logMeal")}
+                      </Text>
+                    </>
+                  )}
                 </Pressable>
-              ))}
-            </View>
-
-            <Pressable
-              onPress={() => router.push("/meals" as any)}
-              style={styles.mealHistoryLink}
-            >
-              <Feather name="clock" size={14} color={theme.primary} />
-              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-                {t("scan.viewMealHistory")}
-              </Text>
-              <Feather name="chevron-right" size={14} color={theme.primary} />
-            </Pressable>
-
-            <View style={[styles.footerRow, { paddingBottom: tabBarHeight + 8 }]}>
-              <Pressable
-                onPress={handleRetake}
-                style={[styles.retakeTextBtn, { borderColor: theme.border }]}
-              >
-                <Feather name="camera" size={16} color={theme.textMuted} />
-                <Text style={[styles.retakeBtnText, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-                  {t("scan.retake")}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handleLogMeal}
-                disabled={isLogging || items.length === 0}
-                style={[
-                  styles.logBtn,
-                  {
-                    backgroundColor: items.length === 0 ? theme.textMuted : theme.primary,
-                    opacity: isLogging ? 0.7 : 1,
-                  },
-                ]}
-              >
-                {isLogging ? (
-                  <ActivityIndicator color="#000" size="small" />
-                ) : (
-                  <>
-                    <Feather name="check" size={18} color="#000" />
-                    <Text style={[styles.logBtnText, { fontFamily: "Inter_700Bold" }]}>
-                      {t("scan.logMeal")}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
+              </View>
             </View>
           </Animated.View>
         </Animated.View>
@@ -836,6 +845,9 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
+  stickyFooter: {
+    borderTopWidth: 1, paddingTop: 12, gap: 10, paddingHorizontal: 0,
+  },
   macroRow: {
     flexDirection: "row",
     gap: 8,
@@ -912,8 +924,7 @@ const styles = StyleSheet.create({
   categoryRow: {
     flexDirection: "row",
     gap: 8,
-    paddingVertical: 14,
-    borderTopWidth: 1,
+    paddingVertical: 12,
   },
   catChip: {
     flex: 1,

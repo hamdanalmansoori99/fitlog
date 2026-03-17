@@ -112,6 +112,9 @@ export default function ExecuteWorkoutScreen() {
   const [templateName, setTemplateName] = useState("");
   const [templateSaved, setTemplateSaved] = useState(false);
   const [prModal, setPrModal] = useState<{ exercise: string; weight: number; reps: number; previousBest: number; previousBestReps?: number } | null>(null);
+  const [prBadgeVisible, setPrBadgeVisible] = useState(false);
+  const [prBadgeText, setPrBadgeText] = useState("");
+  const prCelebratedRef = useRef<Set<string>>(new Set());
 
   const prShareRef = useRef<View>(null);
   const completionShareRef = useRef<View>(null);
@@ -465,6 +468,14 @@ export default function ExecuteWorkoutScreen() {
 
     if (volume > previousBestVolume && previousBestVolume > 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Show inline 2-second badge if not already celebrated this session
+      if (!prCelebratedRef.current.has(ex.name)) {
+        prCelebratedRef.current.add(ex.name);
+        setPrBadgeText(`🏆 ${t("pr.newPersonalRecord")}!`);
+        setPrBadgeVisible(true);
+        setTimeout(() => setPrBadgeVisible(false), 2400);
+      }
+      // Always update the modal data (for sharing)
       setPrModal({ exercise: ex.name, weight, reps, previousBest: previousBestWeight, previousBestReps });
     }
   }
@@ -858,6 +869,7 @@ export default function ExecuteWorkoutScreen() {
   const activeExercises = exercises.filter((e) => !e.skipped);
   const activeIdx = activeExercises.indexOf(currentEx);
   const completedSetCount = exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length;
+  const completedSetsInExercise = currentEx.sets.filter((s) => s.completed).length;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -885,6 +897,29 @@ export default function ExecuteWorkoutScreen() {
         <View style={{ width: 44 }} />
       </View>
 
+      {/* ── Sticky exercise sub-header: exercise name + Set X of Y ── */}
+      <View style={[styles.stickyExHeader, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 17 }} numberOfLines={1}>
+            {currentEx.name}
+          </Text>
+          <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13, marginTop: 1 }}>
+            {t("workouts.setLabel")} {completedSetsInExercise < currentEx.sets.length ? completedSetsInExercise + 1 : currentEx.sets.length} / {currentEx.sets.length}
+          </Text>
+        </View>
+        {currentEx.alternatives.length > 0 && (
+          <Pressable
+            onPress={replaceExercise}
+            style={[styles.swapChip, { backgroundColor: theme.secondaryDim, borderColor: theme.secondary + "50" }]}
+          >
+            <Feather name="refresh-cw" size={13} color={theme.secondary} />
+            <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+              {t("workouts.replaceExercise")}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
       {/* ── Progress bar ── */}
       <View style={[styles.progressContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
         <View style={{ flexDirection: "row", gap: 4 }}>
@@ -906,41 +941,36 @@ export default function ExecuteWorkoutScreen() {
             />
           ))}
         </View>
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 6 }}>
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 5 }}>
           {t("workouts.exerciseN", { n: activeIdx + 1 })} / {activeExercises.length}  ·  {completedSetCount} {t("workouts.setsDone").toLowerCase()}
         </Text>
       </View>
 
-      {/* ── Top rest timer (sticky above scroll content when resting) ── */}
-      {isResting && (
-        <Animated.View
-          entering={SlideInDown.duration(300)}
-          style={[styles.topRestBanner, { backgroundColor: theme.card, borderColor: theme.primary + "40" }]}
-        >
-          <Pressable
-            onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
-            style={{ gap: 8 }}
+      {/* ── Rest Timer — fullscreen bottom sheet overlay ── */}
+      <Modal
+        visible={isResting}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={skipRest}
+      >
+        <View style={[styles.restOverlay, { paddingBottom: insets.bottom + 16 }]}>
+          <Animated.View
+            entering={SlideInDown.springify().damping(18)}
+            style={[styles.restSheet, { backgroundColor: theme.card }]}
           >
-            <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", gap: 10 }}>
-                <View style={[styles.restDot, { backgroundColor: theme.primary }]} />
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13, letterSpacing: 1 }}>
-                  {t("workouts.restLabel")}
-                </Text>
-                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 28 }}>
-                  {fmt(restSecondsLeft)}
-                </Text>
-              </View>
-              <Pressable
-                onPress={(e) => { e.stopPropagation?.(); skipRest(); }}
-                style={[styles.skipRestPillBtn, { borderColor: theme.primary, backgroundColor: theme.primaryDim }]}
-              >
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-                  {t("workouts.skipRest")}
-                </Text>
-              </Pressable>
+            <View style={{ alignItems: "center", gap: 8, paddingBottom: 8 }}>
+              <View style={[styles.restDot, { backgroundColor: theme.primary, width: 10, height: 10, borderRadius: 5 }]} />
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13, letterSpacing: 1.2, textTransform: "uppercase" }}>
+                {t("workouts.restLabel")}
+              </Text>
             </View>
-            <View style={[styles.restProgressBar, { backgroundColor: theme.border }]}>
+
+            <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 72, textAlign: "center", lineHeight: 80 }}>
+              {fmt(restSecondsLeft)}
+            </Text>
+
+            <View style={[styles.restProgressBar, { backgroundColor: theme.border, marginVertical: 8 }]}>
               <View
                 style={[
                   styles.restProgressFill,
@@ -951,16 +981,36 @@ export default function ExecuteWorkoutScreen() {
                 ]}
               />
             </View>
+
             {pendingRef.current && (
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, textAlign: "center" }}>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", marginBottom: 8 }}>
                 {pendingRef.current.exIdx !== exerciseIdx
                   ? `${t("workouts.nextExercise")}: ${exercises[pendingRef.current.exIdx]?.name}`
                   : t("workouts.upNextSet", { set: pendingRef.current.setIdx + 1, total: currentEx?.sets.length })}
               </Text>
             )}
-          </Pressable>
-        </Animated.View>
-      )}
+
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+              <Pressable
+                onPress={() => setRestSecondsLeft((s) => s + 30)}
+                style={[styles.restActionBtn, { borderColor: theme.border, backgroundColor: theme.background }]}
+              >
+                <Feather name="plus" size={16} color={theme.text} />
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>+30s</Text>
+              </Pressable>
+              <Pressable
+                onPress={skipRest}
+                style={[styles.restActionBtn, { backgroundColor: theme.primary, flex: 2 }]}
+              >
+                <Feather name="skip-forward" size={16} color="#0f0f1a" />
+                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                  {t("workouts.skipRest")}
+                </Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
 
       <ScrollView
         ref={scrollRef}
@@ -971,18 +1021,9 @@ export default function ExecuteWorkoutScreen() {
         {/* ── Exercise header ── */}
         <Animated.View entering={FadeIn.duration(300)} key={currentEx.name + exerciseIdx}>
           <View style={{ gap: 4, marginBottom: 4 }}>
-            {currentEx.alternatives.length > 0 && (
-              <Pressable onPress={replaceExercise} style={{ flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start" }}>
-                <Feather name="refresh-cw" size={11} color={theme.secondary} />
-                <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 11 }}>{t("workouts.replaceExercise")}</Text>
-              </Pressable>
-            )}
-            <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 26 }}>
-              {currentEx.name}
-            </Text>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14 }}>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
               {currentEx.targetSets} sets × {currentEx.targetReps || currentEx.targetDuration}
-              {currentEx.restSec > 0 ? `  ·  ${currentEx.restSec}s rest` : ""}
+              {currentEx.restSec > 0 ? `  ·  ${currentEx.restSec}s ${t("workouts.restLabel").toLowerCase()}` : ""}
             </Text>
           </View>
 
@@ -1038,23 +1079,10 @@ export default function ExecuteWorkoutScreen() {
           )}
         </Animated.View>
 
-        {/* ── Sets list ── */}
-        <Card style={{ gap: 0, paddingHorizontal: 0, paddingVertical: 0, overflow: "hidden" }}>
-          {/* Header row */}
-          <View style={[styles.setHeaderRow, { borderBottomColor: theme.border, backgroundColor: theme.card }]}>
-            <Text style={[styles.setHeaderCell, { color: theme.textMuted, flex: 1 }]}>{t("workouts.setLabel")}</Text>
-            <Text style={[styles.setHeaderCell, { color: theme.textMuted, flex: 2 }]}>{t("workouts.reps")}</Text>
-            <Text style={[styles.setHeaderCell, { color: theme.textMuted, flex: 2 }]}>{t("workouts.weightKgLabel")}</Text>
-            <View style={{ width: 32 }} />
-          </View>
-
+        {/* ── Sets list — card-style rows ── */}
+        <View style={{ gap: 8 }}>
           {currentEx.sets.map((s, si) => {
             const isActive = si === setIdx;
-            const rowBg = s.completed
-              ? theme.primary + "08"
-              : isActive
-              ? theme.background
-              : theme.card;
             const hasHistory = !s.completed && progression && progression.trend !== "first";
             const suggestedText = hasHistory && (progression!.suggestedWeightKg != null || progression!.suggestedReps != null)
               ? [
@@ -1068,106 +1096,127 @@ export default function ExecuteWorkoutScreen() {
                   progression!.prevWeightKg != null ? `${progression!.prevWeightKg}${t("common.kg")}` : null,
                 ].filter(Boolean).join(" × ")
               : null;
-            const showHintRow = suggestedText || lastText;
+            const rpeIdx = RPE_VALUES.indexOf(s.rpe ?? -1);
+            const rpeLabel = rpeIdx >= 0 ? RPE_EMOJIS[rpeIdx] : "RPE";
 
             return (
-              <View key={si}>
-                {showHintRow && (
-                  <View style={[
-                    styles.perSetHint,
-                    { backgroundColor: isActive ? trendColor + "12" : trendColor + "06", borderBottomColor: theme.border },
-                  ]}>
-                    <View style={{ flexDirection: isRTL ? "row-reverse" : "row", gap: 10, flexWrap: "wrap" }}>
-                      {lastText && (
-                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, writingDirection: isRTL ? "rtl" : "ltr" }}>
-                          {t("workouts.lastLabel")}: {lastText}
-                        </Text>
-                      )}
-                      {suggestedText && (
-                        <Text style={{ color: isActive ? trendColor : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, writingDirection: isRTL ? "rtl" : "ltr" }}>
-                          {t("workouts.suggestedLabel")}: {suggestedText}
-                        </Text>
-                      )}
-                    </View>
-                    {progression?.rationale ? (
-                      <Text
-                        numberOfLines={1}
-                        style={{ color: isActive ? trendColor : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, opacity: 0.75, writingDirection: isRTL ? "rtl" : "ltr" }}
-                      >
-                        {progression.rationale}
+              <View
+                key={si}
+                style={[
+                  styles.setCard,
+                  {
+                    backgroundColor: s.completed ? theme.primary + "10" : isActive ? theme.card : theme.card + "80",
+                    borderColor: s.completed ? theme.primary + "40" : isActive ? theme.primary + "60" : theme.border,
+                    opacity: s.completed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                {/* Hint row */}
+                {(lastText || suggestedText) && (
+                  <View style={{ flexDirection: isRTL ? "row-reverse" : "row", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                    {lastText && (
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                        {t("workouts.lastLabel")}: {lastText}
                       </Text>
-                    ) : null}
+                    )}
+                    {suggestedText && (
+                      <Text style={{ color: trendColor, fontFamily: "Inter_500Medium", fontSize: 11 }}>
+                        ↑ {suggestedText}
+                      </Text>
+                    )}
                   </View>
                 )}
-                <View
-                  style={[
-                    styles.setRow,
-                    { backgroundColor: rowBg, borderBottomColor: theme.border },
-                    si < currentEx.sets.length - 1 && { borderBottomWidth: 1 },
-                  ]}
-                >
-                  <View style={[
-                    styles.setNumBadge,
-                    { backgroundColor: s.completed ? theme.primary : isActive ? theme.primaryDim : theme.card, flex: 1 }
-                  ]}>
+
+                {/* Main row: checkbox | set# | reps | × | weight | RPE */}
+                <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", gap: 8, minHeight: 52 }}>
+                  {/* Checkbox / set number */}
+                  <Pressable
+                    onPress={si === setIdx && !s.completed ? completeSet : undefined}
+                    style={[
+                      styles.setCheckbox,
+                      {
+                        backgroundColor: s.completed ? theme.primary : isActive ? theme.primaryDim : theme.background,
+                        borderColor: s.completed ? theme.primary : isActive ? theme.primary : theme.border,
+                      },
+                    ]}
+                  >
                     {s.completed
-                      ? <Feather name="check" size={13} color="#0f0f1a" />
-                      : <Text style={{ color: isActive ? theme.primary : theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 12 }}>{si + 1}</Text>
+                      ? <Feather name="check" size={16} color="#0f0f1a" />
+                      : <Text style={{ color: isActive ? theme.primary : theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 14 }}>{si + 1}</Text>
                     }
+                  </Pressable>
+
+                  {/* Reps input */}
+                  <View style={{ flex: 1, alignItems: "center" }}>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, marginBottom: 2 }}>
+                      {t("workouts.reps")}
+                    </Text>
+                    <TextInput
+                      value={s.reps}
+                      onChangeText={(v) => updateSet(exerciseIdx, si, "reps", v)}
+                      editable={!s.completed && isActive}
+                      keyboardType="numeric"
+                      selectTextOnFocus
+                      style={[
+                        styles.setInputCard,
+                        {
+                          color: s.completed ? theme.textMuted : isActive ? theme.text : theme.textMuted,
+                          borderColor: isActive && !s.completed ? theme.primary + "60" : theme.border,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
                   </View>
-                  <TextInput
-                    value={s.reps}
-                    onChangeText={(t) => updateSet(exerciseIdx, si, "reps", t)}
-                    editable={!s.completed}
-                    keyboardType="numeric"
-                    style={[styles.setInput, { color: s.completed ? theme.textMuted : theme.text, borderColor: isActive ? theme.primary + "50" : theme.border, flex: 2 }]}
-                  />
-                  <TextInput
-                    value={s.weight}
-                    onChangeText={(t) => updateSet(exerciseIdx, si, "weight", t)}
-                    editable={!s.completed}
-                    keyboardType="decimal-pad"
-                    placeholder="—"
-                    placeholderTextColor={theme.textMuted}
-                    style={[styles.setInput, { color: s.completed ? theme.textMuted : theme.text, borderColor: isActive ? theme.primary + "50" : theme.border, flex: 2 }]}
-                  />
-                  <View style={{ width: 32, alignItems: "center" }}>
-                    {s.completed && <Feather name="check-circle" size={16} color={theme.primary} />}
+
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 18 }}>×</Text>
+
+                  {/* Weight input */}
+                  <View style={{ flex: 1, alignItems: "center" }}>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, marginBottom: 2 }}>
+                      {t("workouts.weightKgLabel")}
+                    </Text>
+                    <TextInput
+                      value={s.weight}
+                      onChangeText={(v) => updateSet(exerciseIdx, si, "weight", v)}
+                      editable={!s.completed && isActive}
+                      keyboardType="decimal-pad"
+                      placeholder="—"
+                      selectTextOnFocus
+                      placeholderTextColor={theme.textMuted}
+                      style={[
+                        styles.setInputCard,
+                        {
+                          color: s.completed ? theme.textMuted : isActive ? theme.text : theme.textMuted,
+                          borderColor: isActive && !s.completed ? theme.primary + "60" : theme.border,
+                          backgroundColor: theme.background,
+                        },
+                      ]}
+                    />
                   </View>
+
+                  {/* RPE button */}
+                  <Pressable
+                    onPress={!s.completed && isActive ? () => {
+                      const cur = s.rpe;
+                      const idx = RPE_VALUES.indexOf(cur ?? -1);
+                      const next = idx < RPE_VALUES.length - 1 ? RPE_VALUES[idx + 1] : undefined;
+                      setRpe(exerciseIdx, si, next);
+                    } : undefined}
+                    style={[
+                      styles.rpeQuickBtn,
+                      {
+                        backgroundColor: s.rpe != null ? theme.primary + "15" : theme.background,
+                        borderColor: s.rpe != null ? theme.primary + "50" : theme.border,
+                      },
+                    ]}
+                  >
+                    <Text style={{ fontSize: 16 }}>{rpeLabel}</Text>
+                  </Pressable>
                 </View>
               </View>
             );
           })}
-        </Card>
-
-        {/* ── RPE for active set ── */}
-        {currentSet && !currentSet.completed && (
-          <Animated.View entering={FadeIn.duration(200)}>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 8 }}>
-              {t("workouts.howHard")}
-            </Text>
-            <View style={{ flexDirection: "row", gap: 6 }}>
-              {RPE_VALUES.map((val, ri) => {
-                const sel = currentSet.rpe === val;
-                return (
-                  <Pressable
-                    key={val}
-                    onPress={() => setRpe(exerciseIdx, setIdx, sel ? undefined : val)}
-                    style={[
-                      styles.rpeChip,
-                      { backgroundColor: sel ? theme.primary + "20" : theme.card, borderColor: sel ? theme.primary : theme.border, flex: 1 },
-                    ]}
-                  >
-                    <Text style={{ fontSize: 15 }}>{RPE_EMOJIS[ri]}</Text>
-                    <Text style={{ color: sel ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, textAlign: "center" }}>
-                      {RPE_LABELS[ri]}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </Animated.View>
-        )}
+        </View>
 
         {/* ── Action buttons (hidden during rest) ── */}
         {!isResting && (
@@ -1224,6 +1273,21 @@ export default function ExecuteWorkoutScreen() {
 
 
       {renderPRModal()}
+
+      {/* ── PR inline badge (2s auto-dismiss) ── */}
+      {prBadgeVisible && (
+        <Animated.View
+          entering={ZoomIn.duration(300)}
+          style={styles.prBadgeOverlay}
+          pointerEvents="none"
+        >
+          <View style={[styles.prBadge, { backgroundColor: theme.primary }]}>
+            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 18 }}>
+              {prBadgeText}
+            </Text>
+          </View>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -1250,24 +1314,32 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 8,
   },
 
-  // Sets table
-  perSetHint: {
-    paddingHorizontal: 12, paddingVertical: 3, borderBottomWidth: 1,
+  // Sticky exercise sub-header
+  stickyExHeader: {
+    flexDirection: "row", alignItems: "center", paddingHorizontal: 16,
+    paddingVertical: 10, borderBottomWidth: 1, gap: 12,
   },
-  setHeaderRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1 },
-  setHeaderCell: { fontFamily: "Inter_500Medium", fontSize: 11 },
-  setRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
-  setNumBadge: { height: 28, width: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  setInput: {
-    borderWidth: 1, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10,
-    fontFamily: "Inter_400Regular", fontSize: 15, textAlign: "center",
+  swapChip: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, borderWidth: 1,
   },
 
-  // RPE
-  rpeChip: {
-    alignItems: "center", paddingVertical: 10, paddingHorizontal: 4,
-    borderRadius: 10, borderWidth: 1, gap: 3, minHeight: 44,
-    justifyContent: "center" as const,
+  // Card-style set rows
+  setCard: {
+    borderWidth: 1, borderRadius: 14, padding: 12,
+  },
+  setCheckbox: {
+    width: 44, height: 44, borderRadius: 12, borderWidth: 2,
+    alignItems: "center", justifyContent: "center",
+  },
+  setInputCard: {
+    borderWidth: 1.5, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 8,
+    fontFamily: "Inter_600SemiBold", fontSize: 18, textAlign: "center",
+    minWidth: 64,
+  },
+  rpeQuickBtn: {
+    width: 44, height: 44, borderRadius: 12, borderWidth: 1,
+    alignItems: "center", justifyContent: "center",
   },
 
   // Actions
@@ -1286,21 +1358,33 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 14, padding: 14,
   },
 
-  // Top sticky rest timer (appears between header and scroll content)
-  topRestBanner: {
-    marginHorizontal: 0,
-    paddingHorizontal: 16, paddingVertical: 12, gap: 8,
-    borderBottomWidth: 1.5,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
+  // Rest timer bottom sheet overlay
+  restOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end", padding: 16,
+  },
+  restSheet: {
+    borderRadius: 28, padding: 28, gap: 12, alignItems: "center",
   },
   restDot: { width: 8, height: 8, borderRadius: 4 },
-  skipRestPillBtn: {
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: 10, borderWidth: 1,
+  restActionBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, paddingVertical: 16, borderRadius: 16, borderWidth: 1.5,
   },
-  restProgressBar: { height: 4, borderRadius: 2, overflow: "hidden" },
-  restProgressFill: { height: "100%", borderRadius: 2 },
+  restProgressBar: { height: 6, borderRadius: 3, overflow: "hidden", width: "100%" },
+  restProgressFill: { height: "100%", borderRadius: 3 },
+
+  // PR badge
+  prBadgeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center", justifyContent: "center",
+    pointerEvents: "none",
+  } as any,
+  prBadge: {
+    paddingHorizontal: 24, paddingVertical: 14, borderRadius: 20,
+    shadowColor: "#00e676", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
+  },
 
   // Done / summary
   trophyCircle: {
