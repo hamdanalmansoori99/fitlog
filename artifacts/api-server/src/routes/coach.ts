@@ -254,7 +254,7 @@ COACHING STYLE:
 - No long motivational speeches. No filler sentences. Get to the point.
 
 RESPONSE RULES:
-- Simple questions (tips, advice, motivation): 2–4 short paragraphs max.
+- Simple questions (tips, advice, motivation): 2–5 short paragraphs max.
 - Workout recommendations must always include:
   1. Workout name
   2. Exercise list with sets, reps, and rest periods
@@ -512,7 +512,9 @@ router.post("/message", requireAuth, async (req, res) => {
     if (!fullResponse.trim()) {
       fullResponse =
         "I'm having trouble generating a useful response. Try asking with your goal, equipment, and time available.";
-      res.write(`data: ${JSON.stringify({ content: fullResponse })}\n\n`);
+      if (!clientGone) {
+        res.write(`data: ${JSON.stringify({ content: fullResponse })}\n\n`);
+      }
     }
 
     if (!clientGone) {
