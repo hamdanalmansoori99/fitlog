@@ -1,0 +1,198 @@
+Improve the existing AI coach system in my app. Do NOT rebuild it. Only fix, upgrade, and polish the current implementation.
+
+Target files:
+- artifacts/api-server/src/routes/coach.ts
+- artifacts/fitlog/app/coach/chat.tsx
+
+Preserve current architecture, routes, and UI. Do not remove working features.
+
+━━━━━━━━━━━━━━━━━━━━
+BACKEND IMPROVEMENTS (coach.ts)
+━━━━━━━━━━━━━━━━━━━━
+
+1. SAFETY LAYER  
+Add a helper function:
+
+detectSafetyIssue(content: string): string | null
+
+It should detect:
+- chest pain
+- fainting / passed out
+- severe injury / torn muscle / can’t walk
+- eating disorder behavior
+- dangerous drug use (steroids, etc.)
+
+If detected:
+- DO NOT call the AI
+- immediately stream a safe fallback response
+- also save it as an assistant message in the DB
+
+The response should be short, serious, and tell the user to seek a qualified medical professional.
+
+---
+
+2. LIMIT CONVERSATION HISTORY  
+Currently the entire conversation history is sent to the AI.
+
+Fix this:
+- only send the last 10–12 messages
+- keep chronological order
+- this should reduce repetition and improve response quality
+
+---
+
+3. ADD COACH DECISION SUMMARY  
+Create a helper:
+
+buildCoachSummary(profile, recentWorkouts, equipment, todayRecovery)
+
+It should generate a short block like:
+
+COACH DECISION SUMMARY:
+- Equipment allowed: ...
+- Readiness today: low / moderate / high
+- Recent training pattern: ...
+- Instruction: avoid repeating same muscle groups, prefer one clear recommendation
+
+Logic:
+- readiness = low if poor sleep (<6h), low energy, or high stress
+- otherwise moderate/high
+
+Append this summary to the system prompt before sending to the AI.
+
+---
+
+4. IMPROVE SYSTEM PROMPT QUALITY  
+Keep the existing prompt but upgrade the coaching rules:
+
+- Make the coach decisive (not vague)
+- Prefer ONE best recommendation for “what should I do today”
+- Avoid repeating same muscle groups from recent workouts
+- Respect equipment strictly
+- Adapt based on recovery (low recovery → lighter session)
+- Reduce generic advice
+- Reduce repetition
+- Make tone:
+  - calm
+  - confident
+  - practical
+  - trainer-like
+
+Add strict response rules:
+
+RESPONSE RULES:
+- Simple answers: 2–5 short paragraphs max
+- Workout answers must include:
+  - workout name
+  - exercises
+  - sets
+  - reps
+  - rest
+  - progression
+- No long motivational speeches
+- No excessive options unless asked
+- Keep mobile readability
+
+Keep existing formatting rules (no markdown, etc.)
+
+---
+
+5. HANDLE EMPTY AI RESPONSES  
+After streaming:
+
+If fullResponse is empty:
+- replace with a fallback message:
+  “I’m having trouble generating a useful response. Try asking with your goal, equipment, and time available.”
+
+---
+
+6. STREAM IMPROVEMENTS  
+- Detect if client disconnects (req.on("close"))
+- stop streaming if client disconnects
+- prevent wasted compute
+
+---
+
+7. KEEP EVERYTHING ELSE INTACT  
+- Keep SSE streaming
+- Keep DB saving
+- Keep conversation logic
+- Do NOT break existing API
+
+---
+
+━━━━━━━━━━━━━━━━━━━━
+FRONTEND IMPROVEMENTS (chat.tsx)
+━━━━━━━━━━━━━━━━━━━━
+
+1. ADD ABORT CONTROLLER  
+- cancel previous request if user sends another message
+- cancel request on component unmount
+
+---
+
+2. FIX STREAM FINALIZATION  
+- ensure assistant message always sets streaming=false
+- even if “done” event is not received
+
+---
+
+3. IMPROVE MESSAGE READABILITY  
+Assistant messages are currently one block.
+
+Improve rendering:
+- split text into lines/paragraphs
+- render each line separately
+- keep current design but improve spacing
+- make workouts easier to read on mobile
+
+---
+
+4. KEEP UX CLEAN  
+Do NOT redesign UI
+
+Only:
+- improve readability
+- prevent duplicate sends
+- ensure stable streaming behavior
+
+---
+
+━━━━━━━━━━━━━━━━━━━━
+OUTPUT REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━
+
+After making changes, show me:
+
+1. EXACT files changed  
+2. CODE SNIPPETS of key changes  
+3. WHAT was fixed:
+   - repetition
+   - generic answers
+   - poor personalization
+   - formatting
+   - safety
+   - streaming issues  
+4. WHAT is still improvable later
+
+---
+
+━━━━━━━━━━━━━━━━━━━━
+IMPORTANT RULES
+━━━━━━━━━━━━━━━━━━━━
+
+- Do NOT rewrite the app
+- Do NOT remove working features
+- Do NOT change database schema
+- Do NOT break API routes
+- Focus ONLY on improving the AI coach quality and reliability
+
+Goal:
+Make the AI coach feel like a real personal trainer:
+- smarter
+- more consistent
+- more personalized
+- more structured
+- more premium
+
+Apply all changes directly to the existing codebase.
