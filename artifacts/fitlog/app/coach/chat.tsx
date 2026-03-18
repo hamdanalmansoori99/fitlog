@@ -51,6 +51,7 @@ export default function CoachChatScreen() {
   const { prompt } = useLocalSearchParams<{ prompt?: string }>();
   const promptSentRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const activeRequestIdRef = useRef<number>(0);
 
   const suggestions = [
     t("home.coachChip1"),
@@ -139,12 +140,15 @@ export default function CoachChatScreen() {
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || sending) return;
+      if (!trimmed) return;
 
-      // Abort any previous in-flight request
+      // Abort any previous in-flight request and start a fresh one
       abortControllerRef.current?.abort();
       const controller = new AbortController();
       abortControllerRef.current = controller;
+
+      // Track this request so the finally block doesn't race with a newer one
+      const requestId = ++activeRequestIdRef.current;
 
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -186,70 +190,75 @@ export default function CoachChatScreen() {
         const decoder = new TextDecoder();
         let buffer = "";
 
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? "";
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
 
-            for (const line of lines) {
-              if (!line.startsWith("data: ")) continue;
-              const jsonStr = line.slice(6).trim();
-              if (!jsonStr) continue;
-              try {
-                const parsed = JSON.parse(jsonStr);
-                if (parsed.content) {
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantId
-                        ? { ...m, content: m.content + parsed.content }
-                        : m
-                    )
-                  );
-                  setTimeout(() => {
-                    flatListRef.current?.scrollToEnd({ animated: false });
-                  }, 50);
-                }
-                if (parsed.done) {
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantId ? { ...m, streaming: false } : m
-                    )
-                  );
-                }
-              } catch {}
-            }
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr) continue;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              if (parsed.content) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? { ...m, content: m.content + parsed.content }
+                      : m
+                  )
+                );
+                setTimeout(() => {
+                  flatListRef.current?.scrollToEnd({ animated: false });
+                }, 50);
+              }
+              if (parsed.done) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId ? { ...m, streaming: false } : m
+                  )
+                );
+              }
+            } catch {}
           }
-        } finally {
-          // Always finalize the streaming message regardless of how the loop ends
+        }
+      } catch (err: any) {
+        if (err?.name === "AbortError") {
+          // Remove empty placeholder if abort fired before any content arrived
+          setMessages((prev) =>
+            prev.filter((m) => !(m.id === assistantId && m.content === ""))
+          );
+        } else {
+          console.error("Stream error:", err);
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, streaming: false } : m
+              m.id === assistantId
+                ? { ...m, content: t("coach.connectionError"), streaming: false }
+                : m
             )
           );
         }
-      } catch (err: any) {
-        // Ignore abort errors — user intentionally cancelled
-        if (err?.name === "AbortError") return;
-        console.error("Stream error:", err);
+      } finally {
+        // Always finalize streaming on this message (handles all abort/error/done paths)
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === assistantId
-              ? { ...m, content: t("coach.connectionError"), streaming: false }
-              : m
+            m.id === assistantId ? { ...m, streaming: false } : m
           )
         );
-      } finally {
-        setSending(false);
+        // Only clear sending state if no newer request has taken over
+        if (activeRequestIdRef.current === requestId) {
+          setSending(false);
+        }
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         }, 100);
       }
     },
-    [sending, token]
+    [token]
   );
 
   const renderMessageContent = (item: ChatMessage, isUser: boolean, textColor: string) => {
@@ -412,16 +421,15 @@ export default function CoachChatScreen() {
               maxLength={500}
               returnKeyType="send"
               onSubmitEditing={() => sendMessage(input)}
-              editable={!sending}
             />
             <Pressable
               style={({ pressed }) => [
                 styles.sendBtn,
-                { backgroundColor: input.trim() && !sending ? theme.primary : theme.border },
+                { backgroundColor: input.trim() ? theme.primary : theme.border },
                 pressed && { opacity: 0.8 },
               ]}
               onPress={() => sendMessage(input)}
-              disabled={!input.trim() || sending}
+              disabled={!input.trim()}
             >
               {sending ? (
                 <ActivityIndicator size="small" color="#000" />
