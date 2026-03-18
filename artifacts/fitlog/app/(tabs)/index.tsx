@@ -245,6 +245,107 @@ function CoachCard({
   );
 }
 
+function WeightQuickAddRow({
+  measurementsData,
+  settings,
+  theme,
+}: {
+  measurementsData: any;
+  settings: any;
+  theme: AppTheme;
+}) {
+  const { t } = useTranslation();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const useImperial = settings?.unitSystem === "imperial";
+
+  const todayMeasurement = useMemo(() => {
+    const list: any[] = measurementsData?.measurements || [];
+    return list.find(
+      (m: any) => m.date?.startsWith(todayStr) && m.weightKg != null
+    ) || null;
+  }, [measurementsData, todayStr]);
+
+  const weightLabel = useMemo(() => {
+    if (!todayMeasurement) return null;
+    const kg: number = todayMeasurement.weightKg;
+    if (useImperial) {
+      return `${(kg * 2.20462).toFixed(1)} lbs`;
+    }
+    return `${kg.toFixed(1)} kg`;
+  }, [todayMeasurement, useImperial]);
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (todayMeasurement) {
+      router.push({ pathname: "/measurements/edit" as any, params: { id: todayMeasurement.id } });
+    } else {
+      router.push("/measurements/add" as any);
+    }
+  };
+
+  const logged = !!todayMeasurement;
+  const accent = logged ? theme.primary : theme.secondary;
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 13,
+        borderRadius: 14,
+        backgroundColor: theme.card,
+        borderWidth: 1,
+        borderColor: logged ? theme.primary + "30" : theme.border,
+        opacity: pressed ? 0.8 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          backgroundColor: accent + "20",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Feather name="activity" size={17} color={accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            color: logged ? theme.primary : theme.text,
+            fontFamily: "Inter_600SemiBold",
+            fontSize: 14,
+          }}
+          numberOfLines={1}
+        >
+          {logged ? weightLabel! : t("home.logTodaysWeight")}
+        </Text>
+        <Text
+          style={{
+            color: theme.textMuted,
+            fontFamily: "Inter_400Regular",
+            fontSize: 11,
+            marginTop: 1,
+          }}
+          numberOfLines={1}
+        >
+          {logged ? t("home.weightLoggedToday") : t("home.tapToAddMeasurement")}
+        </Text>
+      </View>
+      <Feather
+        name={rtlIcon("chevron-right")}
+        size={16}
+        color={theme.textMuted}
+      />
+    </Pressable>
+  );
+}
+
 function diffColor(d: string | undefined, theme: AppTheme) {
   if (d === "Beginner") return theme.primary;
   if (d === "Intermediate") return theme.secondary;
@@ -854,6 +955,18 @@ export default function HomeScreen() {
     staleTime: 300000,
   });
 
+  const { data: measurementsData, refetch: refetchMeasurements } = useQuery({
+    queryKey: ["measurementsToday"],
+    queryFn: () => api.getMeasurements(1),
+    staleTime: 60000,
+  });
+
+  const { data: settingsData } = useQuery({
+    queryKey: ["settings"],
+    queryFn: api.getSettings,
+    staleTime: 300000,
+  });
+
   const { data: streaksData, refetch: refetchStreaks } = useQuery({
     queryKey: ["streaks"],
     queryFn: api.getStreaks,
@@ -867,9 +980,10 @@ export default function HomeScreen() {
     await Promise.all([
       refetchMeals(), refetchProfile(), refetchWorkouts(),
       refetchRecovery(), refetchAchievements(), refetchStreaks(),
+      refetchMeasurements(),
     ]);
     setRefreshing(false);
-  }, [refetchMeals, refetchProfile, refetchWorkouts, refetchRecovery, refetchAchievements, refetchStreaks]);
+  }, [refetchMeals, refetchProfile, refetchWorkouts, refetchRecovery, refetchAchievements, refetchStreaks, refetchMeasurements]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -1012,6 +1126,16 @@ export default function HomeScreen() {
 
         <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.section}>
           <HeroActions theme={theme} />
+        </Animated.View>
+
+        {/* ═══ ZONE 3.5 — WEIGHT QUICK-ADD ═══ */}
+
+        <Animated.View entering={FadeInDown.delay(130).duration(400)} style={styles.section}>
+          <WeightQuickAddRow
+            measurementsData={measurementsData}
+            settings={settingsData}
+            theme={theme}
+          />
         </Animated.View>
 
         {/* ═══ ZONE 4 — NUTRITION ═══ */}
