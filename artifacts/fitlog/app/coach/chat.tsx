@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -49,6 +49,7 @@ export default function CoachChatScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const token = useAuthStore((s) => s.token);
   const { prompt } = useLocalSearchParams<{ prompt?: string }>();
   const promptSentRef = useRef(false);
@@ -378,7 +379,7 @@ export default function CoachChatScreen() {
   const styles = makeStyles(theme, isWeb, WEB_TOP, WEB_BOTTOM);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={isWeb ? [] : ["top", "bottom"]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={isWeb ? [] : ["top"]}>
       {isWeb && <View style={{ height: WEB_TOP }} />}
 
       <View style={styles.header}>
@@ -479,6 +480,29 @@ export default function CoachChatScreen() {
             />
           )}
 
+          {messages.length > 0 && !sending && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickChips}
+              keyboardShouldPersistTaps="handled"
+            >
+              {suggestions.slice(0, 4).map((s, i) => (
+                <Pressable
+                  key={i}
+                  style={({ pressed }) => [
+                    styles.quickChip,
+                    { backgroundColor: theme.card, borderColor: theme.border },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => sendMessage(s)}
+                >
+                  <Text style={[styles.quickChipText, { color: theme.textMuted }]}>{s}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
           <View style={[styles.inputBar, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.background }]}
@@ -508,30 +532,11 @@ export default function CoachChatScreen() {
             </Pressable>
           </View>
 
-          {messages.length > 0 && !sending && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.quickChips}
-              keyboardShouldPersistTaps="handled"
-            >
-              {suggestions.slice(0, 4).map((s, i) => (
-                <Pressable
-                  key={i}
-                  style={({ pressed }) => [
-                    styles.quickChip,
-                    { backgroundColor: theme.card, borderColor: theme.border },
-                    pressed && { opacity: 0.7 },
-                  ]}
-                  onPress={() => sendMessage(s)}
-                >
-                  <Text style={[styles.quickChipText, { color: theme.textMuted }]}>{s}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+          {isWeb ? (
+            <View style={{ height: WEB_BOTTOM }} />
+          ) : (
+            <View style={{ height: insets.bottom }} />
           )}
-
-          {isWeb && <View style={{ height: WEB_BOTTOM }} />}
         </KeyboardAvoidingView>
       )}
     </SafeAreaView>
