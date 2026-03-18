@@ -1,0 +1,333 @@
+1. Your exact home screen layout
+
+Your home screen should feel like a mission control center, not a dashboard dump.
+
+Top section
+
+Put this at the top:
+	•	Greeting: Good evening, Hamdan
+	•	Small status line: You’re 78% on track this week
+	•	Primary CTA button: Start Workout
+	•	Secondary CTA: Log Meal
+
+This should instantly answer:
+	•	how am I doing?
+	•	what should I do now?
+
+Card 1: Today’s Mission
+
+This should be the main card.
+
+Example:
+	•	Today’s Mission
+	•	Push Day + hit 180g protein
+	•	Estimated time: 52 min
+	•	You missed 1 session this week, so this workout matters
+
+Buttons:
+	•	Start Workout
+	•	Ask Coach
+
+This card should be dynamic based on:
+	•	current split
+	•	missed sessions
+	•	weekly goal
+	•	macro target
+
+Card 2: Weekly Progress
+
+Show 3 simple progress bars:
+	•	Workouts: 4/5 completed
+	•	Protein days hit: 3/7
+	•	Calories on target: 4/7
+
+Then under it:
+	•	1 workout left to hit your weekly target
+
+This creates urgency.
+
+Card 3: Streak / Momentum
+
+Simple but strong.
+	•	5 day streak 🔥
+	•	Best streak: 9 days
+	•	Don’t break it today
+
+Keep this visible.
+
+Card 4: Smart Coach Insight
+
+One short, strong insight only.
+
+Examples:
+	•	Your chest volume is down 14% from last week
+	•	You’re under protein by 32g today
+	•	Your last leg workout was 6 days ago
+	•	Recovery looks low — reduce intensity today
+
+Button:
+	•	See Recommendation
+
+Do not make this a generic chat preview.
+
+Card 5: Recent Wins
+
+This is for dopamine.
+
+Examples:
+	•	New PR: Incline Press +2.5kg
+	•	3 workouts completed this week
+	•	Calories on target 4 days in a row
+
+This should rotate.
+
+Bottom section
+
+Quick actions:
+	•	Start workout
+	•	Log meal
+	•	View progress
+	•	Ask coach
+
+That’s it. Keep it tight.
+
+⸻
+
+2. How your AI should actually work
+
+This is the biggest thing. Your AI should not feel like “ChatGPT inside a gym app.”
+
+It should feel like a decision engine using real user data.
+
+Inputs the AI should use
+
+Your coach logic should read:
+	•	goal: fat loss / muscle gain / maintenance
+	•	training split
+	•	completed workouts this week
+	•	missed workouts
+	•	current day in plan
+	•	exercise history
+	•	volume trends
+	•	PR history
+	•	calories today
+	•	protein today
+	•	bodyweight trend
+	•	sleep/recovery if you track it
+	•	soreness/readiness if you ask user
+
+What the AI should produce
+
+Not long essays. Just practical outputs:
+
+A. Daily recommendation
+
+Example:
+	•	You missed Pull Day yesterday. Do it today to stay on track.
+	•	You’re under protein and calories. Keep training moderate and eat before bed.
+
+B. Workout adjustment
+
+Example:
+	•	Bench volume is trending up well. Increase top set by 2.5kg next session.
+	•	Fatigue looks high. Keep same weight and reduce 1 accessory set.
+
+C. Nutrition correction
+
+Example:
+	•	You still need 41g protein. Best options: chicken wrap, Greek yogurt, whey shake.
+
+D. Plateau detection
+
+Example:
+	•	Your bodyweight has stayed flat for 14 days while calories are below target only 3/7 days. Consistency is the issue, not calories.
+
+E. Missed-session recovery
+
+Example:
+	•	You’re 2 sessions behind. Combine Push + light accessories tomorrow instead of skipping again.
+
+Best AI quick actions
+
+Instead of blank chat, add buttons like:
+	•	What should I do today?
+	•	Adjust my workout
+	•	Check my nutrition
+	•	Why am I not progressing?
+	•	Make tomorrow’s plan
+	•	I feel tired today
+
+That will massively improve usage.
+
+Tone of the AI
+
+Should sound like:
+	•	concise
+	•	confident
+	•	data-aware
+	•	coach-like
+
+Not:
+	•	robotic
+	•	overly motivational
+	•	generic
+
+Good example
+
+You’re behind on your weekly workout goal and protein is low today. Do your 45-minute Push session and aim for one more 35g protein meal tonight.
+
+Bad example
+
+Consistency is key. Keep pushing toward your goals and remember to eat healthy foods.
+
+⸻
+
+3. Your killer feature
+
+You need one thing people remember.
+
+The best killer feature for FitLog is:
+
+Auto-Coach Mode
+
+A system that tells the user exactly what to do next based on their real logs.
+
+That means every day the app can say:
+	•	what workout to do
+	•	whether to increase weight
+	•	whether they’re behind on calories/protein
+	•	whether they should deload
+	•	whether recovery is low
+	•	how to adjust if they missed sessions
+
+This is much stronger than “AI chat.”
+
+Your positioning becomes:
+
+FitLog is the workout tracker that tells you exactly what to do next.
+
+That is way better than:
+
+workout logger + meals + AI
+
+Why this is the right killer feature
+
+Because most apps either:
+	•	track
+	•	or coach
+	•	or do meals
+
+Very few make the tracking directly create actionable coaching.
+
+That’s your edge.
+
+⸻
+
+4. What to cut or simplify
+
+To make this stronger, reduce filler.
+
+Cut or simplify:
+	•	generic AI cards with vague advice
+	•	too many dashboard stats
+	•	weak “motivational” text
+	•	any extra menu clutter
+	•	progress charts that don’t affect behavior
+	•	meal features that feel like a separate app
+
+Your app should feel like:
+	•	log fast
+	•	know status
+	•	know what to do next
+	•	see progress
+
+That’s the product.
+
+⸻
+
+5. How to make the workout flow elite
+
+This needs to feel faster than Strong or Notes.
+
+Add these:
+	•	auto-fill last reps/weight
+	•	one-tap set complete
+	•	swipe to complete set
+	•	persistent active workout bar
+	•	quick rest buttons: +30s, Skip, Restart
+	•	next exercise preview
+	•	easy reorder/remove exercise
+	•	finish workout summary with PRs and volume
+
+Ideal flow
+
+User opens app:
+	•	sees Start Push Day
+	•	taps
+	•	first exercise already loaded
+	•	last performance shown
+	•	logs with 1 tap
+	•	rest timer starts automatically
+	•	next exercise is obvious
+
+You want almost zero friction.
+
+⸻
+
+6. How to improve the progress screen
+
+Your progress screen should make users proud.
+
+Sections it should have
+
+A. Weekly adherence
+	•	workouts completed
+	•	protein target days hit
+	•	calorie target days hit
+
+B. Strength trends
+	•	bench up/down
+	•	squat up/down
+	•	pull-up reps up/down
+	•	top 3 improving lifts
+
+C. Body trend
+	•	bodyweight trend
+	•	average weekly change
+	•	optional measurements/photos later
+
+D. Wins
+	•	new PRs
+	•	streak milestones
+	•	consistent weeks
+	•	best training month
+
+E. Coach summary
+	•	You’re progressing well in upper body lifts
+	•	Nutrition consistency is slowing fat loss
+	•	Leg volume is too inconsistent to assess properly
+
+This page should tell a story, not just show data.
+
+⸻
+
+7. Dopamine loops you should add
+
+Keep them premium, not childish.
+
+Good loops:
+	•	streak card
+	•	weekly target completion
+	•	PR popups
+	•	“You’re on track” status changes
+	•	session complete summary
+	•	monthly recap
+	•	consistency badges
+
+Example reward moments:
+	•	New PR on Incline Press
+	•	5 workouts completed this week
+	•	Protein target hit 3 days in a row
+	•	Best month so far
+
+These make people come back.
