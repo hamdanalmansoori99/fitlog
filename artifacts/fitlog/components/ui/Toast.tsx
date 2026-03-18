@@ -1,6 +1,6 @@
 import React, { useEffect, createContext, useContext, useState, useCallback } from "react";
 import { View, Text, StyleSheet, Platform } from "react-native";
-import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeOutDown, Easing } from "react-native-reanimated";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -52,7 +52,7 @@ function ToastItem({ toast, onDone }: { toast: ToastMessage; onDone: (id: string
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(280)}
+      entering={FadeInDown.duration(280).easing(Easing.out(Easing.cubic))}
       exiting={FadeOutDown.duration(200)}
       style={[styles.toast, { backgroundColor: BG[toast.type], bottom: bottomOffset }]}
     >
