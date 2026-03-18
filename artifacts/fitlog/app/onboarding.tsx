@@ -209,6 +209,7 @@ export default function OnboardingScreen() {
         preferredWorkoutDuration: "45",
         experienceLevel: "intermediate",
         coachOnboardingComplete: true,
+        onboardingComplete: true,
       });
     } else if (step < 3) {
       setStep(step + 1);

@@ -223,7 +223,7 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
         </Pressable>
       </View>
       <View style={styles.historyStats}>
-        {workout.durationMinutes && (
+        {!!workout.durationMinutes && (
           <View style={styles.histStat}>
             <Feather name="clock" size={11} color={theme.textMuted} />
             <Text style={[styles.histStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -231,7 +231,7 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
             </Text>
           </View>
         )}
-        {workout.distanceKm && (
+        {!!workout.distanceKm && (
           <View style={styles.histStat}>
             <Feather name="map-pin" size={11} color={theme.textMuted} />
             <Text style={[styles.histStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -239,7 +239,7 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
             </Text>
           </View>
         )}
-        {workout.caloriesBurned && (
+        {!!workout.caloriesBurned && (
           <View style={styles.histStat}>
             <Feather name="zap" size={11} color={theme.textMuted} />
             <Text style={[styles.histStatText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
