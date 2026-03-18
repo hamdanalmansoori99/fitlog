@@ -963,11 +963,11 @@ export default function HomeScreen() {
           <SmartBanner message={activeBanner} onDismiss={dismiss} theme={theme} />
         )}
 
-        {/* ═══ ZONE 2 — TODAY'S FOCUS ═══ */}
+        {/* ═══ ZONE 2 — TODAY'S FOCUS + QUICK ACTIONS + WEIGHT ═══ */}
 
-        <Animated.View entering={FadeInDown.delay(0).duration(200)} style={[styles.section, { marginBottom: 28 }]}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
-            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15, marginBottom: 8 }}>
+        <Animated.View entering={FadeInDown.delay(40).duration(160)} style={[styles.section, { marginBottom: 16, gap: 10 }]}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
               {t("home.todaysWorkout")}
             </Text>
             {hasCoachOnboarding && (
@@ -992,22 +992,15 @@ export default function HomeScreen() {
           ) : (
             <CoachCtaCard theme={theme} />
           )}
-        </Animated.View>
-
-        {/* ═══ ZONE 3 — QUICK ACTIONS + WEIGHT QUICK-ADD ═══ */}
-
-        <Animated.View entering={FadeInDown.delay(40).duration(160)} style={styles.section}>
           <HeroActions theme={theme} />
-          <View style={{ marginTop: 10 }}>
-            <WeightQuickAddRow
-              measurementsData={measurementsData}
-              settings={settingsData}
-              theme={theme}
-            />
-          </View>
+          <WeightQuickAddRow
+            measurementsData={measurementsData}
+            settings={settingsData}
+            theme={theme}
+          />
         </Animated.View>
 
-        {/* ═══ ZONE 4 — NUTRITION + STREAK STRIP ═══ */}
+        {/* ═══ ZONE 3 — NUTRITION + STREAK STRIP ═══ */}
 
         <Animated.View entering={FadeInDown.delay(80).duration(120)} style={styles.section}>
           {mealsData ? (
@@ -1052,9 +1045,9 @@ export default function HomeScreen() {
           )}
         </Animated.View>
 
-        {/* ═══ ZONE 5 — AI COACH CARD ═══ */}
+        {/* ═══ ZONE 4 — AI COACH CARD ═══ */}
 
-        <Animated.View entering={FadeInDown.delay(120).duration(80)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(80).duration(80)} style={styles.section}>
           <CoachCard
             theme={theme}
             teaser={todayRecommendation?.contextSummary}
