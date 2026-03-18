@@ -29,12 +29,13 @@ const ACTIVITY_TYPES = [
   { id: "other", labelKey: "workouts.activityLabelOther", icon: "more-horizontal" as const, color: "textMuted" },
 ];
 
-const MOODS = ["Exhausted", "Tough", "Good", "Great", "Crushing it"];
-const MOOD_ICON_LIST = ["😴", "😤", "🙂", "😁", "🔥"];
-const MOOD_LABEL_KEYS = [
-  "workouts.moodExhausted", "workouts.moodTough", "workouts.moodGood",
-  "workouts.moodGreat", "workouts.moodCrushingIt",
-];
+const MOOD_OPTIONS = [
+  { value: "Exhausted",   icon: "😴", labelKey: "workouts.moodExhausted" },
+  { value: "Tough",       icon: "😤", labelKey: "workouts.moodTough" },
+  { value: "Good",        icon: "🙂", labelKey: "workouts.moodGood" },
+  { value: "Great",       icon: "😁", labelKey: "workouts.moodGreat" },
+  { value: "Crushing it", icon: "🔥", labelKey: "workouts.moodCrushingIt" },
+] as const;
 
 const GYM_EXERCISES = EXERCISES.map((e) => e.name);
 
@@ -812,23 +813,23 @@ export default function LogWorkoutScreen() {
               <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.mood")}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.moodRow}>
-                  {MOODS.map((m, i) => (
+                  {MOOD_OPTIONS.map(opt => (
                     <Pressable
-                      key={m}
-                      onPress={() => setMood(m)}
+                      key={opt.value}
+                      onPress={() => setMood(opt.value)}
                       style={[
                         styles.moodChip,
                         {
-                          backgroundColor: mood === m ? theme.primaryDim : theme.card,
-                          borderColor: mood === m ? theme.primary : theme.border,
+                          backgroundColor: mood === opt.value ? theme.primaryDim : theme.card,
+                          borderColor: mood === opt.value ? theme.primary : theme.border,
                         },
                       ]}
                     >
-                      <Text style={{ fontSize: 18 }}>{MOOD_ICON_LIST[i]}</Text>
+                      <Text style={{ fontSize: 18 }}>{opt.icon}</Text>
                       <Text style={[
                         styles.moodLabel,
-                        { color: mood === m ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium" },
-                      ]}>{t(MOOD_LABEL_KEYS[i])}</Text>
+                        { color: mood === opt.value ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium" },
+                      ]}>{t(opt.labelKey)}</Text>
                     </Pressable>
                   ))}
                 </View>

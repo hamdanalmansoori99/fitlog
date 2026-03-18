@@ -200,9 +200,10 @@ function WeeklyAdherenceGrid({ perDay, theme }: {
         {t("progress.adherenceGridTitle")}
       </Text>
       <View style={{ flexDirection: "row", gap: 4 }}>
-        {sorted.map((day, i) => {
+        {sorted.map((day) => {
           const isToday = day.date === todayStr;
-          const dayLetter = (["sun","mon","tue","wed","thu","fri","sat"] as const).map(k => t(`components.weeklyBarChart.${k}`))[new Date(day.date + "T12:00:00").getDay()];
+          const weekLetters = t("progress.weekDayLetters", { returnObjects: true }) as string[];
+          const dayLetter = weekLetters[(new Date(day.date + "T12:00:00").getDay() + 6) % 7];
           return (
             <View key={day.date} style={{ flex: 1, alignItems: "center", gap: 4 }}>
               <Text style={{
