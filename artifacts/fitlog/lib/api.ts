@@ -201,7 +201,7 @@ export const api = {
 
   // Smart Notifications
   getSmartNotifications: () =>
-    request<{ messages: Array<{ type: string; title: string; body: string }> }>("/notifications/smart-content"),
+    request<{ messages: Array<{ id: string; type: string; title: string; body: string }> }>("/notifications/smart-content"),
 
   // Scan Meal (AI Vision)
   scanMealAnalyze: (body: { imageBase64: string; mimeType?: string }) =>
