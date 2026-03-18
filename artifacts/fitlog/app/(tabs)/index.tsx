@@ -963,9 +963,9 @@ export default function HomeScreen() {
           <SmartBanner message={activeBanner} onDismiss={dismiss} theme={theme} />
         )}
 
-        {/* ═══ ZONE 2 — TODAY'S FOCUS + QUICK ACTIONS + WEIGHT ═══ */}
+        {/* ═══ ZONE 2 — TODAY'S FOCUS ═══ */}
 
-        <Animated.View entering={FadeInDown.delay(40).duration(160)} style={[styles.section, { marginBottom: 16, gap: 10 }]}>
+        <Animated.View entering={FadeInDown.delay(40).duration(160)} style={[styles.section, { marginBottom: 16 }]}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
             <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
               {t("home.todaysWorkout")}
@@ -992,12 +992,6 @@ export default function HomeScreen() {
           ) : (
             <CoachCtaCard theme={theme} />
           )}
-          <HeroActions theme={theme} />
-          <WeightQuickAddRow
-            measurementsData={measurementsData}
-            settings={settingsData}
-            theme={theme}
-          />
         </Animated.View>
 
         {/* ═══ ZONE 3 — NUTRITION + STREAK STRIP ═══ */}
