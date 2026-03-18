@@ -418,7 +418,7 @@ export default function LogWorkoutScreen() {
         ) : (
           <View style={styles.form}>
             {/* Date */}
-            <Input label={t("workouts.date")} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+            <Input label={t("workouts.date")} value={date} onChangeText={setDate} placeholder={t("meals.datePlaceholder")} />
             
             {/* Name (optional, gym required) */}
             {activityType === "gym" && (

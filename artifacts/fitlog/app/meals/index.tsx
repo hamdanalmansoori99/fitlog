@@ -727,7 +727,7 @@ export default function MealsScreen() {
                       <Text style={[styles.mealMacro, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>P: {Math.round(meal.totalProteinG)}g</Text>
                       <Text style={[styles.mealMacro, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>C: {Math.round(meal.totalCarbsG)}g</Text>
                       <Text style={[styles.mealMacro, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>F: {Math.round(meal.totalFatG)}g</Text>
-                      <Text style={[styles.mealMacro, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{meal.foodItems.length} item{meal.foodItems.length !== 1 ? "s" : ""}</Text>
+                      <Text style={[styles.mealMacro, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("meals.itemCount", { count: meal.foodItems.length })}</Text>
                     </View>
                   </Card>
                   </Pressable>
