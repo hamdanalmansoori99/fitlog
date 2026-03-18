@@ -389,12 +389,12 @@ export default function WorkoutsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100 + bottomPad, gap: 0, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
+        contentContainerStyle={{ paddingTop: 8, paddingBottom: 100 + bottomPad, gap: 0, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
         {/* ── ERROR RETRY BANNER ── */}
         {workoutsError && (
-          <View style={{ margin: 16, padding: 14, borderRadius: 12, backgroundColor: theme.danger + "18", borderWidth: 1, borderColor: theme.danger + "40", flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ marginHorizontal: 20, marginVertical: 8, padding: 14, borderRadius: 12, backgroundColor: theme.danger + "18", borderWidth: 1, borderColor: theme.danger + "40", flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Feather name="alert-circle" size={18} color={theme.danger} />
             <Text style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("common.error")}</Text>
             <Pressable onPress={() => { refetchWorkouts(); refetchProfile(); refetchTemplates(); }} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.danger + "25" }}>

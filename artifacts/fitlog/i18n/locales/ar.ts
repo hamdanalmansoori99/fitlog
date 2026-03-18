@@ -1499,6 +1499,7 @@ export default {
       workoutDays: "أيام التمرين",
       workoutsThisMonth: "{{count}} تمرين{{plural}} هذا الشهر",
       loading: "جارٍ التحميل…",
+      noWorkoutsThisDay: "لم يتم تسجيل تمارين في هذا اليوم",
     },
     errorFallback: {
       somethingWentWrong: "حدث خطأ ما",

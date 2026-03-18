@@ -189,7 +189,6 @@ function WeeklyAdherenceGrid({ perDay, theme }: {
   theme: ReturnType<typeof useTheme>["theme"];
 }) {
   const { t } = useTranslation();
-  const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
 
@@ -197,13 +196,13 @@ function WeeklyAdherenceGrid({ perDay, theme }: {
 
   return (
     <View style={{ gap: 10 }}>
-      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11, letterSpacing: 0.5 }}>
-        {t("progress.adherenceGridTitle").toUpperCase()}
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>
+        {t("progress.adherenceGridTitle")}
       </Text>
       <View style={{ flexDirection: "row", gap: 4 }}>
         {sorted.map((day, i) => {
           const isToday = day.date === todayStr;
-          const dayLetter = DAY_LETTERS[new Date(day.date + "T12:00:00").getDay() === 0 ? 6 : new Date(day.date + "T12:00:00").getDay() - 1] || "·";
+          const dayLetter = new Date(day.date + "T12:00:00").toLocaleDateString(dateLocale(), { weekday: "narrow" });
           return (
             <View key={day.date} style={{ flex: 1, alignItems: "center", gap: 4 }}>
               <Text style={{

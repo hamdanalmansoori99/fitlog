@@ -431,8 +431,8 @@ function PRCelebrationBanner({ pr, onDismiss, theme }: {
         <Feather name="award" size={17} color={accent} />
       </View>
       <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 11, gap: 1 }}>
-        <Text style={{ color: accent, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 0.5 }}>
-          {t("home.prBannerTitle").toUpperCase()}
+        <Text style={{ color: accent, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>
+          {t("home.prBannerTitle")}
         </Text>
         <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }} numberOfLines={1}>
           {t("home.prBannerExercise", { exercise: pr.exercise, value: `${pr.weightKg} kg` })}
@@ -489,8 +489,8 @@ function NextStepCard({ todayWorkout, mealsData, streaksData, theme }: {
         <Feather name={icon} size={17} color={accent} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, letterSpacing: 0.5, marginBottom: 1 }}>
-          {t("home.nextStepTitle").toUpperCase()}
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, letterSpacing: 0.5, marginBottom: 1, textTransform: "uppercase" }}>
+          {t("home.nextStepTitle")}
         </Text>
         <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18 }}>
           {message}
@@ -653,7 +653,6 @@ function getWeeklyWorkoutCount(workouts: any[]): number {
   return weekDates.size;
 }
 
-const WEEK_DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 
 function WeeklyProgressCard({
   workouts, targetDays, theme,
@@ -726,7 +725,7 @@ function WeeklyProgressCard({
                 fontFamily: isToday ? "Inter_700Bold" : "Inter_400Regular",
                 fontSize: 10,
               }}>
-                {WEEK_DAY_LETTERS[i]}
+                {new Date(date + "T12:00:00").toLocaleDateString(dateLocale(), { weekday: "narrow" })}
               </Text>
               <View style={{
                 width: 24, height: 24, borderRadius: 12,

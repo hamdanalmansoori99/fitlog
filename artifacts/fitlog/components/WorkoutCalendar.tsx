@@ -6,6 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 import { dateLocale } from "@/lib/rtl";
+import * as Haptics from "expo-haptics";
 
 const DAY_LABEL_KEYS = [
   "components.weeklyBarChart.mon",
@@ -17,10 +18,6 @@ const DAY_LABEL_KEYS = [
   "components.weeklyBarChart.sun",
 ];
 
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
 
 interface WorkoutEntry {
   id: number;
@@ -102,7 +99,9 @@ export function WorkoutCalendar() {
   function handleDayPress(day: number) {
     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const workouts = days[dateStr] ?? [];
-    if (workouts.length === 0) return;
+    const isFuture = dateStr > todayStr;
+    if (isFuture && workouts.length === 0) return;
+    Haptics.impactAsync(workouts.length === 0 ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
     setSelected({ date: dateStr, workouts });
     setDetailModal(true);
   }
@@ -119,7 +118,7 @@ export function WorkoutCalendar() {
         </Pressable>
         <View style={{ alignItems: "center" }}>
           <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-            {MONTH_NAMES[month - 1]} {year}
+            {new Date(year, month - 1, 1).toLocaleDateString(dateLocale(), { month: "long" })} {year}
           </Text>
           {totalWorkouts > 0 && (
             <Text style={{ color: theme.primary, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 1 }}>
@@ -212,17 +211,26 @@ export function WorkoutCalendar() {
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginBottom: 10 }}>
               {selected && new Date(selected.date + "T12:00:00").toLocaleDateString(dateLocale(), { weekday: "long", month: "long", day: "numeric" })}
             </Text>
-            {selected?.workouts.map((w) => (
-              <View key={w.id} style={[s.detailRow, { borderBottomColor: theme.border }]}>
-                <View style={[s.detailDot, { backgroundColor: activityColor(w.activityType, theme) }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{w.name}</Text>
-                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textTransform: "capitalize" }}>
-                    {w.activityType}{w.durationMinutes ? ` · ${w.durationMinutes} min` : ""}
-                  </Text>
-                </View>
+            {selected?.workouts.length === 0 ? (
+              <View style={{ alignItems: "center", paddingVertical: 12, gap: 8 }}>
+                <Feather name="calendar" size={28} color={theme.textMuted} />
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
+                  {t("components.workoutCalendar.noWorkoutsThisDay")}
+                </Text>
               </View>
-            ))}
+            ) : (
+              selected?.workouts.map((w) => (
+                <View key={w.id} style={[s.detailRow, { borderBottomColor: theme.border }]}>
+                  <View style={[s.detailDot, { backgroundColor: activityColor(w.activityType, theme) }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{w.name}</Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textTransform: "capitalize" }}>
+                      {w.activityType}{w.durationMinutes ? ` · ${w.durationMinutes} min` : ""}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
           </View>
         </Pressable>
       </Modal>

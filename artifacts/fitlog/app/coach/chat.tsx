@@ -63,6 +63,7 @@ export default function CoachChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const flatListRef = useRef<FlatList>(null);
@@ -99,6 +100,7 @@ export default function CoachChatScreen() {
   const loadConversation = async () => {
     try {
       setLoading(true);
+      setLoadError(false);
       const data = await api.getCoachConversation();
       setConversationId(data.id);
       const mapped: ChatMessage[] = (data.messages || []).map((m: any) => ({
@@ -109,6 +111,7 @@ export default function CoachChatScreen() {
       setMessages(mapped);
     } catch (err) {
       console.error("Failed to load conversation:", err);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -326,10 +329,32 @@ export default function CoachChatScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color={theme.primary} size="large" />
-          <Text style={[styles.loadingText, { color: theme.textMuted }]}>
+          <View style={{ width: "100%", gap: 12, paddingHorizontal: 16 }}>
+            {[80, 55, 70].map((w, i) => (
+              <View key={i} style={{ flexDirection: i % 2 === 0 ? "row" : "row-reverse", gap: 10, alignItems: "flex-end" }}>
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: theme.card }} />
+                <View style={{ width: `${w}%`, height: 52, borderRadius: 14, backgroundColor: theme.card }} />
+              </View>
+            ))}
+          </View>
+          <Text style={[styles.loadingText, { color: theme.textMuted, marginTop: 20 }]}>
             {t("coach.loadingConversation")}
           </Text>
+        </View>
+      ) : loadError ? (
+        <View style={styles.loadingContainer}>
+          <Feather name="wifi-off" size={40} color={theme.textMuted} />
+          <Text style={[styles.loadingText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            {t("common.networkError")}
+          </Text>
+          <Pressable
+            onPress={loadConversation}
+            style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, backgroundColor: theme.primary, marginTop: 4 }}
+          >
+            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+              {t("common.retry")}
+            </Text>
+          </Pressable>
         </View>
       ) : (
         <KeyboardAvoidingView

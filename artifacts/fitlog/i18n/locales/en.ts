@@ -1573,6 +1573,7 @@ export default {
       workoutDays: "Workout Days",
       workoutsThisMonth: "{{count}} workout{{plural}} this month",
       loading: "Loading…",
+      noWorkoutsThisDay: "No workouts logged on this day",
     },
     errorFallback: {
       somethingWentWrong: "Something went wrong",

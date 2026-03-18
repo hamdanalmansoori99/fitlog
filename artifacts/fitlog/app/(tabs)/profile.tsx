@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
   avatarLetter: { fontSize: 32 },
   userName: { fontSize: 20 },
   userEmail: { fontSize: 14 },
-  sectionTitle: { fontSize: 15, marginBottom: 12 },
+  sectionTitle: { fontSize: 16, marginBottom: 12 },
   fieldGroup: { gap: 12 },
   fieldLabel: { fontSize: 13, marginBottom: 6 },
   row: { flexDirection: "row", gap: 10 },

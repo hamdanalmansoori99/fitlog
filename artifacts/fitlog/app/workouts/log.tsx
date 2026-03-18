@@ -456,14 +456,23 @@ export default function LogWorkoutScreen() {
               <>
                 <ChipGroup
                   label={t("workouts.routeType")}
-                  options={["Road", "Mountain", "Stationary", "Trail"]}
+                  options={[
+                    { value: "Road", label: t("workouts.optRoad") },
+                    { value: "Mountain", label: t("workouts.optMountain") },
+                    { value: "Stationary", label: t("workouts.optStationary") },
+                    { value: "Trail", label: t("workouts.optTrail") },
+                  ]}
                   selected={routeType}
                   onSelect={setRouteType}
                   theme={theme}
                 />
                 <ChipGroup
                   label={t("workouts.intensity")}
-                  options={["Easy", "Moderate", "Hard"]}
+                  options={[
+                    { value: "Easy", label: t("workouts.rpeEasy") },
+                    { value: "Moderate", label: t("workouts.rpeModerate") },
+                    { value: "Hard", label: t("workouts.rpeHard") },
+                  ]}
                   selected={intensity}
                   onSelect={setIntensity}
                   theme={theme}
@@ -473,37 +482,133 @@ export default function LogWorkoutScreen() {
             
             {activityType === "running" && (
               <>
-                <ChipGroup label={t("workouts.terrainLabel")} options={["Road", "Trail", "Treadmill", "Track"]} selected={terrain} onSelect={setTerrain} theme={theme} />
-                <ChipGroup label={t("workouts.intensity")} options={["Easy", "Moderate", "Hard", "Intervals"]} selected={intensity} onSelect={setIntensity} theme={theme} />
+                <ChipGroup
+                  label={t("workouts.terrainLabel")}
+                  options={[
+                    { value: "Road", label: t("workouts.optRoad") },
+                    { value: "Trail", label: t("workouts.optTrail") },
+                    { value: "Treadmill", label: t("workouts.optTreadmill") },
+                    { value: "Track", label: t("workouts.optTrack") },
+                  ]}
+                  selected={terrain}
+                  onSelect={setTerrain}
+                  theme={theme}
+                />
+                <ChipGroup
+                  label={t("workouts.intensity")}
+                  options={[
+                    { value: "Easy", label: t("workouts.rpeEasy") },
+                    { value: "Moderate", label: t("workouts.rpeModerate") },
+                    { value: "Hard", label: t("workouts.rpeHard") },
+                    { value: "Intervals", label: t("workouts.optIntervals") },
+                  ]}
+                  selected={intensity}
+                  onSelect={setIntensity}
+                  theme={theme}
+                />
               </>
             )}
             
             {activityType === "walking" && (
               <>
                 <Input label={t("workouts.stepsOptional")} value={steps} onChangeText={setSteps} placeholder="8000" keyboardType="numeric" />
-                <ChipGroup label={t("workouts.terrainLabel")} options={["Flat", "Hilly", "Treadmill"]} selected={terrain} onSelect={setTerrain} theme={theme} />
-                <ChipGroup label={t("workouts.intensity")} options={["Light", "Moderate", "Brisk"]} selected={intensity} onSelect={setIntensity} theme={theme} />
+                <ChipGroup
+                  label={t("workouts.terrainLabel")}
+                  options={[
+                    { value: "Flat", label: t("workouts.optFlat") },
+                    { value: "Hilly", label: t("workouts.optHilly") },
+                    { value: "Treadmill", label: t("workouts.optTreadmill") },
+                  ]}
+                  selected={terrain}
+                  onSelect={setTerrain}
+                  theme={theme}
+                />
+                <ChipGroup
+                  label={t("workouts.intensity")}
+                  options={[
+                    { value: "Light", label: t("workouts.optLight") },
+                    { value: "Moderate", label: t("workouts.rpeModerate") },
+                    { value: "Brisk", label: t("workouts.optBrisk") },
+                  ]}
+                  selected={intensity}
+                  onSelect={setIntensity}
+                  theme={theme}
+                />
               </>
             )}
             
             {activityType === "tennis" && (
               <>
-                <ChipGroup label={t("workouts.matchType")} options={["Singles", "Doubles"]} selected={matchType} onSelect={setMatchType} theme={theme} />
+                <ChipGroup
+                  label={t("workouts.matchType")}
+                  options={[
+                    { value: "Singles", label: t("workouts.optSingles") },
+                    { value: "Doubles", label: t("workouts.optDoubles") },
+                  ]}
+                  selected={matchType}
+                  onSelect={setMatchType}
+                  theme={theme}
+                />
                 <Input label={t("workouts.setsPlayed")} value={setsPlayed} onChangeText={setSetsPlayed} placeholder="3" keyboardType="numeric" />
-                <ChipGroup label={t("workouts.resultLabel")} options={["Won", "Lost", "Practice"]} selected={result} onSelect={setResult} theme={theme} />
-                <ChipGroup label={t("workouts.intensity")} options={["Easy", "Moderate", "Hard"]} selected={intensity} onSelect={setIntensity} theme={theme} />
+                <ChipGroup
+                  label={t("workouts.resultLabel")}
+                  options={[
+                    { value: "Won", label: t("workouts.optWon") },
+                    { value: "Lost", label: t("workouts.optLost") },
+                    { value: "Practice", label: t("workouts.optPractice") },
+                  ]}
+                  selected={result}
+                  onSelect={setResult}
+                  theme={theme}
+                />
+                <ChipGroup
+                  label={t("workouts.intensity")}
+                  options={[
+                    { value: "Easy", label: t("workouts.rpeEasy") },
+                    { value: "Moderate", label: t("workouts.rpeModerate") },
+                    { value: "Hard", label: t("workouts.rpeHard") },
+                  ]}
+                  selected={intensity}
+                  onSelect={setIntensity}
+                  theme={theme}
+                />
               </>
             )}
             
             {activityType === "swimming" && (
               <>
                 <Input label={t("workouts.lapsLabel")} value={laps} onChangeText={setLaps} placeholder="20" keyboardType="numeric" />
-                <ChipGroup label={t("workouts.strokeLabel")} options={["Freestyle", "Backstroke", "Breaststroke", "Butterfly", "Mixed"]} selected={strokeType} onSelect={setStrokeType} theme={theme} />
+                <ChipGroup
+                  label={t("workouts.strokeLabel")}
+                  options={[
+                    { value: "Freestyle", label: t("workouts.optFreestyle") },
+                    { value: "Backstroke", label: t("workouts.optBackstroke") },
+                    { value: "Breaststroke", label: t("workouts.optBreaststroke") },
+                    { value: "Butterfly", label: t("workouts.optButterfly") },
+                    { value: "Mixed", label: t("workouts.optMixed") },
+                  ]}
+                  selected={strokeType}
+                  onSelect={setStrokeType}
+                  theme={theme}
+                />
               </>
             )}
             
             {activityType === "yoga" && (
-              <ChipGroup label={t("workouts.typeLabel")} options={["Vinyasa", "Hatha", "Yin", "Power", "Stretching", "Other"]} selected={yogaType} onSelect={setYogaType} theme={theme} />
+              <ChipGroup
+                label={t("workouts.typeLabel")}
+                options={[
+                  { value: "Vinyasa", label: t("workouts.optVinyasa") },
+                  { value: "Hatha", label: t("workouts.optHatha") },
+                  { value: "Yin", label: t("workouts.optYin") },
+                  { value: "Power", label: t("workouts.optPower") },
+                  { value: "Stretching", label: t("workouts.optStretching") },
+                  { value: "Other", label: t("workouts.activityLabelOther") },
+                ]}
+                selected={yogaType}
+                onSelect={setYogaType}
+                theme={theme}
+              />
             )}
             
             {activityType === "other" && (
@@ -756,7 +861,11 @@ export default function LogWorkoutScreen() {
 }
 
 function ChipGroup({ label, options, selected, onSelect, theme }: {
-  label: string; options: string[]; selected: string; onSelect: (v: string) => void; theme: any;
+  label: string;
+  options: { value: string; label: string }[];
+  selected: string;
+  onSelect: (v: string) => void;
+  theme: any;
 }) {
   return (
     <View>
@@ -765,20 +874,20 @@ function ChipGroup({ label, options, selected, onSelect, theme }: {
         <View style={{ flexDirection: "row", gap: 8, paddingBottom: 4 }}>
           {options.map(opt => (
             <Pressable
-              key={opt}
-              onPress={() => onSelect(selected === opt ? "" : opt)}
+              key={opt.value}
+              onPress={() => onSelect(selected === opt.value ? "" : opt.value)}
               style={[
                 styles.chip,
                 {
-                  backgroundColor: selected === opt ? theme.primaryDim : theme.card,
-                  borderColor: selected === opt ? theme.primary : theme.border,
+                  backgroundColor: selected === opt.value ? theme.primaryDim : theme.card,
+                  borderColor: selected === opt.value ? theme.primary : theme.border,
                 },
               ]}
             >
               <Text style={{
-                color: selected === opt ? theme.primary : theme.textMuted,
+                color: selected === opt.value ? theme.primary : theme.textMuted,
                 fontFamily: "Inter_500Medium", fontSize: 13,
-              }}>{opt}</Text>
+              }}>{opt.label}</Text>
             </Pressable>
           ))}
         </View>
