@@ -69,13 +69,22 @@ function MacroPill({
   );
 }
 
-function ScanningOverlay({ capturedUri }: { capturedUri: string }) {
+function ScanningOverlay({
+  capturedUri,
+  timedOut,
+  onRetry,
+}: {
+  capturedUri: string;
+  timedOut: boolean;
+  onRetry: () => void;
+}) {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const pulse = useSharedValue(0);
   const scanLine = useSharedValue(0);
 
   useEffect(() => {
+    if (timedOut) return;
     pulse.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) }),
@@ -89,7 +98,7 @@ function ScanningOverlay({ capturedUri }: { capturedUri: string }) {
       -1,
       true
     );
-  }, []);
+  }, [timedOut]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     opacity: interpolate(pulse.value, [0, 1], [0.4, 1]),
@@ -109,28 +118,59 @@ function ScanningOverlay({ capturedUri }: { capturedUri: string }) {
       {capturedUri ? (
         <Image source={{ uri: capturedUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
       ) : null}
-      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.65)" }]} />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.72)" }]} />
       <View style={styles.scanCenter}>
-        <Animated.View style={[styles.scanFrame, pulseStyle]}>
-          <View style={[styles.scanCorner, styles.scanCornerTL, { borderColor: theme.primary }]} />
-          <View style={[styles.scanCorner, styles.scanCornerTR, { borderColor: theme.primary }]} />
-          <View style={[styles.scanCorner, styles.scanCornerBL, { borderColor: theme.primary }]} />
-          <View style={[styles.scanCorner, styles.scanCornerBR, { borderColor: theme.primary }]} />
-          <View style={styles.scanLineContainer}>
-            <Animated.View
-              style={[styles.scanLine, scanLineStyle, { backgroundColor: theme.primary + "cc" }]}
-            />
-          </View>
-        </Animated.View>
-        <View style={styles.scanTextRow}>
-          <ActivityIndicator color={theme.primary} size="small" />
-          <Text style={[styles.scanningText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
-            {t("scan.analyzing")}
-          </Text>
-        </View>
-        <Text style={[styles.scanSubText, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" }]}>
-          {t("scan.analyzingSubtitle")}
-        </Text>
+        {timedOut ? (
+          <>
+            <View style={[styles.scanFrame, { borderColor: "rgba(255,255,255,0.2)" }]}>
+              <Feather name="clock" size={40} color="rgba(255,255,255,0.5)" />
+            </View>
+            <Text style={[styles.scanningText, { color: "#fff", fontFamily: "Inter_600SemiBold", marginTop: 20, textAlign: "center" }]}>
+              {t("scan.analyzeTimedOut")}
+            </Text>
+            <Text style={[styles.scanSubText, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular", textAlign: "center" }]}>
+              {t("scan.analyzeTimedOutSub")}
+            </Text>
+            <Pressable
+              onPress={onRetry}
+              style={({ pressed }) => [
+                styles.retryBtn,
+                { backgroundColor: theme.primary, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Feather name="refresh-cw" size={16} color="#000" />
+              <Text style={{ color: "#000", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                {t("scan.retryAnalysis")}
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Animated.View style={[styles.scanFrame, pulseStyle]}>
+              <View style={[styles.scanCorner, styles.scanCornerTL, { borderColor: theme.primary }]} />
+              <View style={[styles.scanCorner, styles.scanCornerTR, { borderColor: theme.primary }]} />
+              <View style={[styles.scanCorner, styles.scanCornerBL, { borderColor: theme.primary }]} />
+              <View style={[styles.scanCorner, styles.scanCornerBR, { borderColor: theme.primary }]} />
+              <View style={styles.scanLineContainer}>
+                <Animated.View
+                  style={[styles.scanLine, scanLineStyle, { backgroundColor: theme.primary + "cc" }]}
+                />
+              </View>
+            </Animated.View>
+            <View style={styles.scanTextRow}>
+              <ActivityIndicator color={theme.primary} size="small" />
+              <Text style={[styles.scanningText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
+                {t("scan.analyzing")}
+              </Text>
+            </View>
+            <Text style={[styles.scanSubText, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" }]}>
+              {t("scan.analyzingSubtitle")}
+            </Text>
+            <Text style={[styles.scanHintText, { color: "rgba(255,255,255,0.4)", fontFamily: "Inter_400Regular" }]}>
+              {t("scan.analyzingHint")}
+            </Text>
+          </>
+        )}
       </View>
     </Animated.View>
   );
@@ -236,6 +276,8 @@ export default function ScanScreen() {
   const [category, setCategory] = useState<MealCategory>("Lunch");
   const [editingItem, setEditingItem] = useState<ScanMealItem | null>(null);
   const [isLogging, setIsLogging] = useState(false);
+  const [scanTimedOut, setScanTimedOut] = useState(false);
+  const clientTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const captureButtonScale = useSharedValue(1);
   const captureStyle = useAnimatedStyle(() => ({
@@ -272,6 +314,12 @@ export default function ScanScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
+    setScanTimedOut(false);
+
+    if (clientTimeoutRef.current) {
+      clearTimeout(clientTimeoutRef.current);
+    }
+
     try {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.55,
@@ -294,7 +342,24 @@ export default function ScanScreen() {
         }
       }
 
-      const result = await api.scanMealAnalyze({ imageBase64: base64Data, mimeType: "image/jpeg" });
+      const CLIENT_TIMEOUT_MS = 25000;
+
+      const clientTimeoutPromise = new Promise<never>((_, reject) => {
+        clientTimeoutRef.current = setTimeout(() => {
+          setScanTimedOut(true);
+          reject(new Error("CLIENT_TIMEOUT"));
+        }, CLIENT_TIMEOUT_MS);
+      });
+
+      const result = await Promise.race([
+        api.scanMealAnalyze({ imageBase64: base64Data, mimeType: "image/jpeg" }),
+        clientTimeoutPromise,
+      ]);
+
+      if (clientTimeoutRef.current) {
+        clearTimeout(clientTimeoutRef.current);
+        clientTimeoutRef.current = null;
+      }
 
       setItems(result.items);
       setTotals(result.totals);
@@ -305,7 +370,22 @@ export default function ScanScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (err: any) {
+      if (clientTimeoutRef.current) {
+        clearTimeout(clientTimeoutRef.current);
+        clientTimeoutRef.current = null;
+      }
       console.error("Scan error:", err);
+      if (err?.message === "CLIENT_TIMEOUT") {
+        return;
+      }
+      const isServerTimeout =
+        err?.status === 504 ||
+        (typeof err?.message === "string" && err.message.includes("timed out"));
+      if (isServerTimeout) {
+        setScanTimedOut(true);
+        return;
+      }
+      setScanTimedOut(false);
       setScreenState("camera");
       showToast(t("scan.analyzeFailed"), "error");
     }
@@ -359,6 +439,11 @@ export default function ScanScreen() {
     setItems(newItems);
     recalcTotals(newItems);
   };
+
+  const handleRetry = useCallback(() => {
+    setScanTimedOut(false);
+    setScreenState("camera");
+  }, []);
 
   if (!permission) {
     return (
@@ -445,7 +530,7 @@ export default function ScanScreen() {
       )}
 
       {screenState === "scanning" && (
-        <ScanningOverlay capturedUri={capturedUri} />
+        <ScanningOverlay capturedUri={capturedUri} timedOut={scanTimedOut} onRetry={handleRetry} />
       )}
 
       {screenState === "results" && (
@@ -806,6 +891,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     maxWidth: 220,
+    marginTop: 6,
+  },
+  scanHintText: {
+    fontSize: 11,
+    textAlign: "center",
+    maxWidth: 200,
+    marginTop: 10,
+  },
+  retryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 24,
+    minHeight: 44,
   },
   resultImageContainer: {
     height: 200,

@@ -17,7 +17,9 @@ router.post("/analyze", requireAuth, async (req, res) => {
     const validMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     const safeMimeType = validMimeTypes.includes(mimeType) ? mimeType : "image/jpeg";
 
-    const response = await anthropic.messages.create({
+    const ANALYZE_TIMEOUT_MS = 20000;
+
+    const analysisPromise = anthropic.messages.create({
       model: "claude-haiku-4-5",
       max_tokens: 1024,
       messages: [
@@ -68,6 +70,12 @@ Respond ONLY with a valid JSON object in this exact format (no markdown, no extr
       ],
     });
 
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("ANALYZE_TIMEOUT")), ANALYZE_TIMEOUT_MS)
+    );
+
+    const response = await Promise.race([analysisPromise, timeoutPromise]);
+
     const content = response.content[0];
     if (content.type !== "text") {
       throw new Error("Unexpected response type from AI");
@@ -113,9 +121,13 @@ Respond ONLY with a valid JSON object in this exact format (no markdown, no extr
         fatG: Math.round(totals.fatG * 10) / 10,
       },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Scan meal analyze error:", err);
-    res.status(500).json({ error: "Failed to analyze meal image" });
+    if (err?.message === "ANALYZE_TIMEOUT") {
+      res.status(504).json({ error: "Analysis timed out" });
+    } else {
+      res.status(500).json({ error: "Failed to analyze meal image" });
+    }
   }
 });
 
