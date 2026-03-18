@@ -2,13 +2,21 @@ import { useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "@/lib/api";
 import { sendWebNotification, hasNotificationPermission } from "@/lib/notifications";
+import { useAuthStore } from "@/store/authStore";
 import type { NotifType } from "@/store/notificationStore";
 
-const LAST_FETCH_KEY = "smart-notif-last-fetch";
-const CACHE_KEY = "smart-notif-cache";
-const DISMISSED_KEY_PREFIX = "smart-notif-dismissed:";
 const FETCH_INTERVAL_MS = 4 * 60 * 60 * 1000;
 const DISMISS_TTL_MS = 24 * 60 * 60 * 1000;
+
+function lastFetchKey(userId: number) {
+  return `smart-notif:${userId}:last-fetch`;
+}
+function cacheKey(userId: number) {
+  return `smart-notif:${userId}:cache`;
+}
+function dismissKey(userId: number, messageId: string) {
+  return `smart-notif:${userId}:dismissed:${messageId}`;
+}
 
 export interface SmartMessage {
   id: string;
@@ -17,23 +25,18 @@ export interface SmartMessage {
   body: string;
 }
 
-async function isDismissed(messageId: string): Promise<boolean> {
-  const raw = await AsyncStorage.getItem(`${DISMISSED_KEY_PREFIX}${messageId}`);
+async function isDismissed(userId: number, messageId: string): Promise<boolean> {
+  const raw = await AsyncStorage.getItem(dismissKey(userId, messageId));
   if (!raw) return false;
-  const dismissedAt = parseInt(raw, 10);
-  return Date.now() - dismissedAt < DISMISS_TTL_MS;
+  return Date.now() - parseInt(raw, 10) < DISMISS_TTL_MS;
 }
 
-async function setDismissed(messageId: string): Promise<void> {
-  await AsyncStorage.setItem(
-    `${DISMISSED_KEY_PREFIX}${messageId}`,
-    String(Date.now())
-  );
-}
-
-async function findActiveBanner(messages: SmartMessage[]): Promise<SmartMessage | null> {
+async function findActiveBanner(
+  userId: number,
+  messages: SmartMessage[]
+): Promise<SmartMessage | null> {
   for (const msg of messages) {
-    if (!(await isDismissed(msg.id))) {
+    if (!(await isDismissed(userId, msg.id))) {
       return msg;
     }
   }
@@ -41,27 +44,37 @@ async function findActiveBanner(messages: SmartMessage[]): Promise<SmartMessage 
 }
 
 export function useSmartNotifications() {
+  const { user } = useAuthStore();
+  const userId = user?.id as number | undefined;
   const [activeBanner, setActiveBanner] = useState<SmartMessage | null>(null);
 
   useEffect(() => {
+    if (!userId) return;
     let cancelled = false;
 
     async function load() {
       try {
         const now = Date.now();
-        const lastFetchRaw = await AsyncStorage.getItem(LAST_FETCH_KEY);
+        const lastFetchRaw = await AsyncStorage.getItem(lastFetchKey(userId!));
         const lastFetch = lastFetchRaw ? parseInt(lastFetchRaw, 10) : 0;
         const needsFetch = now - lastFetch > FETCH_INTERVAL_MS;
 
         let messages: SmartMessage[] = [];
 
         if (needsFetch) {
-          const data = await api.getSmartNotifications();
-          messages = (data.messages || []) as SmartMessage[];
-          await AsyncStorage.setItem(LAST_FETCH_KEY, String(now));
-          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(messages));
+          try {
+            const data = await api.getSmartNotifications();
+            messages = (data.messages || []) as SmartMessage[];
+            await AsyncStorage.setItem(lastFetchKey(userId!), String(now));
+            await AsyncStorage.setItem(cacheKey(userId!), JSON.stringify(messages));
+          } catch {
+            const cached = await AsyncStorage.getItem(cacheKey(userId!));
+            if (cached) {
+              messages = JSON.parse(cached) as SmartMessage[];
+            }
+          }
         } else {
-          const cached = await AsyncStorage.getItem(CACHE_KEY);
+          const cached = await AsyncStorage.getItem(cacheKey(userId!));
           if (cached) {
             messages = JSON.parse(cached) as SmartMessage[];
           }
@@ -69,7 +82,7 @@ export function useSmartNotifications() {
 
         if (cancelled) return;
 
-        const banner = await findActiveBanner(messages);
+        const banner = await findActiveBanner(userId!, messages);
         if (cancelled) return;
 
         setActiveBanner(banner);
@@ -88,13 +101,13 @@ export function useSmartNotifications() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userId]);
 
   const dismiss = useCallback(async () => {
-    if (!activeBanner) return;
-    await setDismissed(activeBanner.id);
+    if (!activeBanner || !userId) return;
+    await AsyncStorage.setItem(dismissKey(userId, activeBanner.id), String(Date.now()));
     setActiveBanner(null);
-  }, [activeBanner]);
+  }, [activeBanner, userId]);
 
   return { activeBanner, dismiss };
 }
