@@ -154,13 +154,97 @@ function DonutChart({ data }: { data: { label: string; value: number; color: str
   );
 }
 
-function StreakCard({ icon, value, label, color }: { icon: keyof typeof Feather.glyphMap; value: number; label: string; color: string }) {
+const STREAK_MILESTONES_PROG = [3, 7, 14, 30, 60, 100];
+function nextStreakMilestoneProg(current: number): number | null {
+  return STREAK_MILESTONES_PROG.find(m => m > current) ?? null;
+}
+
+function StreakCard({ icon, value, label, color, showNextMilestone = false }: {
+  icon: keyof typeof Feather.glyphMap;
+  value: number;
+  label: string;
+  color: string;
+  showNextMilestone?: boolean;
+}) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
+  const nextMilestone = showNextMilestone ? nextStreakMilestoneProg(value) : null;
+  const daysToNext = nextMilestone != null ? nextMilestone - value : null;
   return (
     <View style={[styles.streakCard, { backgroundColor: color + "15", borderColor: color + "40" }]}>
       <Feather name={icon} size={22} color={color} />
       <Text style={{ color, fontFamily: "Inter_700Bold", fontSize: 28 }}>{value}</Text>
       <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, textAlign: "center" }}>{label}</Text>
+      {showNextMilestone && daysToNext != null && value > 0 && (
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 9, textAlign: "center", marginTop: 2 }}>
+          {t("progress.streakNextIn", { count: daysToNext })}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function WeeklyAdherenceGrid({ perDay, theme }: {
+  perDay: { date: string; workout: boolean; meal: boolean; hydration: boolean }[];
+  theme: ReturnType<typeof useTheme>["theme"];
+}) {
+  const { t } = useTranslation();
+  const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+
+  const sorted = [...perDay].sort((a, b) => a.date.localeCompare(b.date));
+
+  return (
+    <View style={{ gap: 10 }}>
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11, letterSpacing: 0.5 }}>
+        {t("progress.adherenceGridTitle").toUpperCase()}
+      </Text>
+      <View style={{ flexDirection: "row", gap: 4 }}>
+        {sorted.map((day, i) => {
+          const isToday = day.date === todayStr;
+          const dayLetter = DAY_LETTERS[new Date(day.date + "T12:00:00").getDay() === 0 ? 6 : new Date(day.date + "T12:00:00").getDay() - 1] || "·";
+          return (
+            <View key={day.date} style={{ flex: 1, alignItems: "center", gap: 4 }}>
+              <Text style={{
+                color: isToday ? theme.text : theme.textMuted,
+                fontFamily: isToday ? "Inter_700Bold" : "Inter_400Regular",
+                fontSize: 9,
+              }}>
+                {dayLetter}
+              </Text>
+              <View style={{
+                width: 20, height: 20, borderRadius: 10,
+                backgroundColor: day.workout ? theme.primary : "transparent",
+                borderWidth: 1.5,
+                borderColor: day.workout ? theme.primary : theme.border,
+                alignItems: "center", justifyContent: "center",
+              }}>
+                {day.workout && <Feather name="activity" size={10} color="#0f0f1a" />}
+              </View>
+              <View style={{
+                width: 20, height: 20, borderRadius: 10,
+                backgroundColor: day.meal ? (theme.warning || "#ffab40") : "transparent",
+                borderWidth: 1.5,
+                borderColor: day.meal ? (theme.warning || "#ffab40") : theme.border,
+                alignItems: "center", justifyContent: "center",
+              }}>
+                {day.meal && <Feather name="coffee" size={10} color="#0f0f1a" />}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.primary }} />
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("progress.workoutAdherence")}</Text>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.warning || "#ffab40" }} />
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("progress.mealAdherence")}</Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -228,6 +312,7 @@ export default function ProgressScreen() {
   const { data: nutritionStats, isLoading: nutritionLoading, isError: nutritionError, refetch: refetchNutrition } = useQuery({ queryKey: ["nutritionStats"], queryFn: api.getNutritionStats });
   const { data: streaks, isLoading: streaksLoading, isError: streaksError, refetch: refetchStreaks2 } = useQuery({ queryKey: ["streaks"], queryFn: api.getStreaks });
   const { data: records, isLoading: recordsLoading } = useQuery({ queryKey: ["records"], queryFn: api.getPersonalRecords });
+  const { data: achievementsData } = useQuery({ queryKey: ["achievements"], queryFn: api.getAchievements, staleTime: 300000 });
   const { data: measurements, isLoading: measurementsLoading } = useQuery({ queryKey: ["measurements", measureDays], queryFn: () => api.getMeasurements(measureDays) });
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
   const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, staleTime: 60000 });
@@ -462,9 +547,26 @@ export default function ProgressScreen() {
             </View>
           ) : (
             <View style={styles.streaksRow}>
-              <StreakCard icon="zap" value={streaks?.currentWorkoutStreak || 0} label={t("progress.workoutStreak")} color={theme.primary} />
+              <StreakCard icon="zap" value={streaks?.currentWorkoutStreak || 0} label={t("progress.workoutStreak")} color={theme.primary} showNextMilestone />
               <StreakCard icon="award" value={streaks?.longestWorkoutStreak || 0} label={t("progress.longestStreak")} color={theme.warning} />
-              <StreakCard icon="coffee" value={streaks?.currentMealStreak || 0} label={t("progress.mealStreak")} color={theme.pink} />
+              <StreakCard icon="coffee" value={streaks?.currentMealStreak || 0} label={t("progress.mealStreak")} color={theme.pink} showNextMilestone />
+            </View>
+          )}
+
+          {/* ── WEEKLY ADHERENCE GRID ── */}
+          {achievementsData?.weeklyScore?.perDay?.length > 0 && (
+            <View style={{
+              backgroundColor: theme.card,
+              borderRadius: 16,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: theme.border,
+              marginTop: 12,
+            }}>
+              <WeeklyAdherenceGrid
+                perDay={achievementsData.weeklyScore.perDay}
+                theme={theme}
+              />
             </View>
           )}
         </Animated.View>
@@ -909,14 +1011,28 @@ export default function ProgressScreen() {
                     displayValue = `${m}:${s.toString().padStart(2, "0")} /mi`;
                   }
                 }
+                const exerciseName = r.label?.replace(/^Best /, "") || "";
+                const isRecentPR = achievementsData?.recentPRs?.some(
+                  (p: any) => p.exercise?.toLowerCase() === exerciseName.toLowerCase()
+                ) ?? false;
+                const prAccent = isRecentPR ? (theme.warning || "#ffab40") : theme.primary;
                 return (
-                <Card key={i} style={styles.recordCard}>
-                  <View style={[styles.recordIcon, { backgroundColor: theme.primary + "20" }]}>
-                    <Feather name="award" size={18} color={theme.primary} />
+                <Card key={i} style={[styles.recordCard, isRecentPR && { borderColor: prAccent + "50", borderWidth: 1 }]}>
+                  <View style={[styles.recordIcon, { backgroundColor: prAccent + "20" }]}>
+                    <Feather name="award" size={18} color={prAccent} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.recordLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
-                    <Text style={[styles.recordValue, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{displayValue}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={[styles.recordLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
+                      {isRecentPR && (
+                        <View style={{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, backgroundColor: prAccent + "25" }}>
+                          <Text style={{ color: prAccent, fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 0.3 }}>
+                            {t("progress.prRecentBadge")}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.recordValue, { color: isRecentPR ? prAccent : theme.text, fontFamily: "Inter_700Bold" }]}>{displayValue}</Text>
                   </View>
                   {r.date && (
                     <Text style={[styles.recordDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
