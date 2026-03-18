@@ -90,6 +90,7 @@ interface DayCardProps {
   isLogged: boolean;
   loggedCalories: number;
   loggedMealsCount: number;
+  loggedMeals: any[];
   onLog: (meal: PlannedMeal, date: string) => void;
   loggingId: string | null;
   onRegenerate: (date: string) => void;
@@ -99,7 +100,7 @@ interface DayCardProps {
 }
 
 function DayCard({
-  day, isLogged, loggedCalories, loggedMealsCount,
+  day, isLogged, loggedCalories, loggedMealsCount, loggedMeals,
   onLog, loggingId, onRegenerate, isRegenerating, theme, t,
 }: DayCardProps) {
   const [open, setOpen] = useState(
@@ -132,22 +133,24 @@ function DayCard({
               <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>{t("meals.loggedBadge")}</Text>
             </View>
           )}
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation();
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onRegenerate(day.date);
-            }}
-            disabled={isRegenerating}
-            hitSlop={8}
-            style={{ padding: 4 }}
-          >
-            {isRegenerating ? (
-              <ActivityIndicator size={14} color={theme.secondary} />
-            ) : (
-              <Feather name="refresh-cw" size={14} color={theme.textMuted} />
-            )}
-          </Pressable>
+          {!isLogged && (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onRegenerate(day.date);
+              }}
+              disabled={isRegenerating}
+              hitSlop={8}
+              style={{ padding: 4 }}
+            >
+              {isRegenerating ? (
+                <ActivityIndicator size={14} color={theme.secondary} />
+              ) : (
+                <Feather name="refresh-cw" size={14} color={theme.textMuted} />
+              )}
+            </Pressable>
+          )}
         </View>
         <Feather
           name={open ? "chevron-up" : "chevron-down"}
@@ -159,16 +162,39 @@ function DayCard({
 
       {open && (
         <View style={{ paddingHorizontal: 16, paddingBottom: 12, gap: 4, paddingTop: 8 }}>
-          {day.meals.map((meal, i) => (
-            <MealRow
-              key={i}
-              meal={meal}
-              date={day.date}
-              onLog={onLog}
-              loggingId={loggingId}
-              theme={theme}
-            />
-          ))}
+          {isLogged ? (
+            loggedMeals.map((loggedMeal: any, i: number) => {
+              const accent = CATEGORY_COLORS[loggedMeal.category] ?? theme.primary;
+              return (
+                <View key={i} style={[styles.mealRow, { borderColor: theme.border }]}>
+                  <View style={[styles.catDot, { backgroundColor: accent }]} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>
+                      {loggedMeal.name}
+                    </Text>
+                    <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
+                      <Text style={{ color: accent, fontFamily: "Inter_500Medium", fontSize: 11 }}>{loggedMeal.totalCalories} kcal</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>P {loggedMeal.totalProteinG}g</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>C {loggedMeal.totalCarbsG}g</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>F {loggedMeal.totalFatG}g</Text>
+                    </View>
+                  </View>
+                  <Feather name="check-circle" size={16} color={theme.primary} />
+                </View>
+              );
+            })
+          ) : (
+            day.meals.map((meal, i) => (
+              <MealRow
+                key={i}
+                meal={meal}
+                date={day.date}
+                onLog={onLog}
+                loggingId={loggingId}
+                theme={theme}
+              />
+            ))
+          )}
         </View>
       )}
     </Card>
@@ -297,7 +323,7 @@ export default function WeeklyPlanScreen() {
   const { data: logsPerDay } = useQuery({
     queryKey: ["weeklyMealLogs", today],
     queryFn: async () => {
-      const results: Record<string, { count: number; calories: number }> = {};
+      const results: Record<string, { count: number; calories: number; meals: any[] }> = {};
       await Promise.all(
         sevenDays.map(async (date) => {
           try {
@@ -306,9 +332,10 @@ export default function WeeklyPlanScreen() {
             results[date] = {
               count: meals.length,
               calories: Math.round(data?.dailyTotals?.calories ?? meals.reduce((s: number, m: any) => s + (m.totalCalories ?? 0), 0)),
+              meals,
             };
           } catch {
-            results[date] = { count: 0, calories: 0 };
+            results[date] = { count: 0, calories: 0, meals: [] };
           }
         })
       );
@@ -474,6 +501,7 @@ export default function WeeklyPlanScreen() {
                 isLogged={!!logs && logs.count > 0}
                 loggedCalories={logs?.calories ?? 0}
                 loggedMealsCount={logs?.count ?? 0}
+                loggedMeals={logs?.meals ?? []}
                 onLog={handleLogMeal}
                 loggingId={loggingId}
                 onRegenerate={handleRegenerateDay}
