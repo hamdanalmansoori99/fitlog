@@ -19,22 +19,29 @@ import { calculateStrengthTarget } from "@/lib/progressionEngine";
 import { EXERCISES } from "@/lib/exerciseLibrary";
 
 const ACTIVITY_TYPES = [
-  { id: "cycling", label: "Cycling", icon: "wind" as const, color: "secondary" },
-  { id: "running", label: "Running", icon: "activity" as const, color: "primary" },
-  { id: "walking", label: "Walking", icon: "navigation" as const, color: "cyan" },
-  { id: "gym", label: "Gym / Weights", icon: "zap" as const, color: "purple" },
-  { id: "swimming", label: "Swimming", icon: "droplet" as const, color: "secondary" },
-  { id: "tennis", label: "Tennis", icon: "circle" as const, color: "warning" },
-  { id: "yoga", label: "Yoga", icon: "heart" as const, color: "pink" },
-  { id: "other", label: "Other", icon: "more-horizontal" as const, color: "textMuted" },
+  { id: "cycling", labelKey: "workouts.activityLabelCycling", icon: "wind" as const, color: "secondary" },
+  { id: "running", labelKey: "workouts.activityLabelRunning", icon: "activity" as const, color: "primary" },
+  { id: "walking", labelKey: "workouts.activityLabelWalking", icon: "navigation" as const, color: "cyan" },
+  { id: "gym", labelKey: "workouts.activityLabelGym", icon: "zap" as const, color: "purple" },
+  { id: "swimming", labelKey: "workouts.activityLabelSwimming", icon: "droplet" as const, color: "secondary" },
+  { id: "tennis", labelKey: "workouts.activityLabelTennis", icon: "circle" as const, color: "warning" },
+  { id: "yoga", labelKey: "workouts.activityLabelYoga", icon: "heart" as const, color: "pink" },
+  { id: "other", labelKey: "workouts.activityLabelOther", icon: "more-horizontal" as const, color: "textMuted" },
 ];
 
 const MOODS = ["Exhausted", "Tough", "Good", "Great", "Crushing it"];
-const MOOD_ICONS = ["😴", "😤", "🙂", "😁", "🔥"];
+const MOOD_ICON_LIST = ["😴", "😤", "🙂", "😁", "🔥"];
+const MOOD_LABEL_KEYS = [
+  "workouts.moodExhausted", "workouts.moodTough", "workouts.moodGood",
+  "workouts.moodGreat", "workouts.moodCrushingIt",
+];
 
 const GYM_EXERCISES = EXERCISES.map((e) => e.name);
 
-const RPE_LABELS = ["Very Easy", "Easy", "Moderate", "Hard", "Max Effort"];
+const RPE_LABEL_KEYS = [
+  "workouts.rpeVeryEasy", "workouts.rpeEasy", "workouts.rpeModerate",
+  "workouts.rpeHard", "workouts.rpeMaxEffort",
+];
 const RPE_VALUES = [2, 4, 6, 8, 10];
 const RPE_EMOJIS = ["🟢", "🟡", "🟠", "🔴", "🔥"];
 
@@ -276,7 +283,8 @@ export default function LogWorkoutScreen() {
   };
   
   if (success) {
-    const activityLabel = ACTIVITY_TYPES.find(a => a.id === activityType)?.label || "workout";
+    const activityType_ = ACTIVITY_TYPES.find(a => a.id === activityType);
+    const activityLabel = activityType_ ? t(activityType_.labelKey) : t("workouts.activityLabelOther");
     const completedExercises = exercises.filter(e => e.name && e.sets.some(s => s.reps || s.weight));
     return (
       <View style={[styles.successScreen, { backgroundColor: theme.background }]}>
@@ -399,7 +407,7 @@ export default function LogWorkoutScreen() {
                   <Feather name={act.icon} size={28} color={(theme as any)[act.color]} />
                 </View>
                 <Text style={[styles.actLabel, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                  {act.label}
+                  {t(act.labelKey)}
                 </Text>
               </Pressable>
             ))}
@@ -411,10 +419,10 @@ export default function LogWorkoutScreen() {
             
             {/* Name (optional, gym required) */}
             {activityType === "gym" && (
-              <Input label={t("workouts.workoutName")} value={workoutName} onChangeText={setWorkoutName} placeholder="e.g. Push Day" />
+              <Input label={t("workouts.workoutName")} value={workoutName} onChangeText={setWorkoutName} placeholder={t("workouts.gymNameExample")} />
             )}
             {activityType === "other" && (
-              <Input label={t("workouts.activityName")} value={workoutName} onChangeText={setWorkoutName} placeholder="e.g. Rock Climbing" />
+              <Input label={t("workouts.activityName")} value={workoutName} onChangeText={setWorkoutName} placeholder={t("workouts.activityNameExample")} />
             )}
             
             {/* Duration */}
@@ -672,7 +680,7 @@ export default function LogWorkoutScreen() {
                             >
                               <Text style={{ fontSize: 14 }}>{RPE_EMOJIS[rpeIdx]}</Text>
                               <Text style={{ color: selected ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 9, textAlign: "center" }}>
-                                {RPE_LABELS[rpeIdx]}
+                                {t(RPE_LABEL_KEYS[rpeIdx])}
                               </Text>
                             </Pressable>
                           );
@@ -709,11 +717,11 @@ export default function LogWorkoutScreen() {
                         },
                       ]}
                     >
-                      <Text style={{ fontSize: 18 }}>{MOOD_ICONS[i]}</Text>
+                      <Text style={{ fontSize: 18 }}>{MOOD_ICON_LIST[i]}</Text>
                       <Text style={[
                         styles.moodLabel,
                         { color: mood === m ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium" },
-                      ]}>{m}</Text>
+                      ]}>{t(MOOD_LABEL_KEYS[i])}</Text>
                     </Pressable>
                   ))}
                 </View>

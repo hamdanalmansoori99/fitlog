@@ -16,18 +16,22 @@ import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 
 const ACTIVITY_TYPES = [
-  { id: "cycling", label: "Cycling", icon: "wind" as const },
-  { id: "running", label: "Running", icon: "activity" as const },
-  { id: "walking", label: "Walking", icon: "navigation" as const },
-  { id: "gym", label: "Gym / Weights", icon: "zap" as const },
-  { id: "swimming", label: "Swimming", icon: "droplet" as const },
-  { id: "tennis", label: "Tennis", icon: "circle" as const },
-  { id: "yoga", label: "Yoga", icon: "heart" as const },
-  { id: "other", label: "Other", icon: "more-horizontal" as const },
+  { id: "cycling", labelKey: "workouts.activityLabelCycling", icon: "wind" as const },
+  { id: "running", labelKey: "workouts.activityLabelRunning", icon: "activity" as const },
+  { id: "walking", labelKey: "workouts.activityLabelWalking", icon: "navigation" as const },
+  { id: "gym", labelKey: "workouts.activityLabelGym", icon: "zap" as const },
+  { id: "swimming", labelKey: "workouts.activityLabelSwimming", icon: "droplet" as const },
+  { id: "tennis", labelKey: "workouts.activityLabelTennis", icon: "circle" as const },
+  { id: "yoga", labelKey: "workouts.activityLabelYoga", icon: "heart" as const },
+  { id: "other", labelKey: "workouts.activityLabelOther", icon: "more-horizontal" as const },
 ];
 
 const MOODS = ["Exhausted", "Tough", "Good", "Great", "Crushing it"];
-const MOOD_ICONS = ["😴", "😤", "🙂", "😁", "🔥"];
+const MOOD_ICON_LIST = ["😴", "😤", "🙂", "😁", "🔥"];
+const MOOD_LABEL_KEYS = [
+  "workouts.moodExhausted", "workouts.moodTough", "workouts.moodGood",
+  "workouts.moodGreat", "workouts.moodCrushingIt",
+];
 
 export default function EditWorkoutScreen() {
   const { t } = useTranslation();
@@ -195,7 +199,7 @@ export default function EditWorkoutScreen() {
                 >
                   <Feather name={a.icon} size={14} color={activityType === a.id ? theme.primary : theme.textMuted} />
                   <Text style={{ color: activityType === a.id ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                    {a.label}
+                    {t(a.labelKey)}
                   </Text>
                 </Pressable>
               ))}
@@ -249,9 +253,9 @@ export default function EditWorkoutScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ fontSize: 16 }}>{MOOD_ICONS[idx]}</Text>
+                  <Text style={{ fontSize: 16 }}>{MOOD_ICON_LIST[idx]}</Text>
                   <Text style={{ color: mood === idx ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
-                    {m}
+                    {t(MOOD_LABEL_KEYS[idx])}
                   </Text>
                 </Pressable>
               ))}

@@ -29,14 +29,14 @@ function buildHeroSummary(thisWeek: any, t: (k: string, opts?: any) => string): 
   const proteinPct = proteinGoal > 0 ? Math.round((protein / proteinGoal) * 100) : null;
 
   const parts: string[] = [];
-  if (workouts > 0) parts.push(`trained ${workouts} time${workouts !== 1 ? "s" : ""}`);
-  if (kcal > 0) parts.push(`averaged ${Math.round(kcal)} kcal/day`);
-  if (proteinPct != null) parts.push(`hit ${proteinPct}% of your protein goal`);
+  if (workouts > 0) parts.push(t("weeklyReport.trainedCount", { count: workouts }));
+  if (kcal > 0) parts.push(t("weeklyReport.avgKcalPerDay", { kcal: Math.round(kcal) }));
+  if (proteinPct != null) parts.push(t("weeklyReport.hitProteinGoal", { pct: proteinPct }));
 
   if (parts.length === 0) return t("weeklyReport.noDataDesc");
-  if (parts.length === 1) return `This week you ${parts[0]}.`;
-  if (parts.length === 2) return `This week you ${parts[0]} and ${parts[1]}.`;
-  return `This week you ${parts[0]}, ${parts[1]}, and ${parts[2]}.`;
+  if (parts.length === 1) return t("weeklyReport.heroSummaryOne", { p1: parts[0] });
+  if (parts.length === 2) return t("weeklyReport.heroSummaryTwo", { p1: parts[0], p2: parts[1] });
+  return t("weeklyReport.heroSummaryThree", { p1: parts[0], p2: parts[1], p3: parts[2] });
 }
 
 function DeltaBadge({ prev, curr, unit = "" }: { prev: number; curr: number; unit?: string }) {
