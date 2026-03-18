@@ -142,7 +142,7 @@ export default function CoachChatScreen() {
       const trimmed = text.trim();
       if (!trimmed) return;
 
-      // Abort any previous in-flight request and start a fresh one
+      // Abort any previous in-flight request
       abortControllerRef.current?.abort();
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -182,64 +182,37 @@ export default function CoachChatScreen() {
           signal: controller.signal,
         });
 
-        if (!response.ok || !response.body) {
+        if (!response.ok) {
           throw new Error("Failed to connect to coach");
         }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+        const data = await response.json();
+        const fullContent: string = data.content || "";
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const jsonStr = line.slice(6).trim();
-            if (!jsonStr) continue;
-            let parsed: any;
-            try {
-              parsed = JSON.parse(jsonStr);
-            } catch {
-              continue;
-            }
-            if (parsed.content) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? { ...m, content: m.content + parsed.content }
-                    : m
-                )
-              );
-              setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: false });
-              }, 50);
-            }
-            if (parsed.done) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId ? { ...m, streaming: false } : m
-                )
-              );
-            }
-            if (parsed.error) {
-              throw new Error("Stream error");
-            }
+        // Animate the response word by word for a natural feel
+        const words = fullContent.split(" ");
+        let current = "";
+        for (let i = 0; i < words.length; i++) {
+          if (controller.signal.aborted) break;
+          current += (i === 0 ? "" : " ") + words[i];
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: current } : m
+            )
+          );
+          if (i % 5 === 4) {
+            flatListRef.current?.scrollToEnd({ animated: false });
           }
+          await new Promise<void>((r) => setTimeout(r, 20));
         }
       } catch (err: any) {
         if (err?.name === "AbortError") {
-          // Remove empty placeholder if abort fired before any content arrived
+          // Remove empty placeholder if aborted before any content arrived
           setMessages((prev) =>
             prev.filter((m) => !(m.id === assistantId && m.content === ""))
           );
         } else {
-          console.error("Stream error:", err);
+          console.error("Coach error:", err);
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
@@ -249,13 +222,11 @@ export default function CoachChatScreen() {
           );
         }
       } finally {
-        // Always finalize streaming on this message (handles all abort/error/done paths)
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId ? { ...m, streaming: false } : m
           )
         );
-        // Only clear sending state if no newer request has taken over
         if (activeRequestIdRef.current === requestId) {
           setSending(false);
         }

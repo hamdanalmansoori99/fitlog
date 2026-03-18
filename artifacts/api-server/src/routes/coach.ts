@@ -338,19 +338,6 @@ router.post("/message", requireAuth, async (req, res) => {
       return;
     }
 
-    // Set SSE headers immediately — before any DB work — so errors are always
-    // communicated via the stream rather than a non-200 HTTP response.
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-
-    // Client disconnect guard
-    let clientGone = false;
-    req.on("close", () => {
-      clientGone = true;
-    });
-
     // Safety check — bypass AI entirely if triggered
     const safetyResponse = detectSafetyIssue(content.trim());
 
@@ -383,9 +370,7 @@ router.post("/message", requireAuth, async (req, res) => {
         role: "assistant",
         content: safetyResponse,
       });
-      res.write(`data: ${JSON.stringify({ content: safetyResponse })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
+      res.json({ content: safetyResponse });
       return;
     }
 
@@ -486,54 +471,27 @@ router.post("/message", requireAuth, async (req, res) => {
       content: m.content,
     }));
 
-    let fullResponse = "";
-
-    const stream = anthropic.messages.stream({
+    const aiResponse = await anthropic.messages.create({
       model: "claude-haiku-4-5",
       max_tokens: 8192,
       system: systemPrompt,
       messages: chatMessages,
     });
 
-    for await (const event of stream) {
-      if (clientGone) break;
-      if (
-        event.type === "content_block_delta" &&
-        event.delta.type === "text_delta"
-      ) {
-        fullResponse += event.delta.text;
-        res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
-      }
-    }
+    const fullResponse =
+      (aiResponse.content[0] as any)?.text?.trim() ||
+      "I'm having trouble generating a useful response. Try asking with your goal, equipment, and time available.";
 
-    // Empty response fallback
-    if (!fullResponse.trim()) {
-      fullResponse =
-        "I'm having trouble generating a useful response. Try asking with your goal, equipment, and time available.";
-      if (!clientGone) {
-        res.write(`data: ${JSON.stringify({ content: fullResponse })}\n\n`);
-      }
-    }
+    await db.insert(messages).values({
+      conversationId: conversation.id,
+      role: "assistant",
+      content: fullResponse,
+    });
 
-    if (!clientGone) {
-      await db.insert(messages).values({
-        conversationId: conversation.id,
-        role: "assistant",
-        content: fullResponse,
-      });
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-    }
-
-    res.end();
+    res.json({ content: fullResponse });
   } catch (err) {
     console.error("sendCoachMessage error:", err);
-    if (!res.headersSent) {
-      // Only reached if content was empty (caught before SSE headers) — shouldn't happen
-      res.status(500).json({ error: "Failed to send message" });
-    } else {
-      res.write(`data: ${JSON.stringify({ error: "Stream error" })}\n\n`);
-      res.end();
-    }
+    res.status(500).json({ error: "Failed to send message" });
   }
 });
 
