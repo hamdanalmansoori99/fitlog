@@ -19,8 +19,21 @@ import { PremiumGate } from "@/components/PremiumGate";
 import { useToast } from "@/components/ui/Toast";
 import { useTranslation } from "react-i18next";
 
-const CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
-const UNITS = ["grams", "oz", "cups", "pieces", "servings", "ml"];
+const CATEGORY_OPTIONS = [
+  { value: "Breakfast", labelKey: "meals.breakfast" },
+  { value: "Lunch",     labelKey: "meals.lunch" },
+  { value: "Dinner",    labelKey: "meals.dinner" },
+  { value: "Snacks",    labelKey: "meals.snacks" },
+] as const;
+
+const UNIT_OPTIONS = [
+  { value: "grams",    labelKey: "meals.units.grams" },
+  { value: "oz",       labelKey: "meals.units.oz" },
+  { value: "cups",     labelKey: "meals.units.cups" },
+  { value: "pieces",   labelKey: "meals.units.pieces" },
+  { value: "servings", labelKey: "meals.units.servings" },
+  { value: "ml",       labelKey: "meals.units.ml" },
+] as const;
 
 interface FoodItem {
   name: string;
@@ -685,18 +698,15 @@ export default function AddMealScreen() {
         <View>
           <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("meals.category")}</Text>
           <View style={styles.categoryRow}>
-            {CATEGORIES.map(cat => {
-              const catLabels: Record<string, string> = { Breakfast: t("meals.breakfast"), Lunch: t("meals.lunch"), Dinner: t("meals.dinner"), Snacks: t("meals.snacks") };
-              return (
-                <Pressable
-                  key={cat}
-                  onPress={() => setCategory(cat)}
-                  style={[styles.catChip, { backgroundColor: category === cat ? theme.primaryDim : theme.card, borderColor: category === cat ? theme.primary : theme.border }]}
-                >
-                  <Text style={{ color: category === cat ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{catLabels[cat] || cat}</Text>
-                </Pressable>
-              );
-            })}
+            {CATEGORY_OPTIONS.map(opt => (
+              <Pressable
+                key={opt.value}
+                onPress={() => setCategory(opt.value)}
+                style={[styles.catChip, { backgroundColor: category === opt.value ? theme.primaryDim : theme.card, borderColor: category === opt.value ? theme.primary : theme.border }]}
+              >
+                <Text style={{ color: category === opt.value ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t(opt.labelKey)}</Text>
+              </Pressable>
+            ))}
           </View>
         </View>
 
@@ -840,13 +850,13 @@ export default function AddMealScreen() {
                     <Text style={[styles.miniLabel, { color: theme.textMuted }]}>{t("meals.unit")}</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                       <View style={{ flexDirection: "row", gap: 4 }}>
-                        {UNITS.map(u => (
+                        {UNIT_OPTIONS.map(opt => (
                           <Pressable
-                            key={u}
-                            onPress={() => setFoodItems(fi => fi.map((f, i) => i === idx ? { ...f, unit: u } : f))}
-                            style={[styles.unitChip, { backgroundColor: item.unit === u ? theme.primaryDim : theme.background, borderColor: item.unit === u ? theme.primary : theme.border }]}
+                            key={opt.value}
+                            onPress={() => setFoodItems(fi => fi.map((f, i) => i === idx ? { ...f, unit: opt.value } : f))}
+                            style={[styles.unitChip, { backgroundColor: item.unit === opt.value ? theme.primaryDim : theme.background, borderColor: item.unit === opt.value ? theme.primary : theme.border }]}
                           >
-                            <Text style={{ color: item.unit === u ? theme.primary : theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>{t(`meals.units.${u}`)}</Text>
+                            <Text style={{ color: item.unit === opt.value ? theme.primary : theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>{t(opt.labelKey)}</Text>
                           </Pressable>
                         ))}
                       </View>

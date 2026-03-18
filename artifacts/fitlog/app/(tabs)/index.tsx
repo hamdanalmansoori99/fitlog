@@ -725,7 +725,7 @@ function WeeklyProgressCard({
                 fontFamily: isToday ? "Inter_700Bold" : "Inter_400Regular",
                 fontSize: 10,
               }}>
-                {new Date(date + "T12:00:00").toLocaleDateString(dateLocale(), { weekday: "narrow" })}
+                {(["sun","mon","tue","wed","thu","fri","sat"] as const).map(k => t(`components.weeklyBarChart.${k}`))[new Date(date + "T12:00:00").getDay()]}
               </Text>
               <View style={{
                 width: 24, height: 24, borderRadius: 12,

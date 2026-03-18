@@ -25,6 +25,8 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   streaming?: boolean;
+  failed?: boolean;
+  retryText?: string;
 }
 
 function cleanMarkdown(text: string): string {
@@ -219,7 +221,7 @@ export default function CoachChatScreen() {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? { ...m, content: t("coach.connectionError"), streaming: false }
+                ? { ...m, content: t("coach.connectionError"), streaming: false, failed: true, retryText: trimmed }
                 : m
             )
           );
@@ -299,10 +301,22 @@ export default function CoachChatScreen() {
             styles.bubble,
             isUser
               ? [styles.bubbleUser, { backgroundColor: theme.primary }]
-              : [styles.bubbleAssistant, { backgroundColor: theme.card }],
+              : [styles.bubbleAssistant, { backgroundColor: item.failed ? theme.danger + "18" : theme.card, borderColor: item.failed ? theme.danger + "40" : "transparent", borderWidth: item.failed ? 1 : 0 }],
           ]}
         >
           {renderMessageContent(item, isUser, textColor)}
+          {item.failed && item.retryText && (
+            <Pressable
+              onPress={() => {
+                setMessages(prev => prev.filter(m => m.id !== item.id));
+                sendMessage(item.retryText!);
+              }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8, alignSelf: "flex-start" }}
+            >
+              <Feather name="refresh-cw" size={12} color={theme.primary} />
+              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("common.retry")}</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );

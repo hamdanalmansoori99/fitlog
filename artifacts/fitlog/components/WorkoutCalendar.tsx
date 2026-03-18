@@ -64,6 +64,8 @@ export function WorkoutCalendar() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [selected, setSelected] = useState<DayDetail | null>(null);
   const [detailModal, setDetailModal] = useState(false);
+  const [emptyDayMsg, setEmptyDayMsg] = useState<string | null>(null);
+  const emptyDayTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["workoutCalendar", year, month],
@@ -100,8 +102,15 @@ export function WorkoutCalendar() {
     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const workouts = days[dateStr] ?? [];
     const isFuture = dateStr > todayStr;
-    if (isFuture && workouts.length === 0) return;
-    Haptics.impactAsync(workouts.length === 0 ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
+    if (isFuture) return;
+    if (workouts.length === 0) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (emptyDayTimer.current) clearTimeout(emptyDayTimer.current);
+      setEmptyDayMsg(t("components.workoutCalendar.noWorkoutsThisDay"));
+      emptyDayTimer.current = setTimeout(() => setEmptyDayMsg(null), 2000);
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelected({ date: dateStr, workouts });
     setDetailModal(true);
   }
@@ -200,6 +209,14 @@ export function WorkoutCalendar() {
         </View>
       )}
 
+      {emptyDayMsg && (
+        <View style={{ marginTop: 8, alignItems: "center" }}>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+            {emptyDayMsg}
+          </Text>
+        </View>
+      )}
+
       <Modal
         visible={detailModal}
         transparent
@@ -211,26 +228,17 @@ export function WorkoutCalendar() {
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginBottom: 10 }}>
               {selected && new Date(selected.date + "T12:00:00").toLocaleDateString(dateLocale(), { weekday: "long", month: "long", day: "numeric" })}
             </Text>
-            {selected?.workouts.length === 0 ? (
-              <View style={{ alignItems: "center", paddingVertical: 12, gap: 8 }}>
-                <Feather name="calendar" size={28} color={theme.textMuted} />
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
-                  {t("components.workoutCalendar.noWorkoutsThisDay")}
-                </Text>
-              </View>
-            ) : (
-              selected?.workouts.map((w) => (
-                <View key={w.id} style={[s.detailRow, { borderBottomColor: theme.border }]}>
-                  <View style={[s.detailDot, { backgroundColor: activityColor(w.activityType, theme) }]} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{w.name}</Text>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textTransform: "capitalize" }}>
-                      {w.activityType}{w.durationMinutes ? ` · ${w.durationMinutes} min` : ""}
-                    </Text>
-                  </View>
+            {selected?.workouts.map((w) => (
+              <View key={w.id} style={[s.detailRow, { borderBottomColor: theme.border }]}>
+                <View style={[s.detailDot, { backgroundColor: activityColor(w.activityType, theme) }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{w.name}</Text>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textTransform: "capitalize" }}>
+                    {w.activityType}{w.durationMinutes ? ` · ${w.durationMinutes} min` : ""}
+                  </Text>
                 </View>
-              ))
-            )}
+              </View>
+            ))}
           </View>
         </Pressable>
       </Modal>

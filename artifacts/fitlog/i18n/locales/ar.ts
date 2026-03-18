@@ -872,6 +872,7 @@ export default {
     logFirstMeal: "سجّل أول وجبة",
     nothingLogged: "لم يتم تسجيل شيء",
     noMealsRecorded: "لم يتم تسجيل أي وجبات لهذا اليوم.",
+    noMealsForDate: "لا توجد وجبات مسجلة لهذا اليوم",
     deleteMealQuestion: "حذف الوجبة؟",
     cannotBeUndone: "لا يمكن التراجع عن هذا.",
     addCategory: "إضافة {{category}}",

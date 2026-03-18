@@ -202,7 +202,7 @@ function WeeklyAdherenceGrid({ perDay, theme }: {
       <View style={{ flexDirection: "row", gap: 4 }}>
         {sorted.map((day, i) => {
           const isToday = day.date === todayStr;
-          const dayLetter = new Date(day.date + "T12:00:00").toLocaleDateString(dateLocale(), { weekday: "narrow" });
+          const dayLetter = (["sun","mon","tue","wed","thu","fri","sat"] as const).map(k => t(`components.weeklyBarChart.${k}`))[new Date(day.date + "T12:00:00").getDay()];
           return (
             <View key={day.date} style={{ flex: 1, alignItems: "center", gap: 4 }}>
               <Text style={{

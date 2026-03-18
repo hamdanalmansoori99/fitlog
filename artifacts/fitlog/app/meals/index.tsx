@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/Card";
 import { PremiumGate } from "@/components/PremiumGate";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useTranslation } from "react-i18next";
 import { dateLocale } from "@/lib/rtl";
 
@@ -637,17 +638,15 @@ export default function MealsScreen() {
         {/* Past-day empty state */}
         {!mealsLoading && data && meals.length === 0 && !isToday && (
           <Animated.View entering={FadeInDown.delay(100).duration(400)} style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-            <View style={[styles.firstMealCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <View style={[styles.firstMealIcon, { backgroundColor: theme.secondary + "20" }]}>
-                <Feather name="calendar" size={28} color={theme.secondary} />
-              </View>
-              <Text style={[styles.firstMealTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {t("meals.nothingLogged")}
-              </Text>
-              <Text style={[styles.firstMealSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {t("meals.noMealsRecorded")}
-              </Text>
-            </View>
+            <Card>
+              <EmptyState
+                icon="coffee"
+                title={t("meals.nothingLogged")}
+                subtitle={t("meals.noMealsForDate")}
+                iconColor={theme.secondary}
+                compact
+              />
+            </Card>
           </Animated.View>
         )}
 

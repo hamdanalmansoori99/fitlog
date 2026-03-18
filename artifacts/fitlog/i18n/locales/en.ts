@@ -955,6 +955,7 @@ export default {
     logFirstMeal: "Log first meal",
     nothingLogged: "Nothing logged",
     noMealsRecorded: "No meals were recorded for this day.",
+    noMealsForDate: "No meals logged for this day",
     deleteMealQuestion: "Delete meal?",
     cannotBeUndone: "This cannot be undone.",
     addCategory: "Add {{category}}",

@@ -370,13 +370,15 @@ export default function LogWorkoutScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
       <View style={[styles.navBar, { paddingTop: topPad + 8 }]}>
-        <Pressable onPress={() => step === "form" ? setStep("select") : router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={24} color={theme.text} />
-        </Pressable>
-        <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          {step === "select" ? t("workouts.chooseActivity") : t("workouts.logWorkout")}
-        </Text>
-        <View style={{ width: 44 }} />
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", maxWidth: 600, width: "100%", alignSelf: "center" }}>
+          <Pressable onPress={() => step === "form" ? setStep("select") : router.back()} style={styles.backBtn}>
+            <Feather name="arrow-left" size={24} color={theme.text} />
+          </Pressable>
+          <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            {step === "select" ? t("workouts.chooseActivity") : t("workouts.logWorkout")}
+          </Text>
+          <View style={{ width: 44 }} />
+        </View>
       </View>
       
       <KeyboardAvoidingView

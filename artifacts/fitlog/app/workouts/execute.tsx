@@ -84,12 +84,13 @@ function estimateCals(durationMin: number, activityType: string): number {
   return Math.round((mets[activityType] || 5) * 70 * (durationMin / 60));
 }
 
-const MOODS = ["Exhausted", "Tough", "Good", "Great", "Crushing it"];
-const MOOD_ICON_LIST = ["😓", "💪", "😊", "🔥", "🏆"];
-const MOOD_LABEL_KEYS = [
-  "workouts.moodExhausted", "workouts.moodTough", "workouts.moodGood",
-  "workouts.moodGreat", "workouts.moodCrushingIt",
-];
+const MOOD_OPTIONS = [
+  { value: "Exhausted",   icon: "😓", labelKey: "workouts.moodExhausted" },
+  { value: "Tough",       icon: "💪", labelKey: "workouts.moodTough" },
+  { value: "Good",        icon: "😊", labelKey: "workouts.moodGood" },
+  { value: "Great",       icon: "🔥", labelKey: "workouts.moodGreat" },
+  { value: "Crushing it", icon: "🏆", labelKey: "workouts.moodCrushingIt" },
+] as const;
 const RPE_VALUES = [2, 4, 6, 8, 10];
 const RPE_EMOJIS = ["🟢", "🟡", "🟠", "🔴", "🔥"];
 
@@ -757,22 +758,22 @@ export default function ExecuteWorkoutScreen() {
               {t("workouts.howDidItFeelQuestion")}
             </Text>
             <View style={styles.moodRow}>
-              {MOODS.map((m, i) => (
+              {MOOD_OPTIONS.map(opt => (
                 <Pressable
-                  key={m}
-                  onPress={() => setMood(m)}
+                  key={opt.value}
+                  onPress={() => setMood(opt.value)}
                   style={[
                     styles.moodChip,
                     {
-                      backgroundColor: mood === m ? theme.primaryDim : theme.card,
-                      borderColor: mood === m ? theme.primary : theme.border,
+                      backgroundColor: mood === opt.value ? theme.primaryDim : theme.card,
+                      borderColor: mood === opt.value ? theme.primary : theme.border,
                       flex: 1,
                     },
                   ]}
                 >
-                  <Text style={{ fontSize: 18 }}>{MOOD_ICON_LIST[i]}</Text>
-                  <Text style={{ color: mood === m ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, textAlign: "center" }}>
-                    {t(MOOD_LABEL_KEYS[i])}
+                  <Text style={{ fontSize: 18 }}>{opt.icon}</Text>
+                  <Text style={{ color: mood === opt.value ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, textAlign: "center" }}>
+                    {t(opt.labelKey)}
                   </Text>
                 </Pressable>
               ))}
