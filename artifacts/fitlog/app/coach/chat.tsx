@@ -43,7 +43,6 @@ function cleanMarkdown(text: string): string {
   return out.trim();
 }
 
-
 export default function CoachChatScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -51,6 +50,7 @@ export default function CoachChatScreen() {
   const token = useAuthStore((s) => s.token);
   const { prompt } = useLocalSearchParams<{ prompt?: string }>();
   const promptSentRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const suggestions = [
     t("home.coachChip1"),
@@ -69,6 +69,13 @@ export default function CoachChatScreen() {
   const isWeb = Platform.OS === "web";
   const WEB_TOP = 67;
   const WEB_BOTTOM = 34;
+
+  // Abort in-flight request on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     loadConversation();
@@ -134,6 +141,11 @@ export default function CoachChatScreen() {
       const trimmed = text.trim();
       if (!trimmed || sending) return;
 
+      // Abort any previous in-flight request
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
         role: "user",
@@ -163,6 +175,7 @@ export default function CoachChatScreen() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ content: trimmed }),
+          signal: controller.signal,
         });
 
         if (!response.ok || !response.body) {
@@ -173,53 +186,59 @@ export default function CoachChatScreen() {
         const decoder = new TextDecoder();
         let buffer = "";
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
 
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const jsonStr = line.slice(6).trim();
-            if (!jsonStr) continue;
-            try {
-              const parsed = JSON.parse(jsonStr);
-              if (parsed.content) {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId
-                      ? { ...m, content: m.content + parsed.content }
-                      : m
-                  )
-                );
-                setTimeout(() => {
-                  flatListRef.current?.scrollToEnd({ animated: false });
-                }, 50);
-              }
-              if (parsed.done) {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, streaming: false } : m
-                  )
-                );
-              }
-            } catch {}
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr) continue;
+              try {
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.content) {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId
+                        ? { ...m, content: m.content + parsed.content }
+                        : m
+                    )
+                  );
+                  setTimeout(() => {
+                    flatListRef.current?.scrollToEnd({ animated: false });
+                  }, 50);
+                }
+                if (parsed.done) {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId ? { ...m, streaming: false } : m
+                    )
+                  );
+                }
+              } catch {}
+            }
           }
+        } finally {
+          // Always finalize the streaming message regardless of how the loop ends
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, streaming: false } : m
+            )
+          );
         }
-      } catch (err) {
+      } catch (err: any) {
+        // Ignore abort errors — user intentionally cancelled
+        if (err?.name === "AbortError") return;
         console.error("Stream error:", err);
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? {
-                  ...m,
-                  content:
-                    t("coach.connectionError"),
-                  streaming: false,
-                }
+              ? { ...m, content: t("coach.connectionError"), streaming: false }
               : m
           )
         );
@@ -233,8 +252,47 @@ export default function CoachChatScreen() {
     [sending, token]
   );
 
+  const renderMessageContent = (item: ChatMessage, isUser: boolean, textColor: string) => {
+    if (isUser) {
+      return (
+        <Text style={[styles.bubbleText, { color: textColor }]}>
+          {item.content}
+        </Text>
+      );
+    }
+
+    const cleaned = cleanMarkdown(item.content);
+
+    // Split on blank lines first, then on single newlines within blocks
+    const paragraphs = cleaned
+      .split(/\n\n+/)
+      .flatMap((block) => block.split("\n"))
+      .filter((p) => p.trim().length > 0);
+
+    return (
+      <View>
+        {paragraphs.map((para, i) => (
+          <Text
+            key={i}
+            style={[
+              styles.bubbleText,
+              { color: textColor },
+              i < paragraphs.length - 1 && { marginBottom: 6 },
+            ]}
+          >
+            {para}
+          </Text>
+        ))}
+        {item.streaming && (
+          <Text style={[styles.cursor, { color: textColor }]}>▍</Text>
+        )}
+      </View>
+    );
+  };
+
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isUser = item.role === "user";
+    const textColor = isUser ? "#000" : theme.text;
     return (
       <View
         style={[
@@ -255,22 +313,7 @@ export default function CoachChatScreen() {
               : [styles.bubbleAssistant, { backgroundColor: theme.card }],
           ]}
         >
-          <Text
-            style={[
-              styles.bubbleText,
-              { color: isUser ? "#000" : theme.text },
-            ]}
-          >
-            {isUser ? item.content : cleanMarkdown(item.content)}
-            {item.streaming && !item.content && (
-              <Text style={{ color: theme.textMuted }}>▍</Text>
-            )}
-          </Text>
-          {item.streaming && item.content ? (
-            <Text style={[styles.cursor, { color: theme.textMuted }]}>
-              ▍
-            </Text>
-          ) : null}
+          {renderMessageContent(item, isUser, textColor)}
         </View>
       </View>
     );
