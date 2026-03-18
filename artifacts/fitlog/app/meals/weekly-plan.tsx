@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, Pressable, Platform, ActivityIndicator, Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { router } from "expo-router";
@@ -31,6 +31,10 @@ function getDayLabel(dateStr: string, t: any): string {
   if (diffDays === 0) return t("common.today");
   if (diffDays === 1) return t("meals.tomorrow");
   return d.toLocaleDateString(dateLocale(), { weekday: "short", month: "short", day: "numeric" });
+}
+
+function safeDateISO(dateStr: string): string {
+  return new Date(dateStr + "T12:00:00").toISOString();
 }
 
 interface MealRowProps {
@@ -88,11 +92,16 @@ interface DayCardProps {
   loggedMealsCount: number;
   onLog: (meal: PlannedMeal, date: string) => void;
   loggingId: string | null;
+  onRegenerate: (date: string) => void;
+  isRegenerating: boolean;
   theme: any;
   t: any;
 }
 
-function DayCard({ day, isLogged, loggedCalories, loggedMealsCount, onLog, loggingId, theme, t }: DayCardProps) {
+function DayCard({
+  day, isLogged, loggedCalories, loggedMealsCount,
+  onLog, loggingId, onRegenerate, isRegenerating, theme, t,
+}: DayCardProps) {
   const [open, setOpen] = useState(
     day.date === new Date().toISOString().split("T")[0] || !isLogged
   );
@@ -116,17 +125,35 @@ function DayCard({ day, isLogged, loggedCalories, loggedMealsCount, onLog, loggi
               : t("meals.kcalPlanned", { calories: totalCals, protein: totalProtein })}
           </Text>
         </View>
-        {isLogged && (
-          <View style={[styles.loggedBadge, { backgroundColor: theme.primaryDim }]}>
-            <Feather name="check" size={12} color={theme.primary} />
-            <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>{t("meals.loggedBadge")}</Text>
-          </View>
-        )}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          {isLogged && (
+            <View style={[styles.loggedBadge, { backgroundColor: theme.primaryDim }]}>
+              <Feather name="check" size={12} color={theme.primary} />
+              <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>{t("meals.loggedBadge")}</Text>
+            </View>
+          )}
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onRegenerate(day.date);
+            }}
+            disabled={isRegenerating}
+            hitSlop={8}
+            style={{ padding: 4 }}
+          >
+            {isRegenerating ? (
+              <ActivityIndicator size={14} color={theme.secondary} />
+            ) : (
+              <Feather name="refresh-cw" size={14} color={theme.textMuted} />
+            )}
+          </Pressable>
+        </View>
         <Feather
           name={open ? "chevron-up" : "chevron-down"}
           size={18}
           color={theme.textMuted}
-          style={{ marginLeft: 8 }}
+          style={{ marginLeft: 4 }}
         />
       </Pressable>
 
@@ -175,8 +202,10 @@ export default function WeeklyPlanScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const { showToast } = useToast();
-  const { plan, generatedAt, setPlan, clearPlan } = useWeeklyPlanStore();
+  const queryClient = useQueryClient();
+  const { plan, generatedAt, setPlan, replaceDay, clearPlan } = useWeeklyPlanStore();
   const [loggingId, setLoggingId] = useState<string | null>(null);
+  const [regeneratingDate, setRegeneratingDate] = useState<string | null>(null);
   const [groceryOpen, setGroceryOpen] = useState(false);
   const [groceryList, setGroceryList] = useState<any>(null);
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
@@ -200,18 +229,47 @@ export default function WeeklyPlanScreen() {
     },
   });
 
+  const regenerateDayMutation = useMutation({
+    mutationFn: (date: string) => api.generateDayPlan({ date }),
+    onSuccess: (data) => {
+      if (data?.date && Array.isArray(data.meals)) {
+        replaceDay({ date: data.date, meals: data.meals });
+        showToast(t("meals.dayRegenerated"), "success");
+      } else {
+        showToast(t("meals.couldNotRegenerateDay"), "error");
+      }
+      setRegeneratingDate(null);
+    },
+    onError: (err: any) => {
+      if (err?.message?.includes("Premium")) {
+        showToast(t("meals.weeklyPlanPremium"), "error");
+      } else {
+        showToast(t("meals.couldNotRegenerateDay"), "error");
+      }
+      setRegeneratingDate(null);
+    },
+  });
+
   const logMealMutation = useMutation({
     mutationFn: ({ meal, date }: { meal: PlannedMeal; date: string }) =>
       api.createMeal({
         name: meal.name,
         category: meal.category,
-        date,
-        calories: meal.calories,
-        proteinG: meal.proteinG,
-        carbsG: meal.carbsG,
-        fatG: meal.fatG,
+        date: safeDateISO(date),
+        foodItems: [
+          {
+            name: meal.name,
+            portionSize: 1,
+            unit: "serving",
+            calories: meal.calories,
+            proteinG: meal.proteinG,
+            carbsG: meal.carbsG,
+            fatG: meal.fatG,
+          },
+        ],
       }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["weeklyMealLogs"] });
       showToast(t("meals.mealLogged"), "success");
       setLoggingId(null);
     },
@@ -263,6 +321,11 @@ export default function WeeklyPlanScreen() {
     const id = `${date}-${meal.category}-${meal.name}`;
     setLoggingId(id);
     logMealMutation.mutate({ meal, date });
+  };
+
+  const handleRegenerateDay = (date: string) => {
+    setRegeneratingDate(date);
+    regenerateDayMutation.mutate(date);
   };
 
   const groceryMutation = useMutation({
@@ -413,6 +476,8 @@ export default function WeeklyPlanScreen() {
                 loggedMealsCount={logs?.count ?? 0}
                 onLog={handleLogMeal}
                 loggingId={loggingId}
+                onRegenerate={handleRegenerateDay}
+                isRegenerating={regeneratingDate === day.date}
                 theme={theme}
                 t={t}
               />

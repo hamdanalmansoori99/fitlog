@@ -21,6 +21,7 @@ interface WeeklyPlanState {
   plan: PlannedDay[] | null;
   generatedAt: string | null;
   setPlan: (days: PlannedDay[]) => void;
+  replaceDay: (day: PlannedDay) => void;
   clearPlan: () => void;
 }
 
@@ -31,6 +32,12 @@ export const useWeeklyPlanStore = create<WeeklyPlanState>()(
       generatedAt: null,
       setPlan: (days) =>
         set({ plan: days, generatedAt: new Date().toISOString() }),
+      replaceDay: (day) =>
+        set((state) => ({
+          plan: state.plan
+            ? state.plan.map((d) => (d.date === day.date ? day : d))
+            : [day],
+        })),
       clearPlan: () => set({ plan: null, generatedAt: null }),
     }),
     {

@@ -776,6 +776,91 @@ HARD CONSTRAINT: Sum of proteinG MUST be ≥ ${proteinGoal}g. Sum of calories cl
   }
 });
 
+router.post("/generate-day-plan", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+
+    const { getActiveSubscription } = await import("../services/subscriptionService");
+    const sub = await getActiveSubscription(user.id, user.role ?? "user");
+    if (!sub.plan.features.aiPhotoAnalysis) {
+      res.status(403).json({ error: "AI day plan is a Premium feature" });
+      return;
+    }
+
+    const { date } = req.body;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      res.status(400).json({ error: "date (YYYY-MM-DD) is required" });
+      return;
+    }
+
+    const profiles = await db.select().from(profilesTable).where(eq(profilesTable.userId, user.id)).limit(1);
+    const profile = profiles[0] || {};
+
+    const { proteinGoal, calorieGoal, bodyWeightKg, goalContext } = await computeNutritionTargets(
+      user.id, profile, req.body.calorieGoal, req.body.proteinGoalG
+    );
+    const preferences: string[] = req.body.preferences ?? [];
+    const prefStr = preferences.length > 0 ? preferences.join(", ") : "no specific preferences";
+    const weightNote = bodyWeightKg ? `- Body weight: ${bodyWeightKg} kg` : "";
+
+    const bMin = Math.round(proteinGoal * 0.22);
+    const lMin = Math.round(proteinGoal * 0.28);
+    const dMin = Math.round(proteinGoal * 0.30);
+    const sMin = Math.round(proteinGoal * 0.20);
+
+    const prompt = `You are a precision nutrition coach. Generate a 1-day meal plan for ${date} tailored to this person:
+- Goal: ${goalContext}
+${weightNote}
+- Daily calorie target: ${calorieGoal} kcal
+- Daily protein target: ${proteinGoal}g
+- Dietary preferences: ${prefStr}
+
+PROTEIN IS THE #1 PRIORITY. EVERY meal must meet its protein minimum.
+MINIMUM protein per meal:
+- Breakfast: ≥ ${bMin}g protein
+- Lunch: ≥ ${lMin}g protein
+- Dinner: ≥ ${dMin}g protein
+- Snacks: ≥ ${sMin}g protein
+
+Return EXACTLY a JSON object (no markdown, no extra text):
+{
+  "date": "${date}",
+  "meals": [
+    {
+      "name": "string",
+      "description": "string (1 sentence, mention the main protein source)",
+      "category": "Breakfast" | "Lunch" | "Dinner" | "Snacks",
+      "calories": number,
+      "proteinG": number,
+      "carbsG": number,
+      "fatG": number
+    }
+  ]
+}
+
+Exactly 4 meals (one of each category). Sum calories close to ${calorieGoal}. Sum proteinG ≥ ${proteinGoal}g. Return only the JSON object.`;
+
+    const message = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const raw = (message.content[0] as any).text?.trim() ?? "";
+    const jsonStart = raw.indexOf("{");
+    const jsonEnd = raw.lastIndexOf("}");
+    if (jsonStart === -1 || jsonEnd === -1) {
+      res.status(500).json({ error: "Failed to parse day plan from AI" });
+      return;
+    }
+    const dayPlan = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    res.json(dayPlan);
+  } catch (err) {
+    console.error("generate-day-plan error:", err);
+    res.status(500).json({ error: "Failed to generate day plan" });
+  }
+});
+
 router.post("/generate-week-plan", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);

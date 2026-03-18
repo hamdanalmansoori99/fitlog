@@ -78,6 +78,8 @@ export const api = {
     request<any>("/meals/generate-plan", { method: "POST", body: JSON.stringify(body) }),
   generateWeekPlan: (body: { calorieGoal?: number; proteinGoalG?: number; preferences?: string[] }) =>
     request<any>("/meals/generate-week-plan", { method: "POST", body: JSON.stringify(body) }),
+  generateDayPlan: (body: { date: string; calorieGoal?: number; proteinGoalG?: number; preferences?: string[] }) =>
+    request<any>("/meals/generate-day-plan", { method: "POST", body: JSON.stringify(body) }),
   generateGroceryList: (meals: { name: string; description: string }[]) =>
     request<any>("/meals/generate-grocery-list", { method: "POST", body: JSON.stringify({ meals }) }),
   getMeals: (date?: string) => {
