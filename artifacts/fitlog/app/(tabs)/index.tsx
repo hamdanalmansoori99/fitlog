@@ -279,7 +279,7 @@ function WeightQuickAddRow({
     if (todayMeasurement) {
       router.push({ pathname: "/measurements/edit" as any, params: { id: todayMeasurement.id } });
     } else {
-      router.push("/measurements/add" as any);
+      router.push({ pathname: "/measurements/add" as any, params: { focus: "weight" } });
     }
   };
 

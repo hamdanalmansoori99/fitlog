@@ -5,7 +5,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
@@ -17,7 +17,10 @@ export default function AddMeasurementScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
-  
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+
+  const weightFocusMode = focus === "weight";
+
   const [date] = useState(new Date().toISOString().split("T")[0]);
   const [weightInput, setWeightInput] = useState("");
   const [bodyFat, setBodyFat] = useState("");
@@ -27,7 +30,8 @@ export default function AddMeasurementScreen() {
   const [arms, setArms] = useState("");
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  
+  const [showExtra, setShowExtra] = useState(!weightFocusMode);
+
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { data: settings } = useQuery({
@@ -36,17 +40,18 @@ export default function AddMeasurementScreen() {
     staleTime: 60000,
   });
   const useImperial = settings?.unitSystem === "imperial";
-  
+
   const mutation = useMutation({
     mutationFn: api.createMeasurement,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      queryClient.invalidateQueries({ queryKey: ["measurementsToday"] });
       setSuccess(true);
       setTimeout(() => router.back(), 1000);
     },
     onError: (err: any) => setError(err.message || t("measurements.failedToSaveRetry")),
   });
-  
+
   const handleSave = () => {
     setError("");
     const hasAny = weightInput || bodyFat || chest || waist || hips || arms;
@@ -93,7 +98,7 @@ export default function AddMeasurementScreen() {
       armsCm: arms ? parseFloat(arms) : undefined,
     });
   };
-  
+
   if (success) {
     return (
       <View style={[styles.success, { backgroundColor: theme.background }]}>
@@ -104,7 +109,7 @@ export default function AddMeasurementScreen() {
       </View>
     );
   }
-  
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.navBar, { paddingTop: topPad + 8 }]}>
@@ -114,28 +119,56 @@ export default function AddMeasurementScreen() {
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("measurements.logMeasurement")}</Text>
         <View style={{ width: 44 }} />
       </View>
-      
+
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]} keyboardShouldPersistTaps="handled">
+        {weightFocusMode && (
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginBottom: 4 }}>
+            {t("measurements.weightQuickHint")}
+          </Text>
+        )}
+
         <Input
           label={useImperial ? t("measurements.weightLbs") : t("measurements.weightKg")}
           value={weightInput}
           onChangeText={setWeightInput}
           placeholder={useImperial ? "165.0" : "75.0"}
           keyboardType="decimal-pad"
+          autoFocus={weightFocusMode}
         />
-        <Input label={t("measurements.bodyFat")} value={bodyFat} onChangeText={setBodyFat} placeholder="18.5" keyboardType="decimal-pad" />
-        
-        <Text style={[styles.sectionTitle, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("measurements.circumference")}</Text>
-        
-        <View style={styles.grid}>
-          <View style={{ flex: 1 }}><Input label={t("measurements.chest")} value={chest} onChangeText={setChest} placeholder="95" keyboardType="decimal-pad" /></View>
-          <View style={{ flex: 1 }}><Input label={t("measurements.waist")} value={waist} onChangeText={setWaist} placeholder="80" keyboardType="decimal-pad" /></View>
-        </View>
-        <View style={styles.grid}>
-          <View style={{ flex: 1 }}><Input label={t("measurements.hips")} value={hips} onChangeText={setHips} placeholder="95" keyboardType="decimal-pad" /></View>
-          <View style={{ flex: 1 }}><Input label={t("measurements.arms")} value={arms} onChangeText={setArms} placeholder="35" keyboardType="decimal-pad" /></View>
-        </View>
-        
+
+        {weightFocusMode && (
+          <Pressable
+            onPress={() => setShowExtra(v => !v)}
+            style={[styles.toggleBtn, { borderColor: theme.border }]}
+          >
+            <Feather
+              name={showExtra ? "chevron-up" : "chevron-down"}
+              size={14}
+              color={theme.textMuted}
+            />
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+              {showExtra ? t("measurements.hideExtraFields") : t("measurements.addMoreMeasurements")}
+            </Text>
+          </Pressable>
+        )}
+
+        {showExtra && (
+          <>
+            <Input label={t("measurements.bodyFat")} value={bodyFat} onChangeText={setBodyFat} placeholder="18.5" keyboardType="decimal-pad" />
+
+            <Text style={[styles.sectionTitle, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("measurements.circumference")}</Text>
+
+            <View style={styles.grid}>
+              <View style={{ flex: 1 }}><Input label={t("measurements.chest")} value={chest} onChangeText={setChest} placeholder="95" keyboardType="decimal-pad" /></View>
+              <View style={{ flex: 1 }}><Input label={t("measurements.waist")} value={waist} onChangeText={setWaist} placeholder="80" keyboardType="decimal-pad" /></View>
+            </View>
+            <View style={styles.grid}>
+              <View style={{ flex: 1 }}><Input label={t("measurements.hips")} value={hips} onChangeText={setHips} placeholder="95" keyboardType="decimal-pad" /></View>
+              <View style={{ flex: 1 }}><Input label={t("measurements.arms")} value={arms} onChangeText={setArms} placeholder="35" keyboardType="decimal-pad" /></View>
+            </View>
+          </>
+        )}
+
         {error ? (
           <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
             {error}
@@ -158,4 +191,9 @@ const styles = StyleSheet.create({
   success: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
   circle: { width: 100, height: 100, borderRadius: 50, alignItems: "center", justifyContent: "center" },
   successTitle: { fontSize: 26 },
+  toggleBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1,
+    alignSelf: "flex-start", minHeight: 44,
+  },
 });

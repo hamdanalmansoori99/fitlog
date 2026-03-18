@@ -66,6 +66,7 @@ export default function EditMeasurementScreen() {
     mutationFn: (body: any) => api.updateMeasurement(measureId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      queryClient.invalidateQueries({ queryKey: ["measurementsToday"] });
       queryClient.invalidateQueries({ queryKey: ["measurement", measureId] });
       showToast(t("measurements.measurementUpdated"), "success");
       router.back();
