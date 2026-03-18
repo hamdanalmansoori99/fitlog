@@ -214,7 +214,7 @@ function EditPortionModal({
       >
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
         <Animated.View
-          entering={SlideInDown.springify().damping(18)}
+          entering={SlideInDown.duration(300).easing(Easing.out(Easing.cubic))}
           style={[styles.editModal, { backgroundColor: theme.card, borderColor: theme.border }]}
         >
           <Text style={[styles.editTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
@@ -562,7 +562,7 @@ export default function ScanScreen() {
 
           {/* Results slide-up sheet */}
           <Animated.View
-            entering={SlideInDown.springify().damping(16).delay(100)}
+            entering={SlideInDown.duration(320).delay(100).easing(Easing.out(Easing.cubic))}
             style={[styles.resultsSheet, { backgroundColor: theme.background, borderColor: theme.border }]}
           >
             <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
@@ -607,6 +607,7 @@ export default function ScanScreen() {
               style={styles.itemsList}
               contentContainerStyle={{ paddingBottom: 16 }}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
               {items.map((item, idx) => (
                 <Animated.View

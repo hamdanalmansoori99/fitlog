@@ -52,7 +52,7 @@ function ToastItem({ toast, onDone }: { toast: ToastMessage; onDone: (id: string
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(280).springify()}
+      entering={FadeInDown.duration(280)}
       exiting={FadeOutDown.duration(200)}
       style={[styles.toast, { backgroundColor: BG[toast.type], bottom: bottomOffset }]}
     >

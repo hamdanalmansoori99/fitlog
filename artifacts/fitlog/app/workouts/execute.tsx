@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import Animated, { FadeInDown, FadeIn, FadeOut, SlideInDown, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, FadeOut, SlideInDown, ZoomIn, Easing } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
@@ -966,7 +966,7 @@ export default function ExecuteWorkoutScreen() {
       >
         <View style={[styles.restOverlay, { paddingBottom: insets.bottom + 16 }]}>
           <Animated.View
-            entering={SlideInDown.springify().damping(18)}
+            entering={SlideInDown.duration(300).easing(Easing.out(Easing.cubic))}
             style={[styles.restSheet, { backgroundColor: theme.card }]}
           >
             <View style={{ alignItems: "center", gap: 8, paddingBottom: 8 }}>
