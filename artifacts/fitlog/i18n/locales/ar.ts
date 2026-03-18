@@ -420,6 +420,7 @@ export default {
     exercisesLabel: "التمارين",
     exerciseN: "تمرين {{n}}",
     addSet: "إضافة مجموعة",
+    removeSet: "حذف مجموعة",
     addExercise: "إضافة تمرين",
     effortLevel: "مستوى الجهد (RPE)",
     mood: "المزاج",

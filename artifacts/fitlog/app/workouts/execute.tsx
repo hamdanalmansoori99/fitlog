@@ -85,10 +85,13 @@ function estimateCals(durationMin: number, activityType: string): number {
 }
 
 const MOODS = ["Exhausted", "Tough", "Good", "Great", "Crushing it"];
-const MOOD_ICONS = ["😓", "💪", "😊", "🔥", "🏆"];
+const MOOD_ICON_LIST = ["😓", "💪", "😊", "🔥", "🏆"];
+const MOOD_LABEL_KEYS = [
+  "workouts.moodExhausted", "workouts.moodTough", "workouts.moodGood",
+  "workouts.moodGreat", "workouts.moodCrushingIt",
+];
 const RPE_VALUES = [2, 4, 6, 8, 10];
 const RPE_EMOJIS = ["🟢", "🟡", "🟠", "🔴", "🔥"];
-const RPE_LABELS = ["Easy", "Moderate", "Hard", "V.Hard", "Max"];
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
@@ -135,6 +138,7 @@ export default function ExecuteWorkoutScreen() {
   // Store next position when entering rest phase
   const pendingRef = useRef<{ exIdx: number; setIdx: number } | null>(null);
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastCompletedSetRef = useRef<{ reps: string; weight: string; exerciseName: string } | null>(null);
 
   // Initialise exercises once filteredExercises loads
   useEffect(() => {
@@ -496,17 +500,29 @@ export default function ExecuteWorkoutScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const capturedExIdx = exerciseIdx;
     const capturedSetIdx = setIdx;
-    setExercises((prev) =>
-      prev.map((e, ei) =>
-        ei !== exerciseIdx ? e : {
+    setExercises((prev) => {
+      const completedSetData = prev[exerciseIdx].sets[setIdx];
+      lastCompletedSetRef.current = {
+        reps: completedSetData.reps,
+        weight: completedSetData.weight,
+        exerciseName: prev[exerciseIdx].name,
+      };
+      return prev.map((e, ei) => {
+        if (ei !== exerciseIdx) return e;
+        return {
           ...e,
-          sets: e.sets.map((s, si) => si !== setIdx ? s : { ...s, completed: true }),
-        }
-      )
-    );
-    if (isGym) {
-      checkForPR(capturedExIdx, capturedSetIdx);
-    }
+          sets: e.sets.map((s, si) => {
+            if (si === setIdx) return { ...s, completed: true };
+            // Carry forward weight+reps to subsequent untouched incomplete sets
+            if (si > setIdx && !s.completed && !touchedSetsRef.current.has(`${exerciseIdx}-${si}`)) {
+              return { ...s, weight: completedSetData.weight, reps: completedSetData.reps };
+            }
+            return s;
+          }),
+        };
+      });
+    });
+    if (isGym) checkForPR(capturedExIdx, capturedSetIdx);
     advance(exerciseIdx, setIdx);
   }
 
@@ -754,9 +770,9 @@ export default function ExecuteWorkoutScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ fontSize: 18 }}>{MOOD_ICONS[i]}</Text>
+                  <Text style={{ fontSize: 18 }}>{MOOD_ICON_LIST[i]}</Text>
                   <Text style={{ color: mood === m ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, textAlign: "center" }}>
-                    {m}
+                    {t(MOOD_LABEL_KEYS[i])}
                   </Text>
                 </Pressable>
               ))}
@@ -992,8 +1008,23 @@ export default function ExecuteWorkoutScreen() {
               />
             </View>
 
+            {/* Last completed set recap */}
+            {lastCompletedSetRef.current && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 2 }}>
+                <Feather name="check-circle" size={13} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                  {lastCompletedSetRef.current.reps
+                    ? `${lastCompletedSetRef.current.reps} ${t("workouts.repsUnit")}`
+                    : ""}
+                  {lastCompletedSetRef.current.weight && parseFloat(lastCompletedSetRef.current.weight) > 0
+                    ? ` × ${lastCompletedSetRef.current.weight}${t("common.kg")}`
+                    : ""}
+                </Text>
+              </View>
+            )}
+
             {pendingRef.current && (
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", marginBottom: 8 }}>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", marginBottom: 4 }}>
                 {pendingRef.current.exIdx !== exerciseIdx
                   ? `${t("workouts.nextExercise")}: ${exercises[pendingRef.current.exIdx]?.name}`
                   : t("workouts.upNextSet", { set: pendingRef.current.setIdx + 1, total: currentEx?.sets.length })}
@@ -1002,11 +1033,11 @@ export default function ExecuteWorkoutScreen() {
 
             <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
               <Pressable
-                onPress={() => setRestSecondsLeft((s) => s + 30)}
+                onPress={() => setRestSecondsLeft((s) => Math.max(5, s - 30))}
                 style={[styles.restActionBtn, { borderColor: theme.border, backgroundColor: theme.background }]}
               >
-                <Feather name="plus" size={16} color={theme.text} />
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>+30s</Text>
+                <Feather name="minus" size={16} color={theme.text} />
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>-30s</Text>
               </Pressable>
               <Pressable
                 onPress={skipRest}
@@ -1016,6 +1047,13 @@ export default function ExecuteWorkoutScreen() {
                 <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 15 }}>
                   {t("workouts.skipRest")}
                 </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setRestSecondsLeft((s) => s + 30)}
+                style={[styles.restActionBtn, { borderColor: theme.border, backgroundColor: theme.background }]}
+              >
+                <Feather name="plus" size={16} color={theme.text} />
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>+30s</Text>
               </Pressable>
             </View>
           </Animated.View>
@@ -1229,6 +1267,59 @@ export default function ExecuteWorkoutScreen() {
           })}
         </View>
 
+        {/* ── Add / Remove set ── */}
+        {!isResting && (
+          <View style={{ flexDirection: "row", gap: 8, justifyContent: "flex-end" }}>
+            {currentEx.sets.filter((s) => !s.completed).length > 1 && (
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setExercises((prev) =>
+                    prev.map((e, ei) => {
+                      if (ei !== exerciseIdx) return e;
+                      let removeIdx = -1;
+                      for (let i = e.sets.length - 1; i >= 0; i--) {
+                        if (!e.sets[i].completed) { removeIdx = i; break; }
+                      }
+                      if (removeIdx === -1) return e;
+                      return { ...e, sets: e.sets.filter((_, i) => i !== removeIdx) };
+                    })
+                  );
+                }}
+                style={[styles.setMgmtBtn, { borderColor: theme.border }]}
+              >
+                <Feather name="minus" size={12} color={theme.textMuted} />
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                  {t("workouts.removeSet")}
+                </Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setExercises((prev) =>
+                  prev.map((e, ei) => {
+                    if (ei !== exerciseIdx) return e;
+                    const lastSet = e.sets[e.sets.length - 1];
+                    const newSet: SetData = {
+                      reps: lastSet?.reps || parseRepsFirst(e.targetReps),
+                      weight: lastSet?.weight || "",
+                      completed: false,
+                    };
+                    return { ...e, sets: [...e.sets, newSet] };
+                  })
+                );
+              }}
+              style={[styles.setMgmtBtn, { borderColor: theme.primary + "60", backgroundColor: theme.primaryDim }]}
+            >
+              <Feather name="plus" size={12} color={theme.primary} />
+              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                {t("workouts.addSet")}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* ── Action buttons (hidden during rest) ── */}
         {!isResting && (
           <View style={styles.actionRow}>
@@ -1352,6 +1443,12 @@ const styles = StyleSheet.create({
   rpeQuickBtn: {
     width: 44, height: 44, borderRadius: 12, borderWidth: 1,
     alignItems: "center", justifyContent: "center",
+  },
+
+  // Set management (add/remove)
+  setMgmtBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1,
   },
 
   // Actions

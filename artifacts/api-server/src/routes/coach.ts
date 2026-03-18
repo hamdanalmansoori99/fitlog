@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, conversationsTable, messagesTable, profilesTable, workoutsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable, settingsTable } from "@workspace/db";
+import { db, conversationsTable, messagesTable, profilesTable, workoutsTable, workoutExercisesTable, workoutSetsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable, settingsTable } from "@workspace/db";
 import { eq, and, desc, gte, lt } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
@@ -110,6 +110,49 @@ COACH DECISION SUMMARY:
 - Instruction: avoid repeating same muscle groups from recent sessions; give one clear specific recommendation; match session intensity to readiness.`;
 }
 
+// ─── Gym performance builder ───────────────────────────────────────────────────
+
+async function buildGymPerformanceSummary(userId: string): Promise<string> {
+  const gymWorkouts = await db
+    .select()
+    .from(workoutsTable)
+    .where(and(eq(workoutsTable.userId, userId), eq(workoutsTable.activityType, "gym")))
+    .orderBy(desc(workoutsTable.date))
+    .limit(3);
+
+  if (gymWorkouts.length === 0) return "";
+
+  const lines: string[] = [];
+  for (const w of gymWorkouts) {
+    const daysAgo = Math.round((Date.now() - new Date(w.date).getTime()) / 86400000);
+    const dateLabel = daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo}d ago`;
+    const exRows = await db
+      .select()
+      .from(workoutExercisesTable)
+      .where(eq(workoutExercisesTable.workoutId, w.id))
+      .orderBy(workoutExercisesTable.order);
+
+    const exSummaries: string[] = [];
+    for (const ex of exRows) {
+      const sets = await db
+        .select()
+        .from(workoutSetsTable)
+        .where(and(eq(workoutSetsTable.exerciseId, ex.id), eq(workoutSetsTable.completed, true)))
+        .orderBy(workoutSetsTable.order);
+      if (sets.length === 0) continue;
+      const best = sets.reduce((b, s) => ((s.weightKg ?? 0) * (s.reps ?? 0)) > ((b.weightKg ?? 0) * (b.reps ?? 0)) ? s : b, sets[0]);
+      const setStr = sets.map(s => `${s.reps ?? "?"}${s.weightKg ? `×${s.weightKg}kg` : ""}`).join(", ");
+      exSummaries.push(`  • ${ex.name}: ${setStr}${best.rpe ? ` @RPE${best.rpe}` : ""}`);
+    }
+    if (exSummaries.length > 0) {
+      lines.push(`${w.name || "Gym"} (${dateLabel}, ${w.durationMinutes ?? "?"}min):`);
+      lines.push(...exSummaries);
+    }
+  }
+
+  return lines.length > 0 ? lines.join("\n") : "";
+}
+
 // ─── System prompt ────────────────────────────────────────────────────────────
 
 function buildSystemPrompt(
@@ -117,7 +160,8 @@ function buildSystemPrompt(
   recentWorkouts: any[],
   equipment: any[],
   todayNutrition?: { calories: number; proteinG: number; carbsG: number; fatG: number; mealCount: number } | null,
-  todayRecovery?: RecoveryData
+  todayRecovery?: RecoveryData,
+  gymPerformance?: string
 ): string {
   const today = new Date();
   const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
@@ -188,6 +232,10 @@ Available workout templates in FitLog:
     todayRecovery ?? null
   );
 
+  const gymSection = gymPerformance
+    ? `\nRECENT GYM PERFORMANCE (actual sets × reps × weight logged by the user):\n${gymPerformance}\n`
+    : "";
+
   return `You are the AI Coach inside FitLog, a personal fitness app. Your job is to give specific, practical, and personalized fitness advice. You feel like a knowledgeable personal trainer who knows the user well.
 
 Today is ${dayName}, ${dateStr}.
@@ -242,12 +290,15 @@ ${
     : "No recovery data logged today."
 }
 
+${gymSection}
 ${availableTemplates}
 
 COACHING STYLE:
 - Be decisive. For "what should I do today" give ONE best recommendation — not a list of options.
 - Never suggest exercises or equipment the user does not have available.
 - Reference recent workout history to avoid repeating the same muscle groups back to back.
+- When the user asks about their gym performance, reference exact numbers from RECENT GYM PERFORMANCE above.
+- When recommending progression, compare to the actual last session numbers (e.g. "last time you did 3×8@80kg, try 3×8@82.5kg today").
 - If readiness is low (poor sleep, low energy, high stress), recommend a lighter or recovery-focused session — say why briefly.
 - Name FitLog templates exactly as listed above when recommending one.
 - Be calm, confident, and practical — like a trainer who already knows the plan.
@@ -448,12 +499,15 @@ router.post("/message", requireAuth, async (req, res) => {
       .limit(1);
     const todayRecovery = recoveryRows[0] ?? null;
 
+    const gymPerformance = await buildGymPerformanceSummary(user.id);
+
     let systemPrompt = buildSystemPrompt(
       profile,
       recentWorkouts,
       userEquipment,
       todayNutrition,
-      todayRecovery
+      todayRecovery,
+      gymPerformance || undefined
     );
 
     const [userSettings] = await db

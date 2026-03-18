@@ -420,6 +420,7 @@ export default {
     exercisesLabel: "Exercises",
     exerciseN: "Exercise {{n}}",
     addSet: "Add Set",
+    removeSet: "Remove Set",
     addExercise: "Add Exercise",
     effortLevel: "Effort Level (RPE)",
     mood: "Mood",
