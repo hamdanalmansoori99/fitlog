@@ -10,8 +10,10 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Svg, { Circle, G } from "react-native-svg";
 import { useTheme } from "@/hooks/useTheme";
+import { useSubscription } from "@/hooks/useSubscription";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
+import { PremiumGate } from "@/components/PremiumGate";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { useTranslation } from "react-i18next";
@@ -189,6 +191,7 @@ export default function MealsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { features: subFeatures } = useSubscription();
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [savingFavId, setSavingFavId] = useState<number | null>(null);
@@ -317,7 +320,14 @@ export default function MealsScreen() {
   });
 
   const generatePlanMutation = useMutation({
-    mutationFn: () => api.generateMealPlan({}),
+    mutationFn: () => {
+      const profileGoals: string[] = profileData?.fitnessGoals ?? [];
+      const profileTraining: string[] = profileData?.trainingPreferences ?? [];
+      const dietaryHints = [...profileGoals, ...profileTraining].filter(p =>
+        /vegetarian|vegan|plant.based|pescatarian|keto|paleo|gluten.free|dairy.free|halal|kosher|low.carb|low.fat|high.protein|mediterranean/i.test(p)
+      );
+      return api.generateMealPlan({ preferences: dietaryHints });
+    },
     onSuccess: (res: any) => {
       setMealPlan(res.meals || []);
       setPlanOpen(true);
@@ -521,31 +531,32 @@ export default function MealsScreen() {
         {/* AI Meal Plan Generator */}
         {isToday && (
           <Animated.View entering={FadeInDown.delay(80).duration(350)}>
-            {!planOpen ? (
-              <Pressable
-                onPress={() => { if (!generatePlanMutation.isPending) generatePlanMutation.mutate(); }}
-                style={[styles.planBanner, { backgroundColor: theme.secondaryDim, borderColor: theme.secondary + "40" }]}
-              >
-                {generatePlanMutation.isPending ? (
-                  <ActivityIndicator size="small" color={theme.secondary} />
-                ) : (
-                  <View style={[styles.planBannerIcon, { backgroundColor: theme.secondary + "25" }]}>
-                    <Feather name="cpu" size={15} color={theme.secondary} />
+            <PremiumGate feature="aiPhotoAnalysis" message={t("meals.aiMealPlansPremium")} compact>
+              {!planOpen ? (
+                <Pressable
+                  onPress={() => { if (!generatePlanMutation.isPending) generatePlanMutation.mutate(); }}
+                  style={[styles.planBanner, { backgroundColor: theme.secondaryDim, borderColor: theme.secondary + "40" }]}
+                >
+                  {generatePlanMutation.isPending ? (
+                    <ActivityIndicator size="small" color={theme.secondary} />
+                  ) : (
+                    <View style={[styles.planBannerIcon, { backgroundColor: theme.secondary + "25" }]}>
+                      <Feather name="cpu" size={15} color={theme.secondary} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                      {generatePlanMutation.isPending ? t("meals.generatingPlan") : t("meals.generateTodaysPlan")}
+                    </Text>
+                    <Text style={{ color: theme.secondary + "aa", fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                      {t("meals.aiTailoredMacros")}
+                    </Text>
                   </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                    {generatePlanMutation.isPending ? t("meals.generatingPlan") : t("meals.generateTodaysPlan")}
-                  </Text>
-                  <Text style={{ color: theme.secondary + "aa", fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-                    {t("meals.aiTailoredMacros")}
-                  </Text>
-                </View>
-                {!generatePlanMutation.isPending && (
-                  <Feather name="chevron-right" size={18} color={theme.secondary} />
-                )}
-              </Pressable>
-            ) : (
+                  {!generatePlanMutation.isPending && (
+                    <Feather name="chevron-right" size={18} color={theme.secondary} />
+                  )}
+                </Pressable>
+              ) : (
               <View style={[styles.planCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -593,7 +604,8 @@ export default function MealsScreen() {
                   </View>
                 ))}
               </View>
-            )}
+              )}
+            </PremiumGate>
           </Animated.View>
         )}
 

@@ -712,8 +712,16 @@ router.post("/generate-plan", requireAuth, async (req, res) => {
     const { proteinGoal, calorieGoal, bodyWeightKg, goalContext } = await computeNutritionTargets(
       user.id, profile, req.body.calorieGoal, req.body.proteinGoalG
     );
-    const preferences: string[] = req.body.preferences ?? [];
-    const prefStr = preferences.length > 0 ? preferences.join(", ") : "no specific preferences";
+
+    // Merge client-supplied preferences with profile-sourced dietary context
+    const clientPrefs: string[] = req.body.preferences ?? [];
+    const profileGoals: string[] = profile.fitnessGoals ?? [];
+    const profileTraining: string[] = profile.trainingPreferences ?? [];
+    const profileDietaryHints = [...profileGoals, ...profileTraining].filter(p =>
+      /vegetarian|vegan|plant.based|pescatarian|keto|paleo|gluten.free|dairy.free|halal|kosher|low.carb|low.fat|high.protein|mediterranean/i.test(p)
+    );
+    const allPreferences = Array.from(new Set([...profileDietaryHints, ...clientPrefs]));
+    const prefStr = allPreferences.length > 0 ? allPreferences.join(", ") : "no specific dietary preferences";
     const weightNote = bodyWeightKg ? `- Body weight: ${bodyWeightKg} kg` : "";
 
     const bMin = Math.round(proteinGoal * 0.22);
