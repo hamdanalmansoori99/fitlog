@@ -1,0 +1,102 @@
+Additional implementation guardrails and clarifications:
+
+1. Status signal logic (home screen)
+- Define status deterministically:
+  - "On track" = workoutsThisWeek >= expectedWorkoutsByToday
+  - "Behind" = workoutsThisWeek is slightly below expected pace
+  - "At risk" = workoutsThisWeek is far below expected pace and weekly goal is unlikely without catch-up
+- expectedWorkoutsByToday should be derived from weeklyGoal and current weekday (simple proportional calculation)
+- Keep logic simple, predictable, and explainable — do not use complex heuristics
+
+2. Weekly adherence streak
+- A week counts as "on target" only if workoutsCompleted >= weeklyGoal
+- Weekly streak = number of consecutive past weeks meeting weeklyGoal
+- If insufficient historical data exists, show a clean fallback state instead of incorrect streak values
+
+3. Proactive AI coach message
+- Only trigger the proactive opening message when:
+  - messages.length === 0
+  - AND it has not already been triggered in the current session
+- Do NOT re-trigger the message every time the screen mounts
+- The message must be short, specific, and actionable (no generic motivation)
+
+4. AI coach behavior
+- Responses must prioritize:
+  - actionable next steps
+  - brevity
+  - use of available user data (workouts, adherence, bodyweight trend)
+- Avoid generic advice
+- Prefer clear directives like:
+  - "Do Push Day today"
+  - "Increase weight by 2.5kg next session"
+  - "You are under protein by ~30g today"
+
+5. Workout autofill behavior
+- Autofill previous weight/reps ONLY on initial render if inputs are empty
+- Do NOT overwrite user-entered values on re-render
+- Autofill should improve speed, not reduce control
+
+6. Swipe-to-complete gesture
+- Gesture must be smooth and not interfere with vertical scrolling
+- Only trigger completion on a clear right-swipe threshold
+- Include haptic feedback and a quick visual confirmation (green flash)
+
+7. Active workout indicator
+- State must live in a global store (Zustand or existing context)
+- Must persist across tab navigation
+- Must be easily dismissible when workout is finished
+- Should not block UI or overlap important controls
+
+8. Strength trends calculation
+- Define improvement clearly (e.g. increase in weight, reps, or volume over last 4 weeks vs previous period)
+- Only show trends when sufficient data exists
+- If insufficient data:
+  - hide the section OR
+  - show a clean fallback ("Not enough data yet")
+
+9. Emotional reward highlight
+- Choose the strongest available signal:
+  - best lift ever
+  - most improved exercise
+  - weekly consistency milestone
+- Do NOT show weak or meaningless highlights
+- Always prefer quality over always showing something
+
+10. Coach Summary (progress screen)
+- Must be generated client-side from existing data
+- Keep to 2–3 short sentences
+- Must reference real metrics:
+  - adherence
+  - streaks
+  - PRs
+  - consistency
+- Avoid generic or vague language
+
+11. Fallback states (very important)
+- Every new feature must have:
+  - loading state
+  - empty state
+  - insufficient data state
+- Do NOT render broken, empty, or misleading UI
+
+12. Performance & safety
+- Do not introduce unnecessary re-renders
+- Do not add heavy computations inside render loops
+- Memoize derived calculations where appropriate
+- Do not break existing flows or navigation
+
+13. Design consistency
+- Follow existing theme and spacing rules
+- Use existing components where possible
+- No hardcoded English — all strings must go through i18n (en.ts and ar.ts)
+
+14. Implementation style
+- Make targeted upgrades only
+- Do NOT refactor large parts of the app unnecessarily
+- Keep changes scoped to Phase 2 goals
+- Preserve stability of the app at all times
+
+After implementation:
+- Provide a summary of all changes made
+- List any assumptions used
+- List any areas that require testing or validation

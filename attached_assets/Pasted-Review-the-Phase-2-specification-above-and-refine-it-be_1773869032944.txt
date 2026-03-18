@@ -1,0 +1,168 @@
+Review the Phase 2 specification above and refine it before implementation.
+
+Do NOT rewrite everything.
+Do NOT change structure.
+Instead:
+- tighten logic
+- fix edge cases
+- improve clarity
+- add missing constraints
+- ensure production-level behavior
+
+Apply the following improvements:
+
+==================================================
+1. STATUS SIGNAL REFINEMENT
+==================================================
+
+- Keep the formula:
+  expectedByToday = ceil(weeklyGoal × (dayOfWeek / 7))
+
+- Add early-week tolerance:
+  - Do NOT mark user as "at risk" before mid-week unless extremely behind
+  - Early in the week should lean toward "on track" or "behind"
+
+- Ensure status logic is:
+  - simple
+  - deterministic
+  - consistent across renders
+
+- Add requirement:
+  - status badge must include color + icon:
+    - On track = green + check
+    - Behind = amber + warning
+    - At risk = red + alert
+
+==================================================
+2. WEEKLY STREAK CLARIFICATION
+==================================================
+
+- Explicitly define:
+  - "on target week" = workoutsCompleted >= weeklyGoal
+
+- If insufficient history:
+  - show fallback state
+  - never estimate or fake streaks
+
+==================================================
+3. AI COACH BEHAVIOR UPGRADE
+==================================================
+
+- Proactive message:
+  - must trigger only once per session
+  - must never re-trigger on re-mount
+
+- Add fallback:
+  - if insufficient data → simple actionable recommendation
+
+- Enforce AI quality:
+  - responses must be:
+    - short
+    - specific
+    - data-driven
+  - generic advice = failure
+
+- Prefer outputs like:
+  - "Do Push Day today"
+  - "Increase weight by 2.5kg next session"
+  - "You are under your weekly target"
+
+==================================================
+4. WORKOUT FLOW SAFETY + UX
+==================================================
+
+- Autofill:
+  - ONLY on initial render
+  - NEVER override user input
+  - must improve speed, not reduce control
+
+- Swipe gesture:
+  - must not conflict with vertical scroll
+  - must require clear intentional swipe
+
+- Active workout:
+  - must persist across tabs
+  - must reset if session becomes invalid
+  - must never get stuck
+
+==================================================
+5. PR (PERSONAL RECORD) DEFINITION
+==================================================
+
+Define PR deterministically as:
+- highest weight ever OR
+- highest reps at a weight OR
+- highest volume set
+
+- Must be computed from real history
+- Never guessed or approximated
+
+==================================================
+6. PROGRESS SCREEN LOGIC IMPROVEMENTS
+==================================================
+
+- Strength trends:
+  - must require sufficient data
+  - otherwise hide or show fallback
+
+- Emotional reward:
+  - only show strongest meaningful signal
+  - if weak → hide completely
+
+- Coach summary:
+  - must include real numbers
+  - must avoid generic phrases
+  - must feel like analysis, not motivation
+
+==================================================
+7. FALLBACK STATES (STRICT)
+==================================================
+
+Every feature must handle:
+- loading
+- empty
+- insufficient data
+
+- Never show:
+  - broken UI
+  - misleading values
+  - fake data
+
+==================================================
+8. PERFORMANCE & STABILITY
+==================================================
+
+- Memoize heavy calculations
+- Avoid logic inside render loops
+- Do not introduce unnecessary re-renders
+
+- Preserve:
+  - navigation
+  - existing flows
+  - API stability
+
+==================================================
+9. DESIGN CONSISTENCY
+==================================================
+
+- Follow existing theme system strictly
+- Use existing components where possible
+- No hardcoded text
+- All strings must go through i18n
+
+==================================================
+10. IMPLEMENTATION RULE
+==================================================
+
+- Do NOT refactor unrelated parts of the app
+- Make only targeted improvements
+- Preserve stability at all times
+
+==================================================
+FINAL STEP
+==================================================
+
+After refining:
+1. Show the updated Phase 2 plan with improvements applied
+2. Highlight what was changed or tightened
+3. Then wait for approval before implementing

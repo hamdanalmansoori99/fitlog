@@ -12,6 +12,7 @@ import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { WeeklyBarChart } from "@/components/WeeklyBarChart";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { GoalInsightsPanel } from "@/components/GoalInsightsPanel";
@@ -249,6 +250,138 @@ function WeeklyAdherenceGrid({ perDay, theme }: {
   );
 }
 
+// ─── Phase 2-P1 pure computation functions ───────────────────────────────────
+
+type StrengthTrendItem = { name: string; deltaPercent: number };
+
+function computeStrengthTrends(workoutsData: any): StrengthTrendItem[] {
+  if (!workoutsData?.workouts) return [];
+  const nowMs = Date.now();
+  const DAY = 86400000;
+  const byExercise: Record<string, { weightA: number[]; weightB: number[]; sessionsA: Set<number>; sessionsB: Set<number> }> = {};
+
+  for (const workout of workoutsData.workouts) {
+    if (workout.activityType !== "gym") continue;
+    const ts = new Date(workout.date).getTime();
+    if (isNaN(ts)) continue;
+    const inA = ts >= nowMs - 28 * DAY && ts < nowMs;
+    const inB = ts >= nowMs - 56 * DAY && ts < nowMs - 28 * DAY;
+    if (!inA && !inB) continue;
+
+    for (const ex of (workout.exercises || [])) {
+      const name: string = (ex.name || "").trim();
+      if (!name) continue;
+      if (!byExercise[name]) {
+        byExercise[name] = { weightA: [], weightB: [], sessionsA: new Set(), sessionsB: new Set() };
+      }
+      if (inA) byExercise[name].sessionsA.add(ts);
+      if (inB) byExercise[name].sessionsB.add(ts);
+
+      for (const set of (ex.sets || [])) {
+        const w = parseFloat(set.weightKg);
+        if (!isNaN(w) && w > 0) {
+          if (inA) byExercise[name].weightA.push(w);
+          if (inB) byExercise[name].weightB.push(w);
+        }
+      }
+    }
+  }
+
+  const results: StrengthTrendItem[] = [];
+  for (const [name, data] of Object.entries(byExercise)) {
+    if (data.sessionsA.size < 2 || data.sessionsB.size < 2) continue;
+    if (data.weightA.length === 0 || data.weightB.length === 0) continue;
+    const bestA = Math.max(...data.weightA);
+    const bestB = Math.max(...data.weightB);
+    if (bestB <= 0) continue;
+    const delta = ((bestA - bestB) / bestB) * 100;
+    if (delta <= 0) continue;
+    results.push({ name, deltaPercent: delta });
+  }
+  return results.sort((a, b) => b.deltaPercent - a.deltaPercent).slice(0, 3);
+}
+
+type EmotionalRewardResult =
+  | { type: "bestLift"; exercise: string; value: string }
+  | { type: "mostImproved"; exercise: string; deltaPercent: number };
+
+function computeEmotionalReward(
+  records: any,
+  strengthTrends: StrengthTrendItem[],
+): EmotionalRewardResult | null {
+  const nowMs = Date.now();
+  const THIRTY_DAYS = 30 * 86400000;
+
+  // Candidate 1: best lift set in last 30 days
+  const recordList: any[] = records?.records ?? [];
+  let bestRecentLift: { rawKg: number; exercise: string; value: string } | null = null;
+  for (const r of recordList) {
+    if (!r.date) continue;
+    const ts = new Date(r.date).getTime();
+    if (isNaN(ts)) continue;
+    if (ts < nowMs - THIRTY_DAYS || ts > nowMs) continue;
+    if (!r.rawKg || r.rawKg <= 0) continue;
+    if (!bestRecentLift || r.rawKg > bestRecentLift.rawKg) {
+      const exercise = r.label?.replace(/^Best /, "") || r.label || "";
+      bestRecentLift = { rawKg: r.rawKg, exercise, value: r.value ?? "" };
+    }
+  }
+  if (bestRecentLift) {
+    return { type: "bestLift", exercise: bestRecentLift.exercise, value: bestRecentLift.value };
+  }
+
+  // Candidate 2: most improved exercise with >= 10% delta
+  const topImproved = strengthTrends.find(t => t.deltaPercent >= 10);
+  if (topImproved) {
+    return { type: "mostImproved", exercise: topImproved.name, deltaPercent: topImproved.deltaPercent };
+  }
+
+  return null;
+}
+
+type CoachSummaryData = {
+  adherence?: { done: number; goal: number };
+  streak?: number;
+  prs?: { count: number; exercise: string };
+};
+
+function buildCoachSummary(
+  workoutSummary: any,
+  streaks: any,
+  records: any,
+  profile: any,
+): CoachSummaryData | null {
+  const data: CoachSummaryData = {};
+
+  const goal = profile?.weeklyWorkoutDays ?? 0;
+  if (workoutSummary && goal > 0) {
+    data.adherence = { done: workoutSummary.totalThisWeek ?? 0, goal };
+  }
+
+  const streak = streaks?.currentWorkoutStreak ?? 0;
+  if (streak >= 2) {
+    data.streak = streak;
+  }
+
+  const nowMs = Date.now();
+  const THIRTY_DAYS = 30 * 86400000;
+  const recentPRs = (records?.records ?? []).filter((r: any) => {
+    if (!r.date) return false;
+    const ts = new Date(r.date).getTime();
+    if (isNaN(ts)) return false;
+    return ts >= nowMs - THIRTY_DAYS && ts <= nowMs;
+  });
+  if (recentPRs.length > 0) {
+    const exercise = recentPRs[0].label?.replace(/^Best /, "") || "";
+    data.prs = { count: recentPRs.length, exercise };
+  }
+
+  const hasData = data.adherence !== undefined || data.streak !== undefined || data.prs !== undefined;
+  return hasData ? data : null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function ProgressScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -412,6 +545,10 @@ export default function ProgressScreen() {
     });
   }, [profile, workoutsData, nutritionStats, streaks, records, recoveryTodayData, workoutSummary]);
 
+  const strengthTrends = useMemo(() => computeStrengthTrends(workoutsData), [workoutsData]);
+  const emotionalReward = useMemo(() => computeEmotionalReward(records, strengthTrends), [records, strengthTrends]);
+  const coachSummary = useMemo(() => buildCoachSummary(workoutSummary, streaks, records, profile), [workoutSummary, streaks, records, profile]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
@@ -531,6 +668,45 @@ export default function ProgressScreen() {
             theme={theme}
           />
         </Animated.View>
+
+        {/* ── EMOTIONAL REWARD HIGHLIGHT ── */}
+        {!recordsLoading && emotionalReward && (
+          <Animated.View entering={FadeInDown.delay(30).duration(350)}>
+            <View style={{
+              backgroundColor: theme.primary + "12",
+              borderRadius: 16,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: theme.primary + "35",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 14,
+            }}>
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 13,
+                backgroundColor: theme.primary + "25",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <Feather name="award" size={22} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                  {emotionalReward.type === "bestLift"
+                    ? t("progress.emotionalRewardBestLift")
+                    : t("progress.emotionalRewardMostImproved")}
+                </Text>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15, marginTop: 3 }}>
+                  {emotionalReward.type === "bestLift"
+                    ? t("progress.emotionalRewardBestLiftSub", { exercise: emotionalReward.exercise, value: emotionalReward.value })
+                    : t("progress.emotionalRewardMostImprovedSub", { exercise: emotionalReward.exercise, delta: Math.round(emotionalReward.deltaPercent) })}
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+        )}
 
         {/* Streaks */}
         <Animated.View entering={FadeInDown.delay(40).duration(350)}>
@@ -1057,6 +1233,70 @@ export default function ProgressScreen() {
             </Card>
           )}
         </View>
+
+        {/* ── STRENGTH TRENDS ── */}
+        {workoutsData !== undefined && (
+          <Animated.View entering={FadeInDown.delay(60).duration(350)}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.strengthTrendsTitle")}</Text>
+            {strengthTrends.length === 0 ? (
+              <Card>
+                <EmptyState
+                  compact
+                  icon="trending-up"
+                  title={t("progress.strengthTrendsNoData")}
+                  subtitle={t("progress.strengthTrendsNoDataSub")}
+                />
+              </Card>
+            ) : (
+              <Card>
+                <View style={{ gap: 14 }}>
+                  {strengthTrends.map((item, i) => (
+                    <View key={i} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 14, flex: 1 }} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Feather name="trending-up" size={13} color={theme.primary} />
+                        <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 14 }}>
+                          +{Math.round(item.deltaPercent)}%
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </Card>
+            )}
+          </Animated.View>
+        )}
+
+        {/* ── COACH SUMMARY ── */}
+        {!summaryLoading && !streaksLoading && coachSummary && (
+          <Animated.View entering={FadeInDown.delay(70).duration(350)}>
+            <Card style={{ borderLeftWidth: 3, borderLeftColor: theme.primary + "60" }}>
+              <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 10 }}>
+                {t("progress.coachSummaryTitle")}
+              </Text>
+              <View style={{ gap: 6 }}>
+                {coachSummary.adherence && (
+                  <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 21 }}>
+                    {t("progress.coachSummaryAdherence", { done: coachSummary.adherence.done, goal: coachSummary.adherence.goal })}
+                  </Text>
+                )}
+                {coachSummary.streak !== undefined && (
+                  <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 21 }}>
+                    {t("progress.coachSummaryStreak", { count: coachSummary.streak })}
+                  </Text>
+                )}
+                {coachSummary.prs && (
+                  <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 21 }}>
+                    {t("progress.coachSummaryPRs", { count: coachSummary.prs.count, exercise: coachSummary.prs.exercise })}
+                  </Text>
+                )}
+              </View>
+            </Card>
+          </Animated.View>
+        )}
+
       </ScrollView>
 
       {/* Full-screen photo viewer */}
