@@ -144,43 +144,6 @@ function NutritionHero({ mealsData, theme }: { mealsData: any; theme: AppTheme }
   );
 }
 
-function HeroActions({ theme }: { theme: AppTheme }) {
-  const { t } = useTranslation();
-
-  const actions = [
-    {
-      label: t("home.startWorkout"), icon: "play" as const,
-      color: theme.primary, onPress: () => router.push("/(tabs)/workouts" as any),
-    },
-    {
-      label: t("home.scanMeal"), icon: "camera" as const,
-      color: theme.secondary, onPress: () => router.push("/(tabs)/scan" as any),
-    },
-  ];
-
-  return (
-    <View style={{ flexDirection: "row", gap: 10 }}>
-      {actions.map((a) => (
-        <Pressable
-          key={a.label}
-          onPress={a.onPress}
-          style={({ pressed }) => [
-            styles.heroBtn,
-            { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.8 : 1 },
-          ]}
-        >
-          <View style={[styles.heroBtnIcon, { backgroundColor: a.color + "20" }]}>
-            <Feather name={a.icon} size={20} color={a.color} />
-          </View>
-          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 12, textAlign: "center" }}>
-            {a.label}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 function CoachCard({
   theme, teaser, recommendedPrompt,
 }: { theme: AppTheme; teaser?: string; recommendedPrompt?: string }) {
@@ -212,107 +175,6 @@ function CoachCard({
         </Text>
       </Pressable>
     </Card>
-  );
-}
-
-function WeightQuickAddRow({
-  measurementsData,
-  settings,
-  theme,
-}: {
-  measurementsData: any;
-  settings: any;
-  theme: AppTheme;
-}) {
-  const { t } = useTranslation();
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const useImperial = settings?.unitSystem === "imperial";
-
-  const todayMeasurement = useMemo(() => {
-    const list: any[] = measurementsData?.measurements || [];
-    return list.find(
-      (m: any) => m.date?.startsWith(todayStr) && m.weightKg != null
-    ) || null;
-  }, [measurementsData, todayStr]);
-
-  const weightLabel = useMemo(() => {
-    if (!todayMeasurement) return null;
-    const kg: number = todayMeasurement.weightKg;
-    if (useImperial) {
-      return `${(kg * 2.20462).toFixed(1)} lbs`;
-    }
-    return `${kg.toFixed(1)} kg`;
-  }, [todayMeasurement, useImperial]);
-
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (todayMeasurement) {
-      router.push({ pathname: "/measurements/edit" as any, params: { id: todayMeasurement.id } });
-    } else {
-      router.push({ pathname: "/measurements/add" as any, params: { focus: "weight" } });
-    }
-  };
-
-  const logged = !!todayMeasurement;
-  const accent = logged ? theme.primary : theme.secondary;
-
-  return (
-    <Pressable
-      onPress={handlePress}
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 13,
-        borderRadius: 14,
-        backgroundColor: theme.card,
-        borderWidth: 1,
-        borderColor: logged ? theme.primary + "30" : theme.border,
-        opacity: pressed ? 0.8 : 1,
-      })}
-    >
-      <View
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          backgroundColor: accent + "20",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Feather name="sliders" size={17} color={accent} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            color: logged ? theme.primary : theme.text,
-            fontFamily: "Inter_600SemiBold",
-            fontSize: 14,
-          }}
-          numberOfLines={1}
-        >
-          {logged ? weightLabel! : t("home.logTodaysWeight")}
-        </Text>
-        <Text
-          style={{
-            color: theme.textMuted,
-            fontFamily: "Inter_400Regular",
-            fontSize: 11,
-            marginTop: 1,
-          }}
-          numberOfLines={1}
-        >
-          {logged ? t("home.weightLoggedToday") : t("home.tapToAddMeasurement")}
-        </Text>
-      </View>
-      <Feather
-        name={rtlIcon("chevron-right")}
-        size={16}
-        color={theme.textMuted}
-      />
-    </Pressable>
   );
 }
 
@@ -516,69 +378,6 @@ function WorkoutDoneCard({ workout, theme }: { workout: any; theme: AppTheme }) 
         </Text>
       </Pressable>
     </Card>
-  );
-}
-
-
-function StreakSummaryCard({ streaksData, theme }: { streaksData: any; theme: AppTheme }) {
-  const { t } = useTranslation();
-  if (!streaksData) return null;
-
-  const workoutCurrent = streaksData.currentWorkoutStreak ?? 0;
-  const mealCurrent = streaksData.currentMealStreak ?? 0;
-
-  const items = [
-    { icon: "activity" as const, value: workoutCurrent, label: t("home.workout"), color: "#00e676" },
-    { icon: "coffee" as const, value: mealCurrent, label: t("home.mealsLabel"), color: "#ffab40" },
-  ];
-
-  const hasActiveStreak = workoutCurrent > 0 || mealCurrent > 0;
-
-  return (
-    <View style={{ gap: 8 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          {hasActiveStreak && <Text style={{ fontSize: 14 }}>🔥</Text>}
-          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-            {t("home.streaks")}
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => router.push("/streaks" as any)}
-          style={{ flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, paddingHorizontal: 4 }}
-        >
-          <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-            {t("streaks.viewStreaks")}
-          </Text>
-          <Feather name={rtlIcon("chevron-right")} size={13} color={theme.primary} />
-        </Pressable>
-      </View>
-      <Pressable
-        onPress={() => router.push("/streaks" as any)}
-        style={({ pressed }) => [
-          styles.streakStrip,
-          { backgroundColor: theme.card, borderColor: hasActiveStreak ? theme.primary + "30" : theme.border, opacity: pressed ? 0.85 : 1 },
-        ]}
-      >
-        {items.map((s, i) => (
-          <React.Fragment key={s.label}>
-            {i > 0 && <View style={{ width: 1, height: 28, backgroundColor: theme.border }} />}
-            <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                {s.value > 0 && <Text style={{ fontSize: 10 }}>🔥</Text>}
-                <Feather name={s.icon} size={11} color={s.color} />
-                <Text style={{ color: s.color, fontFamily: "Inter_700Bold", fontSize: 16 }}>
-                  {s.value}
-                </Text>
-              </View>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
-                {s.label}
-              </Text>
-            </View>
-          </React.Fragment>
-        ))}
-      </Pressable>
-    </View>
   );
 }
 
@@ -1101,19 +900,6 @@ const styles = StyleSheet.create({
   secondaryBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 6, paddingVertical: 12, borderRadius: 12, borderWidth: 1, minHeight: 44,
-  },
-  heroBtn: {
-    flex: 1, alignItems: "center", justifyContent: "center", gap: 8,
-    paddingVertical: 16, borderRadius: 16, borderWidth: 1,
-  },
-  heroBtnIcon: {
-    width: 44, height: 44, borderRadius: 12,
-    alignItems: "center", justifyContent: "center",
-  },
-  coachChip: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderWidth: 1,
-    minHeight: 44,
   },
   weeklyIcon: {
     width: 40, height: 40, borderRadius: 12,
