@@ -485,7 +485,7 @@ export default {
     discardSession: "Discard session",
     totalVolume: "Total Volume",
     sessionPRs: "New PRs This Session",
-    activePill: "In progress · {{name}}",
+    activePill: "{{name}} · Active",
     discardWorkoutTitle: "Discard workout?",
     discardWorkoutMessage: "Your session data will not be saved.",
     keepLabel: "Keep",

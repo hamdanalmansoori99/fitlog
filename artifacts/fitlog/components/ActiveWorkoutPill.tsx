@@ -6,17 +6,28 @@ import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkoutStore } from "@/store/workoutStore";
+import { getTemplateById } from "@/lib/workoutTemplates";
 
 export function ActiveWorkoutPill() {
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const { activeWorkoutTemplateId, activeWorkoutTemplateName } = useWorkoutStore();
+  const { activeWorkoutTemplateId, activeWorkoutTemplateName, clearActiveWorkout } = useWorkoutStore();
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(20);
   const pulseScale = useSharedValue(1);
 
+  const templateValid = activeWorkoutTemplateId
+    ? Boolean(getTemplateById(activeWorkoutTemplateId))
+    : false;
+
   useEffect(() => {
-    if (activeWorkoutTemplateId) {
+    if (activeWorkoutTemplateId && !templateValid) {
+      clearActiveWorkout();
+    }
+  }, [activeWorkoutTemplateId, templateValid]);
+
+  useEffect(() => {
+    if (activeWorkoutTemplateId && templateValid) {
       opacity.value = withSpring(1, { damping: 16, stiffness: 200 });
       translateY.value = withSpring(0, { damping: 16, stiffness: 200 });
       pulseScale.value = withRepeat(
@@ -31,14 +42,14 @@ export function ActiveWorkoutPill() {
       opacity.value = withTiming(0, { duration: 200 });
       translateY.value = withTiming(20, { duration: 200 });
     }
-  }, [activeWorkoutTemplateId]);
+  }, [activeWorkoutTemplateId, templateValid]);
 
   const containerStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }, { scale: pulseScale.value }],
   }));
 
-  if (!activeWorkoutTemplateId) return null;
+  if (!activeWorkoutTemplateId || !templateValid) return null;
 
   return (
     <Animated.View

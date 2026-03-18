@@ -485,7 +485,7 @@ export default {
     discardSession: "تجاهل الجلسة",
     totalVolume: "إجمالي الحجم",
     sessionPRs: "أرقام قياسية جديدة في هذه الجلسة",
-    activePill: "قيد التنفيذ · {{name}}",
+    activePill: "{{name}} · نشط",
     discardWorkoutTitle: "تجاهل التمرين؟",
     discardWorkoutMessage: "لن يتم حفظ بيانات جلستك.",
     keepLabel: "إبقاء",
