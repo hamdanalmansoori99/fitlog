@@ -312,7 +312,7 @@ function WeightQuickAddRow({
           justifyContent: "center",
         }}
       >
-        <Feather name="activity" size={17} color={accent} />
+        <Feather name="sliders" size={17} color={accent} />
       </View>
       <View style={{ flex: 1 }}>
         <Text
