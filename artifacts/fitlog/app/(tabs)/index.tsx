@@ -756,6 +756,113 @@ function WeeklyProgressCard({
   );
 }
 
+// ─── STATUS SIGNAL ────────────────────────────────────────────────────────────
+type StatusSignal = "onTrack" | "behind" | "atRisk";
+
+function computeStatusSignal(
+  workoutsThisWeek: number,
+  weeklyGoal: number,
+  dayOfWeek: number, // Mon=1 … Sun=7
+): StatusSignal {
+  if (weeklyGoal <= 0) return "onTrack";
+  const expected = Math.ceil(weeklyGoal * (dayOfWeek / 7));
+  if (workoutsThisWeek >= expected) return "onTrack";
+  const gap = expected - workoutsThisWeek;
+  if (gap >= 2) {
+    const remainingDays = 7 - dayOfWeek; // days left after today
+    const sessionsNeeded = weeklyGoal - workoutsThisWeek;
+    if (sessionsNeeded > remainingDays) return "atRisk";
+  }
+  return "behind";
+}
+
+function computeWeeklyAdherenceStreak(workouts: any[], weeklyGoal: number): number | null {
+  if (!workouts.length || weeklyGoal <= 0) return null;
+  const now = new Date();
+  const jsDay = now.getDay(); // 0=Sun … 6=Sat
+  const mondayOffset = jsDay === 0 ? 6 : jsDay - 1;
+  const currentWeekStart = new Date(now);
+  currentWeekStart.setDate(now.getDate() - mondayOffset);
+  currentWeekStart.setHours(0, 0, 0, 0);
+
+  const workoutsByWeek = new Map<string, Set<string>>();
+  for (const w of workouts) {
+    if (!w.date) continue;
+    const raw = w.date.includes("T") ? w.date : w.date + "T12:00:00";
+    const d = new Date(raw);
+    if (isNaN(d.getTime()) || d >= currentWeekStart) continue;
+    const wDay = d.getDay();
+    const wMon = wDay === 0 ? 6 : wDay - 1;
+    const wWeekStart = new Date(d);
+    wWeekStart.setDate(d.getDate() - wMon);
+    wWeekStart.setHours(0, 0, 0, 0);
+    const key = wWeekStart.toISOString().slice(0, 10);
+    if (!workoutsByWeek.has(key)) workoutsByWeek.set(key, new Set());
+    workoutsByWeek.get(key)!.add(d.toISOString().slice(0, 10));
+  }
+
+  if (workoutsByWeek.size < 2) return null;
+
+  const sortedWeeks = Array.from(workoutsByWeek.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  let streak = 0;
+  let prevKey: string | null = null;
+  for (const [key, dates] of sortedWeeks) {
+    if (prevKey !== null) {
+      const prevDate: Date = new Date(prevKey + "T00:00:00");
+      const expectedPrev: Date = new Date(prevDate.getTime());
+      expectedPrev.setDate(prevDate.getDate() - 7);
+      if (key !== expectedPrev.toISOString().slice(0, 10)) break;
+    }
+    if (dates.size >= weeklyGoal) {
+      streak++;
+      prevKey = key;
+    } else {
+      break;
+    }
+  }
+  return streak >= 2 ? streak : null;
+}
+
+function StatusSignalRow({
+  signal,
+  recentWin,
+  theme,
+}: {
+  signal: StatusSignal | null;
+  recentWin: string | null;
+  theme: AppTheme;
+}) {
+  const { t } = useTranslation();
+  if (!signal) return null;
+
+  const signalConfig: Record<StatusSignal, { label: string; icon: keyof typeof Feather.glyphMap; color: string }> = {
+    onTrack: { label: t("home.statusOnTrack"), icon: "check-circle", color: theme.primary },
+    behind: { label: t("home.statusBehind"), icon: "alert-triangle", color: theme.warning || "#ffab40" },
+    atRisk: { label: t("home.statusAtRisk"), icon: "alert-octagon", color: theme.danger || "#ff5252" },
+  };
+  const { label, icon, color } = signalConfig[signal];
+
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(20).duration(180)}
+      style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, marginBottom: 12 }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: color + "18", borderWidth: 1, borderColor: color + "40" }}>
+        <Feather name={icon} size={12} color={color} />
+        <Text style={{ color, fontFamily: "Inter_700Bold", fontSize: 12 }}>{label}</Text>
+      </View>
+      {recentWin ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border }}>
+          <Feather name="award" size={11} color={theme.warning || "#ffab40"} />
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11 }} numberOfLines={1}>
+            {recentWin}
+          </Text>
+        </View>
+      ) : null}
+    </Animated.View>
+  );
+}
+
 function getGreeting(t: (key: string) => string) {
   const h = new Date().getHours();
   if (h < 12) return t("home.goodMorning");
@@ -949,6 +1056,38 @@ export default function HomeScreen() {
     return getTodayRecommendation(coachProfile, recentWorkoutsList, recoveryCtx);
   }, [profile, recentWorkoutsList, hasCoachOnboarding, recoveryTodayData]);
 
+  const weeklyGoalTarget = useMemo(() => profile?.weeklyWorkoutDays || 3, [profile]);
+
+  const workoutsThisWeekCount = useMemo(
+    () => getWeeklyWorkoutCount(workoutsData?.workouts || []),
+    [workoutsData],
+  );
+
+  const statusSignal = useMemo<StatusSignal | null>(() => {
+    if (!workoutsData || !profile) return null;
+    const jsDay = new Date().getDay();
+    const dayOfWeek = jsDay === 0 ? 7 : jsDay; // Mon=1…Sun=7
+    return computeStatusSignal(workoutsThisWeekCount, weeklyGoalTarget, dayOfWeek);
+  }, [workoutsThisWeekCount, weeklyGoalTarget, workoutsData, profile]);
+
+  const weeklyAdherenceStreak = useMemo(
+    () => computeWeeklyAdherenceStreak(workoutsData?.workouts || [], weeklyGoalTarget),
+    [workoutsData, weeklyGoalTarget],
+  );
+
+  const recentWin = useMemo(() => {
+    if (achievementsData?.recentPRs?.length > 0) {
+      const pr = achievementsData.recentPRs[0];
+      return { type: "pr" as const, exercise: pr.exercise as string, value: pr.weightKg as number };
+    }
+    const bestStreak = Math.max(
+      streaksData?.currentWorkoutStreak ?? 0,
+      streaksData?.currentMealStreak ?? 0,
+    );
+    if (bestStreak >= 3) return { type: "streak" as const, count: bestStreak };
+    return null;
+  }, [achievementsData, streaksData]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
@@ -1012,6 +1151,19 @@ export default function HomeScreen() {
             </Text>
           </Pressable>
         </Animated.View>
+
+        {/* ═══ STATUS SIGNAL ROW ═══ */}
+        <StatusSignalRow
+          signal={statusSignal}
+          recentWin={
+            recentWin
+              ? recentWin.type === "pr"
+                ? t("home.recentWinPR", { exercise: recentWin.exercise, value: `${recentWin.value} kg` })
+                : t("home.recentWinStreak", { count: recentWin.count })
+              : null
+          }
+          theme={theme}
+        />
 
         {/* ═══ SMART NOTIFICATION BANNER ═══ */}
 
@@ -1130,6 +1282,21 @@ export default function HomeScreen() {
                     {t("home.mealDaysThisWeek", { count: achievementsData.weeklyScore.mealDays })}
                   </Text>
                 )}
+              </View>
+              <View style={{ width: 1, height: 36, backgroundColor: theme.border }} />
+              {/* Weekly adherence streak */}
+              <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                  <Feather name="calendar" size={11} color={theme.secondary} />
+                  <Text style={{
+                    color: weeklyAdherenceStreak != null ? theme.secondary : theme.textMuted,
+                    fontFamily: "Inter_700Bold",
+                    fontSize: 16,
+                  }}>
+                    {weeklyAdherenceStreak != null ? weeklyAdherenceStreak : "—"}
+                  </Text>
+                </View>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.weeklyStreakLabel")}</Text>
               </View>
             </Pressable>
           )}

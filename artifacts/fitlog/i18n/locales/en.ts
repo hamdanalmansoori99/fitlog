@@ -299,6 +299,12 @@ export default {
     nextStepProtein: "{{count}}g protein left today",
     nextStepAllDone: "You're on track — great work today",
     dayDotsLabel: "This week",
+    statusOnTrack: "On track",
+    statusBehind: "Behind",
+    statusAtRisk: "At risk",
+    weeklyStreakLabel: "wk streak",
+    recentWinPR: "PR · {{exercise}} {{value}}",
+    recentWinStreak: "{{count}}-day streak",
   },
   weeklyReport: {
     title: "Weekly Report",

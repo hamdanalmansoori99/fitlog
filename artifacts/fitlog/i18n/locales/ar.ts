@@ -299,6 +299,12 @@ export default {
     nextStepProtein: "{{count}}غ بروتين متبقية اليوم",
     nextStepAllDone: "أنت على المسار الصحيح — عمل رائع اليوم",
     dayDotsLabel: "هذا الأسبوع",
+    statusOnTrack: "في المسار",
+    statusBehind: "متأخر",
+    statusAtRisk: "في خطر",
+    weeklyStreakLabel: "أسابيع",
+    recentWinPR: "رقم قياسي · {{exercise}} {{value}}",
+    recentWinStreak: "{{count}} يوم متواصل",
   },
   weeklyReport: {
     title: "التقرير الأسبوعي",
