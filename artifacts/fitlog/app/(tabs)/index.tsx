@@ -965,7 +965,7 @@ export default function HomeScreen() {
 
         {/* ═══ ZONE 2 — TODAY'S FOCUS ═══ */}
 
-        <Animated.View entering={FadeInDown.delay(40).duration(200)} style={[styles.section, { marginBottom: 28 }]}>
+        <Animated.View entering={FadeInDown.delay(0).duration(200)} style={[styles.section, { marginBottom: 28 }]}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
             <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15, marginBottom: 8 }}>
               {t("home.todaysWorkout")}
@@ -994,25 +994,22 @@ export default function HomeScreen() {
           )}
         </Animated.View>
 
-        {/* ═══ ZONE 3 — QUICK ACTIONS ═══ */}
+        {/* ═══ ZONE 3 — QUICK ACTIONS + WEIGHT QUICK-ADD ═══ */}
 
-        <Animated.View entering={FadeInDown.delay(60).duration(200)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(40).duration(160)} style={styles.section}>
           <HeroActions theme={theme} />
-        </Animated.View>
-
-        {/* ═══ ZONE 3.5 — WEIGHT QUICK-ADD ═══ */}
-
-        <Animated.View entering={FadeInDown.delay(80).duration(200)} style={styles.section}>
-          <WeightQuickAddRow
-            measurementsData={measurementsData}
-            settings={settingsData}
-            theme={theme}
-          />
+          <View style={{ marginTop: 10 }}>
+            <WeightQuickAddRow
+              measurementsData={measurementsData}
+              settings={settingsData}
+              theme={theme}
+            />
+          </View>
         </Animated.View>
 
         {/* ═══ ZONE 4 — NUTRITION + STREAK STRIP ═══ */}
 
-        <Animated.View entering={FadeInDown.delay(80).duration(200)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(80).duration(120)} style={styles.section}>
           {mealsData ? (
             <NutritionHero mealsData={mealsData} theme={theme} />
           ) : (
@@ -1057,7 +1054,7 @@ export default function HomeScreen() {
 
         {/* ═══ ZONE 5 — AI COACH CARD ═══ */}
 
-        <Animated.View entering={FadeInDown.delay(80).duration(200)} style={styles.section}>
+        <Animated.View entering={FadeInDown.delay(120).duration(80)} style={styles.section}>
           <CoachCard
             theme={theme}
             teaser={todayRecommendation?.contextSummary}
