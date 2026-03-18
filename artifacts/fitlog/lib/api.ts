@@ -199,6 +199,10 @@ export const api = {
   duplicateDayMeals: (fromDate: string, toDate?: string) =>
     request<any>("/meals/favorites/duplicate-day", { method: "POST", body: JSON.stringify({ fromDate, toDate }) }),
 
+  // Smart Notifications
+  getSmartNotifications: () =>
+    request<{ messages: Array<{ type: string; title: string; body: string }> }>("/notifications/smart-content"),
+
   // Scan Meal (AI Vision)
   scanMealAnalyze: (body: { imageBase64: string; mimeType?: string }) =>
     request<{ items: ScanMealItem[]; mealDescription: string; totals: MacroTotals }>("/scan-meal/analyze", {

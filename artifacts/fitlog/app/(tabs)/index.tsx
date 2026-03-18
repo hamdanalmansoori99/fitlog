@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
   Pressable, Platform, Modal, Share,
 } from "react-native";
+import { useSmartNotifications } from "@/lib/useSmartNotifications";
 import Svg, { Circle, G } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -749,11 +750,81 @@ function formatDate() {
   });
 }
 
+const NOTIF_TYPE_COLOR: Record<string, string> = {
+  workout: "#00e676",
+  meal: "#ff80ab",
+  hydration: "#448aff",
+  streak: "#ffab40",
+  recovery: "#ea80fc",
+  weekly: "#18ffff",
+};
+
+const NOTIF_TYPE_ICON: Record<string, any> = {
+  workout: "activity",
+  meal: "coffee",
+  hydration: "droplet",
+  streak: "zap",
+  recovery: "heart",
+  weekly: "bar-chart-2",
+};
+
+function SmartBanner({
+  message,
+  onDismiss,
+  theme,
+}: {
+  message: { type: string; title: string; body: string };
+  onDismiss: () => void;
+  theme: AppTheme;
+}) {
+  const accent = NOTIF_TYPE_COLOR[message.type] ?? "#00e676";
+  const icon = NOTIF_TYPE_ICON[message.type] ?? "bell";
+  return (
+    <Animated.View
+      entering={FadeIn.duration(350)}
+      style={{
+        marginHorizontal: 16,
+        marginBottom: 14,
+        borderRadius: 14,
+        backgroundColor: theme.card,
+        borderWidth: 1,
+        borderColor: accent + "40",
+        flexDirection: "row",
+        alignItems: "flex-start",
+        overflow: "hidden",
+      }}
+    >
+      <View style={{ width: 3, backgroundColor: accent, alignSelf: "stretch" }} />
+      <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 11, gap: 2 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 1 }}>
+          <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: accent + "20", alignItems: "center", justifyContent: "center" }}>
+            <Feather name={icon} size={11} color={accent} />
+          </View>
+          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 }} numberOfLines={1}>
+            {message.title}
+          </Text>
+        </View>
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 17 }} numberOfLines={2}>
+          {message.body}
+        </Text>
+      </View>
+      <Pressable
+        onPress={onDismiss}
+        style={{ padding: 12, justifyContent: "flex-start" }}
+        hitSlop={8}
+      >
+        <Feather name="x" size={14} color={theme.textMuted} />
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 export default function HomeScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
+  const { activeBanner, dismiss } = useSmartNotifications();
 
   const { data: mealsData, refetch: refetchMeals } = useQuery({
     queryKey: ["mealsToday"],
@@ -899,6 +970,12 @@ export default function HomeScreen() {
             </Text>
           </Pressable>
         </Animated.View>
+
+        {/* ═══ SMART NOTIFICATION BANNER ═══ */}
+
+        {activeBanner && (
+          <SmartBanner message={activeBanner} onDismiss={dismiss} theme={theme} />
+        )}
 
         {/* ═══ ZONE 2 — TODAY'S FOCUS ═══ */}
 

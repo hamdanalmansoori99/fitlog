@@ -16,6 +16,7 @@ import mealFavoritesRouter from "./meal-favorites";
 import achievementsRouter from "./achievements";
 import subscriptionRouter from "./subscription";
 import scanMealRouter from "./scan-meal";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use("/recovery", recoveryRouter);
 router.use("/achievements", achievementsRouter);
 router.use("/subscription", subscriptionRouter);
 router.use("/scan-meal", scanMealRouter);
+router.use("/notifications", notificationsRouter);
 
 export default router;
