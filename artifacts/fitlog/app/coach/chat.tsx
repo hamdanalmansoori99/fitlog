@@ -202,28 +202,34 @@ export default function CoachChatScreen() {
             if (!line.startsWith("data: ")) continue;
             const jsonStr = line.slice(6).trim();
             if (!jsonStr) continue;
+            let parsed: any;
             try {
-              const parsed = JSON.parse(jsonStr);
-              if (parsed.content) {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId
-                      ? { ...m, content: m.content + parsed.content }
-                      : m
-                  )
-                );
-                setTimeout(() => {
-                  flatListRef.current?.scrollToEnd({ animated: false });
-                }, 50);
-              }
-              if (parsed.done) {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, streaming: false } : m
-                  )
-                );
-              }
-            } catch {}
+              parsed = JSON.parse(jsonStr);
+            } catch {
+              continue;
+            }
+            if (parsed.content) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, content: m.content + parsed.content }
+                    : m
+                )
+              );
+              setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: false });
+              }, 50);
+            }
+            if (parsed.done) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId ? { ...m, streaming: false } : m
+                )
+              );
+            }
+            if (parsed.error) {
+              throw new Error("Stream error");
+            }
           }
         }
       } catch (err: any) {
@@ -331,7 +337,7 @@ export default function CoachChatScreen() {
   const styles = makeStyles(theme, isWeb, WEB_TOP, WEB_BOTTOM);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={isWeb ? [] : ["top"]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={isWeb ? [] : ["top", "bottom"]}>
       {isWeb && <View style={{ height: WEB_TOP }} />}
 
       <View style={styles.header}>

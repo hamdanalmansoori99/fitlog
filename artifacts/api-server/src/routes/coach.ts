@@ -338,6 +338,13 @@ router.post("/message", requireAuth, async (req, res) => {
       return;
     }
 
+    // Set SSE headers immediately — before any DB work — so errors are always
+    // communicated via the stream rather than a non-200 HTTP response.
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+
     // Client disconnect guard
     let clientGone = false;
     req.on("close", () => {
@@ -376,10 +383,6 @@ router.post("/message", requireAuth, async (req, res) => {
         role: "assistant",
         content: safetyResponse,
       });
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
-      res.setHeader("X-Accel-Buffering", "no");
       res.write(`data: ${JSON.stringify({ content: safetyResponse })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
@@ -483,11 +486,6 @@ router.post("/message", requireAuth, async (req, res) => {
       content: m.content,
     }));
 
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-
     let fullResponse = "";
 
     const stream = anthropic.messages.stream({
@@ -530,6 +528,7 @@ router.post("/message", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("sendCoachMessage error:", err);
     if (!res.headersSent) {
+      // Only reached if content was empty (caught before SSE headers) — shouldn't happen
       res.status(500).json({ error: "Failed to send message" });
     } else {
       res.write(`data: ${JSON.stringify({ error: "Stream error" })}\n\n`);
