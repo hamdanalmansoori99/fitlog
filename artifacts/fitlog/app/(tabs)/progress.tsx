@@ -355,6 +355,54 @@ export default function ProgressScreen() {
           </View>
         )}
 
+        {/* ── CONSISTENCY SCORE ── */}
+        {!summaryLoading && workoutSummary && profile && (() => {
+          const weeklyTarget = profile.weeklyWorkoutDays || 3;
+          const monthlyTarget = weeklyTarget * 4;
+          const totalMonth = workoutSummary.totalThisMonth || 0;
+          const score = Math.min(Math.round((totalMonth / Math.max(monthlyTarget, 1)) * 100), 100);
+          const streak = streaks?.currentWorkoutStreak || 0;
+          const isHighScore = score >= 80;
+          const isMidScore = score >= 40;
+          const motivationMsg = score === 0
+            ? t("home.buildMomentum")
+            : isHighScore
+            ? t("home.crushingIt")
+            : t("home.keepPushing");
+          const barColor = isHighScore ? theme.primary : isMidScore ? theme.secondary : theme.warning;
+          return (
+            <Animated.View entering={FadeInDown.duration(300)}>
+              <View style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: isHighScore ? theme.primary + "30" : theme.border, gap: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+                      {t("home.consistencyScore")}
+                    </Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                      {t("home.consistencyScoreDesc")}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "center", gap: 2 }}>
+                    <Text style={{ color: barColor, fontFamily: "Inter_700Bold", fontSize: 32, lineHeight: 36 }}>{score}%</Text>
+                    {streak > 0 && (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                        <Text style={{ fontSize: 11 }}>🔥</Text>
+                        <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{streak}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <View style={{ height: 6, backgroundColor: theme.border, borderRadius: 3, overflow: "hidden" }}>
+                  <View style={{ height: 6, width: `${score}%` as `${number}%`, backgroundColor: barColor, borderRadius: 3 }} />
+                </View>
+                <Text style={{ color: isHighScore ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                  {motivationMsg}
+                </Text>
+              </View>
+            </Animated.View>
+          );
+        })()}
+
         {/* Workout History Calendar */}
         <Animated.View entering={FadeInDown.duration(350)}>
           <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("progress.workoutHistory")}</Text>

@@ -1115,9 +1115,10 @@ export default function ExecuteWorkoutScreen() {
                 style={[
                   styles.setCard,
                   {
-                    backgroundColor: s.completed ? theme.primary + "10" : isActive ? theme.card : theme.card + "80",
-                    borderColor: s.completed ? theme.primary + "40" : isActive ? theme.primary + "60" : theme.border,
-                    opacity: s.completed ? 0.85 : 1,
+                    backgroundColor: s.completed ? theme.primary + "12" : isActive ? theme.card : theme.card + "60",
+                    borderColor: s.completed ? theme.primary + "50" : isActive ? theme.primary : theme.border + "60",
+                    borderWidth: isActive && !s.completed ? 1.5 : 1,
+                    opacity: s.completed ? 0.8 : !isActive && !s.completed ? 0.6 : 1,
                   },
                 ]}
               >

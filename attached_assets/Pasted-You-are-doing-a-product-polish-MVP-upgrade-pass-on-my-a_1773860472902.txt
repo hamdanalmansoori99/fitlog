@@ -1,0 +1,304 @@
+You are doing a product polish + MVP upgrade pass on my app FitLog.
+
+Your goal is to turn FitLog from a good-looking MVP into a clean, trustworthy, sticky fitness product.
+
+Do NOT do a full redesign from scratch.
+Do NOT add random new features.
+Do NOT break existing flows.
+Do NOT remove core functionality.
+Instead, improve the current app carefully and systematically.
+
+I want you to audit and fix these areas in priority order:
+
+==================================================
+1. REMOVE ALL TRUST-KILLING ISSUES
+==================================================
+
+Find and fix every issue that makes the app feel broken, unfinished, or low quality.
+
+This includes:
+- any visible runtime errors
+- any React Native / Expo text rendering errors
+- “Text strings must be rendered within a <Text> component” issues
+- unfinished labels
+- internal route names showing in UI such as things like coach/chat, meals/index, or similar
+- broken buttons
+- placeholder text
+- inconsistent spacing
+- inconsistent font sizing
+- alignment issues
+- clipped text
+- overlapping components
+- low-quality loading states
+- low-quality empty states
+- any screen that looks like a dev page instead of a polished user page
+
+Fix these first.
+
+Add proper:
+- loading states
+- empty states
+- error states
+- fallback states
+
+Every screen should feel production-ready.
+
+==================================================
+2. KEEP THE PRODUCT IDENTITY CLEAR
+==================================================
+
+FitLog should feel like:
+“A workout-first fitness app with smart coaching and meal support.”
+
+It should NOT feel like:
+- a random collection of features
+- a generic AI wrapper
+- a cluttered all-in-one app
+- a half-finished dashboard
+
+When making UI and UX decisions, prioritize:
+1. workouts
+2. smart coaching
+3. meal support
+4. progress and retention
+
+==================================================
+3. IMPROVE THE HOME / DASHBOARD SCREEN
+==================================================
+
+The home screen currently feels informative but not memorable enough.
+
+Upgrade it so it creates urgency, clarity, and motivation.
+
+The home screen should clearly show:
+- today’s status
+- whether the user is on track this week
+- what the user should do next
+- quick value from the AI coach
+- a reason to return daily
+
+Add or improve:
+- weekly adherence / consistency score
+- streak display
+- today’s main action
+- “1 workout left this week” style progress messaging
+- calorie / protein target progress
+- workout completion progress
+- a stronger “next step” CTA
+
+Avoid clutter.
+Keep it clean, premium, and fast to scan.
+
+==================================================
+4. MAKE WORKOUT LOGGING MUCH FASTER
+==================================================
+
+This is one of the most important parts of the app.
+
+Optimize the workout flow so logging feels as fast and frictionless as possible.
+
+Improve:
+- one-tap set completion
+- autofill of previous reps / weight
+- quick rest timer controls
+- easier navigation between exercises
+- ability to resume current workout quickly
+- cleaner exercise cards
+- faster save/update interactions
+- better feedback when a set is logged
+
+The ideal feeling:
+“Logging a workout should feel easier than using Notes.”
+
+Do not overcomplicate the UI.
+Speed matters more than fancy visuals.
+
+==================================================
+5. MAKE THE AI COACH ACTUALLY FEEL SMART
+==================================================
+
+Right now the AI should not feel generic.
+
+It must feel connected to real user data.
+
+Improve the AI coach so it can use or reflect:
+- workout history
+- missed workouts
+- calorie progress
+- macro progress
+- recent training volume
+- user goal if available
+- recovery / readiness data if available
+
+The AI coach should generate practical, specific, personalized guidance such as:
+- what to do tomorrow
+- whether to increase or decrease load
+- whether the user is under-eating
+- whether they are falling behind weekly goals
+- how to adjust training if tired, busy, or sore
+
+Do NOT make it verbose or generic.
+Make it feel like a real coach, not a chatbot.
+
+Also improve the coach UI:
+- clearer cards
+- cleaner prompts
+- more helpful quick actions
+- better empty state
+- remove any low-value fluff
+
+==================================================
+6. IMPROVE THE MEALS EXPERIENCE
+==================================================
+
+The meals section is useful but needs to feel more actionable and sticky.
+
+Improve:
+- daily meal progress clarity
+- macro target progress
+- visual completion cues
+- easier understanding of what the user should eat next
+- better weekly meal plan presentation
+- stronger sense of daily compliance
+
+Keep it simple.
+Do not turn this into a separate complicated meal app.
+It should support the core workout-first identity.
+
+==================================================
+7. UPGRADE THE PROGRESS EXPERIENCE
+==================================================
+
+The progress area should feel emotionally rewarding.
+
+Right now it likely feels too light.
+
+Improve it so users can clearly see:
+- workout consistency
+- weekly completion
+- calorie adherence
+- macro adherence
+- strength progress
+- PR highlights
+- bodyweight trend if available
+- recent wins
+
+Make this screen feel motivating and useful.
+Avoid making it a boring stats dump.
+
+Prioritize the metrics that help users stay engaged.
+
+==================================================
+8. ADD RETENTION / DOPAMINE LOOPS
+==================================================
+
+Without making the app childish, add lightweight retention mechanics.
+
+Add or improve:
+- streaks
+- PR celebrations
+- small success feedback after actions
+- weekly goal completion cues
+- encouraging progress messages
+- consistency rewards
+
+Keep it tasteful, premium, and fitness-focused.
+No excessive gamification.
+Just enough to create daily return behavior.
+
+==================================================
+9. CLEAN UP NAVIGATION AND INFORMATION ARCHITECTURE
+==================================================
+
+Review the bottom navigation, labels, screen titles, and screen hierarchy.
+
+Make sure:
+- labels are human-friendly
+- screen names are polished
+- no internal naming leaks into UI
+- navigation feels obvious
+- the most important flows are easy to reach
+- there is no confusion about where workouts, meals, progress, and coach live
+
+If needed, simplify naming and routes while preserving functionality.
+
+==================================================
+10. IMPROVE PRODUCT DIFFERENTIATION
+==================================================
+
+Subtly push the app toward a stronger unique identity.
+
+FitLog’s edge should feel like:
+- fast workout logging
+- clean all-in-one fitness tracking
+- smart coaching tied to real data
+- useful meal support
+
+Where possible, improve copy and UI so that value is clear.
+
+Examples of product messaging tone:
+- “You’re 82% on track this week”
+- “1 workout left to hit your target”
+- “Protein is below target today”
+- “Your volume dropped from last week”
+- “Ready for your next session?”
+
+Keep the language concise, premium, and motivating.
+
+==================================================
+11. IMPLEMENT POLISHED STATES THROUGHOUT
+==================================================
+
+For every major screen, make sure there are polished versions of:
+- first-time user state
+- no data state
+- partial data state
+- loading state
+- error state
+
+Do not leave blank sections or confusing empty cards.
+
+==================================================
+12. DO THIS SAFELY
+==================================================
+
+Important:
+- do not break authentication
+- do not break data models
+- do not remove existing working features
+- do not replace the whole architecture unless absolutely necessary
+- prefer targeted, high-value improvements
+- keep code clean and maintainable
+- refactor duplicated UI where helpful
+- preserve design consistency across the app
+
+==================================================
+13. FINAL DELIVERABLES I WANT
+==================================================
+
+After making the changes, also give me:
+
+1. A summary of what was fixed
+2. A list of any bugs still remaining
+3. A list of the biggest UX improvements made
+4. A short explanation of how the app is now more differentiated
+5. Any recommendations for the next build phase
+
+==================================================
+14. EXECUTION STYLE
+==================================================
+
+Work like a senior product engineer + product designer.
+
+Prioritize:
+- trust
+- polish
+- speed
+- clarity
+- retention
+- differentiated value
+
+Do not just describe what should be done.
+Actually implement the improvements in the codebase.
+
+Start by auditing the current app, then make the changes directly.

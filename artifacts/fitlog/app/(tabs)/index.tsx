@@ -521,6 +521,84 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
   );
 }
 
+function getWeeklyWorkoutCount(workouts: any[]): number {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - mondayOffset);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekDates = new Set<string>();
+  workouts.forEach((w) => {
+    if (!w.date) return;
+    const d = new Date(w.date);
+    if (d >= weekStart) weekDates.add(d.toISOString().slice(0, 10));
+  });
+  return weekDates.size;
+}
+
+function WeeklyProgressCard({
+  workouts, targetDays, theme,
+}: { workouts: any[]; targetDays: number; theme: AppTheme }) {
+  const { t } = useTranslation();
+  const done = getWeeklyWorkoutCount(workouts);
+  const target = Math.max(targetDays, 1);
+  const pct = Math.min(done / target, 1);
+  const pctInt = Math.round(pct * 100);
+  const isGoalMet = done >= target;
+  const remaining = Math.max(target - done, 0);
+
+  let message: string;
+  if (isGoalMet) {
+    message = t("home.weeklyGoalMet");
+  } else if (done === 0) {
+    message = t("home.weeklyFirstWorkout");
+  } else if (remaining === 1) {
+    message = t("home.weeklyOneLeft");
+  } else {
+    message = t("home.weeklyRemaining", { count: remaining });
+  }
+
+  const barColor = isGoalMet ? theme.primary : pct >= 0.5 ? theme.secondary : theme.warning;
+
+  return (
+    <Card style={{ gap: 8 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+          {t("home.weeklyAdherenceTitle")}
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={{ color: isGoalMet ? theme.primary : theme.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>
+            {t("home.weeklyOfTarget", { done, target })}
+          </Text>
+          <View style={{
+            paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6,
+            backgroundColor: isGoalMet ? theme.primaryDim : pct >= 0.5 ? theme.secondary + "20" : theme.warning + "20",
+          }}>
+            <Text style={{
+              color: isGoalMet ? theme.primary : pct >= 0.5 ? theme.secondary : theme.warning,
+              fontFamily: "Inter_700Bold", fontSize: 11,
+            }}>
+              {pctInt}%
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View style={{ height: 5, backgroundColor: theme.border, borderRadius: 3, overflow: "hidden" }}>
+        <View style={{
+          height: 5,
+          width: `${pctInt}%` as `${number}%`,
+          backgroundColor: barColor,
+          borderRadius: 3,
+        }} />
+      </View>
+      <Text style={{ color: isGoalMet ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+        {message}
+      </Text>
+    </Card>
+  );
+}
+
 function getGreeting(t: (key: string) => string) {
   const h = new Date().getHours();
   if (h < 12) return t("home.goodMorning");
@@ -624,7 +702,7 @@ export default function HomeScreen() {
 
   const { data: workoutsData, refetch: refetchWorkouts } = useQuery({
     queryKey: ["workouts"],
-    queryFn: () => api.getWorkouts({ limit: 10 }),
+    queryFn: () => api.getWorkouts({ limit: 20 }),
     staleTime: 300000,
   });
 
@@ -792,6 +870,17 @@ export default function HomeScreen() {
             <CoachCtaCard theme={theme} />
           )}
         </Animated.View>
+
+        {/* ═══ WEEKLY PROGRESS ═══ */}
+        {workoutsData && profile && (
+          <Animated.View entering={FadeInDown.delay(60).duration(200)} style={styles.section}>
+            <WeeklyProgressCard
+              workouts={workoutsData.workouts || []}
+              targetDays={profile.weeklyWorkoutDays || 3}
+              theme={theme}
+            />
+          </Animated.View>
+        )}
 
         {/* ═══ ZONE 3 — NUTRITION + STREAK STRIP ═══ */}
 
