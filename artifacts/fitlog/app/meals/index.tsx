@@ -597,9 +597,10 @@ export default function MealsScreen() {
                           category: meal.category ?? "Lunch",
                         }
                       })}
-                      style={[styles.planAddBtn, { backgroundColor: theme.primary }]}
+                      style={[styles.planAddBtn, { backgroundColor: theme.primary, flexDirection: "row", gap: 4, paddingHorizontal: 10 }]}
                     >
-                      <Feather name="plus" size={14} color="#0f0f1a" />
+                      <Feather name="plus" size={13} color="#0f0f1a" />
+                      <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{t("meals.addToLog")}</Text>
                     </Pressable>
                   </View>
                 ))}
@@ -816,5 +817,5 @@ const styles = StyleSheet.create({
   planBannerIcon: { width: 32, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   planCard: { borderRadius: 16, borderWidth: 1, padding: 16 },
   planMealRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  planAddBtn: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  planAddBtn: { height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center", minWidth: 34 },
 });
