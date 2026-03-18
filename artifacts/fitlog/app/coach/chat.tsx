@@ -52,6 +52,7 @@ export default function CoachChatScreen() {
   const token = useAuthStore((s) => s.token);
   const { prompt } = useLocalSearchParams<{ prompt?: string }>();
   const promptSentRef = useRef(false);
+  const hasAutoSent = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeRequestIdRef = useRef<number>(0);
 
@@ -60,6 +61,8 @@ export default function CoachChatScreen() {
     t("home.coachChip2"),
     t("home.coachChip3"),
     t("home.coachChip4"),
+    t("home.coachChip5"),
+    t("home.coachChip6"),
   ];
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -99,6 +102,16 @@ export default function CoachChatScreen() {
     }
   }, [prompt, loading]);
 
+  // Fire a single proactive opening message when the conversation is empty —
+  // guarded by hasAutoSent so it never re-fires on re-mount or re-render.
+  useEffect(() => {
+    if (!loading && !loadError && messages.length === 0 && !hasAutoSent.current && !prompt) {
+      hasAutoSent.current = true;
+      sendProactiveMessage();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, loadError]);
+
   const loadConversation = async () => {
     try {
       setLoading(true);
@@ -118,6 +131,46 @@ export default function CoachChatScreen() {
       setLoading(false);
     }
   };
+
+  const sendProactiveMessage = useCallback(async () => {
+    const assistantId = `assistant-proactive-${Date.now()}`;
+    const placeholder: ChatMessage = { id: assistantId, role: "assistant", content: "", streaming: true };
+    setMessages([placeholder]);
+
+    try {
+      const response = await fetch(`${BASE_URL}/coach/proactive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+
+      if (response.status === 204) {
+        // Conversation has messages already — load them fresh
+        setMessages([]);
+        loadConversation();
+        return;
+      }
+
+      if (!response.ok) throw new Error("Failed to get proactive message");
+
+      const data = await response.json();
+      const fullContent: string = data.content || "";
+
+      const words = fullContent.split(" ");
+      let current = "";
+      for (let i = 0; i < words.length; i++) {
+        current += (i === 0 ? "" : " ") + words[i];
+        setMessages([{ id: assistantId, role: "assistant", content: current, streaming: true }]);
+        if (i % 5 === 4) flatListRef.current?.scrollToEnd({ animated: false });
+        await new Promise<void>((r) => setTimeout(r, 20));
+      }
+
+      setMessages([{ id: assistantId, role: "assistant", content: fullContent, streaming: false }]);
+    } catch (err) {
+      console.error("Proactive message error:", err);
+      setMessages([]);
+    }
+  }, [token]);
 
   const handleClear = () => {
     Alert.alert(

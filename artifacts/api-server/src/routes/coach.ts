@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, conversationsTable, messagesTable, profilesTable, workoutsTable, workoutExercisesTable, workoutSetsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable, settingsTable } from "@workspace/db";
-import { eq, and, desc, gte, lt } from "drizzle-orm";
+import { db, conversationsTable, messagesTable, profilesTable, workoutsTable, workoutExercisesTable, workoutSetsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable, settingsTable, bodyMeasurementsTable } from "@workspace/db";
+import { eq, and, desc, gte, lt, isNotNull } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
@@ -153,6 +153,33 @@ async function buildGymPerformanceSummary(userId: string): Promise<string> {
   return lines.length > 0 ? lines.join("\n") : "";
 }
 
+// ─── Bodyweight trend ─────────────────────────────────────────────────────────
+
+async function buildBodyweightTrend(userId: string): Promise<string | null> {
+  const rows = await db
+    .select()
+    .from(bodyMeasurementsTable)
+    .where(and(eq(bodyMeasurementsTable.userId, userId), isNotNull(bodyMeasurementsTable.weightKg)))
+    .orderBy(desc(bodyMeasurementsTable.date))
+    .limit(4);
+
+  if (rows.length === 0) return null;
+
+  const ordered = [...rows].reverse();
+  const entries = ordered.map((r) => {
+    const d = new Date(r.date);
+    const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return `${label}: ${r.weightKg}kg`;
+  });
+
+  const newest = rows[0].weightKg!;
+  const oldest = ordered[0].weightKg!;
+  const delta = newest - oldest;
+  const trendStr = delta < -0.5 ? " (trending down)" : delta > 0.5 ? " (trending up)" : " (stable)";
+
+  return entries.join(" → ") + trendStr;
+}
+
 // ─── System prompt ────────────────────────────────────────────────────────────
 
 function buildSystemPrompt(
@@ -161,7 +188,8 @@ function buildSystemPrompt(
   equipment: any[],
   todayNutrition?: { calories: number; proteinG: number; carbsG: number; fatG: number; mealCount: number } | null,
   todayRecovery?: RecoveryData,
-  gymPerformance?: string
+  gymPerformance?: string,
+  bodyweightTrend?: string | null
 ): string {
   const today = new Date();
   const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
@@ -236,6 +264,10 @@ Available workout templates in FitLog:
     ? `\nRECENT GYM PERFORMANCE (actual sets × reps × weight logged by the user):\n${gymPerformance}\n`
     : "";
 
+  const bodyweightSection = bodyweightTrend
+    ? `\nBODYWEIGHT TREND (last 4 logged measurements):\n${bodyweightTrend}\n`
+    : "";
+
   return `You are the AI Coach inside FitLog, a personal fitness app. Your job is to give specific, practical, and personalized fitness advice. You feel like a knowledgeable personal trainer who knows the user well.
 
 Today is ${dayName}, ${dateStr}.
@@ -290,7 +322,7 @@ ${
     : "No recovery data logged today."
 }
 
-${gymSection}
+${gymSection}${bodyweightSection}
 ${availableTemplates}
 
 COACHING STYLE:
@@ -500,6 +532,7 @@ router.post("/message", requireAuth, async (req, res) => {
     const todayRecovery = recoveryRows[0] ?? null;
 
     const gymPerformance = await buildGymPerformanceSummary(user.id);
+    const bodyweightTrend = await buildBodyweightTrend(user.id);
 
     let systemPrompt = buildSystemPrompt(
       profile,
@@ -507,7 +540,8 @@ router.post("/message", requireAuth, async (req, res) => {
       userEquipment,
       todayNutrition,
       todayRecovery,
-      gymPerformance || undefined
+      gymPerformance || undefined,
+      bodyweightTrend
     );
 
     const [userSettings] = await db
@@ -546,6 +580,142 @@ router.post("/message", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("sendCoachMessage error:", err);
     res.status(500).json({ error: "Failed to send message" });
+  }
+});
+
+// ─── Proactive opening message ────────────────────────────────────────────────
+
+router.post("/proactive", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+
+    let conversation = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.userId, user.id))
+      .orderBy(desc(conversations.createdAt))
+      .limit(1)
+      .then((rows) => rows[0] ?? null);
+
+    if (!conversation) {
+      const [created] = await db
+        .insert(conversations)
+        .values({ userId: user.id, title: "AI Coach" })
+        .returning();
+      conversation = created;
+    }
+
+    // If the conversation already has messages, skip — not empty anymore
+    const existing = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, conversation.id))
+      .limit(1);
+    if (existing.length > 0) {
+      res.status(204).end();
+      return;
+    }
+
+    const [profile] = await db
+      .select()
+      .from(profilesTable)
+      .where(eq(profilesTable.userId, user.id))
+      .limit(1);
+
+    const recentWorkouts = await db
+      .select()
+      .from(workoutsTable)
+      .where(eq(workoutsTable.userId, user.id))
+      .orderBy(desc(workoutsTable.date))
+      .limit(20);
+
+    const userEquipment = await db
+      .select()
+      .from(equipmentTable)
+      .where(eq(equipmentTable.userId, user.id));
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayMeals = await db
+      .select()
+      .from(mealsTable)
+      .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, todayStart)));
+
+    let todayNutrition: { calories: number; proteinG: number; carbsG: number; fatG: number; mealCount: number } | null = null;
+    if (todayMeals.length > 0) {
+      const allFoodItems = await Promise.all(
+        todayMeals.map((m) => db.select().from(mealFoodItemsTable).where(eq(mealFoodItemsTable.mealId, m.id)))
+      );
+      const flatItems = allFoodItems.flat();
+      todayNutrition = {
+        mealCount: todayMeals.length,
+        calories: flatItems.reduce((s, f) => s + f.calories, 0),
+        proteinG: flatItems.reduce((s, f) => s + f.proteinG, 0),
+        carbsG: flatItems.reduce((s, f) => s + f.carbsG, 0),
+        fatG: flatItems.reduce((s, f) => s + f.fatG, 0),
+      };
+    }
+
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+    const recoveryRows = await db
+      .select()
+      .from(recoveryLogsTable)
+      .where(and(eq(recoveryLogsTable.userId, user.id), gte(recoveryLogsTable.date, todayStart), lt(recoveryLogsTable.date, todayEnd)))
+      .limit(1);
+    const todayRecovery = recoveryRows[0] ?? null;
+
+    const [gymPerformance, bodyweightTrend] = await Promise.all([
+      buildGymPerformanceSummary(user.id),
+      buildBodyweightTrend(user.id),
+    ]);
+
+    let systemPrompt = buildSystemPrompt(
+      profile,
+      recentWorkouts,
+      userEquipment,
+      todayNutrition,
+      todayRecovery,
+      gymPerformance || undefined,
+      bodyweightTrend
+    );
+
+    const [userSettings] = await db
+      .select()
+      .from(settingsTable)
+      .where(eq(settingsTable.userId, user.id))
+      .limit(1);
+    if (userSettings?.language === "ar") {
+      systemPrompt +=
+        "\n\nLANGUAGE: You MUST respond entirely in Arabic (العربية). All text, recommendations, template names, and coaching advice must be in Arabic. Use Arabic numerals for numbers.";
+    }
+
+    const today = new Date();
+    const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
+    const proactivePrompt = `Today is ${dayName}. Give me a brief personalized opening — what is the single most important thing I should focus on right now based on my actual data? 2–3 sentences, specific numbers, decisive. If data is too sparse for a specific recommendation, give me a simple actionable directive like "Log your first workout today to start building momentum."`;
+
+    const aiResponse = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 512,
+      system: systemPrompt,
+      messages: [{ role: "user", content: proactivePrompt }],
+    });
+
+    const content =
+      (aiResponse.content[0] as any)?.text?.trim() ||
+      "Ready to help — what's on the plan today?";
+
+    // Save ONLY the assistant message — no user message stored
+    await db.insert(messages).values({
+      conversationId: conversation.id,
+      role: "assistant",
+      content,
+    });
+
+    res.json({ content });
+  } catch (err) {
+    console.error("proactiveCoachMessage error:", err);
+    res.status(500).json({ error: "Failed to generate proactive message" });
   }
 });
 
