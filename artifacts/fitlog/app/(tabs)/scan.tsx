@@ -284,6 +284,14 @@ export default function ScanScreen() {
     transform: [{ scale: captureButtonScale.value }],
   }));
 
+  useEffect(() => {
+    return () => {
+      if (clientTimeoutRef.current) {
+        clearTimeout(clientTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const recalcTotals = (currentItems: ScanMealItem[]) => {
     const t = currentItems.reduce(
       (acc, i) => ({
