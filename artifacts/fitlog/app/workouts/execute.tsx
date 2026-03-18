@@ -3,14 +3,19 @@ import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput,
   Platform, Alert, Vibration, Modal, Share,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
-import Animated, { FadeInDown, FadeIn, FadeOut, SlideInDown, ZoomIn, Easing } from "react-native-reanimated";
+import Animated, {
+  FadeInDown, FadeIn, FadeOut, SlideInDown, ZoomIn, Easing,
+  useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
+import { useWorkoutStore } from "@/store/workoutStore";
 import { api } from "@/lib/api";
 import { getTemplateById } from "@/lib/workoutTemplates";
 import { getFilteredExercises } from "@/lib/coachEngine";
@@ -94,6 +99,63 @@ const MOOD_OPTIONS = [
 const RPE_VALUES = [2, 4, 6, 8, 10];
 const RPE_EMOJIS = ["🟢", "🟡", "🟠", "🔴", "🔥"];
 
+// ─── Swipeable set card ───────────────────────────────────────────────────────
+
+function SwipeableSetCard({
+  isActive,
+  completed,
+  cardStyle,
+  onSwipeComplete,
+  children,
+}: {
+  isActive: boolean;
+  completed: boolean;
+  cardStyle: object | object[];
+  onSwipeComplete: () => void;
+  children: React.ReactNode;
+}) {
+  const translateX = useSharedValue(0);
+  const flashOpacity = useSharedValue(0);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+  const flashStyle = useAnimatedStyle(() => ({
+    opacity: flashOpacity.value,
+  }));
+
+  const panGesture = Gesture.Pan()
+    .enabled(isActive && !completed)
+    .failOffsetY([-12, 12])
+    .activeOffsetX([30, Infinity])
+    .onUpdate((e) => {
+      if (e.translationX > 0) {
+        translateX.value = Math.min(e.translationX * 0.35, 55);
+      }
+    })
+    .onEnd((e) => {
+      if (e.translationX > 80 && Math.abs(e.translationY) < 45) {
+        flashOpacity.value = withTiming(0.55, { duration: 80 }, (finished) => {
+          if (finished) flashOpacity.value = withTiming(0, { duration: 350 });
+        });
+        runOnJS(onSwipeComplete)();
+      }
+      translateX.value = withSpring(0, { damping: 20, stiffness: 300 });
+    });
+
+  return (
+    <GestureDetector gesture={panGesture}>
+      <Animated.View style={[cardStyle, animStyle]}>
+        {children}
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { backgroundColor: "#00e676", borderRadius: 14 }, flashStyle]}
+          pointerEvents="none"
+        />
+      </Animated.View>
+    </GestureDetector>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ExecuteWorkoutScreen() {
@@ -136,6 +198,15 @@ export default function ExecuteWorkoutScreen() {
   const prShareRef = useRef<View>(null);
   const completionShareRef = useRef<View>(null);
 
+  // ── Workout store (active pill + session PR tracking) ──────────────────────
+  const {
+    setActiveWorkout,
+    clearActiveWorkout,
+    addSessionPR,
+    clearSessionPRs,
+    sessionPRs,
+  } = useWorkoutStore();
+
   // Store next position when entering rest phase
   const pendingRef = useRef<{ exIdx: number; setIdx: number } | null>(null);
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -162,6 +233,15 @@ export default function ExecuteWorkoutScreen() {
       );
     }
   }, [filteredExercises]);
+
+  // Register the active workout in the global pill store on mount
+  useEffect(() => {
+    if (templateId && template) {
+      clearSessionPRs();
+      setActiveWorkout(templateId as string, template.name);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Elapsed timer — increments ref only, no re-render on parent
   useEffect(() => {
@@ -244,6 +324,8 @@ export default function ExecuteWorkoutScreen() {
   const saveMutation = useMutation({
     mutationFn: api.createWorkout,
     onSuccess: () => {
+      clearActiveWorkout();
+      clearSessionPRs();
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
       queryClient.invalidateQueries({ queryKey: ["todayStats"] });
       queryClient.invalidateQueries({ queryKey: ["recentActivity"] });
@@ -488,6 +570,7 @@ export default function ExecuteWorkoutScreen() {
       // Only celebrate once per exercise per session
       if (!prCelebratedRef.current.has(ex.name)) {
         prCelebratedRef.current.add(ex.name);
+        addSessionPR({ exercise: ex.name, weight, reps });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setPrBadgeText(`🏆 ${t("pr.newPersonalRecord")}!`);
         setPrBadgeVisible(true);
@@ -708,6 +791,52 @@ export default function ExecuteWorkoutScreen() {
             ))}
           </Animated.View>
 
+          {/* Total volume (gym only) */}
+          {isGym && (() => {
+            const vol = exercises
+              .flatMap((e) => e.sets.filter((s) => s.completed))
+              .reduce((sum, s) => {
+                const w = parseFloat(s.weight);
+                const r = parseInt(s.reps);
+                return sum + (isNaN(w) || isNaN(r) ? 0 : w * r);
+              }, 0);
+            if (vol <= 0) return null;
+            const display = vol >= 1000 ? `${(vol / 1000).toFixed(1)}t` : `${Math.round(vol).toLocaleString()}kg`;
+            return (
+              <Animated.View entering={FadeInDown.delay(140).duration(400)}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: theme.card, borderRadius: 14, borderWidth: 1, borderColor: theme.border, paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Feather name="layers" size={16} color={theme.secondary} />
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("workouts.totalVolume")}</Text>
+                  </View>
+                  <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 18 }}>{display}</Text>
+                </View>
+              </Animated.View>
+            );
+          })()}
+
+          {/* Session PRs */}
+          {sessionPRs.length > 0 && (
+            <Animated.View entering={FadeInDown.delay(155).duration(400)}>
+              <Card style={{ gap: 10 }}>
+                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                  🏆 {t("workouts.sessionPRs")}
+                </Text>
+                {sessionPRs.map((pr, i) => (
+                  <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.primary }} />
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 }}>
+                      {pr.exercise}
+                    </Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                      {pr.weight}kg × {pr.reps}
+                    </Text>
+                  </View>
+                ))}
+              </Card>
+            </Animated.View>
+          )}
+
           {/* Exercise summary */}
           <Animated.View entering={FadeInDown.delay(160).duration(400)}>
             <Card style={{ gap: 0, paddingHorizontal: 0, paddingVertical: 0, overflow: "hidden" }}>
@@ -844,7 +973,15 @@ export default function ExecuteWorkoutScreen() {
               onPress={() => {
                 Alert.alert(t("workouts.discardWorkoutTitle"), t("workouts.discardWorkoutMessage"), [
                   { text: t("workouts.keepLabel"), style: "cancel" },
-                  { text: t("workouts.discardLabel"), style: "destructive", onPress: () => router.replace("/(tabs)" as any) },
+                  {
+                    text: t("workouts.discardLabel"),
+                    style: "destructive",
+                    onPress: () => {
+                      clearActiveWorkout();
+                      clearSessionPRs();
+                      router.replace("/(tabs)" as any);
+                    },
+                  },
                 ]);
               }}
               style={{ alignItems: "center", paddingVertical: 8 }}
@@ -1149,9 +1286,12 @@ export default function ExecuteWorkoutScreen() {
             const rpeLabel = rpeIdx >= 0 ? RPE_EMOJIS[rpeIdx] : "RPE";
 
             return (
-              <View
+              <SwipeableSetCard
                 key={si}
-                style={[
+                isActive={isActive}
+                completed={s.completed}
+                onSwipeComplete={isActive && !s.completed ? completeSet : () => {}}
+                cardStyle={[
                   styles.setCard,
                   {
                     backgroundColor: s.completed ? theme.primary + "12" : isActive ? theme.card : theme.card + "60",
@@ -1263,7 +1403,7 @@ export default function ExecuteWorkoutScreen() {
                     <Text style={{ fontSize: 16 }}>{rpeLabel}</Text>
                   </Pressable>
                 </View>
-              </View>
+              </SwipeableSetCard>
             );
           })}
         </View>

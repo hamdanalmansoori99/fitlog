@@ -8,6 +8,8 @@ import React from "react";
 import { I18nManager, Platform, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
+import { ActiveWorkoutPill } from "@/components/ActiveWorkoutPill";
+import { useWorkoutStore } from "@/store/workoutStore";
 
 function NativeTabLayout() {
   const { t } = useTranslation();
@@ -186,8 +188,12 @@ const layoutStyles = StyleSheet.create({
 });
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
+  const activeId = useWorkoutStore((s) => s.activeWorkoutTemplateId);
+
+  return (
+    <View style={{ flex: 1 }}>
+      {isLiquidGlassAvailable() ? <NativeTabLayout /> : <ClassicTabLayout />}
+      {activeId ? <ActiveWorkoutPill /> : null}
+    </View>
+  );
 }
