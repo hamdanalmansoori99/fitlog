@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Switch, Alert, Platform, Image,
 } from "react-native";
@@ -38,6 +38,23 @@ function fmtTime(timeStr: string): string {
 
 const FITNESS_GOALS = ["Lose Weight", "Build Muscle", "Stay Active", "Improve Endurance", "Improve Flexibility"];
 const ACTIVITY_LEVELS = ["Sedentary", "Lightly Active", "Moderately Active", "Very Active"];
+const PROFILE_EQUIPMENT: { id: string; label: string }[] = [
+  { id: "none", label: "Bodyweight only" },
+  { id: "dumbbells", label: "Dumbbells" },
+  { id: "barbell", label: "Barbell" },
+  { id: "bench", label: "Bench" },
+  { id: "pullup_bar", label: "Pull-up bar" },
+  { id: "resistance_bands", label: "Resistance bands" },
+  { id: "kettlebells", label: "Kettlebells" },
+  { id: "cable_machine", label: "Cable machine" },
+  { id: "smith_machine", label: "Smith machine" },
+  { id: "leg_press", label: "Leg press" },
+  { id: "treadmill", label: "Treadmill" },
+  { id: "stationary_bike", label: "Stationary bike" },
+  { id: "rowing_machine", label: "Rowing machine" },
+  { id: "yoga_mat", label: "Yoga mat" },
+  { id: "jump_rope", label: "Jump rope" },
+];
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -49,6 +66,8 @@ export default function ProfileScreen() {
   const { globalEnabled, prefs, setGlobalEnabled, setEnabled, setTime } = useNotificationStore();
   const [expandedNotifType, setExpandedNotifType] = useState<NotifType | null>(null);
   const [bodyStatsExpanded, setBodyStatsExpanded] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const equipmentCardY = useRef(0);
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -85,6 +104,7 @@ export default function ProfileScreen() {
   const [weightLbs, setWeightLbs] = useState("");
   const [fitnessGoals, setFitnessGoals] = useState<string[]>([]);
   const [activityLevel, setActivityLevel] = useState("");
+  const [availableEquipment, setAvailableEquipment] = useState<string[]>([]);
   const [calorieGoal, setCalorieGoal] = useState("");
   const [proteinGoal, setProteinGoal] = useState("");
   const [carbsGoal, setCarbsGoal] = useState("");
@@ -142,6 +162,7 @@ export default function ProfileScreen() {
       }
       setFitnessGoals(profile.fitnessGoals || []);
       setActivityLevel(profile.activityLevel || "");
+      setAvailableEquipment(profile.availableEquipment ?? []);
       setCalorieGoal(profile.dailyCalorieGoal?.toString() || "");
       setProteinGoal(profile.dailyProteinGoal?.toString() || "");
       setCarbsGoal(profile.dailyCarbsGoal?.toString() || "");
@@ -318,6 +339,7 @@ export default function ProfileScreen() {
       weightKg: resolvedWeightKg,
       fitnessGoals,
       activityLevel: activityLevel || undefined,
+      availableEquipment,
       dailyCalorieGoal: calculatedGoal,
       dailyProteinGoal: proteinGoal ? parseInt(proteinGoal) : undefined,
       dailyCarbsGoal: carbsGoal ? parseInt(carbsGoal) : undefined,
@@ -387,6 +409,7 @@ export default function ProfileScreen() {
       </View>
       
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
         keyboardShouldPersistTaps="handled"
@@ -427,7 +450,7 @@ export default function ProfileScreen() {
                   <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
                     {t("profile.trainingIdentity")}
                   </Text>
-                  <Pressable onPress={() => router.push("/workouts/onboarding")}>
+                  <Pressable onPress={() => scrollRef.current?.scrollTo({ y: equipmentCardY.current, animated: true })}>
                     <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
                       {t("profile.updateGoalEquipment")} {"›"}
                     </Text>
@@ -610,6 +633,35 @@ export default function ProfileScreen() {
                 </Pressable>
               ))}
             </Card>
+
+            {/* Equipment */}
+            <View onLayout={(e) => { equipmentCardY.current = e.nativeEvent.layout.y; }}>
+              <Card>
+                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.availableEquipment")}</Text>
+                <View style={styles.goalsGrid}>
+                  {PROFILE_EQUIPMENT.map(eq => {
+                    const selected = availableEquipment.includes(eq.id);
+                    return (
+                      <Pressable
+                        key={eq.id}
+                        onPress={() => setAvailableEquipment(prev =>
+                          prev.includes(eq.id) ? prev.filter(e => e !== eq.id) : [...prev, eq.id]
+                        )}
+                        style={[
+                          styles.goalChip,
+                          { backgroundColor: selected ? theme.primaryDim : theme.cardAlt, borderColor: selected ? theme.primary : theme.border },
+                        ]}
+                      >
+                        {selected && <Feather name="check" size={12} color={theme.primary} />}
+                        <Text style={{ color: selected ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                          {eq.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </Card>
+            </View>
             
             {/* Nutrition Targets */}
             <Card>

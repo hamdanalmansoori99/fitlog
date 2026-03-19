@@ -1222,6 +1222,7 @@ export default {
     languageChangeMessage: "سيتم إعادة تحميل التطبيق لتطبيق اللغة الجديدة.",
     languageChangeConfirm: "تغيير وإعادة تحميل",
     trainingIdentity: "هوية التدريب",
+    availableEquipment: "المعدات المتاحة",
     configuredFor: "مُعَدّ لـ {{days}} أيام {{goal}}",
     profileIncomplete: "الملف الشخصي غير مكتمل — أضف معداتك للحصول على توصيات أفضل",
     updateGoalEquipment: "تحديث الهدف والمعدات",

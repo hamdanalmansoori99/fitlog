@@ -1305,6 +1305,7 @@ export default {
     languageChangeMessage: "The app will reload to apply the new language.",
     languageChangeConfirm: "Change & Reload",
     trainingIdentity: "Training Identity",
+    availableEquipment: "Available Equipment",
     configuredFor: "Configured for {{days}}-day {{goal}}",
     profileIncomplete: "Profile incomplete — add your equipment for better recommendations",
     updateGoalEquipment: "Update goal & equipment",
