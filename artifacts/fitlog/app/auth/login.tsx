@@ -33,7 +33,7 @@ export default function LoginScreen() {
       setError(t("auth.fillAllFields"));
       return;
     }
-    if (!email.includes("@") || email.indexOf(".") < email.indexOf("@")) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError(t("auth.validEmail"));
       return;
     }
