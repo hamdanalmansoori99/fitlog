@@ -112,7 +112,7 @@ COACH DECISION SUMMARY:
 
 // ─── Gym performance builder ───────────────────────────────────────────────────
 
-async function buildGymPerformanceSummary(userId: string): Promise<string> {
+async function buildGymPerformanceSummary(userId: number): Promise<string> {
   const gymWorkouts = await db
     .select()
     .from(workoutsTable)
@@ -155,7 +155,7 @@ async function buildGymPerformanceSummary(userId: string): Promise<string> {
 
 // ─── Bodyweight trend ─────────────────────────────────────────────────────────
 
-async function buildBodyweightTrend(userId: string): Promise<string | null> {
+async function buildBodyweightTrend(userId: number): Promise<string | null> {
   const rows = await db
     .select()
     .from(bodyMeasurementsTable)
