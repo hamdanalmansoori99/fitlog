@@ -232,7 +232,7 @@ export default function ProfileScreen() {
   function intakeStatusColor(consumed: number, goal: number): string | null {
     if (!goal || consumed === 0) return null;
     const pct = consumed / goal;
-    if (pct >= 0.8) return theme.primary;
+    if (pct >= 0.8) return theme.success;
     if (pct >= 0.5) return theme.warning;
     return theme.danger;
   }
@@ -451,9 +451,12 @@ export default function ProfileScreen() {
                     {t("profile.trainingIdentity")}
                   </Text>
                   <Pressable onPress={() => scrollRef.current?.scrollTo({ y: equipmentCardY.current, animated: true })}>
-                    <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                      {t("profile.updateGoalEquipment")} {"›"}
-                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                      <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                        {t("profile.updateGoalEquipment")}
+                      </Text>
+                      <Feather name={rtlIcon("chevron-right")} size={12} color={theme.primary} />
+                    </View>
                   </Pressable>
                 </View>
 
