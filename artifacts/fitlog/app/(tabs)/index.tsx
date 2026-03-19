@@ -101,12 +101,31 @@ function NutritionHero({ mealsData, theme }: { mealsData: any; theme: AppTheme }
     { label: t("home.fat"), value: fat, goal: fatGoal, color: theme.warning || "#ffab40" },
   ];
 
+  const caloriesLeft = Math.max(0, calorieGoal - consumed);
+  const calorieGoalMet = consumed >= calorieGoal;
+  const proteinGoalMet = protein >= proteinGoal;
+  const proteinLeft = Math.max(0, proteinGoal - protein);
+
+  let fuelLine: string;
+  if (calorieGoalMet && proteinGoalMet) {
+    fuelLine = t("home.nutritionFuelMet");
+  } else if (proteinGoalMet && !calorieGoalMet) {
+    fuelLine = t("home.nutritionFuelProteinDone", { calories: caloriesLeft });
+  } else {
+    fuelLine = t("home.nutritionFuelLine", { protein: proteinLeft, calories: caloriesLeft });
+  }
+
   return (
     <Card style={{ gap: 16, alignItems: "center" }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-          {t("home.nutrition")}
-        </Text>
+        <View style={{ gap: 1 }}>
+          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+            {t("home.nutrition")}
+          </Text>
+          <Text style={{ color: calorieGoalMet && proteinGoalMet ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+            {fuelLine}
+          </Text>
+        </View>
         <Pressable
           onPress={() => router.push("/meals" as any)}
           style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
@@ -145,14 +164,31 @@ function NutritionHero({ mealsData, theme }: { mealsData: any; theme: AppTheme }
 }
 
 function CoachCard({
-  theme, teaser, recommendedPrompt,
-}: { theme: AppTheme; teaser?: string; recommendedPrompt?: string }) {
+  theme, recommendedPrompt, recommendationName, isRestDay,
+}: {
+  theme: AppTheme;
+  recommendedPrompt?: string;
+  recommendationName?: string;
+  isRestDay?: boolean;
+}) {
   const { t } = useTranslation();
   const ctaPrompt = recommendedPrompt ?? t("home.coachChip1");
 
+  let decisiveLine: string;
+  if (recommendationName) {
+    decisiveLine = t("home.coachRecommendsSentence", { name: recommendationName });
+  } else if (isRestDay) {
+    decisiveLine = t("home.coachRestSentence");
+  } else {
+    decisiveLine = t("home.coachReadySentence");
+  }
+
   return (
-    <Card style={{ borderColor: theme.secondary + "30", gap: 12 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+    <Card style={{ borderColor: theme.secondary + "30", gap: 0 }}>
+      <Pressable
+        onPress={() => router.push({ pathname: "/coach/chat" as any, params: { prompt: ctaPrompt } })}
+        style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+      >
         <View style={[styles.todayIcon, { backgroundColor: theme.secondaryDim }]}>
           <Feather name="message-circle" size={18} color={theme.secondary} />
         </View>
@@ -161,18 +197,10 @@ function CoachCard({
             {t("home.aiCoach")}
           </Text>
           <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 15 }} numberOfLines={2}>
-            {teaser || t("home.coachCardTitle")}
+            {decisiveLine}
           </Text>
         </View>
-      </View>
-      <Pressable
-        onPress={() => router.push({ pathname: "/coach/chat" as any, params: { prompt: ctaPrompt } })}
-        style={[styles.ctaBtn, { backgroundColor: theme.secondaryDim }]}
-      >
-        <Feather name="message-circle" size={15} color={theme.secondary} />
-        <Text style={{ color: theme.secondary, fontFamily: "Inter_700Bold", fontSize: 14 }}>
-          {t("home.coachCardCta")} →
-        </Text>
+        <Feather name="chevron-right" size={16} color={theme.secondary} />
       </Pressable>
     </Card>
   );
@@ -317,28 +345,28 @@ function RestDayCard({ theme }: { theme: AppTheme }) {
 function CoachCtaCard({ theme }: { theme: AppTheme }) {
   const { t } = useTranslation();
   return (
-    <Card style={{ borderColor: theme.secondary + "30", gap: 12 }}>
+    <Card style={{ borderColor: theme.primary + "40", gap: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={[styles.todayIcon, { backgroundColor: theme.secondaryDim }]}>
-          <Feather name="zap" size={18} color={theme.secondary} />
+        <View style={[styles.todayIcon, { backgroundColor: theme.primaryDim }]}>
+          <Feather name="cpu" size={18} color={theme.primary} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-            {t("home.aiCoach")}
+            {t("home.todaysWorkout")}
           </Text>
           <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }}>
-            {t("home.unlockRecommendations")}
+            {t("home.setupFirstPlanTitle")}
           </Text>
         </View>
       </View>
       <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
-        {t("home.unlockMessage")}
+        {t("home.setupFirstPlanDesc")}
       </Text>
       <Pressable
         onPress={() => router.push("/workouts/onboarding" as any)}
-        style={[styles.ctaBtn, { backgroundColor: theme.secondary }]}
+        style={[styles.ctaBtn, { backgroundColor: theme.primary }]}
       >
-        <Feather name="zap" size={15} color="#0f0f1a" />
+        <Feather name="cpu" size={15} color="#0f0f1a" />
         <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 14 }}>
           {t("home.setUpAICoach")}
         </Text>
@@ -825,40 +853,83 @@ function computeWeeklyAdherenceStreak(workouts: any[], weeklyGoal: number): numb
 
 function StatusSignalRow({
   signal,
-  recentWin,
+  workoutsLeft,
+  weeklyGoalDone,
   theme,
 }: {
   signal: StatusSignal | null;
-  recentWin: string | null;
+  workoutsLeft: number;
+  weeklyGoalDone: boolean;
   theme: AppTheme;
 }) {
   const { t } = useTranslation();
   if (!signal) return null;
 
-  const signalConfig: Record<StatusSignal, { label: string; icon: keyof typeof Feather.glyphMap; color: string }> = {
-    onTrack: { label: t("home.statusOnTrack"), icon: "check-circle", color: theme.primary },
-    behind: { label: t("home.statusBehind"), icon: "alert-triangle", color: theme.warning || "#ffab40" },
-    atRisk: { label: t("home.statusAtRisk"), icon: "alert-octagon", color: theme.danger || "#ff5252" },
-  };
-  const { label, icon, color } = signalConfig[signal];
+  let sentence: string;
+  let icon: keyof typeof Feather.glyphMap;
+  let color: string;
+
+  if (signal === "onTrack") {
+    color = theme.primary;
+    icon = "check-circle";
+    sentence = weeklyGoalDone
+      ? t("home.weeklyGoalMet")
+      : t("home.statusOnTrackSentence");
+  } else if (signal === "behind") {
+    color = theme.warning || "#ffab40";
+    icon = "alert-triangle";
+    sentence = workoutsLeft === 1
+      ? t("home.weeklyOneLeft")
+      : t("home.weeklyRemaining", { count: workoutsLeft });
+  } else {
+    color = theme.danger || "#ff5252";
+    icon = "alert-octagon";
+    sentence = t("home.statusAtRiskSentence", { count: workoutsLeft });
+  }
 
   return (
     <Animated.View
       entering={FadeInDown.delay(20).duration(180)}
-      style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, marginBottom: 12 }}
+      style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, marginBottom: 12 }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: color + "18", borderWidth: 1, borderColor: color + "40" }}>
-        <Feather name={icon} size={12} color={color} />
-        <Text style={{ color, fontFamily: "Inter_700Bold", fontSize: 12 }}>{label}</Text>
-      </View>
-      {recentWin ? (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border }}>
-          <Feather name="award" size={11} color={theme.warning || "#ffab40"} />
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11 }} numberOfLines={1}>
-            {recentWin}
-          </Text>
-        </View>
-      ) : null}
+      <Feather name={icon} size={13} color={color} />
+      <Text style={{ color, fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 }}>
+        {sentence}
+      </Text>
+    </Animated.View>
+  );
+}
+
+function RewardSignalChip({
+  recentWin,
+  theme,
+}: {
+  recentWin: { type: "pr"; exercise: string; value: number } | { type: "streak"; count: number } | null;
+  theme: AppTheme;
+}) {
+  const { t } = useTranslation();
+  if (!recentWin) return null;
+
+  const accent = theme.warning || "#ffab40";
+  const label = recentWin.type === "pr"
+    ? t("home.rewardPRLine", { exercise: recentWin.exercise, value: `${recentWin.value} kg` })
+    : t("home.rewardStreakLine", { count: recentWin.count });
+
+  return (
+    <Animated.View
+      entering={FadeIn.delay(120).duration(250)}
+      style={{
+        flexDirection: "row", alignItems: "center", gap: 8,
+        marginHorizontal: 16, marginBottom: 12,
+        paddingHorizontal: 14, paddingVertical: 10,
+        borderRadius: 12, backgroundColor: accent + "14",
+        borderWidth: 1, borderColor: accent + "40",
+      }}
+    >
+      <Feather name={recentWin.type === "pr" ? "award" : "zap"} size={14} color={accent} />
+      <Text style={{ color: accent, fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 }}>
+        {label}
+      </Text>
     </Animated.View>
   );
 }
@@ -1155,13 +1226,8 @@ export default function HomeScreen() {
         {/* ═══ STATUS SIGNAL ROW ═══ */}
         <StatusSignalRow
           signal={statusSignal}
-          recentWin={
-            recentWin
-              ? recentWin.type === "pr"
-                ? t("home.recentWinPR", { exercise: recentWin.exercise, value: `${recentWin.value} kg` })
-                : t("home.recentWinStreak", { count: recentWin.count })
-              : null
-          }
+          workoutsLeft={Math.max(weeklyGoalTarget - workoutsThisWeekCount, 0)}
+          weeklyGoalDone={workoutsThisWeekCount >= weeklyGoalTarget}
           theme={theme}
         />
 
@@ -1171,31 +1237,9 @@ export default function HomeScreen() {
           <SmartBanner message={activeBanner} onDismiss={dismiss} theme={theme} />
         )}
 
-        {/* ═══ PR CELEBRATION BANNER ═══ */}
-        {!prBannerDismissed && achievementsData?.recentPRs?.length > 0 && (
-          <PRCelebrationBanner
-            pr={achievementsData.recentPRs[0]}
-            onDismiss={() => setPrBannerDismissed(true)}
-            theme={theme}
-          />
-        )}
-
         {/* ═══ ZONE 2 — TODAY'S FOCUS ═══ */}
 
-        <Animated.View entering={FadeInDown.delay(40).duration(160)} style={[styles.section, { marginBottom: 16 }]}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
-            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-              {t("home.todaysWorkout")}
-            </Text>
-            {hasCoachOnboarding && (
-              <View style={[styles.aiPill, { backgroundColor: theme.primaryDim }]}>
-                <Feather name="cpu" size={9} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 9 }}>
-                  {t("home.aiCoach")}
-                </Text>
-              </View>
-            )}
-          </View>
+        <Animated.View entering={FadeInDown.delay(40).duration(160)} style={[styles.section, { marginBottom: 0 }]}>
           {profileLoading ? (
             <SkeletonCard>
               <SkeletonBox width="100%" height={80} borderRadius={12} />
@@ -1210,6 +1254,20 @@ export default function HomeScreen() {
             <CoachCtaCard theme={theme} />
           )}
         </Animated.View>
+
+        {/* ═══ REWARD SIGNAL (below hero card) ═══ */}
+        <View style={{ marginTop: 10 }}>
+          <RewardSignalChip recentWin={recentWin} theme={theme} />
+        </View>
+
+        {/* ═══ PR CELEBRATION BANNER ═══ */}
+        {!prBannerDismissed && achievementsData?.recentPRs?.length > 0 && (
+          <PRCelebrationBanner
+            pr={achievementsData.recentPRs[0]}
+            onDismiss={() => setPrBannerDismissed(true)}
+            theme={theme}
+          />
+        )}
 
         {/* ═══ WEEKLY PROGRESS ═══ */}
         {workoutsData && profile && (
@@ -1307,9 +1365,14 @@ export default function HomeScreen() {
         <Animated.View entering={FadeInDown.delay(80).duration(80)} style={styles.section}>
           <CoachCard
             theme={theme}
-            teaser={todayRecommendation?.contextSummary}
+            recommendationName={
+              todayRecommendation && !todayRecommendation.isRestDayRecommended
+                ? todayRecommendation.recommendation.template.name
+                : undefined
+            }
+            isRestDay={todayRecommendation?.isRestDayRecommended}
             recommendedPrompt={
-              todayRecommendation
+              todayRecommendation && !todayRecommendation.isRestDayRecommended
                 ? `Tell me more about today's ${todayRecommendation.recommendation.template.name} workout recommendation`
                 : undefined
             }
