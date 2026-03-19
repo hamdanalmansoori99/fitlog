@@ -112,6 +112,9 @@ export default function ProfileScreen() {
   const [waterGoalMl, setWaterGoalMl] = useState("2000");
   
   const [profileLoaded, setProfileLoaded] = useState(false);
+  // Tracks the unit system from the previous render so we know the direction
+  // of any switch (metric→imperial or imperial→metric) for in-place conversion.
+  const prevUnitSystemRef = useRef(unitSystem);
   
   const { data: subscriptionData } = useQuery({
     queryKey: ["subscription"],
@@ -171,7 +174,45 @@ export default function ProfileScreen() {
       setProfileLoaded(true);
     }
   }, [profile]);
-  
+
+  // When the user switches unit system chips, convert whatever is currently
+  // in the height/weight fields rather than forcing them to re-save the profile.
+  useEffect(() => {
+    const prev = prevUnitSystemRef.current;
+    prevUnitSystemRef.current = unitSystem;
+
+    // Don't convert until the profile has been loaded into the fields once.
+    if (!profileLoaded) return;
+    // No actual change (e.g. initial render).
+    if (prev === unitSystem) return;
+
+    if (unitSystem === "imperial") {
+      // metric → imperial: convert whatever is currently in the cm/kg fields.
+      const cm = parseFloat(heightCm);
+      if (!isNaN(cm) && cm > 0) {
+        const totalIn = cm / 2.54;
+        setHeightFt(String(Math.floor(totalIn / 12)));
+        setHeightIn(String(Math.round(totalIn % 12)));
+      }
+      const kg = parseFloat(weightKg);
+      if (!isNaN(kg) && kg > 0) {
+        setWeightLbs((kg * 2.20462).toFixed(1));
+      }
+    } else {
+      // imperial → metric: convert whatever is currently in the ft/in/lbs fields.
+      const ft = parseFloat(heightFt);
+      const inVal = parseFloat(heightIn || "0");
+      if (!isNaN(ft) && ft > 0) {
+        const totalCm = Math.round((ft * 12 + (isNaN(inVal) ? 0 : inVal)) * 2.54);
+        setHeightCm(String(totalCm));
+      }
+      const lbs = parseFloat(weightLbs);
+      if (!isNaN(lbs) && lbs > 0) {
+        setWeightKg((lbs / 2.20462).toFixed(1));
+      }
+    }
+  }, [unitSystem]);
+
   const updateMutation = useMutation({
     mutationFn: api.updateProfile,
     onSuccess: () => {
