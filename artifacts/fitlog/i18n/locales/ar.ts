@@ -1104,6 +1104,13 @@ export default {
     coachSummaryStreak: "أنت على سلسلة تمارين {{count}} يوماً.",
     coachSummaryPRs_one: "سجّلت رقماً قياسياً جديداً مؤخراً، بما فيه {{exercise}}.",
     coachSummaryPRs_other: "سجّلت {{count}} أرقام قياسية جديدة مؤخراً، بما فيها {{exercise}}.",
+    bestThisMonthTitle: "أفضل مجموعة هذا الشهر",
+    bestThisMonthNoData: "لم تُسجَّل جلسات صالة هذا الشهر",
+    bestThisMonthNoDataSub: "أكمل تمريناً في الصالة لرؤية أفضل مجموعاتك",
+    bestThisMonthVolume: "{{volume}} كغ إجمالي",
+    adherenceTrendUp: "الاتساق ارتفع {{delta}}% مقارنة بالشهر الماضي ↑",
+    adherenceTrendFlat: "الاتساق ثابت مقارنة بالشهر الماضي →",
+    adherenceTrendDown: "الاتساق انخفض {{delta}}% مقارنة بالشهر الماضي ↓",
   },
   coach: {
     aiCoach: "المدرب الذكي",

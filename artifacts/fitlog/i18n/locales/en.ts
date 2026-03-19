@@ -1187,6 +1187,13 @@ export default {
     coachSummaryStreak: "You're on a {{count}}-day workout streak.",
     coachSummaryPRs_one: "You set {{count}} new PR recently, including {{exercise}}.",
     coachSummaryPRs_other: "You set {{count}} new PRs recently, including {{exercise}}.",
+    bestThisMonthTitle: "Best Set This Month",
+    bestThisMonthNoData: "No gym sets logged this month",
+    bestThisMonthNoDataSub: "Complete a gym workout to see your best set here",
+    bestThisMonthVolume: "{{volume}} kg total volume",
+    adherenceTrendUp: "Consistency up {{delta}}% vs last month ↑",
+    adherenceTrendFlat: "Consistency steady vs last month →",
+    adherenceTrendDown: "Consistency down {{delta}}% vs last month ↓",
   },
   coach: {
     aiCoach: "AI Coach",

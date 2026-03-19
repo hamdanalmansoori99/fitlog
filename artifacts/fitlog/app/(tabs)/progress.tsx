@@ -380,6 +380,78 @@ function buildCoachSummary(
   return hasData ? data : null;
 }
 
+// ─── Best-set-this-month computation ─────────────────────────────────────────
+
+type BestThisMonthResult = {
+  exercise: string;
+  reps: number;
+  weightKg: number;
+  volume: number;
+  date: string;
+};
+
+function computeBestThisMonth(workoutsData: any): BestThisMonthResult | null {
+  if (!workoutsData?.workouts) return null;
+  const nowMs = Date.now();
+  const THIRTY_DAYS = 30 * 86400000;
+  let best: BestThisMonthResult | null = null;
+
+  for (const workout of workoutsData.workouts) {
+    if (workout.activityType !== "gym") continue;
+    const ts = new Date(workout.date).getTime();
+    if (isNaN(ts) || ts < nowMs - THIRTY_DAYS || ts > nowMs) continue;
+
+    for (const ex of (workout.exercises || [])) {
+      const name: string = (ex.name || "").trim();
+      if (!name) continue;
+      for (const set of (ex.sets || [])) {
+        const w = parseFloat(set.weightKg);
+        const r = parseInt(set.reps);
+        if (isNaN(w) || isNaN(r) || w <= 0 || r <= 0) continue;
+        const vol = w * r;
+        if (!best || vol > best.volume) {
+          best = { exercise: name, reps: r, weightKg: w, volume: vol, date: workout.date };
+        }
+      }
+    }
+  }
+  return best;
+}
+
+// ─── Adherence trend computation ──────────────────────────────────────────────
+
+type AdherenceTrendResult = {
+  currentCount: number;
+  prevCount: number;
+  deltaPercent: number;
+  trend: "up" | "flat" | "down";
+};
+
+function computeAdherenceTrend(workoutsData: any): AdherenceTrendResult | null {
+  if (!workoutsData?.workouts) return null;
+  const nowMs = Date.now();
+  const FOUR_WEEKS = 28 * 86400000;
+  let currentCount = 0;
+  let prevCount = 0;
+
+  for (const workout of workoutsData.workouts) {
+    const ts = new Date(workout.date).getTime();
+    if (isNaN(ts)) continue;
+    const ageMs = nowMs - ts;
+    if (ageMs >= 0 && ageMs < FOUR_WEEKS) currentCount++;
+    else if (ageMs >= FOUR_WEEKS && ageMs < FOUR_WEEKS * 2) prevCount++;
+  }
+
+  if (currentCount === 0 && prevCount === 0) return null;
+
+  const deltaPercent = prevCount === 0
+    ? (currentCount > 0 ? 100 : 0)
+    : ((currentCount - prevCount) / prevCount) * 100;
+
+  const trend: "up" | "flat" | "down" = deltaPercent >= 10 ? "up" : deltaPercent <= -10 ? "down" : "flat";
+  return { currentCount, prevCount, deltaPercent, trend };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ProgressScreen() {
@@ -548,6 +620,8 @@ export default function ProgressScreen() {
   const strengthTrends = useMemo(() => computeStrengthTrends(workoutsData), [workoutsData]);
   const emotionalReward = useMemo(() => computeEmotionalReward(records, strengthTrends), [records, strengthTrends]);
   const coachSummary = useMemo(() => buildCoachSummary(workoutSummary, streaks, records, profile), [workoutSummary, streaks, records, profile]);
+  const bestThisMonth = useMemo(() => computeBestThisMonth(workoutsData), [workoutsData]);
+  const adherenceTrend = useMemo(() => computeAdherenceTrend(workoutsData), [workoutsData]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -592,6 +666,15 @@ export default function ProgressScreen() {
             ? t("home.crushingIt")
             : t("home.keepPushing");
           const barColor = isHighScore ? theme.primary : isMidScore ? theme.secondary : theme.warning;
+          const atrendColor = adherenceTrend?.trend === "up" ? theme.primary : adherenceTrend?.trend === "down" ? theme.danger : theme.textMuted;
+          const atrendIcon = adherenceTrend?.trend === "up" ? "trending-up" : adherenceTrend?.trend === "down" ? "trending-down" : "minus";
+          const atrendText = adherenceTrend
+            ? adherenceTrend.trend === "up"
+              ? t("progress.adherenceTrendUp", { delta: Math.abs(Math.round(adherenceTrend.deltaPercent)) })
+              : adherenceTrend.trend === "down"
+              ? t("progress.adherenceTrendDown", { delta: Math.abs(Math.round(adherenceTrend.deltaPercent)) })
+              : t("progress.adherenceTrendFlat")
+            : null;
           return (
             <Animated.View entering={FadeInDown.duration(300)}>
               <View style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: isHighScore ? theme.primary + "30" : theme.border, gap: 12 }}>
@@ -620,10 +703,91 @@ export default function ProgressScreen() {
                 <Text style={{ color: isHighScore ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
                   {motivationMsg}
                 </Text>
+                {!!atrendText && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
+                    <Feather name={atrendIcon as any} size={13} color={atrendColor} />
+                    <Text style={{ color: atrendColor, fontFamily: "Inter_500Medium", fontSize: 13, flex: 1 }}>{atrendText}</Text>
+                  </View>
+                )}
               </View>
             </Animated.View>
           );
         })()}
+
+        {/* ── EMOTIONAL REWARD (elevated) ── */}
+        {!recordsLoading && emotionalReward && (
+          <Animated.View entering={FadeInDown.delay(15).duration(350)}>
+            <View style={{
+              backgroundColor: theme.primary + "18",
+              borderRadius: 16,
+              padding: 18,
+              borderWidth: 1,
+              borderColor: theme.primary + "55",
+              borderLeftWidth: 4,
+              borderLeftColor: theme.primary,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 14,
+            }}>
+              <View style={{
+                width: 52,
+                height: 52,
+                borderRadius: 14,
+                backgroundColor: theme.primary + "30",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <Feather name="award" size={26} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                  {emotionalReward.type === "bestLift"
+                    ? `🏆 ${t("progress.emotionalRewardBestLift")}`
+                    : `⚡ ${t("progress.emotionalRewardMostImproved")}`}
+                </Text>
+                <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 17, marginTop: 4, lineHeight: 22 }}>
+                  {emotionalReward.type === "bestLift"
+                    ? t("progress.emotionalRewardBestLiftSub", { exercise: emotionalReward.exercise, value: emotionalReward.value })
+                    : t("progress.emotionalRewardMostImprovedSub", { exercise: emotionalReward.exercise, delta: Math.round(emotionalReward.deltaPercent) })}
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* ── BEST SET THIS MONTH ── */}
+        {workoutsData !== undefined && (
+          <Animated.View entering={FadeInDown.delay(25).duration(350)}>
+            <View style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: theme.border }}>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10 }}>
+                🏅 {t("progress.bestThisMonthTitle")}
+              </Text>
+              {bestThisMonth ? (
+                <View style={{ gap: 4 }}>
+                  <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 24, lineHeight: 30 }}>
+                    {useImperial ? (bestThisMonth.weightKg * 2.20462).toFixed(1) : bestThisMonth.weightKg.toFixed(1)}{weightUnit} × {bestThisMonth.reps}
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                    {bestThisMonth.exercise}{"  ·  "}{new Date(bestThisMonth.date).toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
+                  </Text>
+                  <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12, marginTop: 2 }}>
+                    {t("progress.bestThisMonthVolume", { volume: Math.round(bestThisMonth.volume) })}
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ alignItems: "center", gap: 8, paddingVertical: 12 }}>
+                  <Feather name="target" size={24} color={theme.textMuted} />
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" }}>
+                    {t("progress.bestThisMonthNoData")}
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textAlign: "center" }}>
+                    {t("progress.bestThisMonthNoDataSub")}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </Animated.View>
+        )}
 
         {/* Workout History Calendar */}
         <Animated.View entering={FadeInDown.duration(350)}>
@@ -669,44 +833,6 @@ export default function ProgressScreen() {
           />
         </Animated.View>
 
-        {/* ── EMOTIONAL REWARD HIGHLIGHT ── */}
-        {!recordsLoading && emotionalReward && (
-          <Animated.View entering={FadeInDown.delay(30).duration(350)}>
-            <View style={{
-              backgroundColor: theme.primary + "12",
-              borderRadius: 16,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: theme.primary + "35",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 14,
-            }}>
-              <View style={{
-                width: 44,
-                height: 44,
-                borderRadius: 13,
-                backgroundColor: theme.primary + "25",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                <Feather name="award" size={22} color={theme.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>
-                  {emotionalReward.type === "bestLift"
-                    ? t("progress.emotionalRewardBestLift")
-                    : t("progress.emotionalRewardMostImproved")}
-                </Text>
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15, marginTop: 3 }}>
-                  {emotionalReward.type === "bestLift"
-                    ? t("progress.emotionalRewardBestLiftSub", { exercise: emotionalReward.exercise, value: emotionalReward.value })
-                    : t("progress.emotionalRewardMostImprovedSub", { exercise: emotionalReward.exercise, delta: Math.round(emotionalReward.deltaPercent) })}
-                </Text>
-              </View>
-            </View>
-          </Animated.View>
-        )}
 
         {/* Streaks */}
         <Animated.View entering={FadeInDown.delay(40).duration(350)}>
