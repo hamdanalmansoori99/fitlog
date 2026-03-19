@@ -277,6 +277,7 @@ export default function ScanScreen() {
   const [editingItem, setEditingItem] = useState<ScanMealItem | null>(null);
   const [isLogging, setIsLogging] = useState(false);
   const [scanTimedOut, setScanTimedOut] = useState(false);
+  const [footerHeight, setFooterHeight] = useState(160);
   const clientTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const captureButtonScale = useSharedValue(1);
@@ -605,7 +606,7 @@ export default function ScanScreen() {
             {/* Food items list */}
             <ScrollView
               style={styles.itemsList}
-              contentContainerStyle={{ paddingBottom: 16 }}
+              contentContainerStyle={{ paddingBottom: footerHeight + 16 }}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
@@ -665,7 +666,10 @@ export default function ScanScreen() {
             </ScrollView>
 
             {/* ── Sticky macro + CTA footer ── */}
-            <View style={[styles.stickyFooter, { borderTopColor: theme.border, paddingBottom: tabBarHeight + 8, backgroundColor: theme.background }]}>
+            <View
+              style={[styles.stickyFooter, { borderTopColor: theme.border, paddingBottom: tabBarHeight + 8, backgroundColor: theme.background }]}
+              onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
+            >
               {/* Macro pills row */}
               <View style={styles.macroRow}>
                 <MacroPill label={t("common.calories")} value={totals.calories} unit="kcal" color={theme.primary} />
