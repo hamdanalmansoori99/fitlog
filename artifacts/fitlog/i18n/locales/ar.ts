@@ -1225,6 +1225,7 @@ export default {
     configuredFor: "مُعَدّ لـ {{days}} أيام {{goal}}",
     profileIncomplete: "الملف الشخصي غير مكتمل — أضف معداتك للحصول على توصيات أفضل",
     updateGoalEquipment: "تحديث الهدف والمعدات",
+    editTrainingGoals: "تعديل أهداف التدريب",
     bodyStatsSection: "الإحصاءات الجسدية",
     perWeek: "{{days}} أيام/أسبوع",
     expBeginner: "مبتدئ",

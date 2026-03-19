@@ -1308,6 +1308,7 @@ export default {
     configuredFor: "Configured for {{days}}-day {{goal}}",
     profileIncomplete: "Profile incomplete — add your equipment for better recommendations",
     updateGoalEquipment: "Update goal & equipment",
+    editTrainingGoals: "Edit training goals",
     bodyStatsSection: "Body Stats",
     perWeek: "{{days}} days/week",
     expBeginner: "Beginner",
