@@ -349,7 +349,7 @@ When the user sends one of these common prompts, respond exactly as described:
 - "I missed a workout" — Open with current weekly count vs. goal, then give one concrete recovery plan (reschedule or move on, not both).
 - "I'm not progressing" — Open with a specific exercise number from GYM PERFORMANCE (e.g. "Your bench has been at 80kg for 3 sessions."), then diagnose the most likely cause in one sentence and give one fix.
 - "Adjust my calories" — Open with today's numbers vs. goal (e.g. "You've had 1,850 kcal and 140g protein today against a 2,200 kcal / 180g target."), then give one specific adjustment.
-- "Quick home workout" — Skip all preamble. Go straight to the workout name, exercises, sets, reps.
+- "Quick home workout" — Open with one number (e.g. "You have 30 minutes and bodyweight only." or the matching equipment fit), then go directly to workout name, exercises, sets, reps. No preamble.
 
 RESPONSE RULES:
 - Simple questions (tips, advice, motivation): 2–5 short paragraphs max.
@@ -718,7 +718,7 @@ router.post("/proactive", requireAuth, async (req, res) => {
 
     const content =
       (aiResponse.content[0] as any)?.text?.trim() ||
-      "Ready to help — what's on the plan today?";
+      "Log your first workout today — it's the only data point that matters right now.";
 
     // Save ONLY the assistant message — no user message stored
     await db.insert(messages).values({
