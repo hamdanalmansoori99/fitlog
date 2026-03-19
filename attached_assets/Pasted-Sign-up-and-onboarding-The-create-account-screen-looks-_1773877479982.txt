@@ -1,0 +1,301 @@
+Sign-up and onboarding
+
+The create account screen looks clean and modern. The onboarding step about equipment is clear and useful. The pill-style equipment selection is a good choice and the “Build my plan” CTA feels strong.
+
+What’s good:
+	•	clean account creation
+	•	onboarding feels fitness-specific
+	•	equipment step is actually useful, not filler
+
+What could be better:
+	•	I don’t yet see a clearer payoff in onboarding like “what plan you’re building for me”
+	•	the equipment screen is good, but it could feel more personalized with visible selected count or plan summary
+
+⸻
+
+2. Home screen
+
+The home screen is much better than earlier versions. It now feels like a fitness dashboard with actionability.
+
+What’s working:
+	•	greeting feels personal
+	•	weekly progress is visible
+	•	nutrition ring looks good
+	•	AI coach card is better integrated
+	•	the updated status/warning feel is useful
+
+What still needs work:
+	•	the home screen still doesn’t hit hard enough emotionally
+	•	the hierarchy is a bit split between workout, nutrition, and AI instead of one strong “do this now” command
+	•	the “Today’s Workout” section is solid, but the screen still needs a more forceful mission-control feel
+
+What I’d change:
+	•	make one card dominate the screen: today’s mission
+	•	have one stronger line like: “1 workout left to stay on track”
+	•	make the AI card more decisive, less informational
+	•	add one reward signal near the top, not lower down
+
+⸻
+
+3. Workout execution
+
+This is one of the strongest parts of the app visually.
+
+What’s good:
+	•	the execute screen looks serious
+	•	set cards are clear
+	•	progression / baseline hints are useful
+	•	finish CTA is visible
+	•	the “next exercise” section is smart
+
+What still worries me:
+	•	there is still a lot of visual density on the execute screen
+	•	it looks good, but I’m not fully convinced it’s faster than Strong/Hevy-level logging yet
+	•	if swipe-to-complete is in there, it needs to feel flawless, otherwise it’s a gimmick
+
+Main product concern:
+	•	logging must feel almost mindless
+	•	if users have to think too much or scan too much, they’ll leave
+
+What I’d refine:
+	•	reduce visual weight around secondary text
+	•	make active set even more dominant
+	•	ensure keyboard behavior is perfect
+	•	confirm one-hand use during gym sessions is smooth
+
+⸻
+
+4. AI coach
+
+This is improved, and visually it looks more productized. The chat screen is clean enough and the prompt chips are a good idea.
+
+What’s good:
+	•	much cleaner coach presentation
+	•	green user bubble is fine
+	•	quick prompts help reduce blank-state friction
+
+What still feels weak:
+	•	I still don’t see a truly differentiated AI experience
+	•	it still risks feeling like “fitness ChatGPT inside the app”
+	•	unless it references real numbers constantly, users won’t trust it
+
+This is the area with the highest upside.
+Your AI should feel like:
+	•	coach
+	•	analyst
+	•	decision engine
+
+Not:
+	•	chatbot
+
+What would make it stronger:
+	•	show exact user-linked references like “you hit 1 of 3 workouts this week”
+	•	push one recommended action immediately
+	•	make the first response shorter and more commanding
+
+⸻
+
+5. Workouts tab / library
+
+The workouts screen looks good and usable. The chips and categories help.
+
+What’s good:
+	•	cleaner exercise list
+	•	decent structure
+	•	exercise discovery is there
+	•	looks more complete than before
+
+What could improve:
+	•	I’m not sure the list is differentiated enough from any typical workout app
+	•	it needs either stronger personalization or faster planning
+	•	the page should make it clearer why this library is better than just a template list
+
+Would improve with:
+	•	“recommended for today”
+	•	“best for your goal”
+	•	“based on your equipment”
+	•	stronger filtering by available gear and progression history
+
+⸻
+
+6. Scan / meal logging
+
+This part has potential, but right now it feels like a separate product.
+
+What’s good:
+	•	the scan page looks premium
+	•	camera permission screen is clean
+	•	barcode / AI scan options are smart
+	•	meal logging screen is usable and not ugly
+	•	weekly meal plan pages look surprisingly strong visually
+
+What still feels off:
+	•	meals still feel disconnected from the workout-first identity
+	•	this could become feature bloat if not tied back to your main hook
+	•	users may not understand whether this is a gym app with meals, or a meal app with workouts
+
+Best fix:
+	•	always connect meals back to the mission
+	•	home should say things like:
+	•	“225g protein left today”
+	•	“Meal plan generated for recovery after Push Day”
+	•	“You’re behind on protein for today’s goal”
+
+That makes meals support the main product instead of competing with it.
+
+⸻
+
+7. Progress screen
+
+This improved a lot visually, but it still isn’t fully emotionally powerful.
+
+What’s good:
+	•	consistency score is useful
+	•	calendar view is clean
+	•	weekly report card is good
+	•	there’s a proper progress destination now
+
+What still needs work:
+	•	it still feels a bit quiet emotionally
+	•	I don’t yet feel a strong sense of achievement
+	•	if this page is supposed to create retention, it needs more “proof of improvement”
+
+Would benefit from:
+	•	strongest lift this month
+	•	top improved movement
+	•	training adherence trend
+	•	clearer “you’re improving / you’re slipping” message
+	•	visual reward hierarchy
+
+The new emotional reward system was the right move. It just needs to feel more visible and memorable in practice.
+
+⸻
+
+8. Profile and targets
+
+Profile is functional and looks decent.
+
+What’s good:
+	•	clear segmented tabs
+	•	daily targets are visible
+	•	profile data entry is straightforward
+
+What I’d improve:
+	•	too much dead-looking data entry feel
+	•	it needs more product payoff and less settings-page energy
+	•	fitness goal selection could feel more personalized
+
+A profile page should not just store data. It should tell the user:
+	•	who they are training to become
+	•	what their targets are
+	•	whether the app is configured correctly for that
+
+⸻
+
+9. Subscription / premium feel
+
+You mentioned subscription and from the flow the app now does feel more premium overall.
+
+Good signs:
+	•	some features feel worth gating
+	•	AI coach and weekly meal plan are obvious premium candidates
+	•	the visual polish supports paid positioning
+
+But:
+	•	premium needs a sharper reason than “more features”
+	•	premium should mean better outcomes, not just extra pages
+
+Strong premium positioning would be:
+	•	AI coach with real recommendations
+	•	personalized weekly plan generation
+	•	advanced progress analysis
+	•	smart nutrition support tied to training
+
+Weak premium positioning would be:
+	•	random gated extras
+
+⸻
+
+Biggest strengths now
+
+The app looks coherent
+
+It no longer feels cobbled together.
+
+The product breadth is real
+
+Workouts, meals, progress, AI, profile — it feels like a full app.
+
+The premium direction is believable
+
+You can charge eventually if the coaching and plans become truly useful.
+
+The build quality seems much higher
+
+This matters a lot for trust.
+
+⸻
+
+Biggest weaknesses now
+
+1. Still not differentiated enough
+
+The app is better, but I still can’t reduce it to one unforgettable sentence.
+
+It should be something like:
+“The workout tracker that tells you exactly what to do next.”
+
+Right now it risks being:
+“a nice-looking all-in-one fitness app.”
+
+That’s not enough.
+
+2. Meals and workouts still feel slightly split
+
+They need stronger product unification.
+
+3. AI still needs to prove itself
+
+This should be your killer edge, and I’m not fully convinced yet.
+
+4. Too much value is distributed across tabs
+
+The home screen should feel more decisive and central.
+
+⸻
+
+What I would do next, in order
+
+Priority 1
+
+Tighten the home screen into a true command center.
+Make it answer:
+	•	what should I do now?
+	•	am I behind?
+	•	what matters today?
+
+Priority 2
+
+Make AI coach obviously data-aware.
+Responses should reference:
+	•	workouts completed
+	•	adherence
+	•	bodyweight
+	•	protein
+	•	volume
+	•	goal
+
+Priority 3
+
+Unify meals with the workout mission.
+Nutrition should feel like fuel for the plan, not a side module.
+
+Priority 4
+
+Strengthen premium value proposition.
+Make premium map to better results.
+
+Priority 5
+
+Polish workout logging speed and one-handed use.
+That’s where retention lives.

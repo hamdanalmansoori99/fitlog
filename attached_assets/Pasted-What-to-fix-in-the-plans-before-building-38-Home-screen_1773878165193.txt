@@ -1,0 +1,58 @@
+What to fix in the plans before building
+
+38 — Home screen
+
+Good, but add:
+	•	Do not duplicate recommendation logic; reuse existing helpers only.
+	•	If no workout recommendation is available, show a polished fallback like “Set up your first plan.”
+	•	The hero CTA must open the correct next action, not a generic screen.
+
+39 — AI coach
+
+This one needs the most tightening.
+You wrote:
+	•	“Add a per-chip context instruction”
+	•	“bodyweight trend is a separate future task”
+
+But bodyweight trend was already added earlier in Phase 2.
+
+Fix:
+	•	remove that “future task” line
+	•	explicitly say: preserve existing proactive route, promptSentRef behavior, and deep-link chip flow
+	•	require: no new coach endpoints
+	•	require: existing conversations must not get duplicate proactive openers
+
+40 — Workout execution
+
+This is strong, but risky.
+
+Add:
+	•	Do not alter save flow, PR detection, or active workout pill behavior unless required.
+	•	Swipe-to-complete must preserve current input values exactly as tapping Done does.
+	•	Keyboard changes must not break Android.
+	•	If react-native-keyboard-controller is not already used safely in this screen, use the smallest possible change.
+
+41 — Progress screen
+
+This one partially overlaps with what was already built.
+
+Add:
+	•	Do not rebuild or duplicate Emotional Reward / Strength Trends / Coach Summary if they already exist
+	•	Only enhance or reposition existing implementations
+	•	Reuse existing pure functions where possible
+
+Otherwise Replit may create duplicate cards or conflicting logic.
+
+45 — Workouts tab
+
+Good plan. Add:
+	•	recommendation logic must be deterministic and client-side only
+	•	if profile/equipment data is missing, gracefully fall back to generic templates
+	•	“Needs gear” badge must not block starting a workout if the user still wants it
+
+46 — Profile
+
+Good direction. Add:
+	•	do not navigate back into onboarding if that flow is brittle; if needed, route to the nearest stable editable screen
+	•	target status indicators must only appear when today’s intake data exists
+	•	collapsed Body Stats must preserve current values and validation behavior
