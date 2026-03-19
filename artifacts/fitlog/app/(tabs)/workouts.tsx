@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   RefreshControl, Platform, Alert, TextInput,
@@ -13,7 +13,7 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
-import { getRecommendations, getTodaySuggestion } from "@/lib/coachEngine";
+import { getRecommendations, getTodaySuggestion, getEquipmentMatchLevel } from "@/lib/coachEngine";
 import { WORKOUT_TEMPLATES, WorkoutTemplate } from "@/lib/workoutTemplates";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
@@ -194,6 +194,84 @@ function TodaySuggestionCard({ suggestion, onPress }: { suggestion: any; onPress
   );
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function daysAgoFromDate(dateStr: string): number {
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+function buildLastTrainedMap(workouts: any[]): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const w of workouts) {
+    const days = daysAgoFromDate(w.date);
+    const type = w.activityType as string;
+    if (!(type in result) || days < result[type]) result[type] = days;
+  }
+  return result;
+}
+
+function formatLastTrained(days: number, t: any): string {
+  if (days === 0) return t("workouts.lastTrainedToday");
+  if (days === 1) return t("workouts.lastTrainedYesterday");
+  return t("workouts.lastTrainedDays", { days });
+}
+
+// ─── For You Today Mini Card ───────────────────────────────────────────────────
+
+function ForYouTodayMiniCard({
+  template,
+  reason,
+  needsGear,
+  lastDays,
+  onPress,
+}: {
+  template: WorkoutTemplate;
+  reason: string;
+  needsGear: boolean;
+  lastDays?: number;
+  onPress: () => void;
+}) {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+  const color = getActivityColor(template.activityType, theme);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.fyCard,
+        { backgroundColor: theme.card, borderColor: needsGear ? theme.warning + "60" : theme.border, opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
+      ]}
+    >
+      <View style={[styles.fyIcon, { backgroundColor: color + "20" }]}>
+        <Feather name={getActivityIcon(template.activityType)} size={18} color={color} />
+      </View>
+      <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, marginTop: 8 }} numberOfLines={2}>
+        {t(`workouts.templates.${template.id}.name`, { defaultValue: template.name })}
+      </Text>
+      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 3 }}>
+        {template.durationMinutes}{t("common.min")} · {t(`workouts.plan.difficulty.${template.difficulty}`)}
+      </Text>
+      <Text style={{ color: color, fontFamily: "Inter_500Medium", fontSize: 11, marginTop: 4 }} numberOfLines={1}>
+        {reason}
+      </Text>
+      {needsGear && (
+        <View style={[styles.needsGearBadge, { backgroundColor: theme.warning + "18", borderColor: theme.warning + "40" }]}>
+          <Feather name="tool" size={9} color={theme.warning} />
+          <Text style={{ color: theme.warning, fontFamily: "Inter_500Medium", fontSize: 10 }}>{t("workouts.needsGear")}</Text>
+        </View>
+      )}
+      {lastDays !== undefined && (
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 4, opacity: 0.8 }}>
+          {formatLastTrained(lastDays, t)}
+        </Text>
+      )}
+    </Pressable>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () => void }) {
   const { theme } = useTheme();
   const { t, i18n } = useTranslation();
@@ -214,9 +292,14 @@ function WorkoutHistoryCard({ workout, onDelete }: { workout: any; onDelete: () 
           <Text style={[styles.historyName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
             {workout.name || workout.activityType}
           </Text>
-          <Text style={[styles.historyDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-            {new Date(workout.date).toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={[styles.historyDate, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {new Date(workout.date).toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
+            </Text>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, opacity: 0.75 }}>
+              · {formatLastTrained(daysAgoFromDate(workout.date), t)}
+            </Text>
+          </View>
         </View>
         <Pressable onPress={(e) => { e.stopPropagation(); onDelete(); }} style={styles.deleteBtn} hitSlop={8}>
           <Feather name="trash-2" size={15} color={theme.danger} />
@@ -340,6 +423,25 @@ export default function WorkoutsScreen() {
   const todaySuggestion = hasCompletedOnboarding
     ? getTodaySuggestion(coachProfile, recentWorkouts)
     : null;
+
+  const lastTrainedMap = useMemo(() => buildLastTrainedMap(workouts), [workouts]);
+
+  const forYouTemplates = useMemo(() => {
+    if (recommendations.length > 0) {
+      return recommendations.slice(0, 3).map((rec: any) => ({
+        template: rec.template as WorkoutTemplate,
+        reason: rec.whyGoodForYou as string,
+        equipmentMatch: rec.equipmentMatch as string,
+        needsGear: rec.equipmentMatch === "none",
+      }));
+    }
+    return WORKOUT_TEMPLATES.slice(0, 3).map((tmpl) => ({
+      template: tmpl,
+      reason: "",
+      equipmentMatch: "full",
+      needsGear: false,
+    }));
+  }, [recommendations]);
 
   const quickLogItems = [
     { label: t("workouts.run"), icon: "activity" as const, type: "running", color: theme.primary },
@@ -595,6 +697,44 @@ export default function WorkoutsScreen() {
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.browseTemplatesTitle")}</Text>
           </View>
+
+          {/* ── FOR YOU TODAY sub-section ── */}
+          {!templateSearch && (
+            <View style={{ marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Feather name="star" size={13} color={theme.primary} />
+                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                    {recommendations.length > 0 ? t("workouts.forYouToday") : t("workouts.topTemplates")}
+                  </Text>
+                </View>
+                {recommendations.length > 0 && (
+                  <Pressable onPress={() => router.push("/workouts/onboarding" as any)}>
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("workouts.editPrefs")}</Text>
+                  </Pressable>
+                )}
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
+                <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 }}>
+                  {forYouTemplates.map((item) => (
+                    <View key={item.template.id} style={{ width: 150 }}>
+                      <ForYouTodayMiniCard
+                        template={item.template}
+                        reason={item.reason || t("workouts.topTemplates")}
+                        needsGear={item.needsGear}
+                        lastDays={lastTrainedMap[item.template.activityType]}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          router.push({ pathname: "/workouts/template" as any, params: { id: item.template.id, whyGoodForYou: item.reason } });
+                        }}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          )}
+
           <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Feather name="search" size={15} color={theme.textMuted} />
             <TextInput
@@ -659,11 +799,16 @@ export default function WorkoutsScreen() {
               <>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={styles.templateRow}>
-                    {filtered.map((tmpl) => (
+                    {filtered.map((tmpl) => {
+                      const { level: matchLevel } = hasCompletedOnboarding
+                        ? getEquipmentMatchLevel(tmpl, coachProfile.availableEquipment)
+                        : { level: "full" as const };
+                      const showNeedsGear = matchLevel === "none";
+                      return (
                       <Pressable
                         key={tmpl.id}
                         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: "/workouts/template" as any, params: { id: tmpl.id } }); }}
-                        style={[styles.templateCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+                        style={[styles.templateCard, { backgroundColor: theme.card, borderColor: showNeedsGear ? theme.warning + "60" : theme.border }]}
                       >
                         <View style={[styles.templateIcon, { backgroundColor: getActivityColor(tmpl.activityType, theme) + "20" }]}>
                           <Feather name={getActivityIcon(tmpl.activityType)} size={20} color={getActivityColor(tmpl.activityType, theme)} />
@@ -676,8 +821,15 @@ export default function WorkoutsScreen() {
                             {tmpl.durationMinutes}{t("common.min")} · {t(`workouts.plan.difficulty.${tmpl.difficulty}`)}
                           </Text>
                         </View>
+                        {showNeedsGear && (
+                          <View style={[styles.needsGearBadge, { backgroundColor: theme.warning + "18", borderColor: theme.warning + "40" }]}>
+                            <Feather name="tool" size={9} color={theme.warning} />
+                            <Text style={{ color: theme.warning, fontFamily: "Inter_500Medium", fontSize: 10 }}>{t("workouts.needsGear")}</Text>
+                          </View>
+                        )}
                       </Pressable>
-                    ))}
+                      );
+                    })}
                   </View>
                 </ScrollView>
                 <Pressable
@@ -1041,5 +1193,17 @@ const styles = StyleSheet.create({
   exIcon: {
     width: 38, height: 38, borderRadius: 10,
     alignItems: "center", justifyContent: "center",
+  },
+  fyCard: {
+    borderRadius: 14, borderWidth: 1, padding: 12, flex: 1,
+  },
+  fyIcon: {
+    width: 38, height: 38, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+  },
+  needsGearBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1,
+    marginTop: 6, alignSelf: "flex-start" as const,
   },
 });
