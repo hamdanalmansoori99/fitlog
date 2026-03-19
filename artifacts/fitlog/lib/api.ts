@@ -217,6 +217,17 @@ export const api = {
   getSmartNotifications: () =>
     request<{ messages: Array<{ id: string; type: string; title: string; body: string }> }>("/notifications/smart-content"),
 
+  // Progress Photos
+  getProgressPhotos: () =>
+    request<{ photos: Array<{ id: number; date: string; note: string; mimeType: string; createdAt: string }> }>("/progress/photos"),
+  createProgressPhoto: (body: { imageBase64: string; mimeType: string; date: string; note: string }) =>
+    request<{ photo: { id: number; date: string; note: string; mimeType: string; createdAt: string } }>("/progress/photos", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  deleteProgressPhoto: (id: number) =>
+    request(`/progress/photos/${id}`, { method: "DELETE" }),
+
   // Scan Meal (AI Vision)
   scanMealAnalyze: (body: { imageBase64: string; mimeType?: string }) =>
     request<{ items: ScanMealItem[]; mealDescription: string; totals: MacroTotals }>("/scan-meal/analyze", {

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable, profilesTable, waterLogsTable, bodyMeasurementsTable } from "@workspace/db";
+import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable, profilesTable, waterLogsTable, bodyMeasurementsTable, progressPhotosTable, sessionsTable, usersTable } from "@workspace/db";
 import { eq, and, gte, lte, lt, desc, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
@@ -540,6 +540,119 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("weekly-report error:", err);
     res.status(500).json({ error: "Failed to get weekly report" });
+  }
+});
+
+// ── Progress Photos ──────────────────────────────────────────────────────────
+
+router.get("/photos", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const photos = await db
+      .select({
+        id: progressPhotosTable.id,
+        date: progressPhotosTable.date,
+        note: progressPhotosTable.note,
+        mimeType: progressPhotosTable.mimeType,
+        createdAt: progressPhotosTable.createdAt,
+      })
+      .from(progressPhotosTable)
+      .where(eq(progressPhotosTable.userId, user.id))
+      .orderBy(desc(progressPhotosTable.createdAt));
+    res.json({ photos });
+  } catch (err) {
+    console.error("photos list error:", err);
+    res.status(500).json({ error: "Failed to get photos" });
+  }
+});
+
+// Serves the raw image bytes. Accepts token from Authorization header OR query param
+// so React Native <Image> can load it as a plain URL.
+router.get("/photos/:id/image", async (req, res) => {
+  try {
+    const queryToken = Array.isArray(req.query.token) ? req.query.token[0] : (req.query.token as string | undefined);
+    const rawToken =
+      (req.headers.authorization?.replace("Bearer ", "") ||
+        queryToken ||
+        req.cookies?.session || "").trim();
+    if (!rawToken) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+    const sessions = await db
+      .select({ session: sessionsTable, user: usersTable })
+      .from(sessionsTable)
+      .innerJoin(usersTable, eq(sessionsTable.userId, usersTable.id))
+      .where(eq(sessionsTable.id, rawToken))
+      .limit(1);
+    if (sessions.length === 0 || new Date() > sessions[0].session.expiresAt) {
+      res.status(401).json({ error: "Invalid or expired session" });
+      return;
+    }
+    const userId = sessions[0].user.id;
+
+    const photoId = parseInt(req.params.id as string, 10);
+    if (isNaN(photoId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+    const [photo] = await db
+      .select()
+      .from(progressPhotosTable)
+      .where(and(eq(progressPhotosTable.id, photoId), eq(progressPhotosTable.userId, userId)))
+      .limit(1);
+
+    if (!photo) { res.status(404).json({ error: "Not found" }); return; }
+
+    const buffer = Buffer.from(photo.imageData, "base64");
+    res.setHeader("Content-Type", photo.mimeType);
+    res.setHeader("Cache-Control", "private, max-age=86400");
+    res.send(buffer);
+  } catch (err) {
+    console.error("photos image error:", err);
+    res.status(500).json({ error: "Failed to serve image" });
+  }
+});
+
+router.post("/photos", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const { imageBase64, mimeType, date, note } = req.body;
+    if (!imageBase64 || !date) {
+      res.status(400).json({ error: "imageBase64 and date are required" });
+      return;
+    }
+    const [photo] = await db
+      .insert(progressPhotosTable)
+      .values({
+        userId: user.id,
+        date,
+        note: note || "",
+        imageData: imageBase64,
+        mimeType: mimeType || "image/jpeg",
+      })
+      .returning({
+        id: progressPhotosTable.id,
+        date: progressPhotosTable.date,
+        note: progressPhotosTable.note,
+        mimeType: progressPhotosTable.mimeType,
+        createdAt: progressPhotosTable.createdAt,
+      });
+    res.json({ photo });
+  } catch (err) {
+    console.error("photos create error:", err);
+    res.status(500).json({ error: "Failed to save photo" });
+  }
+});
+
+router.delete("/photos/:id", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const photoId = parseInt(req.params.id as string, 10);
+    if (isNaN(photoId)) { res.status(400).json({ error: "Invalid id" }); return; }
+    await db
+      .delete(progressPhotosTable)
+      .where(and(eq(progressPhotosTable.id, photoId), eq(progressPhotosTable.userId, user.id)));
+    res.status(204).send();
+  } catch (err) {
+    console.error("photos delete error:", err);
+    res.status(500).json({ error: "Failed to delete photo" });
   }
 });
 

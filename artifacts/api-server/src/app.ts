@@ -10,9 +10,10 @@ app.use(cors({
   credentials: true,
 }));
 
-// Larger limit only for the photo-analysis endpoint (base64 image payload).
+// Larger limits for endpoints that accept base64 image payloads.
 // All other routes use a tight 1 mb cap to prevent DoS via oversized JSON bodies.
 app.use("/api/meals/analyze-photo", express.json({ limit: "6mb" }));
+app.use("/api/progress/photos", express.json({ limit: "8mb" }));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());

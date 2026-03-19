@@ -13,3 +13,4 @@ export * from "./user-templates";
 export * from "./achievements";
 export * from "./events";
 export * from "./subscriptions";
+export * from "./photos";

@@ -7,6 +7,7 @@ export interface ProgressPhoto {
   uri: string;
   date: string;
   note: string;
+  serverId?: number;
 }
 
 interface PhotoState {

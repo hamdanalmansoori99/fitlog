@@ -5,12 +5,13 @@ import {
 } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
-import { api } from "@/lib/api";
+import { api, BASE_URL } from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { WeeklyBarChart } from "@/components/WeeklyBarChart";
@@ -463,27 +464,75 @@ export default function ProgressScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
+  const token = useAuthStore((s) => s.token);
   const [measureDays, setMeasureDays] = useState(60);
   const [photoViewer, setPhotoViewer] = useState<{ uri: string; note: string } | null>(null);
-  const [pendingPhoto, setPendingPhoto] = useState<{ uri: string } | null>(null);
+  const [pendingPhoto, setPendingPhoto] = useState<{ uri: string; base64?: string; mimeType?: string } | null>(null);
   const [pendingNote, setPendingNote] = useState("");
   const [compareOpen, setCompareOpen] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { photos, addPhoto, deletePhoto } = usePhotoStore();
-  const sortedPhotos = useMemo(() =>
-    [...photos].sort((a, b) => a.date.localeCompare(b.date)),
+
+  const { data: serverPhotosData } = useQuery({
+    queryKey: ["progressPhotos"],
+    queryFn: api.getProgressPhotos,
+    staleTime: 60000,
+  });
+
+  const serverPhotoItems = useMemo(() =>
+    (serverPhotosData?.photos ?? []).map((sp) => ({
+      id: `server-${sp.id}`,
+      uri: `${BASE_URL}/progress/photos/${sp.id}/image?token=${encodeURIComponent(token ?? "")}`,
+      date: sp.date,
+      note: sp.note,
+      serverId: sp.id,
+    })),
+    [serverPhotosData, token]
+  );
+
+  const localOnlyPhotos = useMemo(() =>
+    photos.filter((p) => !p.serverId),
     [photos]
   );
 
-  function openNoteModal(uri: string) {
+  const sortedPhotos = useMemo(() =>
+    [...serverPhotoItems, ...localOnlyPhotos].sort((a, b) => a.date.localeCompare(b.date)),
+    [serverPhotoItems, localOnlyPhotos]
+  );
+
+  function openNoteModal(asset: { uri: string; base64?: string | null; mimeType?: string }) {
     setPendingNote("");
-    setPendingPhoto({ uri });
+    setPendingPhoto({ uri: asset.uri, base64: asset.base64 ?? undefined, mimeType: asset.mimeType });
   }
 
-  function savePendingPhoto() {
+  async function savePendingPhoto() {
     if (!pendingPhoto) return;
-    addPhoto({ uri: pendingPhoto.uri, date: new Date().toISOString().split("T")[0], note: pendingNote.trim() });
+    const today = new Date().toISOString().split("T")[0];
+    const note = pendingNote.trim();
+
+    if (pendingPhoto.base64) {
+      try {
+        const res = await api.createProgressPhoto({
+          imageBase64: pendingPhoto.base64,
+          mimeType: pendingPhoto.mimeType || "image/jpeg",
+          date: today,
+          note,
+        });
+        const sp = res.photo;
+        const serverUri = `${BASE_URL}/progress/photos/${sp.id}/image?token=${encodeURIComponent(token ?? "")}`;
+        addPhoto({ uri: serverUri, date: today, note, serverId: sp.id });
+        queryClient.invalidateQueries({ queryKey: ["progressPhotos"] });
+        setPendingPhoto(null);
+        setPendingNote("");
+        return;
+      } catch {
+        // Fall back to local-only storage
+      }
+    }
+
+    addPhoto({ uri: pendingPhoto.uri, date: today, note });
     setPendingPhoto(null);
     setPendingNote("");
   }
@@ -494,26 +543,36 @@ export default function ProgressScreen() {
         text: t("progress.camera"), onPress: async () => {
           const cam = await ImagePicker.requestCameraPermissionsAsync();
           if (!cam.granted) return;
-          const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
-          if (!result.canceled && result.assets[0]) openNoteModal(result.assets[0].uri);
+          const result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7, allowsEditing: true, aspect: [3, 4] });
+          if (!result.canceled && result.assets[0]) openNoteModal(result.assets[0]);
         },
       },
       {
         text: t("progress.photoLibrary"), onPress: async () => {
           const lib = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (!lib.granted) return;
-          const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [3, 4] });
-          if (!result.canceled && result.assets[0]) openNoteModal(result.assets[0].uri);
+          const result = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.7, allowsEditing: true, aspect: [3, 4] });
+          if (!result.canceled && result.assets[0]) openNoteModal(result.assets[0]);
         },
       },
       { text: t("common.cancel"), style: "cancel" },
     ]);
   }
 
-  function handleDeletePhoto(id: string) {
+  function handleDeletePhoto(id: string, serverId?: number) {
     Alert.alert(t("progress.deletePhoto"), t("progress.deletePhotoMessage"), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("common.delete"), style: "destructive", onPress: () => deletePhoto(id) },
+      {
+        text: t("common.delete"),
+        style: "destructive",
+        onPress: async () => {
+          if (serverId) {
+            try { await api.deleteProgressPhoto(serverId); } catch {}
+            queryClient.invalidateQueries({ queryKey: ["progressPhotos"] });
+          }
+          deletePhoto(id);
+        },
+      },
     ]);
   }
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -1176,7 +1235,7 @@ export default function ProgressScreen() {
                     </Text>
                   )}
                   <Pressable
-                    onPress={() => handleDeletePhoto(photo.id)}
+                    onPress={() => handleDeletePhoto(photo.id, photo.serverId)}
                     style={[styles.photoDeleteBtn, { backgroundColor: theme.danger + "dd" }]}
                     hitSlop={4}
                   >
