@@ -23,13 +23,25 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...options,
     headers,
   });
-  
-  const data = await res.json();
-  
+
+  // 204 No Content — nothing to parse.
+  if (res.status === 204) {
+    return undefined as unknown as T;
+  }
+
+  let data: any;
+  try {
+    data = await res.json();
+  } catch {
+    // Server returned a non-JSON body (HTML error page, gateway timeout, etc.).
+    // Surface a clean message instead of a raw SyntaxError.
+    throw new Error(i18n.t("common.requestFailed"));
+  }
+
   if (!res.ok) {
     throw new Error(data.error || data.message || i18n.t("common.requestFailed"));
   }
-  
+
   return data;
 }
 
