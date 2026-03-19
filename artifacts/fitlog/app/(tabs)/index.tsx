@@ -83,7 +83,7 @@ function CalorieRingHero({
   );
 }
 
-function NutritionHero({ mealsData, theme }: { mealsData: any; theme: AppTheme }) {
+function NutritionHero({ mealsData, profile, theme }: { mealsData: any; profile?: any; theme: AppTheme }) {
   const { t } = useTranslation();
   const totals = mealsData?.dailyTotals;
   const calorieGoal = mealsData?.calorieGoal ?? 2000;
@@ -91,9 +91,9 @@ function NutritionHero({ mealsData, theme }: { mealsData: any; theme: AppTheme }
   const protein = totals?.proteinG ?? 0;
   const carbs = totals?.carbsG ?? 0;
   const fat = totals?.fatG ?? 0;
-  const proteinGoal = Math.round(calorieGoal * 0.3 / 4);
-  const carbsGoal = Math.round(calorieGoal * 0.45 / 4);
-  const fatGoal = Math.round(calorieGoal * 0.25 / 9);
+  const proteinGoal = profile?.dailyProteinGoal ?? Math.round(calorieGoal * 0.3 / 4);
+  const carbsGoal = profile?.dailyCarbsGoal ?? Math.round(calorieGoal * 0.45 / 4);
+  const fatGoal = profile?.dailyFatGoal ?? Math.round(calorieGoal * 0.25 / 9);
 
   const macros = [
     { label: t("home.protein"), value: protein, goal: proteinGoal, color: theme.primary },
@@ -473,10 +473,11 @@ function PRCelebrationBanner({ pr, onDismiss, theme }: {
   );
 }
 
-function NextStepCard({ todayWorkout, mealsData, streaksData, theme }: {
+function NextStepCard({ todayWorkout, mealsData, streaksData, profile, theme }: {
   todayWorkout: any;
   mealsData: any;
   streaksData: any;
+  profile?: any;
   theme: AppTheme;
 }) {
   const { t } = useTranslation();
@@ -484,7 +485,7 @@ function NextStepCard({ todayWorkout, mealsData, streaksData, theme }: {
 
   const protein = mealsData?.dailyTotals?.proteinG ?? 0;
   const calorieGoal = mealsData?.calorieGoal ?? 2000;
-  const proteinGoal = Math.round(calorieGoal * 0.3 / 4);
+  const proteinGoal = profile?.dailyProteinGoal ?? Math.round(calorieGoal * 0.3 / 4);
   const proteinRemaining = Math.max(proteinGoal - protein, 0);
   const mealsLoggedToday = (mealsData?.meals?.length ?? 0) > 0;
   const mealStreak = streaksData?.currentMealStreak ?? 0;
@@ -1287,6 +1288,7 @@ export default function HomeScreen() {
               todayWorkout={todayWorkout}
               mealsData={mealsData}
               streaksData={streaksData}
+              profile={profile}
               theme={theme}
             />
           </Animated.View>
@@ -1296,7 +1298,7 @@ export default function HomeScreen() {
 
         <Animated.View entering={FadeInDown.delay(80).duration(120)} style={styles.section}>
           {mealsData ? (
-            <NutritionHero mealsData={mealsData} theme={theme} />
+            <NutritionHero mealsData={mealsData} profile={profile} theme={theme} />
           ) : (
             <Card style={{ gap: 12, alignItems: "center" }}>
               <SkeletonBox width={HERO_RING} height={HERO_RING} borderRadius={HERO_RING / 2} />
