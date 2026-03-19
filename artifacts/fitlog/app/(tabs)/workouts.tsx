@@ -356,7 +356,7 @@ export default function WorkoutsScreen() {
   const { showToast } = useToast();
 
   const { data: profileData, refetch: refetchProfile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
-  const { data: workoutsData, refetch: refetchWorkouts, isLoading: workoutsLoading, isError: workoutsError } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts() });
+  const { data: workoutsData, refetch: refetchWorkouts, isLoading: workoutsLoading, isError: workoutsError } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts({ limit: 50 }) });
   const { data: userTemplatesData, refetch: refetchTemplates } = useQuery({ queryKey: ["userTemplates"], queryFn: api.getUserTemplates });
 
   const deleteMutation = useMutation({
