@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Switch, Alert, Platform, Image,
 } from "react-native";
@@ -49,8 +49,6 @@ export default function ProfileScreen() {
   const { globalEnabled, prefs, setGlobalEnabled, setEnabled, setTime } = useNotificationStore();
   const [expandedNotifType, setExpandedNotifType] = useState<NotifType | null>(null);
   const [bodyStatsExpanded, setBodyStatsExpanded] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
-  const goalsCardY = useRef(0);
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -389,7 +387,6 @@ export default function ProfileScreen() {
       </View>
       
       <ScrollView
-        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
         keyboardShouldPersistTaps="handled"
@@ -430,9 +427,9 @@ export default function ProfileScreen() {
                   <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
                     {t("profile.trainingIdentity")}
                   </Text>
-                  <Pressable onPress={() => scrollRef.current?.scrollTo({ y: goalsCardY.current, animated: true })}>
+                  <Pressable onPress={() => router.push("/workouts/onboarding")}>
                     <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                      {t("profile.editTrainingGoals")} {"›"}
+                      {t("profile.updateGoalEquipment")} {"›"}
                     </Text>
                   </Pressable>
                 </View>
@@ -572,7 +569,6 @@ export default function ProfileScreen() {
             </Card>
             
             {/* Fitness Goals */}
-            <View onLayout={(e) => { goalsCardY.current = e.nativeEvent.layout.y; }}>
             <Card>
               <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.fitnessGoals")}</Text>
               <View style={styles.goalsGrid}>
@@ -595,7 +591,6 @@ export default function ProfileScreen() {
                 ))}
               </View>
             </Card>
-            </View>
             
             {/* Activity Level */}
             <Card>

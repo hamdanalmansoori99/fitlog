@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInRight, FadeOutLeft } from "react-native-reanimated";
@@ -73,6 +73,25 @@ export default function WorkoutOnboardingScreen() {
     experienceLevel: "",
     trainingPreferences: [],
   });
+
+  const { data: existingProfile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: api.getProfile,
+    staleTime: 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (!existingProfile) return;
+    setData(prev => ({
+      availableEquipment: existingProfile.availableEquipment ?? prev.availableEquipment,
+      workoutLocation: existingProfile.workoutLocation ?? prev.workoutLocation,
+      fitnessGoals: existingProfile.fitnessGoals ?? prev.fitnessGoals,
+      weeklyWorkoutDays: existingProfile.weeklyWorkoutDays ?? prev.weeklyWorkoutDays,
+      preferredWorkoutDuration: existingProfile.preferredWorkoutDuration ?? prev.preferredWorkoutDuration,
+      experienceLevel: existingProfile.experienceLevel ?? prev.experienceLevel,
+      trainingPreferences: existingProfile.trainingPreferences ?? prev.trainingPreferences,
+    }));
+  }, [existingProfile]);
 
   const mutation = useMutation({
     mutationFn: (body: any) => api.updateProfile(body),
