@@ -395,11 +395,16 @@ router.get("/conversation", requireAuth, async (req, res) => {
       conversation = created;
     }
 
+    // Return only the most recent 50 messages for the UI.
+    // DESC + limit, then reversed so the client receives them in
+    // chronological (oldest-first) order without loading thousands of rows.
     const msgs = await db
       .select()
       .from(messages)
       .where(eq(messages.conversationId, conversation.id))
-      .orderBy(messages.createdAt);
+      .orderBy(desc(messages.createdAt))
+      .limit(50)
+      .then((rows) => rows.reverse());
 
     res.json({ ...conversation, messages: msgs });
   } catch (err) {
@@ -472,14 +477,15 @@ router.post("/message", requireAuth, async (req, res) => {
       return;
     }
 
-    // Load conversation history — trim to last 12 messages
-    const history = await db
+    // Load the last 12 messages at the DB level — DESC + reverse avoids
+    // fetching thousands of rows and slicing in memory.
+    const trimmedHistory = await db
       .select()
       .from(messages)
       .where(eq(messages.conversationId, conversation.id))
-      .orderBy(messages.createdAt);
-
-    const trimmedHistory = history.slice(-12);
+      .orderBy(desc(messages.createdAt))
+      .limit(12)
+      .then((rows) => rows.reverse());
 
     const [profile] = await db
       .select()
