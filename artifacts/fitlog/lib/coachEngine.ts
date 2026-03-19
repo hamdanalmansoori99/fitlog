@@ -704,6 +704,23 @@ export function getFilteredExercises(
   });
 }
 
+// ─── Goal matching helpers (case-insensitive) ─────────────────────────────────
+// Profile stores goals in Title Case ("Lose Weight"), templates use Sentence
+// case ("Lose weight"). Always normalise to lowercase before comparing.
+
+function goalsOverlap(userGoals: string[], templateGoals: readonly string[]): boolean {
+  const lower = userGoals.map((g) => g.toLowerCase());
+  return (templateGoals as string[]).some((tg) => lower.includes(tg.toLowerCase()));
+}
+
+function findMatchedUserGoal(
+  userGoals: string[],
+  templateGoals: readonly string[]
+): string | undefined {
+  const lowerTemplate = (templateGoals as string[]).map((tg) => tg.toLowerCase());
+  return userGoals.find((g) => lowerTemplate.includes(g.toLowerCase()));
+}
+
 // ─── Recommendation engine ────────────────────────────────────────────────────
 
 export function getRecommendations(
@@ -767,10 +784,11 @@ export function getRecommendations(
     }
 
     // ── 2. Goal alignment ─────────────────────────────────────────────────
-    const goalMatch = goals.some((g) => (template.goals as string[]).includes(g));
+    const goalMatch = goalsOverlap(goals, template.goals);
     if (goalMatch) {
       score += 25;
-      reasons.push(`Aligned with your goal: ${template.goals.find((g) => goals.includes(g as string))}`);
+      const matchedGoal = findMatchedUserGoal(goals, template.goals);
+      reasons.push(`Aligned with your goal: ${matchedGoal}`);
     }
 
     // ── 3. Training preferences ───────────────────────────────────────────
@@ -856,8 +874,9 @@ export function getRecommendations(
 }
 
 function buildDefaultReason(template: WorkoutTemplate, goals: string[]): string {
-  if (template.goals.some((g) => goals.includes(g as string))) {
-    return `Supports your goal: ${template.goals[0]}.`;
+  if (goalsOverlap(goals, template.goals)) {
+    const matched = findMatchedUserGoal(goals, template.goals);
+    return `Supports your goal: ${matched ?? template.goals[0]}.`;
   }
   if (template.requiredEquipment.length === 0) {
     return "No equipment required — do this anywhere.";
@@ -1145,7 +1164,7 @@ function buildTodayCoachingReason(
 
   // 4. Goal alignment
   if (parts.length < 2) {
-    const matchedGoal = goals.find((g) => (t.goals as string[]).includes(g));
+    const matchedGoal = findMatchedUserGoal(goals, t.goals);
     if (matchedGoal) {
       parts.push(`Directly supports your goal: ${matchedGoal.toLowerCase()}`);
     }
