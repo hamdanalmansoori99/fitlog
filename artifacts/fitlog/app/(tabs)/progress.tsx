@@ -427,8 +427,9 @@ type AdherenceTrendResult = {
   trend: "up" | "flat" | "down";
 };
 
-function computeAdherenceTrend(workoutsData: any): AdherenceTrendResult | null {
+function computeAdherenceTrend(workoutsData: any, weeklyTarget: number): AdherenceTrendResult | null {
   if (!workoutsData?.workouts) return null;
+  const target = Math.max(weeklyTarget, 1);
   const nowMs = Date.now();
   const FOUR_WEEKS = 28 * 86400000;
   let currentCount = 0;
@@ -442,11 +443,15 @@ function computeAdherenceTrend(workoutsData: any): AdherenceTrendResult | null {
     else if (ageMs >= FOUR_WEEKS && ageMs < FOUR_WEEKS * 2) prevCount++;
   }
 
+  const targetCount = target * 4;
+  const currentRate = currentCount / targetCount;
+  const prevRate = prevCount / targetCount;
+
   if (currentCount === 0 && prevCount === 0) return null;
 
-  const deltaPercent = prevCount === 0
-    ? (currentCount > 0 ? 100 : 0)
-    : ((currentCount - prevCount) / prevCount) * 100;
+  const deltaPercent = prevRate === 0
+    ? (currentRate > 0 ? 100 : 0)
+    : ((currentRate - prevRate) / prevRate) * 100;
 
   const trend: "up" | "flat" | "down" = deltaPercent >= 10 ? "up" : deltaPercent <= -10 ? "down" : "flat";
   return { currentCount, prevCount, deltaPercent, trend };
@@ -621,7 +626,7 @@ export default function ProgressScreen() {
   const emotionalReward = useMemo(() => computeEmotionalReward(records, strengthTrends), [records, strengthTrends]);
   const coachSummary = useMemo(() => buildCoachSummary(workoutSummary, streaks, records, profile), [workoutSummary, streaks, records, profile]);
   const bestThisMonth = useMemo(() => computeBestThisMonth(workoutsData), [workoutsData]);
-  const adherenceTrend = useMemo(() => computeAdherenceTrend(workoutsData), [workoutsData]);
+  const adherenceTrend = useMemo(() => computeAdherenceTrend(workoutsData, profile?.weeklyWorkoutDays ?? 3), [workoutsData, profile]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -666,8 +671,8 @@ export default function ProgressScreen() {
             ? t("home.crushingIt")
             : t("home.keepPushing");
           const barColor = isHighScore ? theme.primary : isMidScore ? theme.secondary : theme.warning;
-          const atrendColor = adherenceTrend?.trend === "up" ? theme.primary : adherenceTrend?.trend === "down" ? theme.danger : theme.textMuted;
-          const atrendIcon = adherenceTrend?.trend === "up" ? "trending-up" : adherenceTrend?.trend === "down" ? "trending-down" : "minus";
+          const atrendColor = adherenceTrend?.trend === "up" ? theme.primary : adherenceTrend?.trend === "down" ? theme.danger : (theme.warning || "#ffab40");
+          const atrendIcon: keyof typeof Feather.glyphMap = adherenceTrend?.trend === "up" ? "trending-up" : adherenceTrend?.trend === "down" ? "trending-down" : "minus";
           const atrendText = adherenceTrend
             ? adherenceTrend.trend === "up"
               ? t("progress.adherenceTrendUp", { delta: Math.abs(Math.round(adherenceTrend.deltaPercent)) })
@@ -705,7 +710,7 @@ export default function ProgressScreen() {
                 </Text>
                 {!!atrendText && (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
-                    <Feather name={atrendIcon as any} size={13} color={atrendColor} />
+                    <Feather name={atrendIcon} size={13} color={atrendColor} />
                     <Text style={{ color: atrendColor, fontFamily: "Inter_500Medium", fontSize: 13, flex: 1 }}>{atrendText}</Text>
                   </View>
                 )}
