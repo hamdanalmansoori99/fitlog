@@ -295,8 +295,8 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
 
       <Pressable
         onPress={() => router.push({
-          pathname: "/workouts/template" as any,
-          params: { id: rec.template.id, whyGoodForYou: rec.whyGoodForYou },
+          pathname: "/workouts/execute" as any,
+          params: { id: rec.template.id },
         })}
         style={[styles.ctaBtn, { backgroundColor: theme.primary }]}
       >
