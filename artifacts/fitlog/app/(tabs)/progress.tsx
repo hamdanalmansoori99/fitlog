@@ -585,7 +585,7 @@ export default function ProgressScreen() {
   const { data: measurements, isLoading: measurementsLoading } = useQuery({ queryKey: ["measurements", measureDays], queryFn: () => api.getMeasurements(measureDays) });
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
   const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, staleTime: 60000 });
-  const { data: workoutsData } = useQuery({ queryKey: ["workouts"], queryFn: () => api.getWorkouts({ limit: 60 }), staleTime: 120000 });
+  const { data: workoutsData } = useQuery({ queryKey: ["workouts", { limit: 60 }], queryFn: () => api.getWorkouts({ limit: 60 }), staleTime: 120000 });
   const { data: recoveryTodayData } = useQuery({ queryKey: ["recoveryToday"], queryFn: api.getRecoveryToday, staleTime: 60000 });
 
   const useImperial = settings?.unitSystem === "imperial";

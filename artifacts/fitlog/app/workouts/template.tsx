@@ -123,7 +123,7 @@ export default function WorkoutTemplateScreen() {
 
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
   const { data: workoutsData } = useQuery({
-    queryKey: ["workouts"],
+    queryKey: ["workouts", { limit: 30 }],
     queryFn: () => api.getWorkouts({ limit: 30 }),
   });
 

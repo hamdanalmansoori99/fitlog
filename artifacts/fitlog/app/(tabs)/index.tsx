@@ -1036,7 +1036,7 @@ export default function HomeScreen() {
   });
 
   const { data: workoutsData, refetch: refetchWorkouts } = useQuery({
-    queryKey: ["workouts"],
+    queryKey: ["workouts", { limit: 20 }],
     queryFn: () => api.getWorkouts({ limit: 20 }),
     staleTime: 300000,
   });
