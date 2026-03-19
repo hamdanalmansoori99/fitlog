@@ -200,7 +200,7 @@ function CoachCard({
             {decisiveLine}
           </Text>
         </View>
-        <Feather name="chevron-right" size={16} color={theme.secondary} />
+        <Feather name={rtlIcon("chevron-right")} size={16} color={theme.secondary} />
       </Pressable>
     </Card>
   );
@@ -1373,7 +1373,7 @@ export default function HomeScreen() {
             isRestDay={todayRecommendation?.isRestDayRecommended}
             recommendedPrompt={
               todayRecommendation && !todayRecommendation.isRestDayRecommended
-                ? `Tell me more about today's ${todayRecommendation.recommendation.template.name} workout recommendation`
+                ? t("home.coachWorkoutPrompt", { name: todayRecommendation.recommendation.template.name })
                 : undefined
             }
           />

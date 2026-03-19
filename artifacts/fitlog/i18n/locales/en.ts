@@ -317,6 +317,7 @@ export default {
     coachRecommendsSentence: "Coach recommends {{name}} today",
     coachRestSentence: "Rest day recommended today",
     coachReadySentence: "Your coach is ready — ask anything",
+    coachWorkoutPrompt: "Tell me more about today's {{name}} workout recommendation",
     setupFirstPlanTitle: "Set up your first plan",
     setupFirstPlanDesc: "Get a personalised daily workout based on your goals and equipment.",
   },

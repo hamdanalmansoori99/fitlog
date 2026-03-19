@@ -317,6 +317,7 @@ export default {
     coachRecommendsSentence: "المدرب يوصي بـ {{name}} اليوم",
     coachRestSentence: "راحة موصى بها اليوم",
     coachReadySentence: "مدربك جاهز — اسأل أي شيء",
+    coachWorkoutPrompt: "أخبرني أكثر عن توصية تمرين {{name}} اليوم",
     setupFirstPlanTitle: "أنشئ خطتك الأولى",
     setupFirstPlanDesc: "احصل على تمرين يومي مخصص بناءً على أهدافك ومعداتك.",
   },
