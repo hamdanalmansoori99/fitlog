@@ -294,7 +294,7 @@ export default function ScanScreen() {
   }, []);
 
   const recalcTotals = (currentItems: ScanMealItem[]) => {
-    const t = currentItems.reduce(
+    const sum = currentItems.reduce(
       (acc, i) => ({
         calories: acc.calories + i.calories,
         proteinG: acc.proteinG + i.proteinG,
@@ -304,10 +304,10 @@ export default function ScanScreen() {
       { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
     );
     setTotals({
-      calories: Math.round(t.calories),
-      proteinG: Math.round(t.proteinG * 10) / 10,
-      carbsG: Math.round(t.carbsG * 10) / 10,
-      fatG: Math.round(t.fatG * 10) / 10,
+      calories: Math.round(sum.calories),
+      proteinG: Math.round(sum.proteinG * 10) / 10,
+      carbsG: Math.round(sum.carbsG * 10) / 10,
+      fatG: Math.round(sum.fatG * 10) / 10,
     });
   };
 
