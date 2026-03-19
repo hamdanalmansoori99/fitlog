@@ -698,7 +698,7 @@ export default function ProfileScreen() {
                       >
                         {selected && <Feather name="check" size={12} color={theme.primary} />}
                         <Text style={{ color: selected ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-                          {eq.label}
+                          {t(`equipment.${eq.id}`)}
                         </Text>
                       </Pressable>
                     );

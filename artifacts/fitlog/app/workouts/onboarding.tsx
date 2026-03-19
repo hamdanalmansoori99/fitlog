@@ -107,7 +107,7 @@ export default function WorkoutOnboardingScreen() {
       subtitle: t("workouts.selectEverything"),
       key: "availableEquipment",
       type: "multiselect",
-      options: EQUIPMENT_OPTIONS.map(e => ({ id: e.id, label: e.label, icon: e.icon })),
+      options: EQUIPMENT_OPTIONS.map(e => ({ id: e.id, label: t(`equipment.${e.id}`), icon: e.icon })),
     },
     {
       title: t("workouts.whereWorkoutTitle"),
