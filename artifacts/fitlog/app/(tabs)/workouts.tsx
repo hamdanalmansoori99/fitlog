@@ -428,12 +428,21 @@ export default function WorkoutsScreen() {
 
   const forYouTemplates = useMemo(() => {
     if (recommendations.length > 0) {
-      return recommendations.slice(0, 3).map((rec: any) => ({
-        template: rec.template as WorkoutTemplate,
-        reason: rec.whyGoodForYou as string,
-        equipmentMatch: rec.equipmentMatch as string,
-        needsGear: rec.equipmentMatch === "none",
-      }));
+      return recommendations.slice(0, 3).map((rec: any) => {
+        let reason: string;
+        if (rec.equipmentMatch === "full" && rec.template.requiredEquipment.length > 0)
+          reason = t("workouts.reasonBasedOnEquipment");
+        else if (rec.template.goals.some((g: string) => coachProfile.fitnessGoals.includes(g)))
+          reason = t("workouts.reasonMatchesGoal");
+        else
+          reason = t("workouts.reasonBasedOnHistory");
+        return {
+          template: rec.template as WorkoutTemplate,
+          reason,
+          equipmentMatch: rec.equipmentMatch as string,
+          needsGear: rec.equipmentMatch === "none",
+        };
+      });
     }
     return WORKOUT_TEMPLATES.slice(0, 3).map((tmpl) => ({
       template: tmpl,
@@ -441,7 +450,7 @@ export default function WorkoutsScreen() {
       equipmentMatch: "full",
       needsGear: false,
     }));
-  }, [recommendations]);
+  }, [recommendations, t]);
 
   const quickLogItems = [
     { label: t("workouts.run"), icon: "activity" as const, type: "running", color: theme.primary },
@@ -775,11 +784,15 @@ export default function WorkoutsScreen() {
                 <View style={{ gap: 8, marginTop: 4 }}>
                   {filtered.map((tmpl) => {
                     const tColor = getActivityColor(tmpl.activityType, theme);
+                    const { level: qMatchLevel } = hasCompletedOnboarding
+                      ? getEquipmentMatchLevel(tmpl, coachProfile.availableEquipment)
+                      : { level: "full" as const };
+                    const qNeedsGear = qMatchLevel === "none";
                     return (
                       <Pressable
                         key={tmpl.id}
                         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: "/workouts/template" as any, params: { id: tmpl.id } }); }}
-                        style={[styles.templateListRow, { backgroundColor: theme.card, borderColor: theme.border }]}
+                        style={[styles.templateListRow, { backgroundColor: theme.card, borderColor: qNeedsGear ? theme.warning + "60" : theme.border }]}
                       >
                         <View style={[{ width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" }, { backgroundColor: tColor + "20" }]}>
                           <Feather name={getActivityIcon(tmpl.activityType)} size={17} color={tColor} />
@@ -788,7 +801,14 @@ export default function WorkoutsScreen() {
                           <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>{t(`workouts.templates.${tmpl.id}.name`, { defaultValue: tmpl.name })}</Text>
                           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{tmpl.durationMinutes}{t("common.min")} · {t(`workouts.plan.difficulty.${tmpl.difficulty}`)}</Text>
                         </View>
-                        <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+                        {qNeedsGear ? (
+                          <View style={[styles.needsGearBadge, { backgroundColor: theme.warning + "18", borderColor: theme.warning + "40", marginTop: 0 }]}>
+                            <Feather name="tool" size={9} color={theme.warning} />
+                            <Text style={{ color: theme.warning, fontFamily: "Inter_500Medium", fontSize: 10 }}>{t("workouts.needsGear")}</Text>
+                          </View>
+                        ) : (
+                          <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+                        )}
                       </Pressable>
                     );
                   })}
