@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput,
   Platform, Alert, Vibration, Modal, Share,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
@@ -1038,7 +1039,10 @@ export default function ExecuteWorkoutScreen() {
   const completedSetsInExercise = currentEx.sets.filter((s) => s.completed).length;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       {/* ── Header ── */}
       <View style={[styles.navBar, { paddingTop: topPad + 8, borderBottomColor: theme.border }]}>
         <Pressable
@@ -1295,22 +1299,28 @@ export default function ExecuteWorkoutScreen() {
                   styles.setCard,
                   {
                     backgroundColor: s.completed ? theme.primary + "12" : isActive ? theme.card : theme.card + "60",
-                    borderColor: s.completed ? theme.primary + "50" : isActive ? theme.primary : theme.border + "60",
-                    borderWidth: isActive && !s.completed ? 1.5 : 1,
-                    opacity: s.completed ? 0.8 : !isActive && !s.completed ? 0.6 : 1,
+                    borderWidth: 1,
+                    borderColor: s.completed ? theme.primary + "50" : isActive ? theme.primary + "40" : theme.border + "60",
+                    borderLeftWidth: isActive && !s.completed ? 4 : 1,
+                    borderLeftColor: isActive && !s.completed ? theme.primary : undefined,
+                    opacity: s.completed ? 0.8 : !isActive && !s.completed ? 0.65 : 1,
                   },
                 ]}
               >
-                {/* Hint row */}
+                {/* Hint row — de-emphasised on non-active sets */}
                 {(lastText || suggestedText) && (
-                  <View style={{ flexDirection: isRTL ? "row-reverse" : "row", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                  <View style={{
+                    flexDirection: isRTL ? "row-reverse" : "row",
+                    gap: 10, flexWrap: "wrap", marginBottom: 6,
+                    opacity: isActive ? 1 : 0.7,
+                  }}>
                     {lastText && (
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: isActive ? 12 : 11 }}>
                         {t("workouts.lastLabel")}: {lastText}
                       </Text>
                     )}
                     {suggestedText && (
-                      <Text style={{ color: trendColor, fontFamily: "Inter_500Medium", fontSize: 11 }}>
+                      <Text style={{ color: trendColor, fontFamily: "Inter_500Medium", fontSize: isActive ? 12 : 11 }}>
                         ↑ {suggestedText}
                       </Text>
                     )}
@@ -1353,6 +1363,9 @@ export default function ExecuteWorkoutScreen() {
                           color: s.completed ? theme.textMuted : isActive ? theme.text : theme.textMuted,
                           borderColor: isActive && !s.completed ? theme.primary + "60" : theme.border,
                           backgroundColor: theme.background,
+                          minHeight: isActive && !s.completed ? 52 : 40,
+                          paddingVertical: isActive && !s.completed ? 14 : 8,
+                          fontSize: isActive && !s.completed ? 20 : 16,
                         },
                       ]}
                     />
@@ -1379,6 +1392,9 @@ export default function ExecuteWorkoutScreen() {
                           color: s.completed ? theme.textMuted : isActive ? theme.text : theme.textMuted,
                           borderColor: isActive && !s.completed ? theme.primary + "60" : theme.border,
                           backgroundColor: theme.background,
+                          minHeight: isActive && !s.completed ? 52 : 40,
+                          paddingVertical: isActive && !s.completed ? 14 : 8,
+                          fontSize: isActive && !s.completed ? 20 : 16,
                         },
                       ]}
                     />
@@ -1463,27 +1479,31 @@ export default function ExecuteWorkoutScreen() {
 
         {/* ── Action buttons (hidden during rest) ── */}
         {!isResting && (
-          <View style={styles.actionRow}>
-            <Pressable
-              onPress={skipSet}
-              style={[styles.secondaryBtn, { borderColor: theme.border }]}
-            >
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 14 }}>{t("workouts.skipSet")}</Text>
-            </Pressable>
+          <View style={{ gap: 8 }}>
+            {/* Full-width Done button — one-hand reachable */}
             <Pressable
               onPress={completeSet}
-              style={[styles.completeBtn, { backgroundColor: theme.primary, flex: 2 }]}
+              style={[styles.completeBtn, { backgroundColor: theme.primary }]}
             >
-              <Feather name="check" size={18} color="#0f0f1a" />
-              <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 16 }}>{t("workouts.doneBtn")}</Text>
+              <Feather name="check" size={20} color="#0f0f1a" />
+              <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 17 }}>{t("workouts.doneBtn")}</Text>
             </Pressable>
-            <Pressable
-              onPress={skipExercise}
-              style={[styles.secondaryBtn, { borderColor: theme.border }]}
-            >
-              <Feather name="skip-forward" size={14} color={theme.textMuted} />
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("workouts.skipBtn")}</Text>
-            </Pressable>
+            {/* Compact skip row below */}
+            <View style={styles.actionRow}>
+              <Pressable
+                onPress={skipSet}
+                style={[styles.secondaryBtn, { borderColor: theme.border }]}
+              >
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.skipSet")}</Text>
+              </Pressable>
+              <Pressable
+                onPress={skipExercise}
+                style={[styles.secondaryBtn, { borderColor: theme.border }]}
+              >
+                <Feather name="skip-forward" size={13} color={theme.textMuted} />
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.skipBtn")}</Text>
+              </Pressable>
+            </View>
           </View>
         )}
 
@@ -1532,7 +1552,7 @@ export default function ExecuteWorkoutScreen() {
           </View>
         </Animated.View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1595,8 +1615,9 @@ const styles = StyleSheet.create({
   // Actions
   actionRow: { flexDirection: "row", gap: 8, alignItems: "stretch" },
   secondaryBtn: {
-    flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 14,
+    flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 11,
     alignItems: "center", justifyContent: "center", gap: 3,
+    flexDirection: "row",
   },
   completeBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
