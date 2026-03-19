@@ -48,6 +48,7 @@ export default function ProfileScreen() {
   const { darkMode, unitSystem, setDarkMode, setUnitSystem } = useSettingsStore();
   const { globalEnabled, prefs, setGlobalEnabled, setEnabled, setTime } = useNotificationStore();
   const [expandedNotifType, setExpandedNotifType] = useState<NotifType | null>(null);
+  const [bodyStatsExpanded, setBodyStatsExpanded] = useState(false);
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -96,6 +97,20 @@ export default function ProfileScreen() {
     queryKey: ["subscription"],
     queryFn: api.getSubscription,
     staleTime: 5 * 60 * 1000,
+  });
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const { data: todayMealsData } = useQuery({
+    queryKey: ["meals", todayStr],
+    queryFn: () => api.getMeals(todayStr),
+    staleTime: 5 * 60 * 1000,
+    enabled: tab === "profile",
+  });
+  const { data: waterTodayData } = useQuery({
+    queryKey: ["waterToday"],
+    queryFn: api.getWaterToday,
+    staleTime: 5 * 60 * 1000,
+    enabled: tab === "profile",
   });
 
   const { data: profile, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useQuery({
@@ -187,6 +202,25 @@ export default function ProfileScreen() {
       await scheduleNativeNotifications(updated);
     }
   }, [globalEnabled, prefs, setTime]);
+
+  const todayCaloriesConsumed = todayMealsData?.dailyTotals?.calories ?? 0;
+  const todayProteinConsumed = todayMealsData?.dailyTotals?.proteinG ?? 0;
+  const todayWaterConsumed = waterTodayData?.totalMl ?? 0;
+  const hasAnyIntake = todayCaloriesConsumed > 0 || todayProteinConsumed > 0 || todayWaterConsumed > 0;
+
+  function intakeStatusColor(consumed: number, goal: number): string | null {
+    if (!goal || consumed === 0) return null;
+    const pct = consumed / goal;
+    if (pct >= 0.8) return theme.primary;
+    if (pct >= 0.5) return theme.warning;
+    return theme.danger;
+  }
+
+  const experienceLabels: Record<string, string> = {
+    "Beginner": t("profile.expBeginner"),
+    "Intermediate": t("profile.expIntermediate"),
+    "Advanced": t("profile.expAdvanced"),
+  };
 
   const handleSave = () => {
     // ── Validation ─────────────────────────────────────────────────────────
@@ -386,6 +420,60 @@ export default function ProfileScreen() {
 
         {tab === "profile" ? (
           <>
+            {/* Training Identity */}
+            {profileLoaded && (
+              <Card>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                  <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
+                    {t("profile.trainingIdentity")}
+                  </Text>
+                  <Pressable onPress={() => router.push("/workouts/onboarding" as any)}>
+                    <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                      {t("profile.updateGoalEquipment")} {"›"}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {fitnessGoals.length > 0 && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: theme.primaryDim, alignItems: "center", justifyContent: "center" }}>
+                      <Feather name="target" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+                      {goalLabels[fitnessGoals[0]] || fitnessGoals[0]}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={{ flexDirection: "row", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                  {!!profile?.weeklyWorkoutDays && (
+                    <View style={{ backgroundColor: theme.primaryDim, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 }}>
+                      <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                        {t("profile.perWeek", { days: profile.weeklyWorkoutDays })}
+                      </Text>
+                    </View>
+                  )}
+                  {!!profile?.experienceLevel && (
+                    <View style={{ backgroundColor: theme.cardAlt, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: theme.border }}>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                        {experienceLabels[profile.experienceLevel] || profile.experienceLevel}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {profile?.coachOnboardingComplete && (profile?.availableEquipment?.length ?? 0) > 0 ? (
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+                    {t("profile.configuredFor", { days: profile.weeklyWorkoutDays ?? 3, goal: (goalLabels[fitnessGoals[0]] || fitnessGoals[0] || "").toLowerCase() })}
+                  </Text>
+                ) : (
+                  <Text style={{ color: theme.warning, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+                    {t("profile.profileIncomplete")}
+                  </Text>
+                )}
+              </Card>
+            )}
+
             {/* Avatar section */}
             <View style={styles.avatarSection}>
               <View style={[styles.avatar, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}>
@@ -421,44 +509,60 @@ export default function ProfileScreen() {
                     <Input label={t("profile.lastName")} value={lastName} onChangeText={setLastName} placeholder={t("profile.lastNamePlaceholder")} />
                   </View>
                 </View>
-                <Input label={t("profile.age")} value={age} onChangeText={setAge} placeholder="28" keyboardType="numeric" />
-                <View>
-                  <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("profile.gender")}</Text>
-                  <View style={styles.chipRow}>
-                    {["Male", "Female", "Other"].map(g => {
-                      const genderLabels: Record<string, string> = { "Male": t("profile.male"), "Female": t("profile.female"), "Other": t("profile.other") };
-                      return (
-                        <Pressable
-                        key={g}
-                        onPress={() => setGender(gender === g ? "" : g)}
-                        style={[styles.chip, { backgroundColor: gender === g ? theme.primaryDim : "transparent", borderColor: gender === g ? theme.primary : theme.border }]}
-                      >
-                        <Text style={{ color: gender === g ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{genderLabels[g]}</Text>
-                      </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-                {unitSystem === "imperial" ? (
-                  <View style={styles.row}>
-                    <View style={{ flex: 1 }}>
-                      <Input label={t("profile.heightFt")} value={heightFt} onChangeText={setHeightFt} placeholder="5" keyboardType="decimal-pad" />
+
+                {/* Body Stats collapsible */}
+                <Pressable
+                  onPress={() => setBodyStatsExpanded(v => !v)}
+                  style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10, borderTopWidth: 1, borderTopColor: theme.border }}
+                >
+                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                    {t("profile.bodyStatsSection")}
+                  </Text>
+                  <Feather name={bodyStatsExpanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
+                </Pressable>
+
+                {bodyStatsExpanded && (
+                  <View style={{ gap: 12 }}>
+                    <Input label={t("profile.age")} value={age} onChangeText={setAge} placeholder="28" keyboardType="numeric" />
+                    <View>
+                      <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("profile.gender")}</Text>
+                      <View style={styles.chipRow}>
+                        {["Male", "Female", "Other"].map(g => {
+                          const genderLabels: Record<string, string> = { "Male": t("profile.male"), "Female": t("profile.female"), "Other": t("profile.other") };
+                          return (
+                            <Pressable
+                              key={g}
+                              onPress={() => setGender(gender === g ? "" : g)}
+                              style={[styles.chip, { backgroundColor: gender === g ? theme.primaryDim : "transparent", borderColor: gender === g ? theme.primary : theme.border }]}
+                            >
+                              <Text style={{ color: gender === g ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{genderLabels[g]}</Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Input label={t("profile.heightIn")} value={heightIn} onChangeText={setHeightIn} placeholder="10" keyboardType="decimal-pad" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Input label={t("profile.weightLbs")} value={weightLbs} onChangeText={setWeightLbs} placeholder="165" keyboardType="decimal-pad" />
-                    </View>
-                  </View>
-                ) : (
-                  <View style={styles.row}>
-                    <View style={{ flex: 1 }}>
-                      <Input label={t("profile.heightCm")} value={heightCm} onChangeText={setHeightCm} placeholder="175" keyboardType="numeric" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Input label={t("profile.weightKg")} value={weightKg} onChangeText={setWeightKg} placeholder="75" keyboardType="numeric" />
-                    </View>
+                    {unitSystem === "imperial" ? (
+                      <View style={styles.row}>
+                        <View style={{ flex: 1 }}>
+                          <Input label={t("profile.heightFt")} value={heightFt} onChangeText={setHeightFt} placeholder="5" keyboardType="decimal-pad" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Input label={t("profile.heightIn")} value={heightIn} onChangeText={setHeightIn} placeholder="10" keyboardType="decimal-pad" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Input label={t("profile.weightLbs")} value={weightLbs} onChangeText={setWeightLbs} placeholder="165" keyboardType="decimal-pad" />
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={styles.row}>
+                        <View style={{ flex: 1 }}>
+                          <Input label={t("profile.heightCm")} value={heightCm} onChangeText={setHeightCm} placeholder="175" keyboardType="numeric" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Input label={t("profile.weightKg")} value={weightKg} onChangeText={setWeightKg} placeholder="75" keyboardType="numeric" />
+                        </View>
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
@@ -509,14 +613,56 @@ export default function ProfileScreen() {
             
             {/* Nutrition Targets */}
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.dailyTargets")}</Text>
-              <Input label={t("profile.calorieGoalLabel")} value={calorieGoal} onChangeText={setCalorieGoal} placeholder="2000" keyboardType="numeric" />
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("profile.dailyTargets")}</Text>
+                {hasAnyIntake && (
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                    {t("common.today")}
+                  </Text>
+                )}
+              </View>
+
+              {/* Calories */}
+              <View>
+                <Input label={t("profile.calorieGoalLabel")} value={calorieGoal} onChangeText={setCalorieGoal} placeholder="2000" keyboardType="numeric" />
+                {hasAnyIntake && !!calorieGoal && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: -4, marginBottom: 8 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: intakeStatusColor(todayCaloriesConsumed, parseInt(calorieGoal) || 0) ?? theme.border }} />
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                      {todayCaloriesConsumed} / {calorieGoal} {t("common.kcal")}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
               <View style={styles.row}>
-                <View style={{ flex: 1 }}><Input label={t("profile.proteinG")} value={proteinGoal} onChangeText={setProteinGoal} placeholder="150" keyboardType="numeric" /></View>
+                <View style={{ flex: 1 }}>
+                  <Input label={t("profile.proteinG")} value={proteinGoal} onChangeText={setProteinGoal} placeholder="150" keyboardType="numeric" />
+                  {hasAnyIntake && !!proteinGoal && (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: -4 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: intakeStatusColor(todayProteinConsumed, parseInt(proteinGoal) || 0) ?? theme.border }} />
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
+                        {todayProteinConsumed}g
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <View style={{ flex: 1 }}><Input label={t("profile.carbsG")} value={carbsGoal} onChangeText={setCarbsGoal} placeholder="200" keyboardType="numeric" /></View>
                 <View style={{ flex: 1 }}><Input label={t("profile.fatG")} value={fatGoal} onChangeText={setFatGoal} placeholder="60" keyboardType="numeric" /></View>
               </View>
-              <Input label={t("profile.dailyWaterGoal")} value={waterGoalMl} onChangeText={setWaterGoalMl} placeholder="2000" keyboardType="numeric" />
+
+              {/* Water */}
+              <View>
+                <Input label={t("profile.dailyWaterGoal")} value={waterGoalMl} onChangeText={setWaterGoalMl} placeholder="2000" keyboardType="numeric" />
+                {hasAnyIntake && !!waterGoalMl && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: -4 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: intakeStatusColor(todayWaterConsumed, parseInt(waterGoalMl) || 0) ?? theme.border }} />
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                      {todayWaterConsumed} / {waterGoalMl} ml
+                    </Text>
+                  </View>
+                )}
+              </View>
             </Card>
             
             <Button title={t("profile.saveProfile")} onPress={handleSave} loading={updateMutation.isPending} />
