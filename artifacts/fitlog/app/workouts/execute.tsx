@@ -1312,15 +1312,15 @@ export default function ExecuteWorkoutScreen() {
                   <View style={{
                     flexDirection: isRTL ? "row-reverse" : "row",
                     gap: 10, flexWrap: "wrap", marginBottom: 6,
-                    opacity: isActive ? 1 : 0.7,
+                    opacity: isActive ? 1 : 0.8,
                   }}>
                     {lastText && (
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: isActive ? 12 : 11 }}>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
                         {t("workouts.lastLabel")}: {lastText}
                       </Text>
                     )}
                     {suggestedText && (
-                      <Text style={{ color: trendColor, fontFamily: "Inter_500Medium", fontSize: isActive ? 12 : 11 }}>
+                      <Text style={{ color: trendColor, fontFamily: "Inter_500Medium", fontSize: 12 }}>
                         ↑ {suggestedText}
                       </Text>
                     )}
