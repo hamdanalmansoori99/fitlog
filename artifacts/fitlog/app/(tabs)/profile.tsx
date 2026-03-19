@@ -430,7 +430,7 @@ export default function ProfileScreen() {
                   <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
                     {t("profile.trainingIdentity")}
                   </Text>
-                  <Pressable onPress={() => scrollRef.current?.scrollTo({ y: goalsCardY.current, animated: true })}>
+                  <Pressable onPress={() => router.push("/workouts/onboarding")}>
                     <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
                       {t("profile.updateGoalEquipment")} {"›"}
                     </Text>
