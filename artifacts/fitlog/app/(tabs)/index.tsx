@@ -411,9 +411,8 @@ function WorkoutDoneCard({ workout, theme }: { workout: any; theme: AppTheme }) 
 
 
 const MILESTONE_THRESHOLDS = [3, 7, 14, 30, 60, 100];
-const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
 function nextStreakMilestone(current: number): number | null {
-  return STREAK_MILESTONES.find(m => m > current) ?? null;
+  return MILESTONE_THRESHOLDS.find(m => m > current) ?? null;
 }
 
 function getThisWeekWorkoutDates(workouts: any[]): Set<string> {
