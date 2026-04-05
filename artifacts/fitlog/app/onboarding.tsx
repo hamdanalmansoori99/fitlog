@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Pressable,
   TextInput, Platform, KeyboardAvoidingView,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -13,15 +14,27 @@ import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 interface OnboardingData {
   age: string;
   heightCm: string;
   weightKg: string;
+  waistCm: string;
   fitnessGoal: string;
   activityLevel: string;
   availableEquipment: string[];
+}
+
+function calcBMI(heightCm: number, weightKg: number): number {
+  return weightKg / Math.pow(heightCm / 100, 2);
+}
+
+function bmiCategory(bmi: number): { label: string; color: string; motivation: string } {
+  if (bmi < 18.5) return { label: "Underweight", color: "#4fc3f7", motivation: "Focus on building strength and healthy habits." };
+  if (bmi < 25)   return { label: "Normal weight", color: "#00e676", motivation: "Great foundation! Keep up the healthy lifestyle." };
+  if (bmi < 30)   return { label: "Overweight", color: "#ffab40", motivation: "Consistent training and nutrition will get you there." };
+  return            { label: "Obese", color: "#ef5350", motivation: "Every workout counts. You're already taking the right steps." };
 }
 
 const FITNESS_GOALS = [
@@ -30,7 +43,6 @@ const FITNESS_GOALS = [
   { id: "Get stronger", icon: "anchor" as const, labelKey: "getStronger", descKey: "getStrongerDesc" },
   { id: "Stay active", icon: "heart" as const, labelKey: "stayActive", descKey: "stayActiveDesc" },
   { id: "Improve endurance", icon: "wind" as const, labelKey: "improveEndurance", descKey: "improveEnduranceDesc" },
-  { id: "Improve flexibility", icon: "rotate-cw" as const, labelKey: "improveFlexibility", descKey: "improveFlexibilityDesc" },
 ];
 
 const ACTIVITY_LEVELS = [
@@ -55,7 +67,6 @@ const EQUIPMENT_OPTIONS = [
   { id: "treadmill", icon: "activity" as const, labelKey: "treadmill" },
   { id: "stationary_bike", icon: "wind" as const, labelKey: "stationaryBike" },
   { id: "rowing_machine", icon: "navigation" as const, labelKey: "rowingMachine" },
-  { id: "yoga_mat", icon: "heart" as const, labelKey: "yogaMat" },
   { id: "jump_rope", icon: "repeat" as const, labelKey: "jumpRope" },
 ];
 
@@ -168,10 +179,12 @@ export default function OnboardingScreen() {
   const topPad = Platform.OS === "web" ? 24 : insets.top;
 
   const [step, setStep] = useState(0);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [data, setData] = useState<OnboardingData>({
     age: "",
     heightCm: "",
     weightKg: "",
+    waistCm: "",
     fitnessGoal: "",
     activityLevel: "",
     availableEquipment: [],
@@ -181,7 +194,11 @@ export default function OnboardingScreen() {
     mutationFn: (payload: any) => api.updateProfile(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      setStep(4);
+      setSubmitError(null);
+      setStep(5);
+    },
+    onError: (err: any) => {
+      setSubmitError(err?.message || "Something went wrong. Please try again.");
     },
   });
 
@@ -190,20 +207,22 @@ export default function OnboardingScreen() {
     if (step === 1) return !!data.age.trim() && !!data.heightCm.trim() && !!data.weightKg.trim();
     if (step === 2) return !!data.activityLevel;
     if (step === 3) return true;
+    if (step === 4) return true; // waist is optional
     return false;
   };
 
   const handleNext = () => {
-    if (step === 3) {
+    setSubmitError(null);
+    if (step === 4) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       mutation.mutate({
-        firstName: user?.firstName || "",
         age: parseInt(data.age, 10) || undefined,
         heightCm: parseFloat(data.heightCm) || undefined,
         weightKg: parseFloat(data.weightKg) || undefined,
+        waistCm: data.waistCm ? parseFloat(data.waistCm) : undefined,
         fitnessGoals: [data.fitnessGoal],
         activityLevel: data.activityLevel,
         availableEquipment: data.availableEquipment.length > 0 ? data.availableEquipment : ["none"],
-        gender: undefined,
         workoutLocation: "Mixed",
         weeklyWorkoutDays: 3,
         preferredWorkoutDuration: "45",
@@ -211,7 +230,8 @@ export default function OnboardingScreen() {
         coachOnboardingComplete: true,
         onboardingComplete: true,
       });
-    } else if (step < 3) {
+    } else if (step < 4) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setStep(step + 1);
     }
   };
@@ -228,7 +248,7 @@ export default function OnboardingScreen() {
     });
   };
 
-  if (step === 4) {
+  if (step === 5) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad }]}>
         <Animated.View entering={ZoomIn.duration(500)} style={styles.doneWrap}>
@@ -382,10 +402,98 @@ export default function OnboardingScreen() {
               </View>
             </>
           )}
+
+          {step === 4 && (() => {
+            const h = parseFloat(data.heightCm);
+            const w = parseFloat(data.weightKg);
+            const hasBMI = h > 0 && w > 0;
+            const bmi = hasBMI ? calcBMI(h, w) : null;
+            const cat = bmi !== null ? bmiCategory(bmi) : null;
+            return (
+              <>
+                <StepHeader title="Your Body Stats" subtitle="Here's a quick summary of your measurements." />
+                {hasBMI && bmi !== null && cat !== null ? (
+                  <View style={{ gap: 16 }}>
+                    {/* BMI card */}
+                    <View style={[styles.bmiCard, { backgroundColor: theme.card, borderColor: cat.color + "40" }]}>
+                      <View style={[styles.bmiStrip, { backgroundColor: cat.color }]} />
+                      <View style={{ flex: 1, padding: 16, gap: 6 }}>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                          BODY MASS INDEX
+                        </Text>
+                        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
+                          <Text style={{ color: cat.color, fontFamily: "Inter_700Bold", fontSize: 40 }}>
+                            {bmi.toFixed(1)}
+                          </Text>
+                          <View style={[styles.catBadge, { backgroundColor: cat.color + "20" }]}>
+                            <Text style={{ color: cat.color, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+                              {cat.label}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
+                          {cat.motivation}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Height/Weight summary chips */}
+                    <View style={{ flexDirection: "row", gap: 10 }}>
+                      <View style={[styles.statChip, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                        <Feather name="arrow-up" size={14} color={theme.textMuted} />
+                        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{data.heightCm} cm</Text>
+                      </View>
+                      <View style={[styles.statChip, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                        <Feather name="activity" size={14} color={theme.textMuted} />
+                        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{data.weightKg} kg</Text>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={{ padding: 16, borderRadius: 14, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border }}>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14 }}>
+                      BMI could not be calculated — height or weight was not entered.
+                    </Text>
+                  </View>
+                )}
+
+                {/* Optional waist */}
+                <View style={{ gap: 8, marginTop: 4 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: theme.text }}>
+                      Waist size
+                    </Text>
+                    <View style={{ backgroundColor: theme.border, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11 }}>OPTIONAL</Text>
+                    </View>
+                  </View>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
+                    Waist circumference helps estimate body fat distribution and health risk.
+                  </Text>
+                  <InputField
+                    label="Waist circumference (cm)"
+                    value={data.waistCm}
+                    onChangeText={(v) => setData({ ...data, waistCm: v })}
+                    placeholder="e.g. 85"
+                    keyboardType="decimal-pad"
+                    theme={theme}
+                  />
+                </View>
+              </>
+            );
+          })()}
         </Animated.View>
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
+        {submitError && (
+          <View style={[styles.errorBanner, { backgroundColor: "#b71c1c20", borderColor: "#ef5350" }]}>
+            <Feather name="alert-circle" size={14} color="#ef5350" />
+            <Text style={{ color: "#ef5350", fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 }}>
+              {submitError}
+            </Text>
+          </View>
+        )}
         <Pressable
           onPress={handleNext}
           disabled={!canProceed() || mutation.isPending}
@@ -398,11 +506,14 @@ export default function OnboardingScreen() {
           ]}
         >
           {mutation.isPending ? (
-            <Text style={styles.nextBtnText}>...</Text>
+            <>
+              <Text style={styles.nextBtnText}>{t("onboarding.buildMyPlan")}</Text>
+              <Text style={styles.nextBtnText}> ...</Text>
+            </>
           ) : (
             <>
               <Text style={styles.nextBtnText}>
-                {step === 3 ? t("onboarding.buildMyPlan") : t("common.continueText")}
+                {step === 4 ? t("onboarding.buildMyPlan") : t("common.continueText")}
               </Text>
               <Feather name="arrow-right" size={18} color="#0f0f1a" />
             </>
@@ -440,7 +551,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderRadius: 14,
     paddingHorizontal: 16, paddingVertical: 14, fontSize: 17,
   },
-  bottomBar: { paddingHorizontal: 24, paddingTop: 12 },
+  bottomBar: { paddingHorizontal: 24, paddingTop: 12, gap: 10 },
+  errorBanner: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    borderWidth: 1, borderRadius: 12, padding: 12,
+  },
   nextBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, paddingVertical: 16, borderRadius: 16,
@@ -457,5 +572,16 @@ const styles = StyleSheet.create({
   doneBtn: {
     flexDirection: "row", alignItems: "center", gap: 10,
     paddingHorizontal: 36, paddingVertical: 16, borderRadius: 16, marginTop: 12,
+  },
+  bmiCard: {
+    flexDirection: "row", borderRadius: 16, borderWidth: 1, overflow: "hidden",
+  },
+  bmiStrip: { width: 4 },
+  catBadge: {
+    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8,
+  },
+  statChip: {
+    flex: 1, flexDirection: "row", alignItems: "center", gap: 8,
+    padding: 14, borderRadius: 12, borderWidth: 1,
   },
 });

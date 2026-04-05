@@ -34,27 +34,27 @@ interface Props {
 const SLEEP_HOURS = [5, 6, 7, 8, 9];
 
 const SLEEP_QUALITY_OPTIONS = [
-  { value: 1, label: "😴", descKey: "terrible" },
-  { value: 2, label: "😕", descKey: "poor" },
-  { value: 3, label: "😐", descKey: "okay" },
-  { value: 4, label: "😊", descKey: "good" },
-  { value: 5, label: "✨", descKey: "great" },
+  { value: 1, icon: "moon" as const, descKey: "terrible" },
+  { value: 2, icon: "cloud" as const, descKey: "poor" },
+  { value: 3, icon: "minus" as const, descKey: "okay" },
+  { value: 4, icon: "smile" as const, descKey: "good" },
+  { value: 5, icon: "sun" as const, descKey: "great" },
 ];
 
 const ENERGY_OPTIONS = [
-  { value: 1, label: "🥱", descKey: "drained" },
-  { value: 2, label: "😕", descKey: "low" },
-  { value: 3, label: "😐", descKey: "okay" },
-  { value: 4, label: "⚡", descKey: "high" },
-  { value: 5, label: "🔥", descKey: "peak" },
+  { value: 1, icon: "battery" as const, descKey: "drained" },
+  { value: 2, icon: "cloud" as const, descKey: "low" },
+  { value: 3, icon: "minus" as const, descKey: "okay" },
+  { value: 4, icon: "zap" as const, descKey: "high" },
+  { value: 5, icon: "trending-up" as const, descKey: "peak" },
 ];
 
 const STRESS_OPTIONS = [
-  { value: 1, label: "😌", descKey: "chill" },
-  { value: 2, label: "🙂", descKey: "low" },
-  { value: 3, label: "😐", descKey: "some" },
-  { value: 4, label: "😤", descKey: "high" },
-  { value: 5, label: "🤯", descKey: "max" },
+  { value: 1, icon: "wind" as const, descKey: "chill" },
+  { value: 2, icon: "smile" as const, descKey: "low" },
+  { value: 3, icon: "minus" as const, descKey: "some" },
+  { value: 4, icon: "alert-triangle" as const, descKey: "high" },
+  { value: 5, icon: "alert-circle" as const, descKey: "max" },
 ];
 
 const SORENESS_PARTS = [
@@ -184,25 +184,19 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
           )}
           {todayLog.sleepQuality != null && (
             <View style={s.summaryChip}>
-              <Text style={s.summaryChipEmoji}>
-                {SLEEP_QUALITY_OPTIONS.find((o) => o.value === todayLog.sleepQuality)?.label}
-              </Text>
+              <Feather name={SLEEP_QUALITY_OPTIONS.find((o) => o.value === todayLog.sleepQuality)?.icon ?? "moon"} size={14} color={theme.primary} />
               <Text style={s.summaryChipText}>{t("components.recoveryCheckIn.sleepLabel", { value: todayLog.sleepQuality })}</Text>
             </View>
           )}
           {todayLog.energyLevel != null && (
             <View style={s.summaryChip}>
-              <Text style={s.summaryChipEmoji}>
-                {ENERGY_OPTIONS.find((o) => o.value === todayLog.energyLevel)?.label}
-              </Text>
+              <Feather name={ENERGY_OPTIONS.find((o) => o.value === todayLog.energyLevel)?.icon ?? "zap"} size={14} color={theme.primary} />
               <Text style={s.summaryChipText}>{t("components.recoveryCheckIn.energyLabel", { value: todayLog.energyLevel })}</Text>
             </View>
           )}
           {todayLog.stressLevel != null && todayLog.stressLevel >= 4 && (
             <View style={[s.summaryChip, { borderColor: "#ff7043" }]}>
-              <Text style={s.summaryChipEmoji}>
-                {STRESS_OPTIONS.find((o) => o.value === todayLog.stressLevel)?.label}
-              </Text>
+              <Feather name={STRESS_OPTIONS.find((o) => o.value === todayLog.stressLevel)?.icon ?? "alert-triangle"} size={14} color="#ff7043" />
               <Text style={[s.summaryChipText, { color: "#ff7043" }]}>{t("components.recoveryCheckIn.highStress")}</Text>
             </View>
           )}
@@ -317,7 +311,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
             style={[s.emojiChip, sleepQuality === opt.value && s.emojiChipActive]}
             onPress={() => setSleepQuality(opt.value)}
           >
-            <Text style={s.emojiLabel}>{opt.label}</Text>
+            <Feather name={opt.icon as any} size={20} color={sleepQuality === opt.value ? theme.primary : theme.textMuted} />
             <Text style={[s.emojiDesc, sleepQuality === opt.value && s.emojiDescActive]}>{t(`components.recoveryCheckIn.${opt.descKey}`)}</Text>
           </Pressable>
         ))}
@@ -331,7 +325,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
             style={[s.emojiChip, energyLevel === opt.value && s.emojiChipActive]}
             onPress={() => setEnergyLevel(opt.value)}
           >
-            <Text style={s.emojiLabel}>{opt.label}</Text>
+            <Feather name={opt.icon as any} size={20} color={energyLevel === opt.value ? theme.primary : theme.textMuted} />
             <Text style={[s.emojiDesc, energyLevel === opt.value && s.emojiDescActive]}>{t(`components.recoveryCheckIn.${opt.descKey}`)}</Text>
           </Pressable>
         ))}
@@ -345,7 +339,7 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
             style={[s.emojiChip, stressLevel === opt.value && s.emojiChipActive]}
             onPress={() => setStressLevel(opt.value)}
           >
-            <Text style={s.emojiLabel}>{opt.label}</Text>
+            <Feather name={opt.icon as any} size={20} color={stressLevel === opt.value ? theme.primary : theme.textMuted} />
             <Text style={[s.emojiDesc, stressLevel === opt.value && s.emojiDescActive]}>{t(`components.recoveryCheckIn.${opt.descKey}`)}</Text>
           </Pressable>
         ))}

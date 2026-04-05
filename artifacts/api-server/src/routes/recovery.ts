@@ -54,25 +54,41 @@ router.post("/log", requireAuth, async (req, res) => {
     const { start, end } = todayRange();
     const { sleepHours, sleepQuality, energyLevel, stressLevel, overallFeeling, soreness, notes } = req.body;
 
-    // Delete existing today's log (upsert pattern)
-    await db.delete(recoveryLogsTable)
-      .where(and(
-        eq(recoveryLogsTable.userId, user.id),
-        gte(recoveryLogsTable.date, start),
-        lt(recoveryLogsTable.date, end)
-      ));
+    if (sleepHours !== undefined && (typeof sleepHours !== "number" || sleepHours < 0 || sleepHours > 24)) {
+      res.status(400).json({ error: "sleepHours must be a number between 0 and 24" });
+      return;
+    }
+    const scaleFields: Record<string, unknown> = { sleepQuality, energyLevel, stressLevel, overallFeeling };
+    for (const [field, val] of Object.entries(scaleFields)) {
+      if (val !== undefined && (typeof val !== "number" || !Number.isInteger(val) || val < 1 || val > 10)) {
+        res.status(400).json({ error: `${field} must be an integer between 1 and 10` });
+        return;
+      }
+    }
 
-    const [log] = await db.insert(recoveryLogsTable).values({
-      userId: user.id,
-      date: new Date(),
-      sleepHours: sleepHours ?? null,
-      sleepQuality: sleepQuality ?? null,
-      energyLevel: energyLevel ?? null,
-      stressLevel: stressLevel ?? null,
-      overallFeeling: overallFeeling ?? null,
-      soreness: soreness ?? {},
-      notes: notes ?? null,
-    }).returning();
+    // Delete + insert in a transaction to avoid data-loss window
+    const log = await db.transaction(async (tx: typeof db) => {
+      await tx.delete(recoveryLogsTable)
+        .where(and(
+          eq(recoveryLogsTable.userId, user.id),
+          gte(recoveryLogsTable.date, start),
+          lt(recoveryLogsTable.date, end)
+        ));
+
+      const [inserted] = await tx.insert(recoveryLogsTable).values({
+        userId: user.id,
+        date: new Date(),
+        sleepHours: sleepHours ?? null,
+        sleepQuality: sleepQuality ?? null,
+        energyLevel: energyLevel ?? null,
+        stressLevel: stressLevel ?? null,
+        overallFeeling: overallFeeling ?? null,
+        soreness: soreness ?? {},
+        notes: notes ?? null,
+      }).returning();
+
+      return inserted;
+    });
 
     res.status(201).json({ log });
   } catch {

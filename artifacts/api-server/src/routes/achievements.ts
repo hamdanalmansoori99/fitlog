@@ -12,6 +12,8 @@ import {
 import { eq, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { trackEvent } from "../services/analyticsService";
+import { logError } from "../lib/logger";
+import { computeStreaks } from "../lib/streaks";
 
 const router = Router();
 
@@ -44,44 +46,9 @@ const ACHIEVEMENT_DEFS = [
   { key: "pr_10",    title: "PR Machine",       description: "Set 10 personal records",        category: "prs", type: "pr_count", threshold: 10 },
 ] as const;
 
-function computeStreak(sorted: string[]): { current: number; best: number } {
-  if (sorted.length === 0) return { current: 0, best: 0 };
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split("T")[0];
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-  let current = 0;
-  if (sorted[0] === todayStr || sorted[0] === yesterdayStr) {
-    let last = sorted[0];
-    current = 1;
-    for (let i = 1; i < sorted.length; i++) {
-      const prev = new Date(last + "T12:00:00");
-      const cur = new Date(sorted[i] + "T12:00:00");
-      if (Math.round((prev.getTime() - cur.getTime()) / 86400000) === 1) {
-        current++;
-        last = sorted[i];
-      } else break;
-    }
-  }
-
-  let best = current;
-  let run = 1;
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i - 1] + "T12:00:00");
-    const cur = new Date(sorted[i] + "T12:00:00");
-    if (Math.round((prev.getTime() - cur.getTime()) / 86400000) === 1) {
-      run++;
-    } else {
-      best = Math.max(best, run);
-      run = 1;
-    }
-  }
-  best = Math.max(best, run);
-  return { current, best };
+/** Convert YYYY-MM-DD date strings to Date objects for the streaks utility. */
+function datesToObjects(dateStrings: string[]): Date[] {
+  return dateStrings.map(s => new Date(s + "T00:00:00Z"));
 }
 
 function parseRows(result: any): any[] {
@@ -120,9 +87,9 @@ router.get("/", requireAuth, async (req, res) => {
     `);
     const hydrationDates: string[] = parseRows(hydrationR).map((r: any) => r.day);
 
-    const workoutStreak = computeStreak(workoutDates);
-    const mealStreak = computeStreak(mealDates);
-    const hydrationStreak = computeStreak(hydrationDates);
+    const workoutStreak = computeStreaks(datesToObjects(workoutDates));
+    const mealStreak = computeStreaks(datesToObjects(mealDates));
+    const hydrationStreak = computeStreaks(datesToObjects(hydrationDates));
 
     const last7: string[] = [];
     for (let i = 0; i < 7; i++) {
@@ -241,7 +208,7 @@ router.get("/", requireAuth, async (req, res) => {
       recentPRs,
     });
   } catch (err) {
-    console.error("achievements error:", err);
+    logError("achievements error:", err);
     res.status(500).json({ error: "Failed to get achievements" });
   }
 });

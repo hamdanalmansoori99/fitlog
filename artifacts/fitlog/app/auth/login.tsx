@@ -144,6 +144,28 @@ export default function LoginScreen() {
                 <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold" }}>{t("auth.signUp")}</Text>
               </Text>
             </Pressable>
+
+            <Pressable
+              onPress={async () => {
+                setError("");
+                setLoading(true);
+                try {
+                  const res = await api.demoLogin();
+                  setAuth(res.token, res.user);
+                  router.replace("/(tabs)");
+                } catch (err: any) {
+                  setError(err.message || "Demo login failed. Is the server running?");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              style={styles.demoLink}
+            >
+              <Feather name="zap" size={13} color={theme.primary} />
+              <Text style={[styles.demoText, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
+                Try Demo Account
+              </Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -175,4 +197,6 @@ const styles = StyleSheet.create({
   or: { fontSize: 13 },
   registerLink: { alignItems: "center", padding: 4 },
   registerText: { fontSize: 14, textAlign: "center" },
+  demoLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, padding: 4, marginTop: 4 },
+  demoText: { fontSize: 13 },
 });

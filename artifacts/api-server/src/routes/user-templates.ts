@@ -29,7 +29,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     // Enforce plan template limit
     const { getActiveSubscription } = await import("../services/subscriptionService");
-    const sub = await getActiveSubscription(user.id, (user as any).role ?? "user");
+    const sub = await getActiveSubscription(user.id, user.role);
     const limit = sub.plan.limits.maxSavedTemplates;
     if (isFinite(limit)) {
       const existing = await db.select().from(userWorkoutTemplatesTable)

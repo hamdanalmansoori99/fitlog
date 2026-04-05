@@ -2,27 +2,54 @@ import { Platform } from "react-native";
 import { useAuthStore } from "@/store/authStore";
 import i18n from "@/i18n";
 
-const DOMAIN = process.env.EXPO_PUBLIC_DOMAIN || "";
-export const BASE_URL = Platform.OS === "web"
-  ? "/api"
-  : `https://${DOMAIN}/api`;
+// EXPO_PUBLIC_API_URL: full URL to your backend, e.g. http://192.168.1.50:3001/api
+// Set this in artifacts/fitlog/.env before running expo start.
+export const BASE_URL =
+  Platform.OS === "web"
+    ? "/api"
+    : (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/api");
+
+// AI generation endpoints that can legitimately take up to 60s.
+const AI_PATHS = [
+  "/meals/generate-plan",
+  "/meals/generate-day-plan",
+  "/meals/generate-week-plan",
+  "/meals/generate-grocery-list",
+  "/scan-meal/analyze",
+  "/meals/analyze-photo",
+  "/coach/message",
+  "/coach/proactive",
+];
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = useAuthStore.getState().token;
-  
+
+  const isAiPath = AI_PATHS.some((p) => path.startsWith(p));
+  const timeoutMs = isAiPath ? 60000 : 20000;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
-  
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, { ...options, headers, signal: controller.signal });
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err?.name === "AbortError") {
+      throw new Error(i18n.t("common.requestTimeout") || "Request timed out. Check your connection.");
+    }
+    throw new Error(`Cannot reach server at ${BASE_URL}. Check your IP in .env (EXPO_PUBLIC_API_URL).`);
+  }
+  clearTimeout(timeoutId);
 
   // 204 No Content — nothing to parse.
   if (res.status === 204) {
@@ -38,6 +65,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(i18n.t("common.requestFailed"));
   }
 
+  if (res.status === 401) {
+    // Session expired or invalid — clear stored credentials so the app
+    // routes back to the login screen instead of showing confusing errors.
+    useAuthStore.getState().clearAuth();
+    throw new Error(data.error || "Session expired. Please log in again.");
+  }
+
   if (!res.ok) {
     throw new Error(data.error || data.message || i18n.t("common.requestFailed"));
   }
@@ -51,12 +85,14 @@ export const api = {
     request<{ user: any; token: string }>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
   login: (body: { email: string; password: string }) =>
     request<{ user: any; token: string }>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
+  demoLogin: () => request<{ user: any; token: string }>("/auth/demo", { method: "POST" }),
   logout: () => request("/auth/logout", { method: "POST" }),
   getMe: () => request<any>("/auth/me"),
   
   // Profile
   getProfile: () => request<any>("/profile"),
   updateProfile: (body: any) => request<any>("/profile", { method: "PUT", body: JSON.stringify(body) }),
+  getNutritionTargets: () => request<{ calorieGoal: number; proteinGoal: number; carbsGoal: number; fatGoal: number; explanation: string }>("/profile/nutrition-targets"),
   deleteAccount: () => request("/profile/delete", { method: "DELETE" }),
   
   // Workouts
@@ -227,6 +263,11 @@ export const api = {
     }),
   deleteProgressPhoto: (id: number) =>
     request(`/progress/photos/${id}`, { method: "DELETE" }),
+
+  // XP / Rank
+  awardXp: (action: string) =>
+    request<{ xp: number; awarded: number }>("/xp/award", { method: "POST", body: JSON.stringify({ action }) }),
+  getXp: () => request<{ xp: number }>("/xp"),
 
   // Scan Meal (AI Vision)
   scanMealAnalyze: (body: { imageBase64: string; mimeType?: string }) =>

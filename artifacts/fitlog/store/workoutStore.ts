@@ -14,6 +14,7 @@ interface WorkoutState {
   clearActiveWorkout: () => void;
   addSessionPR: (pr: SessionPR) => void;
   clearSessionPRs: () => void;
+  resetStore: () => void;
 }
 
 export const useWorkoutStore = create<WorkoutState>()((set) => ({
@@ -27,4 +28,10 @@ export const useWorkoutStore = create<WorkoutState>()((set) => ({
   addSessionPR: (pr) =>
     set((state) => ({ sessionPRs: [...state.sessionPRs, pr] })),
   clearSessionPRs: () => set({ sessionPRs: [] }),
+  resetStore: () =>
+    set({
+      activeWorkoutTemplateId: null,
+      activeWorkoutTemplateName: null,
+      sessionPRs: [],
+    }),
 }));

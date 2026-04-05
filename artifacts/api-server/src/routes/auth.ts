@@ -1,12 +1,24 @@
 import { Router } from "express";
 import { db, usersTable, sessionsTable, profilesTable, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { hashPassword, generateSessionId, requireAuth, getUser } from "../lib/auth";
+import { hashPassword, verifyPassword, generateSessionId, requireAuth, getUser } from "../lib/auth";
 import { ensureFreeSubscription } from "../services/subscriptionService";
+import rateLimit from "express-rate-limit";
+
+const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// 10 attempts per 15 minutes per IP — brute-force protection
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts. Please try again in 15 minutes." },
+});
 
 const router = Router();
 
-router.post("/register", async (req, res) => {
+router.post("/register", authLimiter, async (req, res) => {
   try {
     const { email, password, firstName, lastName } = req.body;
 
@@ -43,7 +55,7 @@ router.post("/register", async (req, res) => {
       return;
     }
 
-    const passwordHash = hashPassword(password);
+    const passwordHash = await hashPassword(password);
     const [user] = await db.insert(usersTable).values({
       email: normalizedEmail,
       passwordHash,
@@ -66,7 +78,7 @@ router.post("/register", async (req, res) => {
     await ensureFreeSubscription(user.id);
 
     const sessionId = generateSessionId();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    const expiresAt = new Date(Date.now() + SESSION_DURATION_MS); // 30 days
 
     await db.insert(sessionsTable).values({
       id: sessionId,
@@ -84,13 +96,18 @@ router.post("/register", async (req, res) => {
       },
       token: sessionId,
     });
-  } catch (err) {
-    console.error("Register error:", err);
+  } catch (err: any) {
+    // Unique constraint violation — two concurrent registrations with the same email
+    if (err?.code === "23505" || err?.message?.includes("unique")) {
+      res.status(409).json({ error: "Email already registered" });
+      return;
+    }
+    console.error("Register error:", err instanceof Error ? err.message : err);
     res.status(500).json({ error: "Registration failed" });
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -106,13 +123,20 @@ router.post("/login", async (req, res) => {
     }
 
     const user = users[0];
-    if (hashPassword(password) !== user.passwordHash) {
+    const passwordValid = await verifyPassword(password, user.passwordHash);
+    if (!passwordValid) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
+    // Silently migrate legacy SHA256 hash to bcrypt on successful login
+    if (!user.passwordHash.startsWith("$2")) {
+      const newHash = await hashPassword(password);
+      await db.update(usersTable).set({ passwordHash: newHash }).where(eq(usersTable.id, user.id));
+    }
+
     const sessionId = generateSessionId();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
     await db.insert(sessionsTable).values({
       id: sessionId,
@@ -131,7 +155,7 @@ router.post("/login", async (req, res) => {
       token: sessionId,
     });
   } catch (err) {
-    console.error("Login error:", err);
+    console.error("Login error:", err instanceof Error ? err.message : err);
     res.status(500).json({ error: "Login failed" });
   }
 });
@@ -143,6 +167,17 @@ router.post("/logout", requireAuth, async (req, res) => {
     res.json({ message: "Logged out successfully" });
   } catch (err) {
     res.status(500).json({ error: "Logout failed" });
+  }
+});
+
+// Revoke every active session for this account (e.g. after password change or suspected compromise)
+router.post("/logout-all", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    await db.delete(sessionsTable).where(eq(sessionsTable.userId, user.id));
+    res.json({ message: "All sessions revoked" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to revoke sessions" });
   }
 });
 

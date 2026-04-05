@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { db, workoutsTable, workoutExercisesTable, workoutSetsTable, mealsTable, mealFoodItemsTable, profilesTable } from "@workspace/db";
-import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { trackEvent } from "../services/analyticsService";
+import { logError } from "../lib/logger";
 
 const router = Router();
 
@@ -70,31 +71,43 @@ router.get("/stats/weekly", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const today = new Date();
+
+    // Build date range: from 6 days ago to end of today
+    const rangeStart = new Date(today);
+    rangeStart.setDate(rangeStart.getDate() - 6);
+    rangeStart.setHours(0, 0, 0, 0);
+    const rangeEnd = new Date(today);
+    rangeEnd.setDate(rangeEnd.getDate() + 1);
+    rangeEnd.setHours(0, 0, 0, 0);
+
+    // Single query for the entire 7-day range
+    const workouts = await db.select().from(workoutsTable)
+      .where(and(
+        eq(workoutsTable.userId, user.id),
+        gte(workoutsTable.date, rangeStart),
+        lt(workoutsTable.date, rangeEnd)
+      ));
+
+    // Group by date string in memory
+    const minutesByDate = new Map<string, number>();
+    for (const w of workouts) {
+      const dateStr = new Date(w.date).toISOString().split("T")[0];
+      minutesByDate.set(dateStr, (minutesByDate.get(dateStr) ?? 0) + (w.durationMinutes || 0));
+    }
+
+    const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const days = [];
-    
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       date.setHours(0, 0, 0, 0);
-      const nextDay = new Date(date);
-      nextDay.setDate(nextDay.getDate() + 1);
-
-      const workouts = await db.select().from(workoutsTable)
-        .where(and(
-          eq(workoutsTable.userId, user.id),
-          gte(workoutsTable.date, date),
-          lt(workoutsTable.date, nextDay)
-        ));
-
-      const activeMinutes = workouts.reduce((sum, w) => sum + (w.durationMinutes || 0), 0);
-      const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      const isToday = i === 0;
+      const dateStr = date.toISOString().split("T")[0];
 
       days.push({
-        date: date.toISOString().split("T")[0],
+        date: dateStr,
         dayLabel: dayLabels[date.getDay()],
-        activeMinutes,
-        isToday,
+        activeMinutes: minutesByDate.get(dateStr) ?? 0,
+        isToday: i === 0,
       });
     }
 
@@ -123,24 +136,34 @@ router.get("/stats/summary", requireAuth, async (req, res) => {
     const thisMonthWorkouts = await db.select().from(workoutsTable)
       .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, startOfMonth)));
 
-    // Weekly frequency over last 8 weeks
+    // Weekly frequency over last 8 weeks -- single query, partition in memory
+    const freqRangeStart = new Date(now);
+    freqRangeStart.setDate(now.getDate() - now.getDay() - 7 * 7);
+    freqRangeStart.setHours(0, 0, 0, 0);
+    const freqRangeEnd = new Date(now);
+    freqRangeEnd.setDate(now.getDate() - now.getDay() + 7);
+    freqRangeEnd.setHours(0, 0, 0, 0);
+
+    const freqWorkouts = await db.select({ date: workoutsTable.date }).from(workoutsTable)
+      .where(and(
+        eq(workoutsTable.userId, user.id),
+        gte(workoutsTable.date, freqRangeStart),
+        lt(workoutsTable.date, freqRangeEnd)
+      ));
+
+    // Partition workouts by week bucket
+    const weekCounts = new Map<number, number>();
+    for (const w of freqWorkouts) {
+      const daysDiff = Math.floor((new Date(w.date).getTime() - freqRangeStart.getTime()) / 86400000);
+      const weekBucket = Math.floor(daysDiff / 7);
+      weekCounts.set(weekBucket, (weekCounts.get(weekBucket) ?? 0) + 1);
+    }
+
     const weeklyFrequency = [];
     for (let i = 7; i >= 0; i--) {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay() - i * 7);
-      weekStart.setHours(0, 0, 0, 0);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 7);
-      
-      const weekWorkouts = await db.select().from(workoutsTable)
-        .where(and(
-          eq(workoutsTable.userId, user.id),
-          gte(workoutsTable.date, weekStart),
-          lt(workoutsTable.date, weekEnd)
-        ));
-      
+      const bucket = 7 - i;
       const weekLabel = `W${8 - i}`;
-      weeklyFrequency.push({ weekLabel, count: weekWorkouts.length });
+      weeklyFrequency.push({ weekLabel, count: weekCounts.get(bucket) ?? 0 });
     }
 
     // Activity breakdown
@@ -225,6 +248,15 @@ router.get("/calendar", requireAuth, async (req, res) => {
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
     const month = parseInt(req.query.month as string) || new Date().getMonth() + 1;
 
+    if (isNaN(year) || year < 1900 || year > 2200) {
+      res.status(400).json({ error: "year must be between 1900 and 2200" });
+      return;
+    }
+    if (isNaN(month) || month < 1 || month > 12) {
+      res.status(400).json({ error: "month must be between 1 and 12" });
+      return;
+    }
+
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 1);
 
@@ -280,34 +312,55 @@ router.get("/calendar", requireAuth, async (req, res) => {
 router.get("/", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100); // Fix #9: cap at 100
     const offset = parseInt(req.query.offset as string) || 0;
-    
+
     const allWorkouts = await db.select().from(workoutsTable)
       .where(eq(workoutsTable.userId, user.id))
       .orderBy(desc(workoutsTable.date))
       .limit(limit)
       .offset(offset);
-    
-    const workoutsWithExercises = await Promise.all(
-      allWorkouts.map(async (w) => {
-        const exercises = await db.select().from(workoutExercisesTable)
-          .where(eq(workoutExercisesTable.workoutId, w.id))
-          .orderBy(workoutExercisesTable.order);
-        
-        const exercisesWithSets = await Promise.all(
-          exercises.map(async (ex) => {
-            const sets = await db.select().from(workoutSetsTable)
-              .where(eq(workoutSetsTable.exerciseId, ex.id))
-              .orderBy(workoutSetsTable.order);
-            return { ...ex, sets };
-          })
-        );
-        
-        return { ...w, exercises: exercisesWithSets };
-      })
-    );
-    
+
+    if (allWorkouts.length === 0) {
+      res.json({ workouts: [], total: 0 });
+      return;
+    }
+
+    // Batch-fetch all exercises and sets in 2 queries instead of N*M+N
+    const workoutIds = allWorkouts.map(w => w.id);
+    const allExercises = await db.select().from(workoutExercisesTable)
+      .where(inArray(workoutExercisesTable.workoutId, workoutIds))
+      .orderBy(workoutExercisesTable.order);
+
+    const exercisesWithSets = allExercises.length > 0
+      ? await (async () => {
+          const exerciseIds = allExercises.map(e => e.id);
+          const allSets = await db.select().from(workoutSetsTable)
+            .where(inArray(workoutSetsTable.exerciseId, exerciseIds))
+            .orderBy(workoutSetsTable.order);
+
+          const setsByExerciseId = new Map<number, typeof allSets>();
+          for (const set of allSets) {
+            const arr = setsByExerciseId.get(set.exerciseId) ?? [];
+            arr.push(set);
+            setsByExerciseId.set(set.exerciseId, arr);
+          }
+          return allExercises.map(ex => ({ ...ex, sets: setsByExerciseId.get(ex.id) ?? [] }));
+        })()
+      : [];
+
+    const exercisesByWorkoutId = new Map<number, typeof exercisesWithSets>();
+    for (const ex of exercisesWithSets) {
+      const arr = exercisesByWorkoutId.get(ex.workoutId) ?? [];
+      arr.push(ex);
+      exercisesByWorkoutId.set(ex.workoutId, arr);
+    }
+
+    const workoutsWithExercises = allWorkouts.map(w => ({
+      ...w,
+      exercises: exercisesByWorkoutId.get(w.id) ?? [],
+    }));
+
     res.json({ workouts: workoutsWithExercises, total: workoutsWithExercises.length });
   } catch (err) {
     res.status(500).json({ error: "Failed to get workouts" });
@@ -317,7 +370,9 @@ router.get("/", requireAuth, async (req, res) => {
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const workout = await getWorkoutWithExercises(parseInt(req.params.id as string), user.id);
+    const workoutId = parseInt(req.params.id as string);
+    if (isNaN(workoutId)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const workout = await getWorkoutWithExercises(workoutId, user.id);
     if (!workout) {
       res.status(404).json({ error: "Workout not found" });
       return;
@@ -333,41 +388,66 @@ router.post("/", requireAuth, async (req, res) => {
     const user = getUser(req);
     const { activityType, name, date, durationMinutes, distanceKm, caloriesBurned, mood, notes, metadata, exercises } = req.body;
 
-    const [workout] = await db.insert(workoutsTable).values({
-      userId: user.id,
-      activityType,
-      name,
-      date: new Date(date),
-      durationMinutes,
-      distanceKm,
-      caloriesBurned,
-      mood,
-      notes,
-      metadata,
-    }).returning();
-
-    if (exercises && exercises.length > 0) {
-      for (const ex of exercises) {
-        const [exercise] = await db.insert(workoutExercisesTable).values({
-          workoutId: workout.id,
-          name: ex.name,
-          order: ex.order,
-        }).returning();
-        
-        if (ex.sets && ex.sets.length > 0) {
-          for (const set of ex.sets) {
-            await db.insert(workoutSetsTable).values({
-              exerciseId: exercise.id,
-              reps: set.reps,
-              weightKg: set.weightKg,
-              order: set.order,
-            });
-          }
-        }
+    if (!activityType || typeof activityType !== "string") {
+      res.status(400).json({ error: "activityType is required" });
+      return;
+    }
+    if (!date) {
+      res.status(400).json({ error: "date is required" });
+      return;
+    }
+    const numericFields: Record<string, unknown> = { durationMinutes, distanceKm, caloriesBurned };
+    for (const [field, val] of Object.entries(numericFields)) {
+      if (val !== undefined && (typeof val !== "number" || !isFinite(val) || val < 0)) {
+        res.status(400).json({ error: `${field} must be a non-negative number` });
+        return;
       }
     }
 
+    const workout = await db.transaction(async (tx: typeof db) => {
+      const [w] = await tx.insert(workoutsTable).values({
+        userId: user.id,
+        activityType,
+        name,
+        date: new Date(date),
+        durationMinutes,
+        distanceKm,
+        caloriesBurned,
+        mood,
+        notes,
+        metadata,
+      }).returning();
+
+      if (exercises && exercises.length > 0) {
+        for (const ex of exercises) {
+          const [exercise] = await tx.insert(workoutExercisesTable).values({
+            workoutId: w.id,
+            name: ex.name,
+            order: ex.order,
+          }).returning();
+
+          if (ex.sets && ex.sets.length > 0) {
+            for (const set of ex.sets) {
+              await tx.insert(workoutSetsTable).values({
+                exerciseId: exercise.id,
+                reps: set.reps,
+                weightKg: set.weightKg,
+                order: set.order,
+              });
+            }
+          }
+        }
+      }
+
+      return w;
+    });
+
     const fullWorkout = await getWorkoutWithExercises(workout.id, user.id);
+
+    // Award XP for workout completion
+    await db.update(profilesTable)
+      .set({ xp: sql`${profilesTable.xp} + 50` })
+      .where(eq(profilesTable.userId, user.id));
 
     void trackEvent(user.id, "workout.logged", {
       activityType: workout.activityType,
@@ -378,7 +458,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     res.status(201).json(fullWorkout);
   } catch (err) {
-    console.error("Create workout error:", err);
+    logError("Create workout error:", err);
     res.status(500).json({ error: "Failed to create workout" });
   }
 });
@@ -387,7 +467,8 @@ router.put("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const workoutId = parseInt(req.params.id as string);
-    
+    if (isNaN(workoutId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
     const existing = await db.select().from(workoutsTable)
       .where(and(eq(workoutsTable.id, workoutId), eq(workoutsTable.userId, user.id)))
       .limit(1);
@@ -414,17 +495,18 @@ router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const workoutId = parseInt(req.params.id as string);
-    
+    if (isNaN(workoutId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
     const existing = await db.select().from(workoutsTable)
       .where(and(eq(workoutsTable.id, workoutId), eq(workoutsTable.userId, user.id)))
       .limit(1);
-    
+
     if (existing.length === 0) {
       res.status(404).json({ error: "Workout not found" });
       return;
     }
-    
-    await db.delete(workoutsTable).where(eq(workoutsTable.id, workoutId));
+
+    await db.delete(workoutsTable).where(and(eq(workoutsTable.id, workoutId), eq(workoutsTable.userId, user.id)));
     res.json({ message: "Workout deleted" });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete workout" });

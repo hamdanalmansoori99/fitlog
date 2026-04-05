@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth, getUser } from "../lib/auth";
 import { getActiveSubscription, setSubscriptionPlan, cancelSubscription } from "../services/subscriptionService";
 import { PLANS } from "../lib/plans";
+import { logError } from "../lib/logger";
 
 const router = Router();
 
@@ -58,7 +59,7 @@ router.get("/", requireAuth, async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error("Get subscription error:", err);
+    logError("Get subscription error:", err);
     res.status(500).json({ error: "Failed to get subscription" });
   }
 });
@@ -89,7 +90,7 @@ router.post("/cancel", requireAuth, async (req, res) => {
     await cancelSubscription(user.id);
     res.json({ ok: true, message: "Subscription cancelled. Access continues until period end." });
   } catch (err) {
-    console.error("Cancel subscription error:", err);
+    logError("Cancel subscription error:", err);
     res.status(500).json({ error: "Failed to cancel subscription" });
   }
 });
@@ -111,7 +112,7 @@ router.post("/simulate", requireAuth, async (req, res) => {
     const sub = await getActiveSubscription(user.id, user.role ?? "user");
     res.json({ ok: true, plan: sub.plan.name, features: sub.plan.features, limits: sub.plan.limits });
   } catch (err) {
-    console.error("Simulate subscription error:", err);
+    logError("Simulate subscription error:", err);
     res.status(500).json({ error: "Failed to simulate subscription" });
   }
 });

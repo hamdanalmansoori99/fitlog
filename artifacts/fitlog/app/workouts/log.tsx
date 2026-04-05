@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform,
   Alert, KeyboardAvoidingView,
@@ -16,7 +16,9 @@ import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { SuccessView } from "@/components/SuccessView";
 import { calculateStrengthTarget } from "@/lib/progressionEngine";
-import { EXERCISES } from "@/lib/exerciseLibrary";
+import { EXERCISES, normalizeExerciseName } from "@/lib/exerciseLibrary";
+import { usePendingWorkoutsStore } from "@/store/pendingWorkoutsStore";
+import { isNetworkError } from "@/hooks/usePendingWorkoutSync";
 
 const ACTIVITY_TYPES = [
   { id: "cycling", labelKey: "workouts.activityLabelCycling", icon: "wind" as const, color: "secondary" },
@@ -24,33 +26,35 @@ const ACTIVITY_TYPES = [
   { id: "walking", labelKey: "workouts.activityLabelWalking", icon: "navigation" as const, color: "cyan" },
   { id: "gym", labelKey: "workouts.activityLabelGym", icon: "zap" as const, color: "purple" },
   { id: "swimming", labelKey: "workouts.activityLabelSwimming", icon: "droplet" as const, color: "secondary" },
-  { id: "tennis", labelKey: "workouts.activityLabelTennis", icon: "circle" as const, color: "warning" },
-  { id: "yoga", labelKey: "workouts.activityLabelYoga", icon: "heart" as const, color: "pink" },
   { id: "other", labelKey: "workouts.activityLabelOther", icon: "more-horizontal" as const, color: "textMuted" },
 ];
 
 const MOOD_OPTIONS = [
-  { value: "Exhausted",   icon: "😴", labelKey: "workouts.moodExhausted" },
-  { value: "Tough",       icon: "😤", labelKey: "workouts.moodTough" },
-  { value: "Good",        icon: "🙂", labelKey: "workouts.moodGood" },
-  { value: "Great",       icon: "😁", labelKey: "workouts.moodGreat" },
-  { value: "Crushing it", icon: "🔥", labelKey: "workouts.moodCrushingIt" },
+  { value: "Exhausted",   icon: "frown", labelKey: "workouts.moodExhausted" },
+  { value: "Tough",       icon: "shield", labelKey: "workouts.moodTough" },
+  { value: "Good",        icon: "smile", labelKey: "workouts.moodGood" },
+  { value: "Great",       icon: "zap", labelKey: "workouts.moodGreat" },
+  { value: "Crushing it", icon: "award", labelKey: "workouts.moodCrushingIt" },
 ] as const;
 
-const GYM_EXERCISES = EXERCISES.map((e) => e.name);
 
 const RPE_LABEL_KEYS = [
   "workouts.rpeVeryEasy", "workouts.rpeEasy", "workouts.rpeModerate",
   "workouts.rpeHard", "workouts.rpeMaxEffort",
 ];
 const RPE_VALUES = [2, 4, 6, 8, 10];
-const RPE_EMOJIS = ["🟢", "🟡", "🟠", "🔴", "🔥"];
+const RPE_ICONS = ["circle", "circle", "circle", "circle", "zap"] as const;
+const RPE_COLORS = ["#4caf50", "#ffeb3b", "#ff9800", "#f44336", "#ff6b35"];
 
 interface GymExercise {
   name: string;
   sets: { reps: string; weight: string }[];
   rpe?: number;
+  autoFilled?: boolean;
 }
+
+function emptySet() { return { reps: "", weight: "" }; }
+function defaultSets() { return [emptySet(), emptySet(), emptySet()]; }
 
 export default function LogWorkoutScreen() {
   const { t } = useTranslation();
@@ -80,14 +84,13 @@ export default function LogWorkoutScreen() {
   const [terrain, setTerrain] = useState("");
   const [steps, setSteps] = useState("");
   const [strokeType, setStrokeType] = useState("");
-  const [yogaType, setYogaType] = useState("");
   const [setsPlayed, setSetsPlayed] = useState("");
   const [caloriesBurned, setCaloriesBurned] = useState("");
   const [laps, setLaps] = useState("");
   
   // Gym exercises
   const [exercises, setExercises] = useState<GymExercise[]>([
-    { name: "", sets: [{ reps: "", weight: "" }] },
+    { name: "", sets: defaultSets() },
   ]);
 
   const exerciseNames = useMemo(
@@ -111,14 +114,37 @@ export default function LogWorkoutScreen() {
     }
     return map;
   }, [exerciseHistoryData]);
+
+  // Auto-fill sets from history when data arrives for a named exercise
+  useEffect(() => {
+    if (Object.keys(exerciseHistoryMap).length === 0) return;
+    setExercises(prev => prev.map(ex => {
+      if (!ex.name || ex.autoFilled) return ex;
+      const sessions = exerciseHistoryMap[ex.name];
+      if (!sessions || sessions.length === 0) return ex;
+      const target = calculateStrengthTarget(sessions);
+      if (target.trend === "first" || !target.suggestedSets || !target.suggestedReps) return ex;
+      // Don't overwrite if user already typed something
+      const allEmpty = ex.sets.every(s => !s.reps && !s.weight);
+      if (!allEmpty) return ex;
+      const sets = Array.from({ length: target.suggestedSets }, () => ({
+        reps: String(target.suggestedReps),
+        weight: target.suggestedWeightKg ? String(target.suggestedWeightKg) : "",
+      }));
+      return { ...ex, sets, autoFilled: true };
+    }));
+  }, [exerciseHistoryMap]);
+
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [savedTemplateName, setSavedTemplateName] = useState("");
   const [templateSaved, setTemplateSaved] = useState(false);
-  
+  const lastPayload = useRef<any>(null);
+  const { addToQueue } = usePendingWorkoutsStore();
+
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  
+
   const mutation = useMutation({
     mutationFn: api.createWorkout,
     onSuccess: () => {
@@ -131,7 +157,14 @@ export default function LogWorkoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["achievements"] });
       setSuccess(true);
     },
-    onError: (err: any) => setError(err.message),
+    onError: (err: any) => {
+      if (isNetworkError(err) && lastPayload.current) {
+        addToQueue(lastPayload.current, "log");
+        setSuccess(true);
+      } else {
+        setError(err.message || t("workouts.errorSaving"));
+      }
+    },
   });
 
   const saveTemplateMutation = useMutation({
@@ -231,7 +264,6 @@ export default function LogWorkoutScreen() {
     if (result) metadata.result = result;
     if (terrain) metadata.terrain = terrain;
     if (strokeType) metadata.strokeType = strokeType;
-    if (yogaType) metadata.yogaType = yogaType;
     if (setsPlayed) metadata.setsPlayed = setsPlayed;
     if (steps) metadata.steps = steps;
     if (laps) metadata.laps = laps;
@@ -243,7 +275,7 @@ export default function LogWorkoutScreen() {
     } else if (durationMinutes > 0) {
       const mets: Record<string, number> = {
         cycling: 7, running: 9, walking: 4, gym: 5,
-        swimming: 8, tennis: 7, yoga: 3, other: 5,
+        swimming: 8, other: 5,
       };
       const met = mets[activityType] || 5;
       estimatedCals = Math.round(met * 70 * (durationMinutes / 60)); // ~70kg default
@@ -269,7 +301,7 @@ export default function LogWorkoutScreen() {
       metadata.paceMinPerKm = parseFloat((durationMinutes / parsedDistance).toFixed(2));
     }
 
-    mutation.mutate({
+    const payload = {
       activityType,
       name: workoutName || undefined,
       date: new Date(date + "T" + new Date().toTimeString().slice(0, 5)).toISOString(),
@@ -280,7 +312,9 @@ export default function LogWorkoutScreen() {
       notes: notes || undefined,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       exercises: gymExercises,
-    });
+    };
+    lastPayload.current = payload;
+    mutation.mutate(payload);
   };
   
   if (success) {
@@ -540,44 +574,6 @@ export default function LogWorkoutScreen() {
               </>
             )}
             
-            {activityType === "tennis" && (
-              <>
-                <ChipGroup
-                  label={t("workouts.matchType")}
-                  options={[
-                    { value: "Singles", label: t("workouts.optSingles") },
-                    { value: "Doubles", label: t("workouts.optDoubles") },
-                  ]}
-                  selected={matchType}
-                  onSelect={setMatchType}
-                  theme={theme}
-                />
-                <Input label={t("workouts.setsPlayed")} value={setsPlayed} onChangeText={setSetsPlayed} placeholder="3" keyboardType="numeric" />
-                <ChipGroup
-                  label={t("workouts.resultLabel")}
-                  options={[
-                    { value: "Won", label: t("workouts.optWon") },
-                    { value: "Lost", label: t("workouts.optLost") },
-                    { value: "Practice", label: t("workouts.optPractice") },
-                  ]}
-                  selected={result}
-                  onSelect={setResult}
-                  theme={theme}
-                />
-                <ChipGroup
-                  label={t("workouts.intensity")}
-                  options={[
-                    { value: "Easy", label: t("workouts.rpeEasy") },
-                    { value: "Moderate", label: t("workouts.rpeModerate") },
-                    { value: "Hard", label: t("workouts.rpeHard") },
-                  ]}
-                  selected={intensity}
-                  onSelect={setIntensity}
-                  theme={theme}
-                />
-              </>
-            )}
-            
             {activityType === "swimming" && (
               <>
                 <Input label={t("workouts.lapsLabel")} value={laps} onChangeText={setLaps} placeholder="20" keyboardType="numeric" />
@@ -595,23 +591,6 @@ export default function LogWorkoutScreen() {
                   theme={theme}
                 />
               </>
-            )}
-            
-            {activityType === "yoga" && (
-              <ChipGroup
-                label={t("workouts.typeLabel")}
-                options={[
-                  { value: "Vinyasa", label: t("workouts.optVinyasa") },
-                  { value: "Hatha", label: t("workouts.optHatha") },
-                  { value: "Yin", label: t("workouts.optYin") },
-                  { value: "Power", label: t("workouts.optPower") },
-                  { value: "Stretching", label: t("workouts.optStretching") },
-                  { value: "Other", label: t("workouts.activityLabelOther") },
-                ]}
-                selected={yogaType}
-                onSelect={setYogaType}
-                theme={theme}
-              />
             )}
             
             {activityType === "other" && (
@@ -649,29 +628,54 @@ export default function LogWorkoutScreen() {
                         newEx[exIdx].name = t;
                         setExercises(newEx);
                       }}
+                      onBlur={() => {
+                        const canonical = normalizeExerciseName(ex.name);
+                        if (canonical !== ex.name) {
+                          const newEx = [...exercises];
+                          newEx[exIdx].name = canonical;
+                          newEx[exIdx].autoFilled = false;
+                          setExercises(newEx);
+                        }
+                      }}
                       placeholder={t("workouts.exerciseNamePlaceholder")}
                       placeholderTextColor={theme.textMuted}
                       style={[styles.exerciseInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background, fontFamily: "Inter_400Regular" }]}
                     />
-                    
-                    {/* Autocomplete */}
-                    {ex.name.length > 1 && (
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestions}>
-                        {GYM_EXERCISES.filter(e => e.toLowerCase().includes(ex.name.toLowerCase()) && e !== ex.name).slice(0, 5).map(suggestion => (
-                          <Pressable
-                            key={suggestion}
-                            onPress={() => {
-                              const newEx = [...exercises];
-                              newEx[exIdx].name = suggestion;
-                              setExercises(newEx);
-                            }}
-                            style={[styles.suggestion, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}
-                          >
-                            <Text style={{ color: theme.primary, fontFamily: "Inter_400Regular", fontSize: 12 }}>{suggestion}</Text>
-                          </Pressable>
-                        ))}
-                      </ScrollView>
-                    )}
+
+                    {/* Autocomplete — ranked: starts-with first, then contains */}
+                    {ex.name.length > 1 && (() => {
+                      const q = ex.name.toLowerCase();
+                      const hits = EXERCISES.filter(e => {
+                        const en = e.name.toLowerCase();
+                        return en !== q && en.includes(q);
+                      }).sort((a, b) => {
+                        const aS = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+                        const bS = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+                        return aS - bS;
+                      }).slice(0, 6);
+                      if (hits.length === 0) return null;
+                      return (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestions}>
+                          <View style={{ flexDirection: "row", gap: 6 }}>
+                            {hits.map(s => (
+                              <Pressable
+                                key={s.id}
+                                onPress={() => {
+                                  const newEx = [...exercises];
+                                  newEx[exIdx].name = s.name;
+                                  newEx[exIdx].autoFilled = false;
+                                  setExercises(newEx);
+                                }}
+                                style={[styles.suggestion, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "60" }]}
+                              >
+                                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{s.name}</Text>
+                                <Text style={{ color: theme.primary + "90", fontFamily: "Inter_400Regular", fontSize: 10 }}>{s.primaryMuscle}</Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                        </ScrollView>
+                      );
+                    })()}
 
                     {/* Previous performance + progression target */}
                     {ex.name.length > 2 && exerciseHistoryMap[ex.name] != null && (() => {
@@ -752,7 +756,8 @@ export default function LogWorkoutScreen() {
                     <Pressable
                       onPress={() => {
                         const newEx = [...exercises];
-                        newEx[exIdx].sets.push({ reps: "", weight: "" });
+                        const last = newEx[exIdx].sets[newEx[exIdx].sets.length - 1];
+                        newEx[exIdx].sets.push({ reps: last.reps, weight: last.weight });
                         setExercises(newEx);
                       }}
                       style={[styles.addSetBtn, { borderColor: theme.primary }]}
@@ -786,7 +791,7 @@ export default function LogWorkoutScreen() {
                                 },
                               ]}
                             >
-                              <Text style={{ fontSize: 14 }}>{RPE_EMOJIS[rpeIdx]}</Text>
+                              <Feather name={RPE_ICONS[rpeIdx]} size={14} color={selected ? theme.primary : RPE_COLORS[rpeIdx]} />
                               <Text style={{ color: selected ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 9, textAlign: "center" }}>
                                 {t(RPE_LABEL_KEYS[rpeIdx])}
                               </Text>
@@ -799,7 +804,7 @@ export default function LogWorkoutScreen() {
                 ))}
                 
                 <Pressable
-                  onPress={() => setExercises([...exercises, { name: "", sets: [{ reps: "", weight: "" }] }])}
+                  onPress={() => setExercises([...exercises, { name: "", sets: defaultSets() }])}
                   style={[styles.addExBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
                 >
                   <Feather name="plus" size={18} color={theme.primary} />
@@ -825,7 +830,7 @@ export default function LogWorkoutScreen() {
                         },
                       ]}
                     >
-                      <Text style={{ fontSize: 18 }}>{opt.icon}</Text>
+                      <Feather name={opt.icon as keyof typeof Feather.glyphMap} size={18} color={mood === opt.value ? theme.primary : theme.textMuted} />
                       <Text style={[
                         styles.moodLabel,
                         { color: mood === opt.value ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium" },
@@ -939,7 +944,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderRadius: 12, padding: 12, fontSize: 15, minHeight: 48,
   },
   suggestions: { marginTop: 4 },
-  suggestion: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 8, borderWidth: 1, marginRight: 6 },
+  suggestion: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, gap: 2 },
   setsHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   setLabel: { fontSize: 12 },
   setRow: { flexDirection: "row", alignItems: "center", gap: 8 },

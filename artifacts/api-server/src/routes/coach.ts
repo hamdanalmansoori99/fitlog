@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { db, conversationsTable, messagesTable, profilesTable, workoutsTable, workoutExercisesTable, workoutSetsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable, settingsTable, bodyMeasurementsTable } from "@workspace/db";
-import { eq, and, desc, gte, lt, isNotNull } from "drizzle-orm";
+import { eq, and, desc, gte, lte, lt, isNotNull, inArray, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
-import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { anthropic, isAnthropicConfigured } from "@workspace/integrations-anthropic-ai";
+import { logError } from "../lib/logger";
 
 const conversations = conversationsTable;
 const messages = messagesTable;
@@ -122,30 +123,51 @@ async function buildGymPerformanceSummary(userId: number): Promise<string> {
 
   if (gymWorkouts.length === 0) return "";
 
+  const workoutIds = gymWorkouts.map((w) => w.id);
+  const allExercises = await db
+    .select()
+    .from(workoutExercisesTable)
+    .where(inArray(workoutExercisesTable.workoutId, workoutIds))
+    .orderBy(workoutExercisesTable.order);
+
+  const exerciseIds = allExercises.map((e) => e.id);
+  const allSets = exerciseIds.length > 0
+    ? await db
+        .select()
+        .from(workoutSetsTable)
+        .where(and(inArray(workoutSetsTable.exerciseId, exerciseIds), eq(workoutSetsTable.completed, true)))
+        .orderBy(workoutSetsTable.order)
+    : [];
+
+  const setsByExercise = new Map<number, typeof allSets>();
+  for (const s of allSets) {
+    const arr = setsByExercise.get(s.exerciseId) ?? [];
+    arr.push(s);
+    setsByExercise.set(s.exerciseId, arr);
+  }
+  const exercisesByWorkout = new Map<number, typeof allExercises>();
+  for (const e of allExercises) {
+    const arr = exercisesByWorkout.get(e.workoutId) ?? [];
+    arr.push(e);
+    exercisesByWorkout.set(e.workoutId, arr);
+  }
+
   const lines: string[] = [];
   for (const w of gymWorkouts) {
     const daysAgo = Math.round((Date.now() - new Date(w.date).getTime()) / 86400000);
     const dateLabel = daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo}d ago`;
-    const exRows = await db
-      .select()
-      .from(workoutExercisesTable)
-      .where(eq(workoutExercisesTable.workoutId, w.id))
-      .orderBy(workoutExercisesTable.order);
-
+    const exRows = exercisesByWorkout.get(w.id) ?? [];
     const exSummaries: string[] = [];
     for (const ex of exRows) {
-      const sets = await db
-        .select()
-        .from(workoutSetsTable)
-        .where(and(eq(workoutSetsTable.exerciseId, ex.id), eq(workoutSetsTable.completed, true)))
-        .orderBy(workoutSetsTable.order);
+      const sets = setsByExercise.get(ex.id) ?? [];
       if (sets.length === 0) continue;
       const best = sets.reduce((b, s) => ((s.weightKg ?? 0) * (s.reps ?? 0)) > ((b.weightKg ?? 0) * (b.reps ?? 0)) ? s : b, sets[0]);
-      const setStr = sets.map(s => `${s.reps ?? "?"}${s.weightKg ? `×${s.weightKg}kg` : ""}`).join(", ");
+      const setStr = sets.map((s) => `${s.reps ?? "?"}${s.weightKg ? `×${s.weightKg}kg` : ""}`).join(", ");
       exSummaries.push(`  • ${ex.name}: ${setStr}${best.rpe ? ` @RPE${best.rpe}` : ""}`);
     }
     if (exSummaries.length > 0) {
-      lines.push(`${w.name || "Gym"} (${dateLabel}, ${w.durationMinutes ?? "?"}min):`);
+      const moodStr = w.mood ? `, felt ${w.mood}` : "";
+      lines.push(`${w.name || "Gym"} (${dateLabel}, ${w.durationMinutes ?? "?"}min${moodStr}):`);
       lines.push(...exSummaries);
     }
   }
@@ -180,6 +202,204 @@ async function buildBodyweightTrend(userId: number): Promise<string | null> {
   return entries.join(" → ") + trendStr;
 }
 
+// ─── 7-day recovery trend ─────────────────────────────────────────────────────
+
+async function buildRecoveryTrend(userId: number): Promise<string | null> {
+  const since = new Date();
+  since.setDate(since.getDate() - 7);
+  since.setHours(0, 0, 0, 0);
+
+  const rows = await db
+    .select()
+    .from(recoveryLogsTable)
+    .where(and(eq(recoveryLogsTable.userId, userId), gte(recoveryLogsTable.date, since)))
+    .orderBy(desc(recoveryLogsTable.date))
+    .limit(7);
+
+  if (rows.length === 0) return null;
+
+  const lines = rows.map((r) => {
+    const d = new Date(r.date);
+    const label = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    const parts: string[] = [];
+    if (r.sleepHours != null) parts.push(`sleep ${r.sleepHours}h`);
+    if (r.energyLevel != null) parts.push(`energy ${r.energyLevel}/10`);
+    if (r.stressLevel != null) parts.push(`stress ${r.stressLevel}/10`);
+    if (r.overallFeeling != null) parts.push(`feeling ${r.overallFeeling}/10`);
+    if (r.soreness && Object.keys(r.soreness as object).length > 0) {
+      const soreStr = Object.entries(r.soreness as Record<string, number>)
+        .map(([part, val]) => `${part}(${val}/3)`)
+        .join(" ");
+      parts.push(`sore: ${soreStr}`);
+    }
+    return `${label}: ${parts.join(", ")}`;
+  });
+
+  // Detect patterns worth flagging
+  const flags: string[] = [];
+  const lowSleepDays = rows.filter((r) => r.sleepHours != null && r.sleepHours < 6).length;
+  const lowEnergyDays = rows.filter((r) => r.energyLevel != null && r.energyLevel <= 3).length;
+  const highStressDays = rows.filter((r) => r.stressLevel != null && r.stressLevel >= 7).length;
+  if (lowSleepDays >= 3) flags.push(`${lowSleepDays} nights under 6h sleep this week`);
+  if (lowEnergyDays >= 3) flags.push(`${lowEnergyDays} days with low energy this week`);
+  if (highStressDays >= 3) flags.push(`${highStressDays} days with high stress this week`);
+
+  const flagStr = flags.length > 0 ? `\nPatterns: ${flags.join("; ")}` : "";
+  return lines.join("\n") + flagStr;
+}
+
+// ─── Rank tiers (mirrors frontend ranks.ts) ───────────────────────────────────
+
+const RANK_TIERS = [
+  { name: "Hollow",            minXp: 0,      maxXp: 99     },
+  { name: "Ash Walker",        minXp: 100,    maxXp: 299    },
+  { name: "Iron Seeker",       minXp: 300,    maxXp: 599    },
+  { name: "Bronze Forger",     minXp: 600,    maxXp: 1199   },
+  { name: "Stone Sentinel",    minXp: 1200,   maxXp: 2399   },
+  { name: "Silver Vanguard",   minXp: 2400,   maxXp: 4799   },
+  { name: "Gold Templar",      minXp: 4800,   maxXp: 9599   },
+  { name: "Obsidian Titan",    minXp: 9600,   maxXp: 19199  },
+  { name: "Crimson Champion",  minXp: 19200,  maxXp: 38399  },
+  { name: "Arcane Sovereign",  minXp: 38400,  maxXp: 76799  },
+  { name: "Eternal Ascendant", minXp: 76800,  maxXp: null   },
+];
+
+function getRankInfo(xp: number): { rankName: string; xpToNext: number | null } {
+  for (let i = RANK_TIERS.length - 1; i >= 0; i--) {
+    if (xp >= RANK_TIERS[i].minXp) {
+      const tier = RANK_TIERS[i];
+      return {
+        rankName: tier.name,
+        xpToNext: tier.maxXp !== null ? tier.maxXp - xp + 1 : null,
+      };
+    }
+  }
+  return { rankName: RANK_TIERS[0].name, xpToNext: RANK_TIERS[0].maxXp! - xp + 1 };
+}
+
+// ─── Workout streak calculation ────────────────────────────────────────────────
+
+async function buildWorkoutStreak(userId: number): Promise<number> {
+  const since = new Date();
+  since.setDate(since.getDate() - 365);
+
+  const rows = await db.execute(sql`
+    SELECT DISTINCT to_char(date AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day
+    FROM workouts WHERE user_id = ${userId} AND date >= ${since}
+    ORDER BY day DESC
+  `);
+  const dates: string[] = ((rows as any).rows ?? Array.from(rows as any)).map((r: any) => r.day);
+
+  if (dates.length === 0) return 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split("T")[0];
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  if (dates[0] !== todayStr && dates[0] !== yesterdayStr) return 0;
+
+  let streak = 1;
+  let last = dates[0];
+  for (let i = 1; i < dates.length; i++) {
+    const prev = new Date(last + "T12:00:00");
+    const cur = new Date(dates[i] + "T12:00:00");
+    if (Math.round((prev.getTime() - cur.getTime()) / 86400000) === 1) {
+      streak++;
+      last = dates[i];
+    } else break;
+  }
+  return streak;
+}
+
+// ─── Strain score ──────────────────────────────────────────────────────────────
+
+// Returns a 0-10 strain score. Higher = more strained/tired.
+// Based on: yesterday's workout RPE, last recovery log (sleep, energy, stress), workout frequency.
+async function buildStrainScore(userId: number): Promise<{ score: number; factors: string[] }> {
+  const factors: string[] = [];
+  let score = 0;
+
+  // Factor 1: Last recovery log
+  const recoveryRows = await db
+    .select()
+    .from(recoveryLogsTable)
+    .where(eq(recoveryLogsTable.userId, userId))
+    .orderBy(desc(recoveryLogsTable.date))
+    .limit(1);
+  const recovery = recoveryRows[0] ?? null;
+
+  if (recovery) {
+    const sleepHours = recovery.sleepHours ?? 7;
+    const energyLevel = recovery.energyLevel ?? 5;
+    const stressLevel = recovery.stressLevel ?? 5;
+
+    if (sleepHours < 5) { score += 3; factors.push(`Only ${sleepHours}h sleep`); }
+    else if (sleepHours < 6.5) { score += 1.5; factors.push(`Light sleep (${sleepHours}h)`); }
+
+    if (energyLevel <= 2) { score += 2; factors.push("Very low energy"); }
+    else if (energyLevel <= 3) { score += 1; factors.push("Low energy"); }
+
+    if (stressLevel >= 4) { score += 1; factors.push("High stress"); }
+  }
+
+  // Factor 2: Yesterday's workout RPE
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStart = new Date(yesterday);
+  yesterdayStart.setHours(0, 0, 0, 0);
+  const yesterdayEnd = new Date(yesterday);
+  yesterdayEnd.setHours(23, 59, 59, 999);
+
+  const yesterdayWorkouts = await db
+    .select()
+    .from(workoutsTable)
+    .where(and(
+      eq(workoutsTable.userId, userId),
+      gte(workoutsTable.date, yesterdayStart),
+      lte(workoutsTable.date, yesterdayEnd)
+    ))
+    .limit(1);
+  const yesterdayWorkout = yesterdayWorkouts[0] ?? null;
+
+  if (yesterdayWorkout) {
+    const exercises = await db
+      .select()
+      .from(workoutExercisesTable)
+      .where(eq(workoutExercisesTable.workoutId, yesterdayWorkout.id));
+
+    if (exercises.length > 0) {
+      const exerciseIds = exercises.map((e) => e.id);
+      const sets = await db
+        .select()
+        .from(workoutSetsTable)
+        .where(inArray(workoutSetsTable.exerciseId, exerciseIds));
+      const allRpe = sets.map((s) => s.rpe ?? 0).filter((r) => r > 0);
+      if (allRpe.length > 0) {
+        const avgRpe = allRpe.reduce((a, b) => a + b, 0) / allRpe.length;
+        if (avgRpe >= 9) { score += 2.5; factors.push(`Intense workout yesterday (RPE ${avgRpe.toFixed(1)})`); }
+        else if (avgRpe >= 7) { score += 1; factors.push(`Hard workout yesterday (RPE ${avgRpe.toFixed(1)})`); }
+      }
+    }
+  }
+
+  // Factor 3: Consecutive workout days
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const recentWorkouts = await db
+    .select()
+    .from(workoutsTable)
+    .where(and(eq(workoutsTable.userId, userId), gte(workoutsTable.date, sevenDaysAgo)))
+    .orderBy(desc(workoutsTable.date));
+
+  if (recentWorkouts.length >= 6) { score += 1.5; factors.push("6+ workouts in last 7 days"); }
+  else if (recentWorkouts.length >= 5) { score += 0.5; factors.push("5 workouts in last 7 days"); }
+
+  return { score: Math.min(Math.round(score * 10) / 10, 10), factors };
+}
+
 // ─── System prompt ────────────────────────────────────────────────────────────
 
 function buildSystemPrompt(
@@ -189,7 +409,11 @@ function buildSystemPrompt(
   todayNutrition?: { calories: number; proteinG: number; carbsG: number; fatG: number; mealCount: number } | null,
   todayRecovery?: RecoveryData,
   gymPerformance?: string,
-  bodyweightTrend?: string | null
+  bodyweightTrend?: string | null,
+  recoveryTrend?: string | null,
+  strain?: { score: number; factors: string[] },
+  xp?: number,
+  workoutStreak?: number
 ): string {
   const today = new Date();
   const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
@@ -219,9 +443,10 @@ function buildSystemPrompt(
             const daysAgo = Math.round(
               (Date.now() - new Date(w.date).getTime()) / 86400000
             );
+            const moodStr = w.mood ? `, felt ${w.mood}` : "";
             return `- ${w.activityType || w.workoutName} (${
               daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`
-            }, ${w.durationMinutes} min)`;
+            }, ${w.durationMinutes} min${moodStr})`;
           })
           .join("\n");
 
@@ -232,7 +457,7 @@ Available workout templates in FitLog:
 • Walking Fat-Loss Plan (45 min, no equipment)
 • Core + Mobility (25 min, bodyweight only)
 • Jog/Walk Intervals (25 min, no equipment)
-• Yoga Recovery Session (30 min, no equipment)
+• Stretching & Cool Down (30 min, no equipment)
 • Jump Rope Cardio Blast (20 min, jump rope)
 • Dumbbell Full Body Beginner (40 min, dumbbells)
 • Dumbbell Upper Body Strength (45 min, dumbbells)
@@ -268,6 +493,32 @@ Available workout templates in FitLog:
     ? `\nBODYWEIGHT TREND (last 4 logged measurements):\n${bodyweightTrend}\n`
     : "";
 
+  const recoveryTrendSection = recoveryTrend
+    ? `\nRECOVERY TREND (last 7 days — sleep, energy 1-10, stress 1-10, feeling 1-10, soreness by muscle):\n${recoveryTrend}\n`
+    : "";
+
+  // Strain score section
+  const strainSection = strain != null
+    ? `\nSTRAIN SCORE: ${
+        strain.score >= 7
+          ? `HIGH (${strain.score}/10) — Factors: ${strain.factors.join(", ")}. Recommend rest or light active recovery today.`
+          : strain.score >= 4
+          ? `MODERATE (${strain.score}/10) — Factors: ${strain.factors.length > 0 ? strain.factors.join(", ") : "accumulated training load"}. Consider lower intensity today.`
+          : `LOW (${strain.score}/10) — User is fresh and ready to push hard.`
+      }\n`
+    : "";
+
+  // XP and rank section
+  const rankInfo = xp != null ? getRankInfo(xp) : null;
+  const xpSection = rankInfo
+    ? `\nUSER RANK & XP: ${xp} XP — Current rank: ${rankInfo.rankName}${rankInfo.xpToNext != null ? ` (${rankInfo.xpToNext} XP to next rank)` : " (max rank)"}\n`
+    : "";
+
+  // Streak section
+  const streakSection = workoutStreak != null && workoutStreak > 0
+    ? `\nWORKOUT STREAK: ${workoutStreak} day${workoutStreak !== 1 ? "s" : ""} in a row\n`
+    : "";
+
   return `You are the AI Coach inside FitLog, a personal fitness app. Your job is to give specific, practical, and personalized fitness advice. You feel like a knowledgeable personal trainer who knows the user well.
 
 Today is ${dayName}, ${dateStr}.
@@ -282,7 +533,7 @@ USER PROFILE:
 - Workout location: ${location}
 - Available equipment: ${gear}
 
-RECENT WORKOUT HISTORY (last 30 days):
+RECENT WORKOUT HISTORY (last 30 days, includes post-workout mood when logged):
 ${recentStr}
 
 TODAY'S NUTRITION:
@@ -300,16 +551,16 @@ ${
   todayRecovery
     ? [
         todayRecovery.sleepHours != null
-          ? `- Sleep: ${todayRecovery.sleepHours}h${todayRecovery.sleepQuality != null ? ` (quality ${todayRecovery.sleepQuality}/5)` : ""}`
+          ? `- Sleep: ${todayRecovery.sleepHours}h${todayRecovery.sleepQuality != null ? ` (quality ${todayRecovery.sleepQuality}/10)` : ""}`
           : null,
         todayRecovery.energyLevel != null
-          ? `- Energy level: ${todayRecovery.energyLevel}/5`
+          ? `- Energy level: ${todayRecovery.energyLevel}/10`
           : null,
         todayRecovery.stressLevel != null
-          ? `- Stress level: ${todayRecovery.stressLevel}/5`
+          ? `- Stress level: ${todayRecovery.stressLevel}/10`
           : null,
         todayRecovery.overallFeeling != null
-          ? `- Overall feeling: ${todayRecovery.overallFeeling}/5`
+          ? `- Overall feeling: ${todayRecovery.overallFeeling}/10`
           : null,
         todayRecovery.soreness && Object.keys(todayRecovery.soreness).length > 0
           ? `- Muscle soreness: ${Object.entries(todayRecovery.soreness)
@@ -322,7 +573,7 @@ ${
     : "No recovery data logged today."
 }
 
-${gymSection}${bodyweightSection}
+${gymSection}${bodyweightSection}${recoveryTrendSection}${strainSection}${xpSection}${streakSection}
 ${availableTemplates}
 
 COACHING STYLE:
@@ -331,10 +582,28 @@ COACHING STYLE:
 - Reference recent workout history to avoid repeating the same muscle groups back to back.
 - When the user asks about their gym performance, reference exact numbers from RECENT GYM PERFORMANCE above.
 - When recommending progression, compare to the actual last session numbers (e.g. "last time you did 3×8@80kg, try 3×8@82.5kg today").
-- If readiness is low (poor sleep, low energy, high stress), recommend a lighter or recovery-focused session — say why briefly.
 - Name FitLog templates exactly as listed above when recommending one.
 - Be calm, confident, and practical — like a trainer who already knows the plan.
 - No long motivational speeches. No filler sentences. Get to the point.
+
+RECOVERY-TO-TRAINING RULES (follow these strictly):
+- If today's energy is 1-3/10 OR sleep was under 5h: prescribe active recovery or full rest. Name the specific reason (e.g. "Your energy is 2/10 today — pushing hard will only dig the hole deeper.").
+- If today's energy is 4-5/10 OR sleep was 5-6h: recommend a lower-intensity session (Zone 2 cardio, stretching, or a light version of the planned workout at 70% weight).
+- If the RECOVERY TREND shows 3+ days of poor sleep or low energy: flag cumulative fatigue explicitly before giving any recommendation. Say something like "You've had 4 nights under 6h sleep this week — your body is running on a deficit."
+- If a muscle group shows soreness level 2-3/3 in today's or recent recovery data: never recommend training that muscle group. Suggest an antagonist or completely different session.
+- If last session's mood was "Exhausted" or "Tough" and it was yesterday: factor that into intensity recommendation.
+- If last gym session had any sets at RPE 9-10: treat that muscle group as needing 48h minimum rest.
+- When the user asks "how's my recovery" or "should I rest": lead with the most important recovery number (worst signal), then give a direct yes/no on training today, then one sentence on what to do instead if resting.
+- If STRAIN SCORE is HIGH (>=7): recommend rest day or light walk/mobility only. Do not suggest heavy gym sessions. Mention the specific strain factors.
+- If STRAIN SCORE is MODERATE (4-6): suggest moderate intensity, lower volume (3 sets instead of 4, 70% of usual weight).
+- If STRAIN SCORE is LOW (<4): user is fresh, can push hard — good time for PRs or personal bests.
+
+GAMIFICATION & MOTIVATION RULES:
+- Mention the user's current rank and XP occasionally as motivation, especially when they hit a milestone or are close to the next rank (e.g. "You're 50 XP away from Silver Vanguard").
+- Reference the workout streak count when relevant (e.g. "You're on a 5-day streak — don't break it now.").
+- When suggesting weight increases for exercises, always say the actual target number (e.g. "Try 70kg instead of 67.5kg").
+- If the user has completed sets at their current weight for 2+ sessions in a row with good completion, tell them they're ready to increase weight by 2.5-5kg — be specific about which exercise.
+- If the same workout template has been used 3+ times in the last 14 days, proactively suggest a variation to prevent adaptation plateau.
 
 DECISIVENESS RULES (non-negotiable):
 - NEVER open with filler phrases: "Great question!", "Of course!", "Absolutely!", "Sure!", "Happy to help!", "That's a great goal!", "I love that you're tracking this", "Fantastic!", or any variation.
@@ -408,7 +677,7 @@ router.get("/conversation", requireAuth, async (req, res) => {
 
     res.json({ ...conversation, messages: msgs });
   } catch (err) {
-    console.error("getCoachConversation error:", err);
+    logError("getCoachConversation error:", err);
     res.status(500).json({ error: "Failed to get conversation" });
   }
 });
@@ -426,13 +695,18 @@ router.delete("/conversation", requireAuth, async (req, res) => {
 
     res.json({ ...created, messages: [] });
   } catch (err) {
-    console.error("clearCoachConversation error:", err);
+    logError("clearCoachConversation error:", err);
     res.status(500).json({ error: "Failed to clear conversation" });
   }
 });
 
 router.post("/message", requireAuth, async (req, res) => {
   try {
+    if (!isAnthropicConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+      return;
+    }
+
     const user = getUser(req);
     const { content } = req.body as { content: string };
 
@@ -552,8 +826,16 @@ router.post("/message", requireAuth, async (req, res) => {
       .limit(1);
     const todayRecovery = recoveryRows[0] ?? null;
 
-    const gymPerformance = await buildGymPerformanceSummary(user.id);
-    const bodyweightTrend = await buildBodyweightTrend(user.id);
+    const [gymPerformance, bodyweightTrend, recoveryTrend, [userSettings], strain, workoutStreak] = await Promise.all([
+      buildGymPerformanceSummary(user.id),
+      buildBodyweightTrend(user.id),
+      buildRecoveryTrend(user.id),
+      db.select().from(settingsTable).where(eq(settingsTable.userId, user.id)).limit(1),
+      buildStrainScore(user.id),
+      buildWorkoutStreak(user.id),
+    ]);
+
+    const userXp: number = profile?.xp ?? 0;
 
     let systemPrompt = buildSystemPrompt(
       profile,
@@ -562,14 +844,13 @@ router.post("/message", requireAuth, async (req, res) => {
       todayNutrition,
       todayRecovery,
       gymPerformance || undefined,
-      bodyweightTrend
+      bodyweightTrend,
+      recoveryTrend,
+      strain,
+      userXp,
+      workoutStreak
     );
 
-    const [userSettings] = await db
-      .select()
-      .from(settingsTable)
-      .where(eq(settingsTable.userId, user.id))
-      .limit(1);
     if (userSettings?.language === "ar") {
       systemPrompt +=
         "\n\nLANGUAGE: You MUST respond entirely in Arabic (العربية). All text, recommendations, template names, and coaching advice must be in Arabic. Use Arabic numerals for numbers.";
@@ -580,12 +861,15 @@ router.post("/message", requireAuth, async (req, res) => {
       content: m.content,
     }));
 
-    const aiResponse = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages: chatMessages,
-    });
+    const aiResponse = await Promise.race([
+      anthropic.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 8192,
+        system: systemPrompt,
+        messages: chatMessages,
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
+    ]);
 
     const fullResponse =
       (aiResponse.content[0] as any)?.text?.trim() ||
@@ -599,7 +883,7 @@ router.post("/message", requireAuth, async (req, res) => {
 
     res.json({ content: fullResponse });
   } catch (err) {
-    console.error("sendCoachMessage error:", err);
+    logError("sendCoachMessage error:", err);
     res.status(500).json({ error: "Failed to send message" });
   }
 });
@@ -608,6 +892,11 @@ router.post("/message", requireAuth, async (req, res) => {
 
 router.post("/proactive", requireAuth, async (req, res) => {
   try {
+    if (!isAnthropicConfigured()) {
+      res.status(204).end();
+      return;
+    }
+
     const user = getUser(req);
 
     let conversation = await db
@@ -686,10 +975,17 @@ router.post("/proactive", requireAuth, async (req, res) => {
       .limit(1);
     const todayRecovery = recoveryRows[0] ?? null;
 
-    const [gymPerformance, bodyweightTrend] = await Promise.all([
+    const [gymPerformance, bodyweightTrend, recoveryTrend, [userSettings], strain, workoutStreak] = await Promise.all([
       buildGymPerformanceSummary(user.id),
       buildBodyweightTrend(user.id),
+      buildRecoveryTrend(user.id),
+      db.select().from(settingsTable).where(eq(settingsTable.userId, user.id)).limit(1),
+      buildStrainScore(user.id),
+      buildWorkoutStreak(user.id),
     ]);
+
+    const userXp: number = profile?.xp ?? 0;
+    const rankInfo = getRankInfo(userXp);
 
     let systemPrompt = buildSystemPrompt(
       profile,
@@ -698,14 +994,13 @@ router.post("/proactive", requireAuth, async (req, res) => {
       todayNutrition,
       todayRecovery,
       gymPerformance || undefined,
-      bodyweightTrend
+      bodyweightTrend,
+      recoveryTrend,
+      strain,
+      userXp,
+      workoutStreak
     );
 
-    const [userSettings] = await db
-      .select()
-      .from(settingsTable)
-      .where(eq(settingsTable.userId, user.id))
-      .limit(1);
     if (userSettings?.language === "ar") {
       systemPrompt +=
         "\n\nLANGUAGE: You MUST respond entirely in Arabic (العربية). All text, recommendations, template names, and coaching advice must be in Arabic. Use Arabic numerals for numbers.";
@@ -713,14 +1008,30 @@ router.post("/proactive", requireAuth, async (req, res) => {
 
     const today = new Date();
     const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
-    const proactivePrompt = `Today is ${dayName}. Give me my opening brief — exactly 1 to 2 sentences. Lead with the single most important number from my data (workouts this week vs. goal, today's protein vs. target, days since last session, bodyweight trend, or weekly adherence %). End with one concrete action I should take right now. No greeting, no preamble, no sign-off. If there is no data to reference, say: "Log your first workout today — it's the only data point that matters right now."`;
 
-    const aiResponse = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 512,
-      system: systemPrompt,
-      messages: [{ role: "user", content: proactivePrompt }],
-    });
+    // Build enriched proactive context for the opening brief
+    const strainContext = strain.score >= 7
+      ? `Strain is HIGH (${strain.score}/10) — recommend rest or active recovery today.`
+      : strain.score >= 4
+      ? `Strain is MODERATE (${strain.score}/10) — suggest lower intensity.`
+      : `Strain is LOW (${strain.score}/10) — user is fresh and ready to push.`;
+    const streakContext = workoutStreak > 0 ? `Current workout streak: ${workoutStreak} day(s).` : "No active workout streak.";
+    const rankContext = `User is rank ${rankInfo.rankName} with ${userXp} XP${rankInfo.xpToNext != null ? ` (${rankInfo.xpToNext} XP to next rank)` : ""}.`;
+    const gymContext = gymPerformance
+      ? `Recent gym performance available — reference a specific weight/exercise if relevant.`
+      : "";
+
+    const proactivePrompt = `Today is ${dayName}. Give me my opening brief — exactly 2 to 3 sentences. Lead with the single most important number from my data (workouts this week vs. goal, today's protein vs. target, days since last session, bodyweight trend, or weekly adherence %). Include one of these if relevant: ${strainContext} ${streakContext} ${rankContext} ${gymContext} End with one concrete action I should take right now. No greeting, no preamble, no sign-off. If there is no data to reference, say: "Log your first workout today — it's the only data point that matters right now."`;
+
+    const aiResponse = await Promise.race([
+      anthropic.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 512,
+        system: systemPrompt,
+        messages: [{ role: "user", content: proactivePrompt }],
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
+    ]);
 
     const content =
       (aiResponse.content[0] as any)?.text?.trim() ||
@@ -735,8 +1046,8 @@ router.post("/proactive", requireAuth, async (req, res) => {
 
     res.json({ content });
   } catch (err) {
-    console.error("proactiveCoachMessage error:", err);
-    res.status(500).json({ error: "Failed to generate proactive message" });
+    logError("proactiveCoachMessage error:", err);
+    res.status(204).end();
   }
 });
 

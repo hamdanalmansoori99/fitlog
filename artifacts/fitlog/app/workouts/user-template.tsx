@@ -39,6 +39,7 @@ export default function UserTemplateScreen() {
   const { data, isLoading } = useQuery({
     queryKey: ["userTemplates"],
     queryFn: api.getUserTemplates,
+    staleTime: 300_000,
   });
 
   const templates = data?.templates || [];

@@ -22,11 +22,23 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { useAuthStore } from "@/store/authStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
+import { useNotificationSetup } from "@/hooks/useNotificationSetup";
+import { usePendingWorkoutSync } from "@/hooks/usePendingWorkoutSync";
 import { api } from "@/lib/api";
 
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,          // 1 min before considered stale
+      gcTime: 10 * 60_000,        // 10 min in cache after unmount
+      retry: 1,
+      refetchOnWindowFocus: false, // prevents noisy refetches on tab switch
+      refetchOnReconnect: true,
+    },
+  },
+});
 
 function RootLayoutNav() {
   const { token, _hydrated } = useAuthStore();
@@ -77,6 +89,9 @@ function RootLayoutNav() {
     }
   }, [serverSettings]);
 
+  useNotificationSetup(!!token && !!_hydrated);
+  usePendingWorkoutSync();
+
   useEffect(() => {
     if (!_hydrated) return;
     if (!token) {
@@ -106,6 +121,7 @@ function RootLayoutNav() {
       <Stack.Screen name="workouts/user-template" options={{ headerShown: false }} />
       <Stack.Screen name="meals/add" options={{ headerShown: false }} />
       <Stack.Screen name="meals/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="meals/weekly-plan" options={{ headerShown: false }} />
       <Stack.Screen name="equipment/add" options={{ headerShown: false }} />
       <Stack.Screen name="measurements/add" options={{ headerShown: false }} />
       <Stack.Screen name="subscription" options={{ headerShown: false }} />

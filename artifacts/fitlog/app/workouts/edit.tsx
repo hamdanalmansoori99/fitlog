@@ -26,11 +26,12 @@ const ACTIVITY_TYPES = [
   { id: "other", labelKey: "workouts.activityLabelOther", icon: "more-horizontal" as const },
 ];
 
-const MOODS = ["Exhausted", "Tough", "Good", "Great", "Crushing it"];
-const MOOD_ICON_LIST = ["😴", "😤", "🙂", "😁", "🔥"];
-const MOOD_LABEL_KEYS = [
-  "workouts.moodExhausted", "workouts.moodTough", "workouts.moodGood",
-  "workouts.moodGreat", "workouts.moodCrushingIt",
+const MOOD_ICONS: { icon: string; label: string; labelKey: string }[] = [
+  { icon: "moon", label: "Exhausted", labelKey: "workouts.moodExhausted" },
+  { icon: "frown", label: "Tough", labelKey: "workouts.moodTough" },
+  { icon: "meh", label: "Good", labelKey: "workouts.moodGood" },
+  { icon: "smile", label: "Great", labelKey: "workouts.moodGreat" },
+  { icon: "zap", label: "Crushing it", labelKey: "workouts.moodCrushingIt" },
 ];
 
 export default function EditWorkoutScreen() {
@@ -58,6 +59,7 @@ export default function EditWorkoutScreen() {
     queryKey: ["workout", id],
     queryFn: () => api.getWorkout(workoutId),
     enabled: workoutId > 0 && !prefilled,
+    staleTime: 120_000,
   });
 
   useEffect(() => {
@@ -182,7 +184,7 @@ export default function EditWorkoutScreen() {
           {/* Activity Type */}
           <View>
             <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
-              {t("workouts.activityType")}
+              {t("workouts.activityTypeLabel")}
             </Text>
             <View style={styles.activityGrid}>
               {ACTIVITY_TYPES.map(a => (
@@ -241,9 +243,9 @@ export default function EditWorkoutScreen() {
           <View>
             <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.mood")}</Text>
             <View style={styles.moodRow}>
-              {MOODS.map((m, idx) => (
+              {MOOD_ICONS.map((m, idx) => (
                 <Pressable
-                  key={m}
+                  key={m.label}
                   onPress={() => { setMood(idx === mood ? null : idx); Haptics.selectionAsync(); }}
                   style={[
                     styles.moodChip,
@@ -253,9 +255,9 @@ export default function EditWorkoutScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ fontSize: 16 }}>{MOOD_ICON_LIST[idx]}</Text>
+                  <Feather name={m.icon as keyof typeof Feather.glyphMap} size={24} color={mood === idx ? theme.primary : theme.textMuted} />
                   <Text style={{ color: mood === idx ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
-                    {t(MOOD_LABEL_KEYS[idx])}
+                    {t(m.labelKey)}
                   </Text>
                 </Pressable>
               ))}

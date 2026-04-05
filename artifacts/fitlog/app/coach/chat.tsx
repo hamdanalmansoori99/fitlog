@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
+  Animated,
   Platform,
   Pressable,
   ScrollView,
@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -45,6 +46,48 @@ function cleanMarkdown(text: string): string {
   return out.trim();
 }
 
+function ThinkingDots({ color }: { color: string }) {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animate = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+        ])
+      );
+    const a1 = animate(dot1, 0);
+    const a2 = animate(dot2, 200);
+    const a3 = animate(dot3, 400);
+    a1.start();
+    a2.start();
+    a3.start();
+    return () => { a1.stop(); a2.stop(); a3.stop(); };
+  }, []);
+
+  const dotStyle = (anim: Animated.Value) => ({
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: color,
+    marginHorizontal: 2,
+    opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+    transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.3] }) }],
+  });
+
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 4 }}>
+      <Animated.View style={dotStyle(dot1)} />
+      <Animated.View style={dotStyle(dot2)} />
+      <Animated.View style={dotStyle(dot3)} />
+    </View>
+  );
+}
+
 export default function CoachChatScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -60,9 +103,11 @@ export default function CoachChatScreen() {
   const suggestions = [
     t("home.coachChip1"),
     t("home.coachChip2"),
-    t("home.coachChip3"),
+    t("home.coachChipRecovery"),
+    t("home.coachChipRest"),
     t("home.coachChip4"),
     t("home.coachChip5"),
+    t("home.coachChip3"),
     t("home.coachChip6"),
   ];
 
@@ -72,7 +117,8 @@ export default function CoachChatScreen() {
   const [loadError, setLoadError] = useState(false);
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
-  const flatListRef = useRef<FlatList>(null);
+  const [proactiveMessage, setProactiveMessage] = useState<string | null>(null);
+  const flatListRef = useRef<FlashListRef<ChatMessage>>(null);
 
   const isWeb = Platform.OS === "web";
   const WEB_TOP = 67;
@@ -114,6 +160,10 @@ export default function CoachChatScreen() {
   }, [loading, loadError]);
 
   const loadConversation = async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setLoadError(false);
@@ -125,8 +175,14 @@ export default function CoachChatScreen() {
         content: m.content,
       }));
       setMessages(mapped);
-    } catch (err) {
-      console.error("Failed to load conversation:", err);
+    } catch (err: any) {
+      const msg: string = err?.message ?? "";
+      if (msg.includes("401") || msg.includes("not authenticated") || msg.includes("Unauthorized")) {
+        // Not logged in — silently show empty chat
+        setLoading(false);
+        return;
+      }
+      console.warn("Failed to load conversation:", msg);
       setLoadError(true);
     } finally {
       setLoading(false);
@@ -139,11 +195,14 @@ export default function CoachChatScreen() {
     setMessages([placeholder]);
 
     try {
+      const proactiveController = new AbortController();
+      const proactiveTimeout = setTimeout(() => proactiveController.abort(), 20000);
       const response = await fetch(`${BASE_URL}/coach/proactive`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({}),
-      });
+        signal: proactiveController.signal,
+      }).finally(() => clearTimeout(proactiveTimeout));
 
       if (response.status === 204) {
         // Conversation has messages already — load them fresh
@@ -152,7 +211,14 @@ export default function CoachChatScreen() {
         return;
       }
 
-      if (!response.ok) throw new Error("Failed to get proactive message");
+      if (!response.ok) {
+        let errorMsg = "Failed to get proactive message";
+        try {
+          const errData = await response.json();
+          if (errData?.error) errorMsg = errData.error;
+        } catch {}
+        throw new Error(errorMsg);
+      }
 
       const data = await response.json();
       const fullContent: string = data.content || "";
@@ -167,8 +233,9 @@ export default function CoachChatScreen() {
       }
 
       setMessages([{ id: assistantId, role: "assistant", content: fullContent, streaming: false }]);
-    } catch (err) {
-      console.error("Proactive message error:", err);
+      setProactiveMessage(fullContent);
+    } catch (err: any) {
+      console.warn("Proactive message unavailable:", err?.message);
       setMessages([]);
     }
   }, [token]);
@@ -187,6 +254,7 @@ export default function CoachChatScreen() {
               const data = await api.clearCoachConversation();
               setConversationId(data.id);
               setMessages([]);
+              setProactiveMessage(null);
             } catch (err) {
               Alert.alert(t("common.error"), t("coach.errorClearing"));
             }
@@ -223,6 +291,7 @@ export default function CoachChatScreen() {
       };
 
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
+      setProactiveMessage(null);
       setInput("");
       setSending(true);
 
@@ -242,7 +311,12 @@ export default function CoachChatScreen() {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to connect to coach");
+          let errorMsg = "Failed to connect to coach";
+          try {
+            const errData = await response.json();
+            if (errData?.error) errorMsg = errData.error;
+          } catch {}
+          throw new Error(errorMsg);
         }
 
         const data = await response.json();
@@ -304,6 +378,10 @@ export default function CoachChatScreen() {
           {item.content}
         </Text>
       );
+    }
+
+    if (item.streaming && !item.content) {
+      return <ThinkingDots color={textColor} />;
     }
 
     const cleaned = cleanMarkdown(item.content);
@@ -467,17 +545,39 @@ export default function CoachChatScreen() {
               </View>
             </ScrollView>
           ) : (
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              keyExtractor={(item) => item.id}
-              renderItem={renderMessage}
-              contentContainerStyle={styles.messagesList}
-              onContentSizeChange={() =>
-                flatListRef.current?.scrollToEnd({ animated: false })
-              }
-              keyboardShouldPersistTaps="handled"
-            />
+            <>
+              {proactiveMessage && (
+                <View
+                  style={{
+                    margin: 16,
+                    marginBottom: 8,
+                    padding: 12,
+                    backgroundColor: theme.card,
+                    borderRadius: 12,
+                    borderLeftWidth: 3,
+                    borderLeftColor: theme.primary,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, color: theme.primary, fontFamily: "Inter_600SemiBold", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    {t("coach.todaysBrief") || "TODAY'S BRIEF"}
+                  </Text>
+                  <Text style={{ fontSize: 14, color: theme.text, lineHeight: 20, fontFamily: "Inter_400Regular" }}>
+                    {proactiveMessage}
+                  </Text>
+                </View>
+              )}
+              <FlashList
+                ref={flatListRef}
+                data={proactiveMessage ? messages.filter((m) => !m.id.startsWith("assistant-proactive-")) : messages}
+                keyExtractor={(item) => item.id}
+                renderItem={renderMessage}
+                contentContainerStyle={styles.messagesList}
+                onContentSizeChange={() =>
+                  flatListRef.current?.scrollToEnd({ animated: false })
+                }
+                keyboardShouldPersistTaps="handled"
+              />
+            </>
           )}
 
           {messages.length > 0 && !sending && (
@@ -623,18 +723,18 @@ function makeStyles(theme: any, isWeb: boolean, webTop: number, webBottom: numbe
     },
     suggestionsGrid: {
       width: "100%",
-      gap: 8,
+      gap: 6,
     },
     suggestionChip: {
-      borderRadius: 12,
+      borderRadius: 10,
       borderWidth: 1,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
     },
     suggestionText: {
       fontFamily: "Inter_400Regular",
-      fontSize: 14,
-      lineHeight: 20,
+      fontSize: 13,
+      lineHeight: 18,
     },
     messagesList: {
       padding: 16,

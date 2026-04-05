@@ -137,7 +137,7 @@ export default function WeeklyReportScreen() {
 
   const shareStats = [
     { label: t("weeklyReport.workouts"), value: String(thisWeek?.workoutsCompleted ?? 0) },
-    ...(thisWeek?.streak > 0 ? [{ label: t("weeklyReport.streakDays"), value: `${thisWeek.streak}🔥`, accent: true }] : []),
+    ...(thisWeek?.streak > 0 ? [{ label: t("weeklyReport.streakDays"), value: `${thisWeek.streak}`, accent: true }] : []),
     ...(thisWeek?.avgCalories > 0 ? [{ label: t("weeklyReport.avgCalories"), value: `${thisWeek.avgCalories} kcal` }] : []),
     ...(thisWeek?.avgProtein > 0 ? [{ label: t("weeklyReport.avgProtein"), value: `${thisWeek.avgProtein}g` }] : []),
   ];

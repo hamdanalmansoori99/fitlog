@@ -12,9 +12,7 @@ export type Equipment =
   | "treadmill"
   | "stationary_bike"
   | "rowing_machine"
-  | "yoga_mat"
   | "jump_rope"
-  | "tennis_racket"
   | "swimming_pool";
 
 export type Goal =
@@ -22,8 +20,7 @@ export type Goal =
   | "Build muscle"
   | "Get stronger"
   | "Stay active"
-  | "Improve endurance"
-  | "Improve flexibility";
+  | "Improve endurance";
 
 export type Difficulty = "Beginner" | "Intermediate" | "Advanced";
 
@@ -129,32 +126,6 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     ],
   },
   {
-    id: "core-mobility",
-    name: "Core + Mobility",
-    description: "Strengthen your core and improve full-body flexibility in one session.",
-    durationMinutes: 25,
-    difficulty: "Beginner",
-    requiredEquipment: ["yoga_mat"],
-    goals: ["Stay active", "Improve flexibility"],
-    tags: ["core", "mobility", "stretching", "beginner"],
-    activityType: "yoga",
-    benefits: [
-      "Reduces risk of injury",
-      "Improves posture and stability",
-      "Loosens tight muscles",
-      "Complements any other training",
-    ],
-    exercises: [
-      { name: "Dead Bug", sets: 3, reps: "8 each side", rest: "30s" },
-      { name: "Bird Dog", sets: 3, reps: "10 each side", rest: "30s" },
-      { name: "Plank", sets: 3, duration: "30s", rest: "30s" },
-      { name: "Hip Flexor Stretch", duration: "60s each side" },
-      { name: "Thoracic Rotation", reps: "10 each side" },
-      { name: "Cat-Cow", reps: "10 slow", rest: "0s" },
-      { name: "Child's Pose", duration: "60s" },
-    ],
-  },
-  {
     id: "jog-walk-intervals",
     name: "Jog/Walk Intervals",
     description: "Alternate between jogging and walking to build running fitness without burning out.",
@@ -174,33 +145,6 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       { name: "Warm-up walk", duration: "5 min" },
       { name: "Jog 1 min / Walk 2 min", reps: "×6 rounds" },
       { name: "Cool-down walk", duration: "5 min" },
-    ],
-  },
-  {
-    id: "yoga-recovery",
-    name: "Yoga Recovery Session",
-    description: "A calming yoga session to reduce muscle soreness and restore mobility.",
-    durationMinutes: 30,
-    difficulty: "Beginner",
-    requiredEquipment: ["yoga_mat"],
-    goals: ["Improve flexibility", "Stay active"],
-    tags: ["yoga", "recovery", "flexibility", "mindfulness"],
-    activityType: "yoga",
-    benefits: [
-      "Reduces muscle soreness",
-      "Improves flexibility and range of motion",
-      "Lowers stress",
-      "Improves sleep quality",
-    ],
-    exercises: [
-      { name: "Child's Pose", duration: "2 min" },
-      { name: "Cat-Cow Flow", reps: "10 slow breaths" },
-      { name: "Downward Dog", duration: "60s" },
-      { name: "Low Lunge (each side)", duration: "60s" },
-      { name: "Pigeon Pose (each side)", duration: "90s" },
-      { name: "Seated Forward Fold", duration: "90s" },
-      { name: "Supine Twist (each side)", duration: "60s" },
-      { name: "Savasana", duration: "3 min" },
     ],
   },
   {
@@ -584,30 +528,6 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   },
 
   // ── SPORT SPECIFIC ────────────────────────────────────────────────────────
-  {
-    id: "tennis-fitness",
-    name: "Tennis Fitness Session",
-    description: "A dedicated tennis hitting session plus on-court drills.",
-    durationMinutes: 60,
-    difficulty: "Intermediate",
-    requiredEquipment: ["tennis_racket"],
-    goals: ["Stay active", "Improve endurance"],
-    tags: ["tennis", "sport", "cardio", "agility"],
-    activityType: "tennis",
-    benefits: [
-      "Improves agility and reaction speed",
-      "Great aerobic workout",
-      "Improves hand-eye coordination",
-      "Competitive and social",
-    ],
-    exercises: [
-      { name: "Warm-up rally / groundstrokes", duration: "10 min" },
-      { name: "Cross-court forehands", duration: "10 min" },
-      { name: "Cross-court backhands", duration: "10 min" },
-      { name: "Net approach drills", duration: "10 min" },
-      { name: "Points/games", duration: "20 min" },
-    ],
-  },
   {
     id: "swim-endurance",
     name: "Swimming Endurance Session",

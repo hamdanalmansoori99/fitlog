@@ -8,7 +8,8 @@ const router = Router();
 router.get("/", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const days = parseInt(req.query.days as string) || 30;
+    const rawDays = parseInt(req.query.days as string);
+    const days = (!isNaN(rawDays) && rawDays > 0) ? Math.min(rawDays, 365) : 30;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
     
@@ -26,7 +27,19 @@ router.post("/", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const { date, weightKg, bodyFatPercent, chestCm, waistCm, hipsCm, armsCm } = req.body;
-    
+
+    if (!date) {
+      res.status(400).json({ error: "date is required" });
+      return;
+    }
+    const numericFields: Record<string, unknown> = { weightKg, bodyFatPercent, chestCm, waistCm, hipsCm, armsCm };
+    for (const [field, val] of Object.entries(numericFields)) {
+      if (val !== undefined && (typeof val !== "number" || !isFinite(val) || val < 0)) {
+        res.status(400).json({ error: `${field} must be a non-negative number` });
+        return;
+      }
+    }
+
     const [measurement] = await db.insert(bodyMeasurementsTable).values({
       userId: user.id,
       date: new Date(date),
@@ -90,10 +103,11 @@ router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const measureId = parseInt(req.params.id as string);
+    if (isNaN(measureId)) { res.status(400).json({ error: "Invalid id" }); return; }
     const existing = await db.select().from(bodyMeasurementsTable)
       .where(and(eq(bodyMeasurementsTable.id, measureId), eq(bodyMeasurementsTable.userId, user.id))).limit(1);
     if (existing.length === 0) { res.status(404).json({ error: "Measurement not found" }); return; }
-    await db.delete(bodyMeasurementsTable).where(eq(bodyMeasurementsTable.id, measureId));
+    await db.delete(bodyMeasurementsTable).where(and(eq(bodyMeasurementsTable.id, measureId), eq(bodyMeasurementsTable.userId, user.id)));
     res.json({ message: "Measurement deleted" });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete measurement" });

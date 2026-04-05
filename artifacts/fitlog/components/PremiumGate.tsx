@@ -1,10 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useSubscription, type SubscriptionFeatures } from "@/hooks/useSubscription";
 import { useTranslation } from "react-i18next";
+import { UpsellModal } from "@/components/UpsellModal";
 
 interface PremiumGateProps {
   feature: keyof SubscriptionFeatures;
@@ -18,6 +18,7 @@ export function PremiumGate({ feature, message, children, compact = false, minHe
   const { theme } = useTheme();
   const { t } = useTranslation();
   const { features, isLoading } = useSubscription();
+  const [upsellVisible, setUpsellVisible] = useState(false);
 
   if (isLoading || features[feature]) {
     return <>{children}</>;
@@ -36,52 +37,60 @@ export function PremiumGate({ feature, message, children, compact = false, minHe
   const displayMessage = message ?? defaultMessages[feature] ?? t("components.premiumGate.upgradeMessage");
 
   return (
-    <View style={{ position: "relative" }}>
-      <View style={{ opacity: 0.25, pointerEvents: "none" }}>
-        {children}
-      </View>
+    <>
+      <UpsellModal
+        visible={upsellVisible}
+        onClose={() => setUpsellVisible(false)}
+        feature={feature}
+      />
 
-      <View
-        style={[
-          styles.overlay,
-          compact ? styles.overlayCompact : styles.overlayFull,
-          {
-            backgroundColor: theme.card + "f0",
-            borderColor: "#448aff30",
-            minHeight: minHeight ?? (compact ? 64 : 120),
-          },
-        ]}
-      >
-        <View style={[styles.lockWrap, { backgroundColor: "#448aff18" }]}>
-          <Feather name="lock" size={compact ? 14 : 20} color="#448aff" />
+      <View style={{ position: "relative" }}>
+        <View style={{ opacity: 0.25, pointerEvents: "none" }}>
+          {children}
         </View>
 
-        {!compact && (
-          <Text style={[styles.lockTitle, { color: theme.text }]}>{t("components.premiumGate.premiumFeature")}</Text>
-        )}
-
-        <Text
+        <View
           style={[
-            styles.lockMessage,
-            { color: theme.textMuted },
-            compact && { fontSize: 11, textAlign: "center" },
+            styles.overlay,
+            compact ? styles.overlayCompact : styles.overlayFull,
+            {
+              backgroundColor: theme.card + "f0",
+              borderColor: theme.secondary + "30",
+              minHeight: minHeight ?? (compact ? 64 : 120),
+            },
           ]}
-          numberOfLines={compact ? 2 : 4}
         >
-          {displayMessage}
-        </Text>
+          <View style={[styles.lockWrap, { backgroundColor: theme.secondaryDim }]}>
+            <Feather name="lock" size={compact ? 14 : 20} color={theme.secondary} />
+          </View>
 
-        <Pressable
-          onPress={() => router.push("/subscription" as any)}
-          style={[styles.upgradeBtn, compact && styles.upgradeBtnCompact]}
-        >
-          <Feather name="zap" size={compact ? 11 : 13} color="#0f0f1a" />
-          <Text style={[styles.upgradeBtnText, compact && { fontSize: 11 }]}>
-            {compact ? t("components.premiumGate.upgrade") : t("components.premiumGate.upgradeToPremium")}
+          {!compact && (
+            <Text style={[styles.lockTitle, { color: theme.text }]}>{t("components.premiumGate.premiumFeature")}</Text>
+          )}
+
+          <Text
+            style={[
+              styles.lockMessage,
+              { color: theme.textMuted },
+              compact && { fontSize: 11, textAlign: "center" },
+            ]}
+            numberOfLines={compact ? 2 : 4}
+          >
+            {displayMessage}
           </Text>
-        </Pressable>
+
+          <Pressable
+            onPress={() => setUpsellVisible(true)}
+            style={[styles.upgradeBtn, { backgroundColor: theme.secondary }, compact && styles.upgradeBtnCompact]}
+          >
+            <Feather name="zap" size={compact ? 11 : 13} color={theme.background} />
+            <Text style={[styles.upgradeBtnText, { color: theme.background }, compact && { fontSize: 11 }]}>
+              {compact ? t("components.premiumGate.upgrade") : t("components.premiumGate.upgradeToPremium")}
+            </Text>
+          </Pressable>
+        </View>
       </View>
-    </View>
+    </>
   );
 }
 
@@ -117,7 +126,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#448aff",
+    backgroundColor: undefined,
     paddingHorizontal: 18,
     paddingVertical: 9,
     borderRadius: 10,
@@ -130,7 +139,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   upgradeBtnText: {
-    color: "#0f0f1a",
+    color: undefined,
     fontFamily: "Inter_700Bold",
     fontSize: 13,
   },

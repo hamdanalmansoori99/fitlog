@@ -38,7 +38,8 @@ export async function trackEvent(
       sessionId: meta?.sessionId,
       appVersion: meta?.appVersion,
     });
-  } catch {
+  } catch (err) {
     // Analytics failures must never affect the main user flow
+    console.warn("[analytics] Failed to track event:", (err as Error)?.message ?? err);
   }
 }

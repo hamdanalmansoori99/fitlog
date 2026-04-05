@@ -256,7 +256,7 @@ export default function MealsScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["favoriteMeals"] });
       setSavingFavId(null);
-      showToast(t("meals.savedToFavourites") + " ⭐", "success");
+      showToast(t("meals.savedToFavourites"), "success");
     },
     onError: () => {
       setSavingFavId(null);

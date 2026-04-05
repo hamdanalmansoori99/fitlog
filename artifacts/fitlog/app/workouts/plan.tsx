@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
-  Modal, FlatList, ActivityIndicator,
+  Modal, ActivityIndicator,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -98,7 +99,7 @@ function SwapModal({
           </Text>
         </Pressable>
 
-        <FlatList
+        <FlashList
           data={recs}
           keyExtractor={(r) => r.template.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10, paddingTop: 12 }}
@@ -161,8 +162,8 @@ export default function WeeklyPlanScreen() {
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
-  const { data: workoutsData } = useQuery({ queryKey: ["workouts", { limit: 100 }], queryFn: () => api.getWorkouts({ limit: 100 }) });
+  const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile, staleTime: 300_000 });
+  const { data: workoutsData } = useQuery({ queryKey: ["workouts", { limit: 100 }], queryFn: () => api.getWorkouts({ limit: 100 }), staleTime: 120_000 });
 
   const recentWorkouts = (workoutsData?.workouts || []).slice(0, 14).map((w: any) => ({
     name: w.name,

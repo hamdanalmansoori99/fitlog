@@ -1,4 +1,5 @@
 import { pgTable, serial, integer, text, varchar, timestamp, index } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { usersTable } from "./users";
 
 export const progressPhotosTable = pgTable("progress_photos", {
@@ -13,4 +14,5 @@ export const progressPhotosTable = pgTable("progress_photos", {
   index("progress_photos_user_id_idx").on(table.userId),
 ]);
 
+export const insertProgressPhotoSchema = createInsertSchema(progressPhotosTable);
 export type ProgressPhoto = typeof progressPhotosTable.$inferSelect;

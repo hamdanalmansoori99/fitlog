@@ -6,8 +6,8 @@ import {
 import { useSmartNotifications } from "@/lib/useSmartNotifications";
 import Svg, { Circle, G } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
-import { Feather } from "@expo/vector-icons";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInDown, ZoomIn, FadeIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -17,6 +17,10 @@ import { dateLocale, rtlIcon } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
+import { getStreakNarrative } from "@/lib/streakNarratives";
+import { fetchStepCounts, isHealthIntegrationAvailable } from "@/lib/healthIntegration";
+import { DailyTipCard } from "@/components/DailyTipCard";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Card } from "@/components/ui/Card";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import {
@@ -29,6 +33,8 @@ import type Colors from "@/constants/colors";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { ShareCard } from "@/components/ShareCard";
+import { RankBadge } from "@/components/RankBadge";
+import { getRankByXp, getXpProgress } from "@/lib/ranks";
 
 type AppTheme = (typeof Colors)["dark"];
 
@@ -118,7 +124,7 @@ function NutritionHero({ mealsData, profile, theme }: { mealsData: any; profile?
   return (
     <Card style={{ gap: 16, alignItems: "center" }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-        <View style={{ gap: 1 }}>
+        <View style={{ gap: 6 }}>
           <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
             {t("home.nutrition")}
           </Text>
@@ -457,7 +463,7 @@ function PRCelebrationBanner({ pr, onDismiss, theme }: {
       <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: accent + "20", alignItems: "center", justifyContent: "center", marginLeft: 12, marginVertical: 12 }}>
         <Feather name="award" size={17} color={accent} />
       </View>
-      <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 11, gap: 1 }}>
+      <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 11, gap: 6 }}>
         <Text style={{ color: accent, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase" }}>
           {t("home.prBannerTitle")}
         </Text>
@@ -624,7 +630,7 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
                 transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
               />
             </Svg>
-            <Text style={{ position: "absolute", top: ringSize / 2 - 16, fontSize: 32, textAlign: "center" }}>🔥</Text>
+            <MaterialCommunityIcons name="fire" size={32} color="#ff6b35" style={{ position: "absolute", top: ringSize / 2 - 16 }} />
           </View>
           <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", marginTop: 8 }}>
             {t("streaks.milestoneTitle")}
@@ -1022,8 +1028,19 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { activeBanner, dismiss } = useSmartNotifications();
+  const subscription = useSubscription();
+  const queryClient = useQueryClient();
 
-  const { data: mealsData, refetch: refetchMeals } = useQuery({
+  // Prefetch adjacent-tab data in the background so those screens feel instant
+  useEffect(() => {
+    queryClient.prefetchQuery({ queryKey: ["workouts", { limit: 50 }], queryFn: () => api.getWorkouts({ limit: 50 }), staleTime: 120_000 });
+    queryClient.prefetchQuery({ queryKey: ["userTemplates"], queryFn: api.getUserTemplates, staleTime: 300_000 });
+    queryClient.prefetchQuery({ queryKey: ["workoutSummary"], queryFn: api.getWorkoutSummary, staleTime: 120_000 });
+    queryClient.prefetchQuery({ queryKey: ["nutritionStats"], queryFn: api.getNutritionStats, staleTime: 120_000 });
+    queryClient.prefetchQuery({ queryKey: ["records"], queryFn: api.getPersonalRecords, staleTime: 300_000 });
+  }, []);
+
+  const { data: mealsData, isLoading: mealsLoading, refetch: refetchMeals } = useQuery({
     queryKey: ["mealsToday"],
     queryFn: () => api.getMeals(),
     staleTime: 60000,
@@ -1035,129 +1052,46 @@ export default function HomeScreen() {
     staleTime: 300000,
   });
 
-  const { data: workoutsData, refetch: refetchWorkouts } = useQuery({
+  const { data: workoutsData, isLoading: workoutsLoading, refetch: refetchWorkouts } = useQuery({
     queryKey: ["workouts", { limit: 20 }],
     queryFn: () => api.getWorkouts({ limit: 20 }),
     staleTime: 300000,
   });
 
-  const { data: recoveryTodayData, refetch: refetchRecovery } = useQuery({
-    queryKey: ["recoveryToday"],
-    queryFn: api.getRecoveryToday,
-    staleTime: 60000,
-  });
-
-  const { data: measurementsData, refetch: refetchMeasurements } = useQuery({
-    queryKey: ["measurementsToday"],
-    queryFn: () => api.getMeasurements(1),
-    staleTime: 60000,
-  });
-
-  const { data: settingsData } = useQuery({
-    queryKey: ["settings"],
-    queryFn: api.getSettings,
-    staleTime: 300000,
-  });
-
-  const { data: streaksData, refetch: refetchStreaks } = useQuery({
+  const { data: streaksData, isLoading: streaksLoading, refetch: refetchStreaks } = useQuery({
     queryKey: ["streaks"],
     queryFn: api.getStreaks,
     staleTime: 300000,
   });
 
-  const { data: achievementsData } = useQuery({
-    queryKey: ["achievements"],
-    queryFn: api.getAchievements,
-    staleTime: 300000,
+  const { data: stepsData } = useQuery({
+    queryKey: ["healthSteps"],
+    queryFn: async () => {
+      const steps = await fetchStepCounts(1);
+      return steps.length > 0 ? steps[0].steps : null;
+    },
+    staleTime: 300_000,
+    enabled: isHealthIntegrationAvailable(),
   });
 
-  const [prBannerDismissed, setPrBannerDismissed] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
-      refetchMeals(), refetchProfile(), refetchWorkouts(),
-      refetchRecovery(), refetchStreaks(), refetchMeasurements(),
+      refetchMeals(), refetchProfile(), refetchWorkouts(), refetchStreaks(),
     ]);
     setRefreshing(false);
-  }, [refetchMeals, refetchProfile, refetchWorkouts, refetchRecovery, refetchStreaks, refetchMeasurements]);
+  }, [refetchMeals, refetchProfile, refetchWorkouts, refetchStreaks]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const hasCoachOnboarding = !!profile?.coachOnboardingComplete;
-
-  const todayWorkout = useMemo(() => {
-    const workouts: any[] = workoutsData?.workouts || [];
-    const today = new Date().toISOString().slice(0, 10);
-    return workouts.find((w: any) => w.date?.startsWith(today)) || null;
-  }, [workoutsData]);
-
-  const recentWorkoutsList = useMemo(() => {
-    const workouts: any[] = workoutsData?.workouts || [];
-    return workouts.slice(0, 10).map((w: any) => ({
-      name: w.name,
-      activityType: w.activityType,
-      date: w.date,
-      durationMinutes: w.durationMinutes,
-    }));
-  }, [workoutsData]);
-
-  const todayRecommendation = useMemo<TodayRecommendation | null>(() => {
-    if (!profile || !hasCoachOnboarding) return null;
-    const coachProfile: UserCoachProfile = {
-      availableEquipment: profile.availableEquipment || [],
-      workoutLocation: profile.workoutLocation || "Home",
-      trainingPreferences: profile.trainingPreferences || [],
-      experienceLevel: profile.experienceLevel || "Beginner",
-      preferredWorkoutDuration: profile.preferredWorkoutDuration || "45 minutes",
-      weeklyWorkoutDays: profile.weeklyWorkoutDays || 3,
-      fitnessGoals: profile.fitnessGoals || [],
-    };
-    const recoveryLog = recoveryTodayData?.log ?? undefined;
-    const recoveryCtx: RecoveryContext | undefined = recoveryLog
-      ? {
-          sleepHours: recoveryLog.sleepHours ?? undefined,
-          sleepQuality: recoveryLog.sleepQuality ?? undefined,
-          energyLevel: recoveryLog.energyLevel ?? undefined,
-          stressLevel: recoveryLog.stressLevel ?? undefined,
-          soreness: recoveryLog.soreness ?? {},
-        }
-      : undefined;
-    return getTodayRecommendation(coachProfile, recentWorkoutsList, recoveryCtx);
-  }, [profile, recentWorkoutsList, hasCoachOnboarding, recoveryTodayData]);
-
   const weeklyGoalTarget = useMemo(() => profile?.weeklyWorkoutDays || 3, [profile]);
-
-  const workoutsThisWeekCount = useMemo(
-    () => getWeeklyWorkoutCount(workoutsData?.workouts || []),
-    [workoutsData],
-  );
-
-  const statusSignal = useMemo<StatusSignal | null>(() => {
-    if (!workoutsData || !profile) return null;
-    const jsDay = new Date().getDay();
-    const dayOfWeek = jsDay === 0 ? 7 : jsDay; // Mon=1…Sun=7
-    return computeStatusSignal(workoutsThisWeekCount, weeklyGoalTarget, dayOfWeek);
-  }, [workoutsThisWeekCount, weeklyGoalTarget, workoutsData, profile]);
 
   const weeklyAdherenceStreak = useMemo(
     () => computeWeeklyAdherenceStreak(workoutsData?.workouts || [], weeklyGoalTarget),
     [workoutsData, weeklyGoalTarget],
   );
-
-  const recentWin = useMemo(() => {
-    if (achievementsData?.recentPRs?.length > 0) {
-      const pr = achievementsData.recentPRs[0];
-      return { type: "pr" as const, exercise: pr.exercise as string, value: pr.weightKg as number };
-    }
-    const bestStreak = Math.max(
-      streaksData?.currentWorkoutStreak ?? 0,
-      streaksData?.currentMealStreak ?? 0,
-    );
-    if (bestStreak >= 3) return { type: "streak" as const, count: bestStreak };
-    return null;
-  }, [achievementsData, streaksData]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -1181,13 +1115,16 @@ export default function HomeScreen() {
               const daysToNext = nextMilestone != null ? nextMilestone - bestStreak : null;
               return (
                 <Pressable
-                  onPress={() => router.push("/streaks" as any)}
-                  style={{ marginTop: 1, marginBottom: 1 }}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push("/streaks" as any);
+                  }}
+                  style={{ marginTop: 4, marginBottom: 2 }}
                 >
                   {bestStreak > 0 ? (
-                    <View style={{ gap: 1 }}>
+                    <View style={{ gap: 4 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <Text style={{ fontSize: 14 }}>🔥</Text>
+                        <MaterialCommunityIcons name="fire" size={14} color="#ff6b35" />
                         <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 16, lineHeight: 22 }}>
                           {bestStreak}
                         </Text>
@@ -1195,8 +1132,11 @@ export default function HomeScreen() {
                           {bestStreak === 1 ? t("home.streakDay") : t("home.streakDays")}
                         </Text>
                       </View>
+                      <Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 4 }}>
+                        {getStreakNarrative(bestStreak).message}
+                      </Text>
                       {daysToNext != null && daysToNext <= 7 && (
-                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 2 }}>
                           {t("home.streakNextMilestone", { count: daysToNext })}
                         </Text>
                       )}
@@ -1223,162 +1163,192 @@ export default function HomeScreen() {
           </Pressable>
         </Animated.View>
 
-        {/* ═══ STATUS SIGNAL ROW ═══ */}
-        <StatusSignalRow
-          signal={statusSignal}
-          workoutsLeft={Math.max(weeklyGoalTarget - workoutsThisWeekCount, 0)}
-          weeklyGoalDone={workoutsThisWeekCount >= weeklyGoalTarget}
-          theme={theme}
-        />
-
         {/* ═══ SMART NOTIFICATION BANNER ═══ */}
 
         {activeBanner && (
           <SmartBanner message={activeBanner} onDismiss={dismiss} theme={theme} />
         )}
 
-        {/* ═══ ZONE 2 — TODAY'S FOCUS ═══ */}
-
-        <Animated.View entering={FadeInDown.delay(40).duration(160)} style={[styles.section, { marginBottom: 0 }]}>
-          {profileLoading ? (
-            <SkeletonCard>
-              <SkeletonBox width="100%" height={80} borderRadius={12} />
+        {/* ═══ RANK CARD ═══ */}
+        {profileLoading && !profile && (
+          <Animated.View entering={FadeInDown.delay(30).duration(160)} style={styles.section}>
+            <SkeletonCard style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <SkeletonBox width={36} height={36} borderRadius={18} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <SkeletonBox width="50%" height={13} borderRadius={5} />
+                <SkeletonBox width="100%" height={4} borderRadius={2} />
+              </View>
             </SkeletonCard>
-          ) : todayWorkout ? (
-            <WorkoutDoneCard workout={todayWorkout} theme={theme} />
-          ) : hasCoachOnboarding && todayRecommendation ? (
-            <TodayWorkoutCard todayRec={todayRecommendation} theme={theme} />
-          ) : hasCoachOnboarding ? (
-            <RestDayCard theme={theme} />
-          ) : (
-            <CoachCtaCard theme={theme} />
-          )}
-        </Animated.View>
-
-        {/* ═══ REWARD SIGNAL (below hero card) ═══ */}
-        <View style={{ marginTop: 10 }}>
-          <RewardSignalChip recentWin={recentWin} theme={theme} />
-        </View>
-
-        {/* ═══ PR CELEBRATION BANNER ═══ */}
-        {!prBannerDismissed && achievementsData?.recentPRs?.length > 0 && (
-          <PRCelebrationBanner
-            pr={achievementsData.recentPRs[0]}
-            onDismiss={() => setPrBannerDismissed(true)}
-            theme={theme}
-          />
-        )}
-
-        {/* ═══ WEEKLY PROGRESS ═══ */}
-        {workoutsData && profile && (
-          <Animated.View entering={FadeInDown.delay(60).duration(200)} style={styles.section}>
-            <WeeklyProgressCard
-              workouts={workoutsData.workouts || []}
-              targetDays={profile.weeklyWorkoutDays || 3}
-              theme={theme}
-            />
           </Animated.View>
         )}
-
-        {/* ═══ NEXT STEP GUIDANCE ═══ */}
-        {todayWorkout && (
-          <Animated.View entering={FadeInDown.delay(70).duration(180)} style={styles.section}>
-            <NextStepCard
-              todayWorkout={todayWorkout}
-              mealsData={mealsData}
-              streaksData={streaksData}
-              profile={profile}
-              theme={theme}
-            />
-          </Animated.View>
-        )}
-
-        {/* ═══ ZONE 3 — NUTRITION + STREAK STRIP ═══ */}
-
-        <Animated.View entering={FadeInDown.delay(80).duration(120)} style={styles.section}>
-          {mealsData ? (
-            <NutritionHero mealsData={mealsData} profile={profile} theme={theme} />
-          ) : (
-            <Card style={{ gap: 12, alignItems: "center" }}>
-              <SkeletonBox width={HERO_RING} height={HERO_RING} borderRadius={HERO_RING / 2} />
-              <View style={{ flexDirection: "row", gap: 8, width: "100%" }}>
-                {[1, 2, 3].map((i) => (
-                  <View key={i} style={{ flex: 1, gap: 4 }}>
-                    <SkeletonBox width="100%" height={6} borderRadius={3} />
+        {profile && (() => {
+          const xp = profile.xp ?? 0;
+          const rank = getRankByXp(xp);
+          const { current, needed } = getXpProgress(xp);
+          return (
+            <Animated.View entering={FadeInDown.delay(30).duration(160)} style={styles.section}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push("/rank" as any);
+                }}
+                style={({ pressed }) => [
+                  styles.rankCard,
+                  { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <RankBadge xp={xp} size="sm" />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{rank.name}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
+                    <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: theme.border, overflow: "hidden" }}>
+                      <View style={{ width: `${Math.round((current / needed) * 100)}%`, height: 4, borderRadius: 2, backgroundColor: theme.primary }} />
+                    </View>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
+                      {current.toLocaleString()} / {needed.toLocaleString()} XP
+                    </Text>
                   </View>
-                ))}
-              </View>
-            </Card>
-          )}
-          {streaksData && (
-            <Pressable
-              onPress={() => router.push("/streaks" as any)}
-              style={({ pressed }) => [
-                styles.streakStrip,
-                { marginTop: 10, backgroundColor: theme.card, borderColor: (streaksData.currentWorkoutStreak ?? 0) > 0 || (streaksData.currentMealStreak ?? 0) > 0 ? theme.primary + "30" : theme.border, opacity: pressed ? 0.85 : 1 },
-              ]}
-            >
-              {/* Workout streak */}
-              <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                  {(streaksData.currentWorkoutStreak ?? 0) > 0 && <Text style={{ fontSize: 10 }}>🔥</Text>}
-                  <Feather name="activity" size={11} color={theme.primary} />
-                  <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 16 }}>{streaksData.currentWorkoutStreak ?? 0}</Text>
                 </View>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.workout")}</Text>
+                <Feather name="chevron-right" size={14} color={theme.textMuted} />
+              </Pressable>
+            </Animated.View>
+          );
+        })()}
+
+        {/* ═══ ZONE 2 — NUTRITION ═══ */}
+
+        <Animated.View entering={FadeInDown.delay(40).duration(160)} style={styles.section}>
+          {mealsLoading && !mealsData ? (
+            <SkeletonCard style={{ alignItems: "center", gap: 16 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}>
+                <SkeletonBox width="40%" height={15} borderRadius={6} />
+                <SkeletonBox width={50} height={13} borderRadius={4} />
               </View>
-              <View style={{ width: 1, height: 36, backgroundColor: theme.border }} />
-              {/* Meal streak + compliance */}
-              <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                  {(streaksData.currentMealStreak ?? 0) > 0 && <Text style={{ fontSize: 10 }}>🔥</Text>}
-                  <Feather name="coffee" size={11} color={theme.warning || "#ffab40"} />
-                  <Text style={{ color: theme.warning || "#ffab40", fontFamily: "Inter_700Bold", fontSize: 16 }}>{streaksData.currentMealStreak ?? 0}</Text>
-                </View>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.mealsLabel")}</Text>
-                {achievementsData?.weeklyScore?.mealDays != null && (
-                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 9 }}>
-                    {t("home.mealDaysThisWeek", { count: achievementsData.weeklyScore.mealDays })}
-                  </Text>
-                )}
+              <SkeletonBox width={120} height={120} borderRadius={60} />
+              <View style={{ flexDirection: "row", gap: 12, width: "100%" }}>
+                <SkeletonBox width="30%" height={6} borderRadius={3} style={{ flex: 1 }} />
+                <SkeletonBox width="30%" height={6} borderRadius={3} style={{ flex: 1 }} />
+                <SkeletonBox width="30%" height={6} borderRadius={3} style={{ flex: 1 }} />
               </View>
-              <View style={{ width: 1, height: 36, backgroundColor: theme.border }} />
-              {/* Weekly adherence streak */}
-              <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                  <Feather name="calendar" size={11} color={theme.secondary} />
-                  <Text style={{
-                    color: weeklyAdherenceStreak != null ? theme.secondary : theme.textMuted,
-                    fontFamily: "Inter_700Bold",
-                    fontSize: 16,
-                  }}>
-                    {weeklyAdherenceStreak != null ? weeklyAdherenceStreak : "—"}
-                  </Text>
-                </View>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.weeklyStreakLabel")}</Text>
-              </View>
-            </Pressable>
+            </SkeletonCard>
+          ) : (
+            <NutritionHero mealsData={mealsData ?? { dailyTotals: null, calorieGoal: 2000 }} profile={profile} theme={theme} />
           )}
         </Animated.View>
 
-        {/* ═══ ZONE 4 — AI COACH CARD ═══ */}
+        {/* ═══ ZONE 3 — HYDRATION ═══ */}
 
-        <Animated.View entering={FadeInDown.delay(80).duration(80)} style={styles.section}>
-          <CoachCard
-            theme={theme}
-            recommendationName={
-              todayRecommendation && !todayRecommendation.isRestDayRecommended
-                ? todayRecommendation.recommendation.template.name
-                : undefined
-            }
-            isRestDay={todayRecommendation?.isRestDayRecommended}
-            recommendedPrompt={
-              todayRecommendation && !todayRecommendation.isRestDayRecommended
-                ? t("home.coachWorkoutPrompt", { name: todayRecommendation.recommendation.template.name })
-                : undefined
-            }
-          />
+        <Animated.View entering={FadeInDown.delay(50).duration(160)} style={styles.section}>
+          <Card style={{ gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#448aff20", alignItems: "center", justifyContent: "center" }}>
+                <Feather name="droplet" size={18} color="#448aff" />
+              </View>
+              <View style={{ flex: 1, gap: 6 }}>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                  {t("home.hydration")}
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 20 }}>
+                    {streaksData?.currentHydrationStreak ?? 0}
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+                    {t("home.dayStreak")}
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => router.push("/water/add" as any)}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                  Log
+                </Text>
+                <Feather name="chevron-right" size={13} color={theme.primary} />
+              </Pressable>
+            </View>
+          </Card>
         </Animated.View>
+
+        {/* ═══ ZONE 4 — STREAK STRIP ═══ */}
+
+        <Animated.View entering={FadeInDown.delay(60).duration(120)} style={styles.section}>
+          {streaksLoading && !streaksData ? (
+            <SkeletonBox width="100%" height={60} borderRadius={16} />
+          ) : (
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/streaks" as any);
+            }}
+            style={({ pressed }) => [
+              styles.streakStrip,
+              { backgroundColor: theme.card, borderColor: (streaksData?.currentWorkoutStreak ?? 0) > 0 || (streaksData?.currentMealStreak ?? 0) > 0 ? theme.primary + "30" : theme.border, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            {/* Workout streak */}
+            <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                {(streaksData?.currentWorkoutStreak ?? 0) > 0 && <MaterialCommunityIcons name="fire" size={10} color="#ff6b35" />}
+                <Feather name="activity" size={11} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 16 }}>{streaksData?.currentWorkoutStreak ?? 0}</Text>
+              </View>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.workout")}</Text>
+            </View>
+            <View style={{ width: 1, height: 36, backgroundColor: theme.border }} />
+            {/* Meal streak */}
+            <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                {(streaksData?.currentMealStreak ?? 0) > 0 && <MaterialCommunityIcons name="fire" size={10} color="#ff6b35" />}
+                <Feather name="coffee" size={11} color={theme.warning || "#ffab40"} />
+                <Text style={{ color: theme.warning || "#ffab40", fontFamily: "Inter_700Bold", fontSize: 16 }}>{streaksData?.currentMealStreak ?? 0}</Text>
+              </View>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.mealsLabel")}</Text>
+            </View>
+            <View style={{ width: 1, height: 36, backgroundColor: theme.border }} />
+            {/* Weekly adherence streak */}
+            <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                <Feather name="calendar" size={11} color={theme.secondary} />
+                <Text style={{
+                  color: weeklyAdherenceStreak != null ? theme.secondary : theme.textMuted,
+                  fontFamily: "Inter_700Bold",
+                  fontSize: 16,
+                }}>
+                  {weeklyAdherenceStreak ?? 0}
+                </Text>
+              </View>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.weeklyStreakLabel")}</Text>
+            </View>
+          </Pressable>
+          )}
+        </Animated.View>
+
+        {/* ═══ ZONE 5 — STEPS ═══ */}
+
+        <Animated.View entering={FadeInDown.delay(70).duration(120)} style={styles.section}>
+          <Card style={{ marginBottom: 12, padding: 16 }}>
+            <Text style={{ fontSize: 13, color: theme.textMuted, marginBottom: 4 }}>Steps Today</Text>
+            <Text style={{ fontSize: 28, fontWeight: "700", color: theme.text }}>
+              {stepsData != null ? stepsData.toLocaleString() : "0"}
+            </Text>
+            <Text style={{ fontSize: 11, color: theme.textMuted, marginTop: 4 }}>
+              {stepsData != null
+                ? "Synced from your health app"
+                : isHealthIntegrationAvailable()
+                  ? "Step data not available"
+                  : "Health sync requires a custom dev build"}
+            </Text>
+          </Card>
+        </Animated.View>
+
+        {/* ═══ ZONE 6 — PREMIUM DAILY TIP ═══ */}
+        {subscription.isPremium && (
+          <Animated.View entering={FadeInDown.delay(80).duration(120)} style={styles.section}>
+            <DailyTipCard />
+          </Animated.View>
+        )}
+
       </ScrollView>
 
       {streaksData && (
@@ -1407,6 +1377,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
   },
   section: { paddingHorizontal: 16, marginBottom: 16 },
+  rankCard: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    padding: 12, borderRadius: 14, borderWidth: 1,
+  },
   aiPill: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,

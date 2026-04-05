@@ -2,9 +2,32 @@ import { Request, Response, NextFunction } from "express";
 import { db, sessionsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import * as crypto from "crypto";
+import bcrypt from "bcryptjs";
 
-export function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password + "fitlog_salt_2024").digest("hex");
+const BCRYPT_ROUNDS = 12;
+
+// ── Typed authenticated request ──────────────────────────────────────────────
+type User = typeof usersTable.$inferSelect;
+
+export interface AuthenticatedRequest extends Request {
+  user: User;
+  sessionId: string;
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
+}
+
+// Supports both new bcrypt hashes and legacy SHA256 hashes.
+// Returns true if the password matches. If the hash is a legacy SHA256,
+// the caller should re-hash and update the stored hash.
+export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  if (storedHash.startsWith("$2")) {
+    return bcrypt.compare(password, storedHash);
+  }
+  // Legacy SHA256 hash
+  const legacyHash = crypto.createHash("sha256").update(password + "fitlog_salt_2024").digest("hex");
+  return storedHash === legacyHash;
 }
 
 export function generateSessionId(): string {
@@ -40,14 +63,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    (req as any).user = user;
-    (req as any).sessionId = token;
+    (req as AuthenticatedRequest).user = user;
+    (req as AuthenticatedRequest).sessionId = token;
     next();
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
 }
 
-export function getUser(req: Request) {
-  return (req as any).user as typeof usersTable.$inferSelect;
+export function getUser(req: Request): User {
+  return (req as AuthenticatedRequest).user;
 }

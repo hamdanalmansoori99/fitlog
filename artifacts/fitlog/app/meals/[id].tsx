@@ -73,6 +73,7 @@ export default function MealDetailScreen() {
     queryKey: ["meal", id],
     queryFn: () => api.getMeal(Number(id)),
     enabled: !!id,
+    staleTime: 60_000,
   });
 
   const deleteMutation = useMutation({

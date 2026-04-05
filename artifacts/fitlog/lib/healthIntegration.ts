@@ -1,14 +1,13 @@
 /**
- * Health Integration — Apple Health & Google Fit Ready Architecture
+ * Health Integration — Apple Health & Google Health Connect
  *
- * This module provides a unified interface for reading from and writing to
- * platform health APIs. On iOS this maps to HealthKit; on Android to Health
- * Connect (Google Fit successor). On web it is a no-op.
+ * Unified interface for reading from and writing to platform health APIs.
+ * On iOS this maps to HealthKit (react-native-health).
+ * On Android this maps to Health Connect (react-native-health-connect).
+ * On web it is a no-op.
  *
- * Current status: STUB — all methods resolve with empty / no-op results.
- * To activate, install the native health library of your choice
- * (e.g. react-native-health, react-native-health-connect) and replace the
- * stub implementations below.
+ * Libraries are lazy-loaded so the app doesn't crash in Expo Go or on web.
+ * Full functionality requires a native dev build.
  */
 
 import { Platform } from "react-native";
@@ -35,32 +34,55 @@ export interface HealthBodyMeasurement {
 }
 
 export interface HealthStepCount {
-  date: Date;
+  date: string;
   steps: number;
-  source: "apple_health" | "google_fit" | "health_connect";
+  source: string;
 }
 
 export interface HealthSleep {
-  date: Date;
+  date: string;
   hoursAsleep: number;
-  quality?: "poor" | "fair" | "good" | "excellent";
-  source: "apple_health" | "google_fit" | "health_connect";
+  quality: string;
+  source: string;
 }
 
 export interface HealthHeartRate {
-  date: Date;
+  date: string;
   bpm: number;
-  restingBpm?: number;
-  source: "apple_health" | "google_fit" | "health_connect";
+  restingBpm: number;
+  source: string;
 }
 
 export interface HealthPermissions {
   workouts: boolean;
-  bodyMeasurements: boolean;
   stepCount: boolean;
   sleep: boolean;
   heartRate: boolean;
-  nutrition: boolean;
+}
+
+// ─── Lazy library loaders ─────────────────────────────────────────────────────
+
+let AppleHealthKit: any = null;
+let HealthConnect: any = null;
+
+function getAppleHealthKit(): any {
+  if (AppleHealthKit) return AppleHealthKit;
+  try {
+    AppleHealthKit = require("react-native-health").default;
+  } catch {
+    // Not available in Expo Go or on web
+  }
+  return AppleHealthKit;
+}
+
+function getHealthConnect(): any {
+  if (HealthConnect) return HealthConnect;
+  try {
+    HealthConnect = require("react-native-health-connect");
+  } catch {
+    // Not available in Expo Go or on web
+  }
+  return HealthConnect;
 }
 
 // ─── Platform detection ───────────────────────────────────────────────────────
@@ -72,138 +94,378 @@ export function getHealthPlatform(): "apple_health" | "health_connect" | "none" 
 }
 
 export function isHealthIntegrationAvailable(): boolean {
-  return Platform.OS === "ios" || Platform.OS === "android";
+  if (Platform.OS === "ios") {
+    return !!getAppleHealthKit();
+  }
+  if (Platform.OS === "android") {
+    return !!getHealthConnect();
+  }
+  return false;
 }
 
 // ─── Permissions ──────────────────────────────────────────────────────────────
 
-/**
- * Request read/write permissions from the platform health store.
- * Returns a summary of which permissions were granted.
- *
- * STUB: always resolves with all permissions denied until a native library
- * is wired in.
- */
 export async function requestHealthPermissions(): Promise<HealthPermissions> {
-  if (!isHealthIntegrationAvailable()) {
-    return {
-      workouts: false,
-      bodyMeasurements: false,
-      stepCount: false,
-      sleep: false,
-      heartRate: false,
-      nutrition: false,
-    };
+  if (Platform.OS === "ios") {
+    const HK = getAppleHealthKit();
+    if (!HK) return { workouts: false, stepCount: false, sleep: false, heartRate: false };
+
+    return new Promise((resolve) => {
+      const permissions = {
+        permissions: {
+          read: [
+            HK.Constants.Permissions.Steps,
+            HK.Constants.Permissions.SleepAnalysis,
+            HK.Constants.Permissions.HeartRate,
+            HK.Constants.Permissions.RestingHeartRate,
+            HK.Constants.Permissions.Workout,
+            HK.Constants.Permissions.ActiveEnergyBurned,
+          ],
+          write: [
+            HK.Constants.Permissions.Steps,
+            HK.Constants.Permissions.Workout,
+            HK.Constants.Permissions.WaterConsumption,
+          ],
+        },
+      };
+      HK.initHealthKit(permissions, (err: any) => {
+        resolve({
+          workouts: !err,
+          stepCount: !err,
+          sleep: !err,
+          heartRate: !err,
+        });
+      });
+    });
   }
 
-  // TODO: Replace with native SDK call, e.g.:
-  // iOS   → AppleHealthKit.initHealthKit(permissions, callback)
-  // Android → initialize() from @kingstinct/react-native-healthkit or similar
+  if (Platform.OS === "android") {
+    const HC = getHealthConnect();
+    if (!HC) return { workouts: false, stepCount: false, sleep: false, heartRate: false };
 
-  return {
-    workouts: false,
-    bodyMeasurements: false,
-    stepCount: false,
-    sleep: false,
-    heartRate: false,
-    nutrition: false,
-  };
+    try {
+      await HC.initialize();
+      await HC.requestPermission([
+        { accessType: "read", recordType: "Steps" },
+        { accessType: "read", recordType: "SleepSession" },
+        { accessType: "read", recordType: "HeartRate" },
+        { accessType: "read", recordType: "ExerciseSession" },
+        { accessType: "write", recordType: "ExerciseSession" },
+        { accessType: "write", recordType: "Hydration" },
+      ]);
+      return { workouts: true, stepCount: true, sleep: true, heartRate: true };
+    } catch {
+      return { workouts: false, stepCount: false, sleep: false, heartRate: false };
+    }
+  }
+
+  return { workouts: false, stepCount: false, sleep: false, heartRate: false };
 }
 
 export async function getHealthPermissions(): Promise<HealthPermissions> {
   return requestHealthPermissions();
 }
 
-// ─── Read ──────────────────────────────────────────────────────────────────────
+// ─── Step Counts ──────────────────────────────────────────────────────────────
 
-/**
- * Fetch workouts from Apple Health / Google Fit logged in the past N days.
- * STUB: always returns an empty array.
- */
-export async function fetchHealthWorkouts(_days = 30): Promise<HealthWorkout[]> {
-  if (!isHealthIntegrationAvailable()) return [];
-  // TODO: wire in native SDK
+export async function fetchStepCounts(days: number = 7): Promise<HealthStepCount[]> {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  if (Platform.OS === "ios") {
+    const HK = getAppleHealthKit();
+    if (!HK) return [];
+    return new Promise((resolve) => {
+      HK.getDailyStepCountSamples(
+        { startDate: startDate.toISOString(), endDate: new Date().toISOString() },
+        (err: any, results: any[]) => {
+          if (err) { resolve([]); return; }
+          resolve(
+            results.map((r) => ({
+              date: r.startDate.slice(0, 10),
+              steps: r.value,
+              source: "apple_health",
+            }))
+          );
+        }
+      );
+    });
+  }
+
+  if (Platform.OS === "android") {
+    const HC = getHealthConnect();
+    if (!HC) return [];
+    try {
+      const result = await HC.readRecords("Steps", {
+        timeRangeFilter: {
+          operator: "between",
+          startTime: startDate.toISOString(),
+          endTime: new Date().toISOString(),
+        },
+      });
+      // Aggregate by day
+      const byDay: Record<string, number> = {};
+      for (const record of result.records) {
+        const day = record.startTime.slice(0, 10);
+        byDay[day] = (byDay[day] ?? 0) + record.count;
+      }
+      return Object.entries(byDay).map(([date, steps]) => ({
+        date,
+        steps,
+        source: "health_connect",
+      }));
+    } catch {
+      return [];
+    }
+  }
+
   return [];
 }
 
-/**
- * Fetch the latest body weight from Apple Health / Google Fit.
- * STUB: always returns null.
- */
-export async function fetchLatestWeight(): Promise<HealthBodyMeasurement | null> {
-  if (!isHealthIntegrationAvailable()) return null;
-  // TODO: wire in native SDK
-  return null;
-}
+// ─── Sleep ────────────────────────────────────────────────────────────────────
 
-/**
- * Fetch step counts for each day over the past N days.
- * STUB: always returns an empty array.
- */
-export async function fetchStepCounts(_days = 7): Promise<HealthStepCount[]> {
-  if (!isHealthIntegrationAvailable()) return [];
-  // TODO: wire in native SDK
+export async function fetchSleepData(days: number = 7): Promise<HealthSleep[]> {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  if (Platform.OS === "ios") {
+    const HK = getAppleHealthKit();
+    if (!HK) return [];
+    return new Promise((resolve) => {
+      HK.getSleepSamples(
+        { startDate: startDate.toISOString(), endDate: new Date().toISOString() },
+        (err: any, results: any[]) => {
+          if (err) { resolve([]); return; }
+          // Group by date, sum hours for ASLEEP segments only
+          const byDay: Record<string, number> = {};
+          for (const r of results) {
+            if (r.value === "ASLEEP") {
+              const day = r.startDate.slice(0, 10);
+              const hours =
+                (new Date(r.endDate).getTime() - new Date(r.startDate).getTime()) / 3_600_000;
+              byDay[day] = (byDay[day] ?? 0) + hours;
+            }
+          }
+          resolve(
+            Object.entries(byDay).map(([date, hoursAsleep]) => ({
+              date,
+              hoursAsleep: Math.round(hoursAsleep * 10) / 10,
+              quality: hoursAsleep >= 7 ? "good" : hoursAsleep >= 5 ? "fair" : "poor",
+              source: "apple_health",
+            }))
+          );
+        }
+      );
+    });
+  }
+
+  if (Platform.OS === "android") {
+    const HC = getHealthConnect();
+    if (!HC) return [];
+    try {
+      const result = await HC.readRecords("SleepSession", {
+        timeRangeFilter: {
+          operator: "between",
+          startTime: startDate.toISOString(),
+          endTime: new Date().toISOString(),
+        },
+      });
+      return result.records.map((r: any) => {
+        const hours =
+          (new Date(r.endTime).getTime() - new Date(r.startTime).getTime()) / 3_600_000;
+        return {
+          date: r.startTime.slice(0, 10),
+          hoursAsleep: Math.round(hours * 10) / 10,
+          quality: hours >= 7 ? "good" : hours >= 5 ? "fair" : "poor",
+          source: "health_connect",
+        };
+      });
+    } catch {
+      return [];
+    }
+  }
+
   return [];
 }
 
-/**
- * Fetch sleep data for the past N days.
- * STUB: always returns an empty array.
- */
-export async function fetchSleepData(_days = 7): Promise<HealthSleep[]> {
-  if (!isHealthIntegrationAvailable()) return [];
-  // TODO: wire in native SDK
+// ─── Heart Rate ───────────────────────────────────────────────────────────────
+
+export async function fetchHeartRateData(days: number = 1): Promise<HealthHeartRate[]> {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  if (Platform.OS === "ios") {
+    const HK = getAppleHealthKit();
+    if (!HK) return [];
+    return new Promise((resolve) => {
+      HK.getHeartRateSamples(
+        { startDate: startDate.toISOString(), endDate: new Date().toISOString() },
+        (err: any, results: any[]) => {
+          if (err) { resolve([]); return; }
+          const byDay: Record<string, number[]> = {};
+          for (const r of results) {
+            const day = r.startDate.slice(0, 10);
+            if (!byDay[day]) byDay[day] = [];
+            byDay[day].push(r.value);
+          }
+          resolve(
+            Object.entries(byDay).map(([date, bpms]) => ({
+              date,
+              bpm: Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length),
+              restingBpm: Math.min(...bpms),
+              source: "apple_health",
+            }))
+          );
+        }
+      );
+    });
+  }
+
+  if (Platform.OS === "android") {
+    const HC = getHealthConnect();
+    if (!HC) return [];
+    try {
+      const result = await HC.readRecords("HeartRate", {
+        timeRangeFilter: {
+          operator: "between",
+          startTime: startDate.toISOString(),
+          endTime: new Date().toISOString(),
+        },
+      });
+      const byDay: Record<string, number[]> = {};
+      for (const r of result.records) {
+        const day = r.time.slice(0, 10);
+        if (!byDay[day]) byDay[day] = [];
+        byDay[day].push(r.beatsPerMinute);
+      }
+      return Object.entries(byDay).map(([date, bpms]) => ({
+        date,
+        bpm: Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length),
+        restingBpm: Math.min(...bpms),
+        source: "health_connect",
+      }));
+    } catch {
+      return [];
+    }
+  }
+
   return [];
 }
 
-/**
- * Fetch resting heart rate data for the past N days.
- * STUB: always returns an empty array.
- */
-export async function fetchHeartRateData(_days = 7): Promise<HealthHeartRate[]> {
-  if (!isHealthIntegrationAvailable()) return [];
-  // TODO: wire in native SDK
-  return [];
-}
+// ─── Write ────────────────────────────────────────────────────────────────────
 
-// ─── Write ─────────────────────────────────────────────────────────────────────
-
-/**
- * Write a FitLog workout back to Apple Health / Google Fit.
- * STUB: no-op.
- */
-export async function writeWorkoutToHealth(_workout: {
+export async function writeWorkoutToHealth(params: {
   activityType: string;
   startDate: Date;
-  durationMinutes: number;
+  endDate: Date;
   caloriesBurned?: number;
   distanceKm?: number;
-}): Promise<void> {
-  if (!isHealthIntegrationAvailable()) return;
-  // TODO: wire in native SDK
+}): Promise<boolean> {
+  try {
+    if (Platform.OS === "ios") {
+      const AppleHealthKit = require("react-native-health").default;
+      return new Promise((resolve) => {
+        AppleHealthKit.saveWorkout(
+          {
+            type: "Other",
+            startDate: params.startDate.toISOString(),
+            endDate: params.endDate.toISOString(),
+            energyBurned: params.caloriesBurned ?? 0,
+            energyBurnedUnit: "calorie",
+          },
+          (err: any) => resolve(!err)
+        );
+      });
+    }
+    if (Platform.OS === "android") {
+      const { insertRecords } = require("react-native-health-connect");
+      await insertRecords([{
+        recordType: "ExerciseSession",
+        startTime: params.startDate.toISOString(),
+        endTime: params.endDate.toISOString(),
+        exerciseType: 0,
+      }]);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
-/**
- * Write a water intake log to Apple Health.
- * STUB: no-op.
- */
-export async function writeWaterIntakeToHealth(_amountMl: number): Promise<void> {
-  if (Platform.OS !== "ios") return;
-  // TODO: wire in native SDK — HealthKit only (Android Health Connect
-  //       does not have a hydration data type as of 2025)
+export async function writeWaterIntakeToHealth(amountMl: number): Promise<boolean> {
+  try {
+    if (Platform.OS === "ios") {
+      const AppleHealthKit = require("react-native-health").default;
+      return new Promise((resolve) => {
+        AppleHealthKit.saveWater(
+          { value: amountMl / 1000, date: new Date().toISOString(), unit: "liter" },
+          (err: any) => resolve(!err)
+        );
+      });
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 // ─── Sync helpers ─────────────────────────────────────────────────────────────
 
-/**
- * Pull any workouts from Apple Health / Google Fit that haven't yet been
- * logged in FitLog and return them as candidate workouts for the user to
- * review and import.
- *
- * STUB: always returns an empty array.
- */
-export async function getImportableworkouts(_existingDates: string[]): Promise<HealthWorkout[]> {
-  if (!isHealthIntegrationAvailable()) return [];
-  // TODO: call fetchHealthWorkouts(), filter out dates already in FitLog
-  return [];
+export async function fetchHealthWorkouts(days = 7): Promise<any[]> {
+  try {
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    if (Platform.OS === "ios") {
+      const AppleHealthKit = require("react-native-health").default;
+      return new Promise((resolve) => {
+        AppleHealthKit.getSamples(
+          { typeIdentifier: "Workout", startDate: start.toISOString(), endDate: new Date().toISOString() },
+          (err: any, results: any[]) => resolve(err ? [] : results ?? [])
+        );
+      });
+    }
+    if (Platform.OS === "android") {
+      const { readRecords } = require("react-native-health-connect");
+      const result = await readRecords("ExerciseSession", {
+        timeRangeFilter: { operator: "between", startTime: start.toISOString(), endTime: new Date().toISOString() },
+      });
+      return result?.records ?? [];
+    }
+    return [];
+  } catch { return []; }
+}
+
+export async function fetchLatestWeight(): Promise<number | null> {
+  try {
+    if (Platform.OS === "ios") {
+      const AppleHealthKit = require("react-native-health").default;
+      return new Promise((resolve) => {
+        AppleHealthKit.getLatestWeight({}, (err: any, result: any) => {
+          resolve(err ? null : result?.value ?? null);
+        });
+      });
+    }
+    if (Platform.OS === "android") {
+      const { readRecords } = require("react-native-health-connect");
+      const end = new Date();
+      const start = new Date(); start.setDate(start.getDate() - 30);
+      const result = await readRecords("Weight", {
+        timeRangeFilter: { operator: "between", startTime: start.toISOString(), endTime: end.toISOString() },
+      });
+      const records = result?.records ?? [];
+      if (records.length === 0) return null;
+      return records[records.length - 1]?.weight?.inKilograms ?? null;
+    }
+    return null;
+  } catch { return null; }
+}
+
+export async function getImportableWorkouts(existingDates: string[] = []): Promise<any[]> {
+  const workouts = await fetchHealthWorkouts(30);
+  const existing = new Set(existingDates);
+  return workouts.filter((w: any) => {
+    const date = new Date(w.startDate || w.startTime).toISOString().split("T")[0];
+    return !existing.has(date);
+  });
 }

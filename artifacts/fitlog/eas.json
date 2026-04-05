@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/expo/eas-cli/main/packages/eas-json/schema/eas.schema.json",
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release"
+      }
+    },
+    "production": {
+      "env": {
+        "CI": "1"
+      },
+      "ios": {
+        "buildConfiguration": "Release",
+        "image": "latest"
+      },
+      "node": "20.18.0",
+      "pnpm": "10.33.0",
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "hamdan.almansoori4@icloud.com",
+        "ascAppId": "6761670929",
+        "appleTeamId": "HK2YPRZVV8"
+      }
+    }
+  }
+}

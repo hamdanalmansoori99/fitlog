@@ -11,7 +11,6 @@ export type ExerciseCategory =
   | "abs"
   | "forearms"
   | "cardio"
-  | "mobility"
   | "bodyweight";
 
 export interface Exercise {
@@ -38,7 +37,6 @@ export const EXERCISE_CATEGORIES: { id: ExerciseCategory; label: string; icon: s
   { id: "abs", label: "Abs", icon: "circle" },
   { id: "forearms", label: "Forearms", icon: "tool" },
   { id: "cardio", label: "Cardio", icon: "heart" },
-  { id: "mobility", label: "Mobility", icon: "rotate-cw" },
   { id: "bodyweight", label: "Bodyweight", icon: "user" },
 ];
 
@@ -1330,115 +1328,6 @@ export const EXERCISES: Exercise[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MOBILITY (15)
-  // ═══════════════════════════════════════════════════════════════════════════
-  {
-    id: "hip-flexor-stretch", name: "Hip Flexor Stretch", category: "mobility",
-    primaryMuscle: "Hip Flexors", secondaryMuscles: ["Quadriceps"],
-    equipment: ["none"], difficulty: "Beginner", animationPlaceholder: "hip-flexor-stretch",
-    instructions: ["Kneel on one knee in a lunge position", "Push your hips forward gently", "Squeeze the glute of the rear leg", "Hold for 30–60 seconds per side"],
-    commonMistakes: ["Leaning forward instead of pushing hips", "Not squeezing the rear glute", "Bouncing in the stretch"],
-  },
-  {
-    id: "downward-dog", name: "Downward Dog", category: "mobility",
-    primaryMuscle: "Hamstrings", secondaryMuscles: ["Calves", "Shoulders", "Core"],
-    equipment: ["yoga_mat"], difficulty: "Beginner", animationPlaceholder: "downward-dog",
-    instructions: ["Start on all fours, push hips up and back", "Form an inverted V-shape with your body", "Press heels toward the floor", "Hold and breathe deeply"],
-    commonMistakes: ["Rounding the back", "Locking out the knees", "Not pressing through hands"],
-  },
-  {
-    id: "pigeon-pose", name: "Pigeon Pose", category: "mobility",
-    primaryMuscle: "Hip External Rotators", secondaryMuscles: ["Glutes", "Hip Flexors"],
-    equipment: ["yoga_mat"], difficulty: "Intermediate", animationPlaceholder: "pigeon-pose",
-    instructions: ["From a plank, bring one knee forward behind the same-side wrist", "Lower the rear leg flat behind you", "Square your hips as much as possible", "Fold forward for a deeper stretch and hold"],
-    commonMistakes: ["Hips not square", "Forcing depth beyond comfort", "Not breathing into the stretch"],
-  },
-  {
-    id: "world-greatest-stretch", name: "World's Greatest Stretch", category: "mobility",
-    primaryMuscle: "Hip Flexors", secondaryMuscles: ["Thoracic Spine", "Hamstrings", "Glutes"],
-    equipment: ["none"], difficulty: "Beginner", animationPlaceholder: "worlds-greatest-stretch",
-    instructions: ["Lunge forward with your right foot", "Place your left hand on the floor inside the right foot", "Rotate your right arm up to the ceiling", "Return and repeat on the other side"],
-    commonMistakes: ["Rushing through positions", "Not rotating the thoracic spine enough", "Back knee too far from the floor"],
-  },
-  {
-    id: "cat-cow", name: "Cat-Cow", category: "mobility",
-    primaryMuscle: "Spine", secondaryMuscles: ["Core", "Back"],
-    equipment: ["yoga_mat"], difficulty: "Beginner", animationPlaceholder: "cat-cow",
-    instructions: ["On all fours, alternate between arching (cow) and rounding (cat)", "Inhale during cow, exhale during cat", "Move slowly and mindfully", "Feel each vertebra moving"],
-    commonMistakes: ["Moving too fast", "Only moving in the lower back", "Not coordinating with breath"],
-  },
-  {
-    id: "thoracic-rotation", name: "Thoracic Rotation", category: "mobility",
-    primaryMuscle: "Thoracic Spine", secondaryMuscles: ["Obliques"],
-    equipment: ["none"], difficulty: "Beginner", animationPlaceholder: "thoracic-rotation",
-    instructions: ["On all fours or side-lying position", "Place one hand behind your head", "Rotate that elbow up toward the ceiling", "Return and repeat"],
-    commonMistakes: ["Moving from the lower back instead of thoracic", "Going too fast", "Not getting enough rotation"],
-  },
-  {
-    id: "foam-roll-upper", name: "Foam Roll Upper Back", category: "mobility",
-    primaryMuscle: "Thoracic Spine", secondaryMuscles: ["Lats"],
-    equipment: ["yoga_mat"], difficulty: "Beginner", animationPlaceholder: "foam-roll-upper-back",
-    instructions: ["Place foam roller under your upper back", "Support head with hands, feet flat on floor", "Roll from mid-back to upper back slowly", "Pause on tight spots for 20–30 seconds"],
-    commonMistakes: ["Rolling the lower back", "Going too fast", "Not breathing into tight spots"],
-  },
-  {
-    id: "couch-stretch", name: "Couch Stretch", category: "mobility",
-    primaryMuscle: "Hip Flexors", secondaryMuscles: ["Quadriceps"],
-    equipment: ["none"], difficulty: "Intermediate", animationPlaceholder: "couch-stretch",
-    instructions: ["Kneel with one foot elevated behind you against a wall or couch", "Keep the other foot forward in a lunge position", "Drive hips forward while squeezing the rear glute", "Hold 60–120 seconds per side"],
-    commonMistakes: ["Arching the lower back", "Knee too far from the wall", "Not squeezing the glute"],
-  },
-  {
-    id: "shoulder-dislocate", name: "Shoulder Dislocate (Band/Dowel)", category: "mobility",
-    primaryMuscle: "Shoulder Joint", secondaryMuscles: ["Rotator Cuff", "Chest"],
-    equipment: ["resistance_bands"], difficulty: "Beginner", animationPlaceholder: "shoulder-dislocate",
-    instructions: ["Hold a band or dowel with a wide grip", "Raise it overhead and behind your body in an arc", "Return to the front in the same arc", "Gradually narrow your grip over time"],
-    commonMistakes: ["Grip too narrow (forcing it)", "Bending elbows during the arc", "Going too fast"],
-  },
-  {
-    id: "90-90-stretch", name: "90/90 Hip Stretch", category: "mobility",
-    primaryMuscle: "Hip Rotators", secondaryMuscles: ["Glutes"],
-    equipment: ["none"], difficulty: "Intermediate", animationPlaceholder: "90-90-stretch",
-    instructions: ["Sit with front and back legs both bent at 90 degrees", "Front shin parallel to your body, back shin perpendicular", "Sit tall and lean forward slightly for a deeper stretch", "Hold 60 seconds then switch sides"],
-    commonMistakes: ["Not achieving 90-degree angles", "Rounding the back", "Forcing depth too quickly"],
-  },
-  {
-    id: "ankle-mobility", name: "Ankle Mobility Drill", category: "mobility",
-    primaryMuscle: "Ankle Joint", secondaryMuscles: ["Calves"],
-    equipment: ["none"], difficulty: "Beginner", animationPlaceholder: "ankle-mobility",
-    instructions: ["Stand in a split stance facing a wall, front foot a few inches away", "Drive the front knee over the toes toward the wall", "Keep the heel on the ground", "Repeat for 10–15 reps per side"],
-    commonMistakes: ["Heel lifting off the floor", "Standing too far from the wall", "Not going through full range"],
-  },
-  {
-    id: "childs-pose", name: "Child's Pose", category: "mobility",
-    primaryMuscle: "Spine", secondaryMuscles: ["Lats", "Hips"],
-    equipment: ["yoga_mat"], difficulty: "Beginner", animationPlaceholder: "childs-pose",
-    instructions: ["Kneel with toes together, knees apart", "Sit back on your heels", "Extend arms forward and lower chest to the floor", "Hold and breathe deeply for 30–60 seconds"],
-    commonMistakes: ["Knees too close together", "Not relaxing into the stretch", "Lifting hips off heels"],
-  },
-  {
-    id: "hamstring-stretch", name: "Standing Hamstring Stretch", category: "mobility",
-    primaryMuscle: "Hamstrings", secondaryMuscles: ["Calves"],
-    equipment: ["none"], difficulty: "Beginner", animationPlaceholder: "hamstring-stretch",
-    instructions: ["Stand and place one heel on a low surface", "Keep the leg straight and hinge forward at hips", "Feel the stretch along the back of the leg", "Hold 30 seconds per side"],
-    commonMistakes: ["Rounding the back instead of hinging", "Bending the stretching leg", "Bouncing"],
-  },
-  {
-    id: "supine-twist", name: "Supine Spinal Twist", category: "mobility",
-    primaryMuscle: "Spine", secondaryMuscles: ["Obliques", "Glutes"],
-    equipment: ["yoga_mat"], difficulty: "Beginner", animationPlaceholder: "supine-twist",
-    instructions: ["Lie on your back with arms out to sides", "Bring one knee across your body to the opposite side", "Keep both shoulders on the floor", "Hold 30–60 seconds per side"],
-    commonMistakes: ["Shoulders lifting off the floor", "Forcing the knee down", "Not breathing"],
-  },
-  {
-    id: "brettzel", name: "Brettzel Stretch", category: "mobility",
-    primaryMuscle: "Hip Flexors", secondaryMuscles: ["Thoracic Spine", "Quadriceps"],
-    equipment: ["yoga_mat"], difficulty: "Intermediate", animationPlaceholder: "brettzel",
-    instructions: ["Lie on your side with top leg in front, knee on floor at hip height", "Grab your bottom foot behind you (quad stretch)", "Rotate your top shoulder toward the floor", "Hold and breathe for 30–60 seconds per side"],
-    commonMistakes: ["Not stacking the positions properly", "Forcing the rotation", "Top knee lifting off floor"],
-  },
-
-  // ═══════════════════════════════════════════════════════════════════════════
   // BODYWEIGHT (12)
   // ═══════════════════════════════════════════════════════════════════════════
   {
@@ -1544,4 +1433,15 @@ export function searchExercises(query: string): Exercise[] {
       e.secondaryMuscles.some((m) => m.toLowerCase().includes(q)) ||
       e.category.includes(q)
   );
+}
+
+/**
+ * Returns the canonical library name if the input is a case-insensitive
+ * exact match for a known exercise, otherwise returns the original string.
+ * Prevents "bench press" / "Barbell Bench Press" history splits.
+ */
+export function normalizeExerciseName(name: string): string {
+  const lower = name.toLowerCase().trim();
+  const match = EXERCISES.find((e) => e.name.toLowerCase() === lower);
+  return match ? match.name : name;
 }

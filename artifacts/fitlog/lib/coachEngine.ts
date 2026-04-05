@@ -649,8 +649,8 @@ export function getEquipmentMatchLevel(
 
   if (exercisesWithRules.length === 0 && missing.length > 0) {
     // Template has equipment requirements but exercises aren't in our substitution DB
-    // Check if missing equipment is minor (e.g. yoga_mat vs whole barbell setup)
-    const canManage = missing.every((m) => ["yoga_mat", "jump_rope"].includes(m));
+    // Check if missing equipment is minor (e.g. jump_rope vs whole barbell setup)
+    const canManage = missing.every((m) => ["jump_rope"].includes(m));
     return canManage
       ? { level: "partial", missing, substitutable: true }
       : { level: "none", missing, substitutable: false };
@@ -897,7 +897,7 @@ const MUSCLE_GROUP_TAGS: Record<string, string> = {
   "cardio": "cardio", "hiit": "cardio", "running": "cardio",
   "cycling": "cardio", "swimming": "cardio", "endurance": "cardio",
   "conditioning": "cardio", "intervals": "cardio",
-  "yoga": "recovery", "recovery": "recovery",
+  "recovery": "recovery",
   "stretching": "recovery", "mobility": "recovery",
 };
 
@@ -913,7 +913,7 @@ function getMuscleGroups(template: WorkoutTemplate): string[] {
   if (/core|abs/.test(n)) groups.add("core");
   if (/full.?body/.test(n)) groups.add("full");
   if (/cardio|run|cycle|swim/.test(n)) groups.add("cardio");
-  if (/yoga|stretch|recover|mobil/.test(n)) groups.add("recovery");
+  if (/stretch|recover|mobil/.test(n)) groups.add("recovery");
   return Array.from(groups);
 }
 
@@ -927,7 +927,6 @@ function inferMuscleGroupsFromWorkout(name: string, activityType: string): strin
   if (/core|abs/.test(n)) groups.add("core");
   if (/full.?body/.test(n)) groups.add("full");
   if (["running", "cycling", "swimming", "walking"].includes(t)) groups.add("cardio");
-  if (t === "yoga") groups.add("recovery");
 
   const matchedTemplate = WORKOUT_TEMPLATES.find(
     (tmpl) => tmpl.name.toLowerCase() === n || tmpl.id === n
@@ -1387,12 +1386,12 @@ export function getTodayRecommendation(
       soreness["chest"] ?? 0, soreness["back"] ?? 0,
       soreness["shoulders"] ?? 0, soreness["arms"] ?? 0
     );
-    if (legSore >= 2) pills.unshift("🦵 Legs recovering");
-    if (upperSore >= 2) pills.unshift("💪 Upper body recovering");
-    if (recovery.energyLevel !== undefined && recovery.energyLevel >= 4) pills.unshift("⚡ High energy");
-    if (recovery.sleepQuality !== undefined && recovery.sleepQuality >= 4) pills.unshift("😴 Well rested");
-    if (recovery.sleepQuality !== undefined && recovery.sleepQuality <= 2) pills.unshift("💤 Light session");
-    if (recovery.energyLevel !== undefined && recovery.energyLevel <= 2) pills.unshift("🔋 Low energy");
+    if (legSore >= 2) pills.unshift("Legs recovering");
+    if (upperSore >= 2) pills.unshift("Upper body recovering");
+    if (recovery.energyLevel !== undefined && recovery.energyLevel >= 4) pills.unshift("High energy");
+    if (recovery.sleepQuality !== undefined && recovery.sleepQuality >= 4) pills.unshift("Well rested");
+    if (recovery.sleepQuality !== undefined && recovery.sleepQuality <= 2) pills.unshift("Light session");
+    if (recovery.energyLevel !== undefined && recovery.energyLevel <= 2) pills.unshift("Low energy");
   }
 
   // Build context summary
@@ -1607,8 +1606,6 @@ export function getActivityBenefits(activityType: string): string[] {
     gym: ["Builds strength and muscle", "Improves bone density", "Boosts resting metabolism", "Supports long-term body composition"],
     cycling: ["Effective cardiovascular workout", "Lower joint impact than running", "Improves leg endurance and power", "Great calorie burner"],
     swimming: ["Full-body conditioning", "Zero joint impact", "Builds lung capacity", "Excellent for recovery"],
-    tennis: ["Improves agility and reaction speed", "Great aerobic workout", "Develops hand-eye coordination", "Fun and social"],
-    yoga: ["Improves flexibility and range of motion", "Supports muscle recovery", "Reduces stress and improves sleep", "Improves mobility and balance"],
     other: ["Keeps you active and moving", "Burns calories", "Variety is key to long-term consistency"],
   };
   return map[activityType] || map.other;

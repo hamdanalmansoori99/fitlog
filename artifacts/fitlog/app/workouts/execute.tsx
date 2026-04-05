@@ -17,9 +17,13 @@ import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkoutStore } from "@/store/workoutStore";
+import { usePendingWorkoutsStore } from "@/store/pendingWorkoutsStore";
+import { isNetworkError } from "@/hooks/usePendingWorkoutSync";
 import { api } from "@/lib/api";
 import { getTemplateById } from "@/lib/workoutTemplates";
 import { getFilteredExercises } from "@/lib/coachEngine";
+import { getExerciseById } from "@/lib/exerciseLibrary";
+import BodyMuscleMap from "@/components/BodyMuscleMap";
 import { calculateStrengthTarget, ExerciseSession } from "@/lib/progressionEngine";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -48,6 +52,7 @@ interface SetData {
   weight: string;
   completed: boolean;
   rpe?: number;
+  failed?: boolean;
 }
 interface ExerciseData {
   name: string;
@@ -85,20 +90,21 @@ function fmt(seconds: number): string {
 function estimateCals(durationMin: number, activityType: string): number {
   const mets: Record<string, number> = {
     gym: 5, running: 9, cycling: 7, walking: 4,
-    swimming: 8, tennis: 7, yoga: 3, other: 5,
+    swimming: 8, other: 5,
   };
   return Math.round((mets[activityType] || 5) * 70 * (durationMin / 60));
 }
 
 const MOOD_OPTIONS = [
-  { value: "Exhausted",   icon: "😓", labelKey: "workouts.moodExhausted" },
-  { value: "Tough",       icon: "💪", labelKey: "workouts.moodTough" },
-  { value: "Good",        icon: "😊", labelKey: "workouts.moodGood" },
-  { value: "Great",       icon: "🔥", labelKey: "workouts.moodGreat" },
-  { value: "Crushing it", icon: "🏆", labelKey: "workouts.moodCrushingIt" },
+  { value: "Exhausted",   icon: "frown", labelKey: "workouts.moodExhausted" },
+  { value: "Tough",       icon: "shield", labelKey: "workouts.moodTough" },
+  { value: "Good",        icon: "smile", labelKey: "workouts.moodGood" },
+  { value: "Great",       icon: "zap", labelKey: "workouts.moodGreat" },
+  { value: "Crushing it", icon: "award", labelKey: "workouts.moodCrushingIt" },
 ] as const;
 const RPE_VALUES = [2, 4, 6, 8, 10];
-const RPE_EMOJIS = ["🟢", "🟡", "🟠", "🔴", "🔥"];
+const RPE_ICONS = ["circle", "circle", "circle", "circle", "zap"] as const;
+const RPE_COLORS = ["#4caf50", "#ffeb3b", "#ff9800", "#f44336", "#ff6b35"];
 
 // ─── Swipeable set card ───────────────────────────────────────────────────────
 
@@ -170,7 +176,7 @@ export default function ExecuteWorkoutScreen() {
 
   const template = templateId ? getTemplateById(templateId as string) : undefined;
 
-  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile });
+  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile, staleTime: 300_000 });
   const userEquipment: string[] = profile?.availableEquipment || [];
 
   const filteredExercises = useMemo(
@@ -207,6 +213,8 @@ export default function ExecuteWorkoutScreen() {
     clearSessionPRs,
     sessionPRs,
   } = useWorkoutStore();
+  const { addToQueue } = usePendingWorkoutsStore();
+  const lastSavePayload = useRef<any>(null);
 
   // Store next position when entering rest phase
   const pendingRef = useRef<{ exIdx: number; setIdx: number } | null>(null);
@@ -254,20 +262,20 @@ export default function ExecuteWorkoutScreen() {
   useEffect(() => {
     if (phase !== "rest" || restSecondsLeft <= 0) return;
     const t = setTimeout(() => {
-      setRestSecondsLeft((s) => {
-        if (s <= 1) {
-          // Time's up — advance
-          if (pendingRef.current) {
-            const { exIdx, setIdx: si } = pendingRef.current;
-            setExerciseIdx(exIdx);
-            setSetIdx(si);
-            setPhase("active");
-            pendingRef.current = null;
-          }
-          return 0;
+      if (restSecondsLeft <= 1) {
+        // Time's up — advance
+        setRestSecondsLeft(0);
+        if (pendingRef.current) {
+          const { exIdx, setIdx: si } = pendingRef.current;
+          setExerciseIdx(exIdx);
+          setSetIdx(si);
+          setPhase("active");
+          pendingRef.current = null;
         }
-        return s - 1;
-      });
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } else {
+        setRestSecondsLeft(restSecondsLeft - 1);
+      }
     }, 1000);
     return () => clearTimeout(t);
   }, [phase, restSecondsLeft]);
@@ -336,7 +344,16 @@ export default function ExecuteWorkoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["achievements"] });
       router.replace("/(tabs)" as any);
     },
-    onError: (err: any) => Alert.alert(t("common.error"), err.message || t("workouts.errorSaving")),
+    onError: (err: any) => {
+      if (isNetworkError(err) && lastSavePayload.current) {
+        addToQueue(lastSavePayload.current, "execute");
+        clearActiveWorkout();
+        clearSessionPRs();
+        router.replace("/(tabs)" as any);
+      } else {
+        Alert.alert(t("common.error"), err.message || t("workouts.errorSaving"));
+      }
+    },
   });
 
   const saveTemplateMutation = useMutation({
@@ -403,6 +420,7 @@ export default function ExecuteWorkoutScreen() {
         pendingRef.current = { exIdx: fromExI, setIdx: nextSetI };
         setRestSecondsLeft(rest);
         setPhase("rest");
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } else {
         setSetIdx(nextSetI);
       }
@@ -417,6 +435,7 @@ export default function ExecuteWorkoutScreen() {
           pendingRef.current = { exIdx: nextExI, setIdx: 0 };
           setRestSecondsLeft(rest);
           setPhase("rest");
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         } else {
           setExerciseIdx(nextExI);
           setSetIdx(0);
@@ -488,7 +507,7 @@ export default function ExecuteWorkoutScreen() {
       <Modal transparent animationType="fade" visible={!!prModal} onRequestClose={() => setPrModal(null)}>
         <View style={styles.prOverlay}>
           <Animated.View entering={ZoomIn.duration(400)} style={[styles.prCard, { backgroundColor: theme.card }]}>
-            <Text style={{ fontSize: 52, textAlign: "center" }}>🏆</Text>
+            <Feather name="award" size={52} color={theme.primary} style={{ textAlign: "center" }} />
             <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", marginTop: 8 }}>
               {t("pr.newPersonalRecord")}
             </Text>
@@ -572,11 +591,17 @@ export default function ExecuteWorkoutScreen() {
       if (!prCelebratedRef.current.has(ex.name)) {
         prCelebratedRef.current.add(ex.name);
         addSessionPR({ exercise: ex.name, weight, reps });
+        // Victory vibration pattern (distinct from regular set haptic)
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setPrBadgeText(`🏆 ${t("pr.newPersonalRecord")}!`);
+        Vibration.vibrate([0, 80, 60, 80]);
+        // Show specific badge first — badge stays for 900ms before modal opens
+        setPrBadgeText(`${ex.name}  ${weight}kg x ${reps}`);
         setPrBadgeVisible(true);
-        setTimeout(() => setPrBadgeVisible(false), 2400);
-        setPrModal({ exercise: ex.name, weight, reps, previousBest: previousBestWeight, previousBestReps });
+        setTimeout(() => setPrBadgeVisible(false), 2600);
+        // Delay modal so badge is seen first
+        setTimeout(() => {
+          setPrModal({ exercise: ex.name, weight, reps, previousBest: previousBestWeight, previousBestReps });
+        }, 900);
       }
     }
   }
@@ -586,20 +611,20 @@ export default function ExecuteWorkoutScreen() {
     const capturedExIdx = exerciseIdx;
     const capturedSetIdx = setIdx;
     setExercises((prev) => {
-      const completedSetData = prev[exerciseIdx].sets[setIdx];
+      const completedSetData = prev[capturedExIdx].sets[capturedSetIdx];
       lastCompletedSetRef.current = {
         reps: completedSetData.reps,
         weight: completedSetData.weight,
-        exerciseName: prev[exerciseIdx].name,
+        exerciseName: prev[capturedExIdx].name,
       };
       return prev.map((e, ei) => {
-        if (ei !== exerciseIdx) return e;
+        if (ei !== capturedExIdx) return e;
         return {
           ...e,
           sets: e.sets.map((s, si) => {
-            if (si === setIdx) return { ...s, completed: true };
+            if (si === capturedSetIdx) return { ...s, completed: true };
             // Carry forward weight+reps to subsequent untouched incomplete sets
-            if (si > setIdx && !s.completed && !touchedSetsRef.current.has(`${exerciseIdx}-${si}`)) {
+            if (si > capturedSetIdx && !s.completed && !touchedSetsRef.current.has(`${capturedExIdx}-${si}`)) {
               return { ...s, weight: completedSetData.weight, reps: completedSetData.reps };
             }
             return s;
@@ -614,6 +639,25 @@ export default function ExecuteWorkoutScreen() {
   function skipSet() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     advance(exerciseIdx, setIdx);
+  }
+
+  function failSet() {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    const capturedExIdx = exerciseIdx;
+    const capturedSetIdx = setIdx;
+    setExercises((prev) =>
+      prev.map((e, ei) => {
+        if (ei !== capturedExIdx) return e;
+        return {
+          ...e,
+          sets: e.sets.map((s, si) => {
+            if (si === capturedSetIdx) return { ...s, completed: true, failed: true, rpe: 10 };
+            return s;
+          }),
+        };
+      })
+    );
+    advance(capturedExIdx, capturedSetIdx);
   }
 
   function skipExercise() {
@@ -695,7 +739,7 @@ export default function ExecuteWorkoutScreen() {
     const completedSets = exercises.flatMap((e) => e.sets.filter((s) => s.completed));
     const cals = estimateCals(durationMin, template.activityType);
 
-    saveMutation.mutate({
+    const savePayload = {
       activityType: template.activityType,
       name: template.name,
       date: new Date().toISOString(),
@@ -704,7 +748,9 @@ export default function ExecuteWorkoutScreen() {
       mood: mood || undefined,
       exercises: gymExercises,
       metadata: { source: "execute", templateId: template.id },
-    });
+    };
+    lastSavePayload.current = savePayload;
+    saveMutation.mutate(savePayload);
   }
 
   // ── Guards ─────────────────────────────────────────────────────────────────
@@ -767,7 +813,7 @@ export default function ExecuteWorkoutScreen() {
           {/* Trophy */}
           <Animated.View entering={FadeIn.duration(500)} style={{ alignItems: "center", gap: 8, paddingVertical: 16 }}>
             <View style={[styles.trophyCircle, { backgroundColor: theme.primaryDim }]}>
-              <Text style={{ fontSize: 44 }}>🏆</Text>
+              <Feather name="award" size={44} color={theme.primary} />
             </View>
             <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 26, marginTop: 8 }}>
               {t("workouts.workoutComplete")}
@@ -819,20 +865,23 @@ export default function ExecuteWorkoutScreen() {
           {/* Session PRs */}
           {sessionPRs.length > 0 && (
             <Animated.View entering={FadeInDown.delay(155).duration(400)}>
-              <Card style={{ gap: 10 }}>
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                  🏆 {t("workouts.sessionPRs")}
-                </Text>
+              <Card style={{ gap: 10, borderColor: theme.primary + "40", borderWidth: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Feather name="award" size={20} color={theme.primary} />
+                  <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                    {sessionPRs.length === 1 ? t("workouts.sessionPRs") : `${sessionPRs.length} ${t("workouts.sessionPRs")}`}
+                  </Text>
+                </View>
                 {sessionPRs.map((pr, i) => (
-                  <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.primary }} />
+                  <Animated.View key={i} entering={ZoomIn.delay(200 + i * 120).duration(350).springify()} style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: theme.primary + "10", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
+                    <Feather name="star" size={16} color={theme.primary} />
                     <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 }}>
                       {pr.exercise}
                     </Text>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>
                       {pr.weight}kg × {pr.reps}
                     </Text>
-                  </View>
+                  </Animated.View>
                 ))}
               </Card>
             </Animated.View>
@@ -901,7 +950,7 @@ export default function ExecuteWorkoutScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ fontSize: 18 }}>{opt.icon}</Text>
+                  <Feather name={opt.icon as keyof typeof Feather.glyphMap} size={18} color={mood === opt.value ? theme.primary : theme.textMuted} />
                   <Text style={{ color: mood === opt.value ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, textAlign: "center" }}>
                     {t(opt.labelKey)}
                   </Text>
@@ -1198,6 +1247,39 @@ export default function ExecuteWorkoutScreen() {
                 <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>+30s</Text>
               </Pressable>
             </View>
+
+            {/* Common mistake tip during rest */}
+            {(() => {
+              const ex = getExerciseById(currentEx?.name?.toLowerCase().replace(/\s+/g, "-") ?? "");
+              if (!ex || !ex.commonMistakes.length) return null;
+              const mistake = ex.commonMistakes[Math.floor(Date.now() / 1000) % ex.commonMistakes.length];
+              return (
+                <View style={{ marginTop: 16, padding: 12, backgroundColor: "#1a1a2e", borderRadius: 8, borderLeftWidth: 3, borderLeftColor: "#ffab40" }}>
+                  <Text style={{ fontSize: 11, color: "#ffab40", fontFamily: "Inter_600SemiBold", marginBottom: 4, letterSpacing: 0.5 }}>
+                    COMMON MISTAKE
+                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Feather name="alert-triangle" size={14} color="#ffab40" />
+                    <Text style={{ fontSize: 14, color: "#f5f5f5", fontFamily: "Inter_400Regular", flex: 1 }}>{mistake}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* Muscle map during rest */}
+            {(() => {
+              const ex = getExerciseById(currentEx?.name?.toLowerCase().replace(/\s+/g, "-") ?? "");
+              if (!ex) return null;
+              return (
+                <View style={{ marginTop: 12 }}>
+                  <BodyMuscleMap
+                    primaryMuscles={[ex.primaryMuscle]}
+                    secondaryMuscles={ex.secondaryMuscles}
+                    size="compact"
+                  />
+                </View>
+              );
+            })()}
           </Animated.View>
         </View>
       </Modal>
@@ -1287,7 +1369,8 @@ export default function ExecuteWorkoutScreen() {
                 ].filter(Boolean).join(" × ")
               : null;
             const rpeIdx = RPE_VALUES.indexOf(s.rpe ?? -1);
-            const rpeLabel = rpeIdx >= 0 ? RPE_EMOJIS[rpeIdx] : "RPE";
+            const rpeIcon = rpeIdx >= 0 ? RPE_ICONS[rpeIdx] : null;
+            const rpeColor = rpeIdx >= 0 ? RPE_COLORS[rpeIdx] : theme.textMuted;
 
             return (
               <SwipeableSetCard
@@ -1298,9 +1381,9 @@ export default function ExecuteWorkoutScreen() {
                 cardStyle={[
                   styles.setCard,
                   {
-                    backgroundColor: s.completed ? theme.primary + "12" : isActive ? theme.card : theme.card + "60",
+                    backgroundColor: s.failed ? theme.danger + "12" : s.completed ? theme.primary + "12" : isActive ? theme.card : theme.card + "60",
                     borderWidth: 1,
-                    borderColor: s.completed ? theme.primary + "50" : isActive ? theme.primary + "40" : theme.border + "60",
+                    borderColor: s.failed ? theme.danger + "50" : s.completed ? theme.primary + "50" : isActive ? theme.primary + "40" : theme.border + "60",
                     borderLeftWidth: isActive && !s.completed ? 4 : 1,
                     borderLeftColor: isActive && !s.completed ? theme.primary : undefined,
                     opacity: s.completed ? 0.8 : !isActive && !s.completed ? 0.65 : 1,
@@ -1335,12 +1418,14 @@ export default function ExecuteWorkoutScreen() {
                     style={[
                       styles.setCheckbox,
                       {
-                        backgroundColor: s.completed ? theme.primary : isActive ? theme.primaryDim : theme.background,
-                        borderColor: s.completed ? theme.primary : isActive ? theme.primary : theme.border,
+                        backgroundColor: s.failed ? theme.danger : s.completed ? theme.primary : isActive ? theme.primaryDim : theme.background,
+                        borderColor: s.failed ? theme.danger : s.completed ? theme.primary : isActive ? theme.primary : theme.border,
                       },
                     ]}
                   >
-                    {s.completed
+                    {s.failed
+                      ? <Feather name="x" size={16} color="#fff" />
+                      : s.completed
                       ? <Feather name="check" size={16} color="#0f0f1a" />
                       : <Text style={{ color: isActive ? theme.primary : theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 14 }}>{si + 1}</Text>
                     }
@@ -1416,7 +1501,7 @@ export default function ExecuteWorkoutScreen() {
                       },
                     ]}
                   >
-                    <Text style={{ fontSize: 16 }}>{rpeLabel}</Text>
+                    {rpeIcon ? <Feather name={rpeIcon} size={16} color={rpeColor} /> : <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_500Medium" }}>RPE</Text>}
                   </Pressable>
                 </View>
               </SwipeableSetCard>
@@ -1488,6 +1573,14 @@ export default function ExecuteWorkoutScreen() {
               <Feather name="check" size={20} color="#0f0f1a" />
               <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 17 }}>{t("workouts.doneBtn")}</Text>
             </Pressable>
+            {/* Couldn't do it — failed attempt, feeds deload logic */}
+            <Pressable
+              onPress={failSet}
+              style={[styles.completeBtn, { backgroundColor: "transparent", borderWidth: 1, borderColor: theme.danger + "80" }]}
+            >
+              <Feather name="x" size={18} color={theme.danger} />
+              <Text style={{ color: theme.danger, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("workouts.failedSetBtn")}</Text>
+            </Pressable>
             {/* Compact skip row below */}
             <View style={styles.actionRow}>
               <Pressable
@@ -1537,17 +1630,20 @@ export default function ExecuteWorkoutScreen() {
 
       {renderPRModal()}
 
-      {/* ── PR inline badge (2s auto-dismiss) ── */}
+      {/* ── PR inline badge (shown before modal opens) ── */}
       {prBadgeVisible && (
         <Animated.View
-          entering={ZoomIn.duration(300)}
-          exiting={FadeOut.duration(500)}
+          entering={ZoomIn.springify().damping(12).stiffness(180)}
+          exiting={FadeOut.duration(400)}
           style={styles.prBadgeOverlay}
           pointerEvents="none"
         >
           <View style={[styles.prBadge, { backgroundColor: theme.primary }]}>
-            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 18 }}>
+            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 20, textAlign: "center" }}>
               {prBadgeText}
+            </Text>
+            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center", marginTop: 2, opacity: 0.75 }}>
+              {t("pr.newPersonalRecord")}
             </Text>
           </View>
         </Animated.View>
@@ -1648,12 +1744,15 @@ const styles = StyleSheet.create({
   // PR badge
   prBadgeOverlay: {
     ...StyleSheet.absoluteFillObject,
-    alignItems: "center", justifyContent: "center",
+    alignItems: "center", justifyContent: "flex-start",
+    paddingTop: 100,
+    zIndex: 999,
   },
   prBadge: {
-    paddingHorizontal: 24, paddingVertical: 14, borderRadius: 20,
-    shadowColor: "#00e676", shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
+    paddingHorizontal: 28, paddingVertical: 18, borderRadius: 24,
+    shadowColor: "#ffd700", shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5, shadowRadius: 16, elevation: 12,
+    alignItems: "center",
   },
 
   // Done / summary

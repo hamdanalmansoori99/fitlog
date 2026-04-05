@@ -48,6 +48,7 @@ export default function MyTemplatesScreen() {
   const { data, isLoading } = useQuery({
     queryKey: ["userTemplates"],
     queryFn: api.getUserTemplates,
+    staleTime: 300_000,
   });
 
   const templates: any[] = data?.templates || [];
@@ -191,7 +192,7 @@ export default function MyTemplatesScreen() {
                 style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background, fontFamily: "Inter_400Regular" }]}
                 autoFocus
               />
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.activityType")}</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.activityTypeLabel")}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {ACTIVITY_TYPES.map((act) => {

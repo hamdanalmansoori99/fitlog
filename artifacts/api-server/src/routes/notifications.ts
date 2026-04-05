@@ -11,10 +11,41 @@ import {
 import { eq, and, gte, lt, desc, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import type { Profile } from "@workspace/db";
+import { logError } from "../lib/logger";
+import { computeCurrentStreak } from "../lib/streaks";
 
 const router = Router();
 
 type NotifType = "workout" | "meal" | "hydration" | "streak" | "recovery" | "weekly";
+
+// Inline streak milestone narratives (mirrors lib/streakNarratives.ts on the client)
+const STREAK_MILESTONES: { day: number; message: string }[] = [
+  { day: 1,   message: "The spark is lit." },
+  { day: 2,   message: "Back again. This is how legends start." },
+  { day: 3,   message: "Three in a row. Your body is starting to remember." },
+  { day: 5,   message: "Five days strong. The habit is forming." },
+  { day: 7,   message: "One full week. The Forge has claimed you." },
+  { day: 10,  message: "Double digits. You're not stopping." },
+  { day: 14,  message: "Two weeks forged. Others are still deciding to start." },
+  { day: 21,  message: "21 days. Science says this is a habit now. You're different." },
+  { day: 30,  message: "A full month. Bronze Forger energy." },
+  { day: 45,  message: "45 days. The grind is second nature." },
+  { day: 60,  message: "Two months. Most people quit by week 2. You're not most people." },
+  { day: 90,  message: "90 days. Elite territory." },
+  { day: 100, message: "100 days. You've entered rare air. The Obsidian path calls." },
+  { day: 180, message: "Half a year. The realm has noticed." },
+  { day: 365, message: "One year. The Eternal Ascendant watches and nods." },
+];
+
+function getStreakNarrativeMessage(days: number): string {
+  if (days <= 0) return "Start your streak today.";
+  let best = STREAK_MILESTONES[0];
+  for (const m of STREAK_MILESTONES) {
+    if (days >= m.day) best = m;
+    else break;
+  }
+  return best.message;
+}
 
 interface SmartMessage {
   id: string;
@@ -143,41 +174,9 @@ router.get("/smart-content", requireAuth, async (req, res) => {
       proteinToday = foodItems.reduce((s, f) => s + (f.proteinG ?? 0), 0);
     }
 
-    let streak = 0;
-    {
-      const uniqueDays = new Set(
-        recentWorkouts.map((w) => new Date(w.date).toDateString())
-      );
-      const base = new Date();
-      base.setHours(0, 0, 0, 0);
-      for (let i = 0; i < 14; i++) {
-        const d = new Date(base);
-        d.setDate(base.getDate() - i);
-        if (uniqueDays.has(d.toDateString())) {
-          streak++;
-        } else if (i > 0) {
-          break;
-        }
-      }
-    }
-
-    let consecutiveDays = 0;
-    {
-      const uniqueDays = new Set(
-        recentWorkouts.map((w) => new Date(w.date).toDateString())
-      );
-      const base = new Date();
-      base.setHours(0, 0, 0, 0);
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(base);
-        d.setDate(base.getDate() - i);
-        if (uniqueDays.has(d.toDateString())) {
-          consecutiveDays++;
-        } else if (i > 0) {
-          break;
-        }
-      }
-    }
+    const recentDates = recentWorkouts.map((w) => new Date(w.date));
+    const streak = computeCurrentStreak(recentDates);
+    const consecutiveDays = streak;
 
     const candidates: SmartMessage[] = [];
 
@@ -187,7 +186,7 @@ router.get("/smart-content", requireAuth, async (req, res) => {
         type: "streak",
         priority: streak >= 7 ? 0 : 1,
         title: `🔥 ${streak}-day streak at risk!`,
-        body: `You haven't worked out yet today. Don't break your ${streak}-day streak!`,
+        body: `${getStreakNarrativeMessage(streak)} Log a workout to keep it alive.`,
       });
     }
 
@@ -197,7 +196,7 @@ router.get("/smart-content", requireAuth, async (req, res) => {
         type: "streak",
         priority: 3,
         title: "Start your streak today",
-        body: "Log a workout today and kick off your fitness streak.",
+        body: getStreakNarrativeMessage(0),
       });
     }
 
@@ -303,7 +302,7 @@ router.get("/smart-content", requireAuth, async (req, res) => {
 
     res.json({ messages });
   } catch (err) {
-    console.error("smart-content error:", err);
+    logError("smart-content error:", err);
     res.status(500).json({ error: "Failed to get smart notification content" });
   }
 });

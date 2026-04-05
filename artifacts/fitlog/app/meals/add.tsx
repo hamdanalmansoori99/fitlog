@@ -106,6 +106,8 @@ export default function AddMealScreen() {
   const [barcodeOpen, setBarcodeOpen] = useState(false);
   const [barcodeLooking, setBarcodeLooking] = useState(false);
   const barcodeProcessed = useRef(false);
+  const baseScanItems = useRef<FoodItem[]>([]);
+  const [scanMultipliers, setScanMultipliers] = useState<number[]>([]);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const { showToast } = useToast();
 
@@ -154,7 +156,7 @@ export default function AddMealScreen() {
     const prot = params.prefillProtein ? String(params.prefillProtein) : "";
     const carb = params.prefillCarbs ? String(params.prefillCarbs) : "";
     const fat = params.prefillFat ? String(params.prefillFat) : "";
-    setFoodItems([{ name, portionSize: "1", unit: "serving", calories: cal, proteinG: prot, carbsG: carb, fatG: fat }]);
+    setFoodItems([{ name, portionSize: "1", unit: "servings", calories: cal, proteinG: prot, carbsG: carb, fatG: fat }]);
   }, []);
 
   const { data: recentFoodsData } = useQuery({
@@ -239,16 +241,11 @@ export default function AddMealScreen() {
         carbsG: String(food.carbsG || 0),
         fatG: String(food.fatG || 0),
       };
-      const hasEmpty = foodItems.some(f => !f.name);
-      if (hasEmpty) {
-        setFoodItems(fi => {
-          const idx = fi.findIndex(f => !f.name);
-          return fi.map((f, i) => i === idx ? newFood : f);
-        });
-      } else {
-        setFoodItems(fi => [...fi, newFood]);
-      }
-      if (!mealName) setMealName(displayName);
+      setFoodItems(fi => {
+        const emptyIdx = fi.findIndex(f => !f.name);
+        return emptyIdx >= 0 ? fi.map((f, i) => i === emptyIdx ? newFood : f) : [...fi, newFood];
+      });
+      setMealName(prev => prev || displayName);
       showToast(t("meals.foundFood", { name: displayName }), "success");
     } catch (err: any) {
       setBarcodeOpen(false);
@@ -257,7 +254,7 @@ export default function AddMealScreen() {
     } finally {
       setBarcodeLooking(false);
     }
-  }, [barcodeLooking, foodItems, mealName]);
+  }, [barcodeLooking]);
 
   async function pickAndScanImage(source: "camera" | "library") {
     try {
@@ -265,11 +262,11 @@ export default function AddMealScreen() {
       if (source === "camera") {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
         if (!perm.granted) { Alert.alert(t("meals.cameraAccessNeeded"), t("meals.allowCameraSettings")); return; }
-        result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7, mediaTypes: "images" });
+        result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.5, mediaTypes: "images" });
       } else {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!perm.granted) { Alert.alert(t("meals.photoLibraryAccessNeeded"), t("meals.allowPhotoAccess")); return; }
-        result = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.7, mediaTypes: "images" });
+        result = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.5, mediaTypes: "images" });
       }
 
       if (result.canceled || !result.assets?.[0]) return;
@@ -291,17 +288,18 @@ export default function AddMealScreen() {
       }
 
       setMealName(analysisResult.mealName || "");
-      setFoodItems(
-        (analysisResult.foods || []).map((f: any) => ({
-          name: f.name,
-          portionSize: String(f.portionSize),
-          unit: f.unit || "grams",
-          calories: String(f.calories),
-          proteinG: String(f.proteinG),
-          carbsG: String(f.carbsG),
-          fatG: String(f.fatG),
-        }))
-      );
+      const scannedItems = (analysisResult.foods || []).map((f: any) => ({
+        name: f.name,
+        portionSize: String(f.portionSize),
+        unit: f.unit || "grams",
+        calories: String(f.calories),
+        proteinG: String(f.proteinG),
+        carbsG: String(f.carbsG),
+        fatG: String(f.fatG),
+      }));
+      baseScanItems.current = scannedItems;
+      setScanMultipliers(scannedItems.map(() => 1));
+      setFoodItems(scannedItems);
       setScanMode("confirm");
     } catch (err: any) {
       setError(err.message || t("meals.failedToAnalyzePhoto"));
@@ -416,6 +414,25 @@ export default function AddMealScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const copy = { ...foodItems[idx] };
     setFoodItems(fi => [...fi.slice(0, idx + 1), copy, ...fi.slice(idx + 1)]);
+  }
+
+  function applyMultiplier(idx: number, multiplier: number) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const base = baseScanItems.current[idx];
+    if (!base) return;
+    setScanMultipliers(prev => prev.map((m, i) => i === idx ? multiplier : m));
+    setFoodItems(prev => prev.map((f, i) => {
+      if (i !== idx) return f;
+      const scale = (val: string) => String(Math.round(parseFloat(val) * multiplier * 10) / 10);
+      return {
+        ...f,
+        portionSize: String(Math.round(parseFloat(base.portionSize) * multiplier)),
+        calories: String(Math.round(parseFloat(base.calories) * multiplier)),
+        proteinG: scale(base.proteinG),
+        carbsG: scale(base.carbsG),
+        fatG: scale(base.fatG),
+      };
+    }));
   }
 
   const handleSubmit = () => {
@@ -780,7 +797,13 @@ export default function AddMealScreen() {
                 <View style={styles.foodHeader}>
                   <Text style={[styles.foodNum, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>{t("meals.itemNumber", { number: idx + 1 })}</Text>
                   {foodItems.length > 1 && (
-                    <Pressable onPress={() => setFoodItems(foodItems.filter((_, i) => i !== idx))} hitSlop={8}>
+                    <Pressable onPress={() => {
+                      setFoodItems(foodItems.filter((_, i) => i !== idx));
+                      if (scanMode === "confirm") {
+                        baseScanItems.current = baseScanItems.current.filter((_, i) => i !== idx);
+                        setScanMultipliers(prev => prev.filter((_, i) => i !== idx));
+                      }
+                    }} hitSlop={8}>
                       <Feather name="x" size={18} color={theme.danger} />
                     </Pressable>
                   )}
@@ -831,6 +854,38 @@ export default function AddMealScreen() {
                       ))}
                     </View>
                   </ScrollView>
+                )}
+
+                {/* Portion multiplier — only shown after AI scan */}
+                {scanMode === "confirm" && baseScanItems.current[idx] && (
+                  <View style={styles.multiplierRow}>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11 }}>
+                      {t("meals.portionScale")}
+                    </Text>
+                    <View style={{ flexDirection: "row", gap: 6 }}>
+                      {([0.5, 1, 1.5, 2] as const).map(m => (
+                        <Pressable
+                          key={m}
+                          onPress={() => applyMultiplier(idx, m)}
+                          style={[
+                            styles.multiplierChip,
+                            {
+                              backgroundColor: scanMultipliers[idx] === m ? theme.primary : theme.card,
+                              borderColor: scanMultipliers[idx] === m ? theme.primary : theme.border,
+                            },
+                          ]}
+                        >
+                          <Text style={{
+                            color: scanMultipliers[idx] === m ? "#0f0f1a" : theme.textMuted,
+                            fontFamily: "Inter_600SemiBold",
+                            fontSize: 12,
+                          }}>
+                            {m === 0.5 ? "½x" : m === 1.5 ? "1½x" : `${m}x`}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
                 )}
 
                 {/* Portion + Unit */}
@@ -1006,6 +1061,8 @@ const styles = StyleSheet.create({
   foodInput: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15, minHeight: 46 },
   barcodeBtn: { width: 40, height: 40, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   servingChip: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+  multiplierRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  multiplierChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1 },
   portionRow: { flexDirection: "row", gap: 10, alignItems: "flex-end" },
   miniLabel: { fontSize: 11, marginBottom: 4, fontFamily: "Inter_500Medium" },
   smallInput: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 14, textAlign: "center", minHeight: 44 },

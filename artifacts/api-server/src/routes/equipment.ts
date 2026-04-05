@@ -21,6 +21,11 @@ router.post("/", requireAuth, async (req, res) => {
     const user = getUser(req);
     const { name, category, photoUrl, notes } = req.body;
 
+    if (!name || typeof name !== "string" || name.trim().length < 1 || name.trim().length > 100) {
+      res.status(400).json({ error: "Equipment name must be 1–100 characters" });
+      return;
+    }
+
     const [item] = await db.insert(equipmentTable).values({
       userId: user.id,
       name,
@@ -53,6 +58,7 @@ router.put("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const equipId = parseInt(req.params.id as string);
+    if (isNaN(equipId)) { res.status(400).json({ error: "Invalid id" }); return; }
     const existing = await db.select().from(equipmentTable)
       .where(and(eq(equipmentTable.id, equipId), eq(equipmentTable.userId, user.id))).limit(1);
     if (existing.length === 0) { res.status(404).json({ error: "Equipment not found" }); return; }
@@ -73,10 +79,11 @@ router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const equipId = parseInt(req.params.id as string);
+    if (isNaN(equipId)) { res.status(400).json({ error: "Invalid id" }); return; }
     const existing = await db.select().from(equipmentTable)
       .where(and(eq(equipmentTable.id, equipId), eq(equipmentTable.userId, user.id))).limit(1);
     if (existing.length === 0) { res.status(404).json({ error: "Equipment not found" }); return; }
-    await db.delete(equipmentTable).where(eq(equipmentTable.id, equipId));
+    await db.delete(equipmentTable).where(and(eq(equipmentTable.id, equipId), eq(equipmentTable.userId, user.id)));
     res.json({ message: "Equipment deleted" });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete equipment" });

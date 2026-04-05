@@ -73,6 +73,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const id = parseInt(req.params.id as string);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
     await db.delete(favoriteMealsTable)
       .where(and(eq(favoriteMealsTable.id, id), eq(favoriteMealsTable.userId, user.id)));
     res.json({ ok: true });
@@ -86,6 +87,7 @@ router.post("/:id/log", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const id = parseInt(req.params.id as string);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
     const { category } = req.body;
 
     const [fav] = await db.select().from(favoriteMealsTable)

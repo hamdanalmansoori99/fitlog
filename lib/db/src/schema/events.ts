@@ -1,4 +1,5 @@
 import { pgTable, serial, integer, text, jsonb, timestamp, index } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { usersTable } from "./users";
 
 export const analyticsEventsTable = pgTable("analytics_events", {
@@ -17,4 +18,5 @@ export const analyticsEventsTable = pgTable("analytics_events", {
   index("analytics_events_user_event_idx").on(table.userId, table.eventType),
 ]);
 
+export const insertAnalyticsEventSchema = createInsertSchema(analyticsEventsTable);
 export type AnalyticsEvent = typeof analyticsEventsTable.$inferSelect;

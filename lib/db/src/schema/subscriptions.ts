@@ -1,4 +1,5 @@
 import { pgTable, serial, integer, text, timestamp, index } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { usersTable } from "./users";
 
 /**
@@ -28,4 +29,5 @@ export const userSubscriptionsTable = pgTable("user_subscriptions", {
   index("user_subscriptions_status_idx").on(table.status),
 ]);
 
+export const insertSubscriptionSchema = createInsertSchema(userSubscriptionsTable);
 export type UserSubscription = typeof userSubscriptionsTable.$inferSelect;

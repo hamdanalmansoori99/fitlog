@@ -285,6 +285,7 @@ function buildMuscleInsights(input: GoalInsightsInput): GoalInsight[] {
 
   if (input.nutritionStats) {
     const { avg7DayCalories, macroSplit } = input.nutritionStats;
+    if (!macroSplit) return insights;
     const estimatedDailyProtein = (macroSplit.proteinPercentage / 100) * avg7DayCalories / 4;
     const proteinPct = proteinGoal > 0 ? estimatedDailyProtein / proteinGoal : 0.7;
     const logged = input.nutritionStats.dailyCalories.slice(-7).filter((d) => d.calories > 0).length;

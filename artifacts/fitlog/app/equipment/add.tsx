@@ -24,9 +24,7 @@ const EQUIPMENT_IDS = [
   { id: "treadmill", labelKey: "equipment.treadmill", icon: "activity" as const },
   { id: "stationary_bike", labelKey: "equipment.stationaryBike", icon: "wind" as const },
   { id: "rowing_machine", labelKey: "equipment.rowingMachine", icon: "navigation" as const },
-  { id: "yoga_mat", labelKey: "equipment.yogaMat", icon: "heart" as const },
   { id: "jump_rope", labelKey: "equipment.jumpRope", icon: "repeat" as const },
-  { id: "tennis_racket", labelKey: "equipment.tennisRacket", icon: "circle" as const },
   { id: "swimming_pool", labelKey: "equipment.swimmingPool", icon: "droplet" as const },
 ];
 

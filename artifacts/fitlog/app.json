@@ -15,10 +15,15 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.fitlog.app"
+      "bundleIdentifier": "com.yesha.fitlog",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "FitLog reads your steps, heart rate, and sleep to give your AI coach accurate recovery data.",
+        "NSHealthUpdateUsageDescription": "FitLog writes your workouts and water intake to Apple Health.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.fitlog.app",
+      "package": "com.yesha.fitlog",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0f0f1a"
@@ -36,18 +41,43 @@
       "output": "single"
     },
     "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
       [
-        "expo-router",
+        "react-native-health-connect",
         {
-          "origin": "https://replit.com/"
+          "permissions": [
+            "android.permission.health.READ_STEPS",
+            "android.permission.health.READ_SLEEP",
+            "android.permission.health.READ_HEART_RATE",
+            "android.permission.health.WRITE_EXERCISE",
+            "android.permission.health.WRITE_HYDRATION"
+          ]
         }
       ],
-      "expo-font",
-      "expo-web-browser"
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#00e676",
+          "androidMode": "default",
+          "androidCollapsedTitle": "FitLog",
+          "iosDisplayInForeground": true
+        }
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e50ad49b-f5fa-448d-a7ab-9537a44b442a"
+      }
+    },
+    "owner": "hamdan777"
   }
 }

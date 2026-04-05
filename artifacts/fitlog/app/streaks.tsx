@@ -4,7 +4,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
@@ -12,6 +12,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { rtlIcon, dateLocale } from "@/lib/rtl";
+import { getStreakNarrative, getStreakLabel } from "@/lib/streakNarratives";
 
 const MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -58,6 +59,23 @@ function StreakRing({
         </View>
       </View>
 
+      {(() => {
+        const narrative = getStreakNarrative(current);
+        return (
+          <View style={{ marginTop: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Feather name={narrative.icon as keyof typeof Feather.glyphMap} size={15} color={theme.textMuted} />
+              <Text style={{ fontSize: 15, color: theme.textMuted, fontFamily: "Inter_400Regular", flex: 1 }}>
+                {narrative.message}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 4 }}>
+              {getStreakLabel(current)}
+            </Text>
+          </View>
+        );
+      })()}
+
       <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
         <View style={[styles.progressFill, { backgroundColor: color, width: `${pct * 100}%` as `${number}%` }]} />
       </View>
@@ -96,7 +114,7 @@ function MilestoneBadge({
         borderColor: achieved ? color + "40" : theme.border,
       },
     ]}>
-      <Text style={{ fontSize: 20 }}>{achieved ? "🔥" : "🔒"}</Text>
+      {achieved ? <MaterialCommunityIcons name="fire" size={20} color={color} /> : <Feather name="lock" size={20} color={theme.textMuted} />}
       <Text style={{
         color: achieved ? color : theme.textMuted,
         fontFamily: "Inter_700Bold",

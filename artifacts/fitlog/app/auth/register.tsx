@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useReducer, useRef, useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   KeyboardAvoidingView, Platform, TextInput,
@@ -13,6 +13,12 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
+type FormState = { firstName: string; lastName: string; email: string; password: string };
+type FormAction = { field: keyof FormState; value: string };
+function formReducer(state: FormState, action: FormAction): FormState {
+  return { ...state, [action.field]: action.value };
+}
+
 const MAX_W = 480;
 
 export default function RegisterScreen() {
@@ -21,10 +27,8 @@ export default function RegisterScreen() {
   const { setAuth } = useAuthStore();
   const { t } = useTranslation();
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [form, dispatch] = useReducer(formReducer, { firstName: "", lastName: "", email: "", password: "" });
+  const { firstName, lastName, email, password } = form;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -109,9 +113,11 @@ export default function RegisterScreen() {
                 <Input
                   label={t("auth.firstName")}
                   value={firstName}
-                  onChangeText={setFirstName}
+                  onChangeText={(v) => dispatch({ field: "firstName", value: v })}
                   placeholder={t("auth.firstNamePlaceholder")}
                   autoCapitalize="words"
+                  autoCorrect={false}
+                  spellCheck={false}
                   returnKeyType="next"
                   onSubmitEditing={() => lastNameRef.current?.focus()}
                   blurOnSubmit={false}
@@ -122,9 +128,11 @@ export default function RegisterScreen() {
                   ref={lastNameRef}
                   label={t("auth.lastName")}
                   value={lastName}
-                  onChangeText={setLastName}
+                  onChangeText={(v) => dispatch({ field: "lastName", value: v })}
                   placeholder={t("auth.lastNamePlaceholder")}
                   autoCapitalize="words"
+                  autoCorrect={false}
+                  spellCheck={false}
                   returnKeyType="next"
                   onSubmitEditing={() => emailRef.current?.focus()}
                   blurOnSubmit={false}
@@ -136,10 +144,12 @@ export default function RegisterScreen() {
               ref={emailRef}
               label={t("auth.email")}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(v) => dispatch({ field: "email", value: v })}
               placeholder={t("auth.emailPlaceholder")}
               keyboardType={Platform.OS === "web" ? "default" : "email-address"}
               autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
               autoComplete="email"
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
@@ -151,7 +161,7 @@ export default function RegisterScreen() {
               ref={passwordRef}
               label={t("auth.password")}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(v) => dispatch({ field: "password", value: v })}
               placeholder={t("auth.passwordMinChars")}
               secureEntry
               returnKeyType="done"

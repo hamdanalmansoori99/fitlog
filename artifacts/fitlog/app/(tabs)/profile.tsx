@@ -19,9 +19,13 @@ import {
   cancelAllNativeNotifications,
 } from "@/lib/notifications";
 import { api } from "@/lib/api";
+import { getRankByXp, getXpProgress } from "@/lib/ranks";
+import { RANK_ICON_MAP } from "@/components/RankIcons";
+import { RankBadge } from "@/components/RankBadge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { useToast } from "@/components/ui/Toast";
 
 const PRESET_TIMES = [
@@ -52,7 +56,6 @@ const PROFILE_EQUIPMENT: { id: string; label: string }[] = [
   { id: "treadmill", label: "Treadmill" },
   { id: "stationary_bike", label: "Stationary bike" },
   { id: "rowing_machine", label: "Rowing machine" },
-  { id: "yoga_mat", label: "Yoga mat" },
   { id: "jump_rope", label: "Jump rope" },
 ];
 
@@ -112,6 +115,11 @@ export default function ProfileScreen() {
   const [waterGoalMl, setWaterGoalMl] = useState("2000");
   
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [nutritionSuggestion, setNutritionSuggestion] = useState<{ calorieGoal: number; proteinGoal: number; carbsGoal: number; fatGoal: number; explanation: string } | null>(null);
+  const [goalsExpanded, setGoalsExpanded] = useState(true);
+  const [activityExpanded, setActivityExpanded] = useState(true);
+  const [equipmentExpanded, setEquipmentExpanded] = useState(false);
+  const [nutritionExpanded, setNutritionExpanded] = useState(false);
   // Tracks the unit system from the previous render so we know the direction
   // of any switch (metric→imperial or imperial→metric) for in-place conversion.
   const prevUnitSystemRef = useRef(unitSystem);
@@ -139,6 +147,21 @@ export default function ProfileScreen() {
   const { data: profile, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ["profile"],
     queryFn: api.getProfile,
+    staleTime: 300_000,
+  });
+
+  const { data: workoutSummary } = useQuery({
+    queryKey: ["workoutSummary"],
+    queryFn: api.getWorkoutSummary,
+    staleTime: 120_000,
+    enabled: tab === "profile",
+  });
+
+  const { data: streaksData } = useQuery({
+    queryKey: ["streaks"],
+    queryFn: api.getStreaks,
+    staleTime: 300_000,
+    enabled: tab === "profile",
   });
 
   useEffect(() => {
@@ -469,101 +492,132 @@ export default function ProfileScreen() {
         {/* ── PROFILE LOADING SKELETONS ── */}
         {tab === "profile" && profileLoading && !profile && (
           <View style={{ gap: 16 }}>
-            <View style={{ alignItems: "center", gap: 12, paddingVertical: 16 }}>
-              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: theme.card }} />
-              <View style={{ width: 140, height: 16, borderRadius: 8, backgroundColor: theme.card }} />
-            </View>
-            {[1, 2, 3].map((i) => (
-              <View key={i} style={{ gap: 8, padding: 16, borderRadius: 16, backgroundColor: theme.card }}>
-                <View style={{ width: 100, height: 14, borderRadius: 7, backgroundColor: theme.border }} />
-                <View style={{ height: 44, borderRadius: 10, backgroundColor: theme.border + "88" }} />
+            <SkeletonCard style={{ alignItems: "center", gap: 12, paddingVertical: 16 }}>
+              <SkeletonBox width={80} height={80} borderRadius={40} />
+              <SkeletonBox width={140} height={16} borderRadius={8} />
+              <SkeletonBox width={200} height={13} borderRadius={6} />
+            </SkeletonCard>
+            <SkeletonCard style={{ gap: 6 }}>
+              <SkeletonBox width="100%" height={6} borderRadius={3} />
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <SkeletonBox width={80} height={11} borderRadius={4} />
+                <SkeletonBox width={100} height={11} borderRadius={4} />
               </View>
+            </SkeletonCard>
+            {[1, 2, 3].map((i) => (
+              <SkeletonCard key={i} style={{ gap: 10 }}>
+                <SkeletonBox width={100} height={14} borderRadius={7} />
+                <SkeletonBox width="100%" height={44} borderRadius={10} />
+              </SkeletonCard>
             ))}
           </View>
         )}
 
         {tab === "profile" ? (
           <>
-            {/* Training Identity */}
-            {profileLoaded && (
-              <Card>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                  <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
-                    {t("profile.trainingIdentity")}
-                  </Text>
-                  <Pressable onPress={() => scrollRef.current?.scrollTo({ y: equipmentCardY.current, animated: true })}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                      <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                        {t("profile.updateGoalEquipment")}
+            {/* ── RANK HERO ── */}
+            {(() => {
+              const xp: number = (profile as any)?.xp ?? 0;
+              const rank = getRankByXp(xp);
+              const xpProgress = getXpProgress(xp);
+              const IconComponent = RANK_ICON_MAP[rank.tier];
+              return (
+                <Card>
+                  {/* Icon + rank name */}
+                  <View style={{ alignItems: "center", gap: 10, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+                    <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: rank.bgColor, borderWidth: 3, borderColor: rank.borderColor, alignItems: "center", justifyContent: "center" }}>
+                      {IconComponent && <IconComponent color={rank.borderColor} size={48} />}
+                    </View>
+                    <Pressable onPress={() => router.push("/rank")}>
+                      <Text style={{ color: rank.textColor, fontFamily: "Inter_700Bold", fontSize: 22 }}>
+                        {rank.name}
                       </Text>
-                      <Feather name={rtlIcon("chevron-right")} size={12} color={theme.primary} />
+                    </Pressable>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", lineHeight: 18, maxWidth: 260 }}>
+                      {rank.flavorText}
+                    </Text>
+                    {/* XP bar */}
+                    <View style={{ width: "100%", gap: 6 }}>
+                      <View style={{ height: 6, backgroundColor: theme.border, borderRadius: 3, overflow: "hidden" }}>
+                        <View style={{ height: 6, width: `${Math.round(xpProgress.percent * 100)}%` as any, backgroundColor: rank.borderColor, borderRadius: 3 }} />
+                      </View>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                          {xp.toLocaleString()} XP
+                        </Text>
+                        {xpProgress.needed > 0 && (
+                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                            {xpProgress.needed.toLocaleString()} to next rank
+                          </Text>
+                        )}
+                      </View>
                     </View>
-                  </Pressable>
-                </View>
+                  </View>
 
-                {fitnessGoals.length > 0 && (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                    <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: theme.primaryDim, alignItems: "center", justifyContent: "center" }}>
-                      <Feather name="target" size={16} color={theme.primary} />
+                  {/* Avatar + name */}
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+                    <View style={[styles.avatar, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}>
+                      {profile?.photoUrl ? (
+                        <Image source={{ uri: profile.photoUrl }} style={{ width: "100%", height: "100%", borderRadius: 40 }} resizeMode="cover" />
+                      ) : (
+                        <Text style={[styles.avatarLetter, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
+                          {firstName[0]?.toUpperCase() || user?.firstName?.[0]?.toUpperCase() || "U"}
+                        </Text>
+                      )}
                     </View>
-                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-                      {goalLabels[fitnessGoals[0]] || fitnessGoals[0]}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 17 }}>
+                        {firstName} {lastName}
+                      </Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                        {user?.email}
+                      </Text>
+                    </View>
+                  </View>
+
+                </Card>
+              );
+            })()}
+
+            {/* BMI Card */}
+            {profileLoaded && profile?.heightCm && profile?.weightKg && (() => {
+              const bmi = profile.weightKg / Math.pow(profile.heightCm / 100, 2);
+              type BmiCat = { label: string; color: string };
+              const cat: BmiCat =
+                bmi < 18.5 ? { label: "Underweight", color: "#4fc3f7" } :
+                bmi < 25   ? { label: "Normal weight", color: "#00e676" } :
+                bmi < 30   ? { label: "Overweight", color: "#ffab40" } :
+                             { label: "Obese", color: "#ef5350" };
+              return (
+                <Card>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
+                      BMI
+                    </Text>
+                    <View style={{ backgroundColor: cat.color + "20", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3 }}>
+                      <Text style={{ color: cat.color, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{cat.label}</Text>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
+                    <Text style={{ color: cat.color, fontFamily: "Inter_700Bold", fontSize: 36 }}>
+                      {bmi.toFixed(1)}
+                    </Text>
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                      kg/m²
                     </Text>
                   </View>
-                )}
+                  <View style={{ flexDirection: "row", gap: 8, marginBottom: 4 }}>
+                    {[{ label: "Height", value: `${profile.heightCm} cm` }, { label: "Weight", value: `${profile.weightKg} kg` }, ...((profile as any).waistCm ? [{ label: "Waist", value: `${(profile as any).waistCm} cm` }] : [])].map((s) => (
+                      <View key={s.label} style={{ flex: 1, backgroundColor: theme.cardAlt, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: theme.border }}>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{s.label}</Text>
+                        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14, marginTop: 2 }}>{s.value}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </Card>
+              );
+            })()}
 
-                <View style={{ flexDirection: "row", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-                  {!!profile?.weeklyWorkoutDays && (
-                    <View style={{ backgroundColor: theme.primaryDim, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 }}>
-                      <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                        {t("profile.perWeek", { days: profile.weeklyWorkoutDays })}
-                      </Text>
-                    </View>
-                  )}
-                  {!!profile?.experienceLevel && (
-                    <View style={{ backgroundColor: theme.cardAlt, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: theme.border }}>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                        {experienceLabels[profile.experienceLevel] || profile.experienceLevel}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {profile?.coachOnboardingComplete && (profile?.availableEquipment?.length ?? 0) > 0 ? (
-                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                    {t("profile.configuredFor", { days: profile.weeklyWorkoutDays ?? 3, goal: (goalLabels[fitnessGoals[0]] || fitnessGoals[0] || "").toLowerCase() })}
-                  </Text>
-                ) : (
-                  <Text style={{ color: theme.warning, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                    {t("profile.profileIncomplete")}
-                  </Text>
-                )}
-              </Card>
-            )}
-
-            {/* Avatar section */}
-            <View style={styles.avatarSection}>
-              <View style={[styles.avatar, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}>
-                {profile?.photoUrl ? (
-                  <Image
-                    source={{ uri: profile.photoUrl }}
-                    style={{ width: "100%", height: "100%", borderRadius: 40 }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Text style={[styles.avatarLetter, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
-                    {firstName[0]?.toUpperCase() || user?.firstName?.[0]?.toUpperCase() || "U"}
-                  </Text>
-                )}
-              </View>
-              <Text style={[styles.userName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                {firstName} {lastName}
-              </Text>
-              <Text style={[styles.userEmail, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {user?.email}
-              </Text>
-            </View>
-            
             {/* Personal Info */}
             <Card>
               <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.personalInfo")}</Text>
@@ -635,88 +689,163 @@ export default function ProfileScreen() {
               </View>
             </Card>
             
-            {/* Fitness Goals */}
+            {/* Fitness Goals — collapsible */}
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.fitnessGoals")}</Text>
-              <View style={styles.goalsGrid}>
-                {FITNESS_GOALS.map(goal => (
-                  <Pressable
-                    key={goal}
-                    onPress={() => setFitnessGoals(
-                      fitnessGoals.includes(goal) ? fitnessGoals.filter(g => g !== goal) : [...fitnessGoals, goal]
-                    )}
-                    style={[
-                      styles.goalChip,
-                      { backgroundColor: fitnessGoals.includes(goal) ? theme.primaryDim : theme.cardAlt, borderColor: fitnessGoals.includes(goal) ? theme.primary : theme.border },
-                    ]}
-                  >
-                    {fitnessGoals.includes(goal) && <Feather name="check" size={12} color={theme.primary} />}
-                    <Text style={{ color: fitnessGoals.includes(goal) ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-                      {goalLabels[goal] || goal}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </Card>
-            
-            {/* Activity Level */}
-            <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.activityLevel")}</Text>
-              {ACTIVITY_LEVELS.map(level => (
-                <Pressable
-                  key={level}
-                  onPress={() => setActivityLevel(level)}
-                  style={[styles.levelRow, { borderColor: activityLevel === level ? theme.primary : theme.border }]}
-                >
-                  <View style={[styles.radio, { borderColor: activityLevel === level ? theme.primary : theme.border }]}>
-                    {activityLevel === level && <View style={[styles.radioDot, { backgroundColor: theme.primary }]} />}
-                  </View>
-                  <Text style={{ color: activityLevel === level ? theme.primary : theme.text, fontFamily: "Inter_500Medium", fontSize: 14 }}>
-                    {activityLabels[level] || level}
-                  </Text>
-                </Pressable>
-              ))}
+              <Pressable
+                onPress={() => setGoalsExpanded(v => !v)}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+              >
+                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("profile.fitnessGoals")}</Text>
+                <Feather name={goalsExpanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
+              </Pressable>
+              {goalsExpanded && (
+                <View style={[styles.goalsGrid, { marginTop: 12 }]}>
+                  {FITNESS_GOALS.map(goal => (
+                    <Pressable
+                      key={goal}
+                      onPress={() => {
+                        setFitnessGoals(
+                          fitnessGoals.includes(goal) ? fitnessGoals.filter(g => g !== goal) : [...fitnessGoals, goal]
+                        );
+                        setNutritionSuggestion(null);
+                        api.getNutritionTargets().then(setNutritionSuggestion).catch(() => {});
+                      }}
+                      style={[
+                        styles.goalChip,
+                        { backgroundColor: fitnessGoals.includes(goal) ? theme.primaryDim : theme.cardAlt, borderColor: fitnessGoals.includes(goal) ? theme.primary : theme.border },
+                      ]}
+                    >
+                      {fitnessGoals.includes(goal) && <Feather name="check" size={12} color={theme.primary} />}
+                      <Text style={{ color: fitnessGoals.includes(goal) ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                        {goalLabels[goal] || goal}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
             </Card>
 
-            {/* Equipment */}
+            {/* Activity Level — collapsible */}
+            <Card>
+              <Pressable
+                onPress={() => setActivityExpanded(v => !v)}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+              >
+                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("profile.activityLevel")}</Text>
+                <Feather name={activityExpanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
+              </Pressable>
+              {activityExpanded && (
+                <View style={{ marginTop: 12 }}>
+                  {ACTIVITY_LEVELS.map(level => (
+                    <Pressable
+                      key={level}
+                      onPress={() => setActivityLevel(level)}
+                      style={[styles.levelRow, { borderColor: activityLevel === level ? theme.primary : theme.border }]}
+                    >
+                      <View style={[styles.radio, { borderColor: activityLevel === level ? theme.primary : theme.border }]}>
+                        {activityLevel === level && <View style={[styles.radioDot, { backgroundColor: theme.primary }]} />}
+                      </View>
+                      <Text style={{ color: activityLevel === level ? theme.primary : theme.text, fontFamily: "Inter_500Medium", fontSize: 14 }}>
+                        {activityLabels[level] || level}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </Card>
+
+            {/* Equipment — collapsible, collapsed by default */}
             <View onLayout={(e) => { equipmentCardY.current = e.nativeEvent.layout.y; }}>
               <Card>
-                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.availableEquipment")}</Text>
-                <View style={styles.goalsGrid}>
-                  {PROFILE_EQUIPMENT.map(eq => {
-                    const selected = availableEquipment.includes(eq.id);
-                    return (
-                      <Pressable
-                        key={eq.id}
-                        onPress={() => setAvailableEquipment(prev =>
-                          prev.includes(eq.id) ? prev.filter(e => e !== eq.id) : [...prev, eq.id]
-                        )}
-                        style={[
-                          styles.goalChip,
-                          { backgroundColor: selected ? theme.primaryDim : theme.cardAlt, borderColor: selected ? theme.primary : theme.border },
-                        ]}
-                      >
-                        {selected && <Feather name="check" size={12} color={theme.primary} />}
-                        <Text style={{ color: selected ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-                          {t(`equipment.${eq.id}`)}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                <Pressable
+                  onPress={() => setEquipmentExpanded(v => !v)}
+                  style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                >
+                  <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("profile.availableEquipment")}</Text>
+                  <Feather name={equipmentExpanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
+                </Pressable>
+                {equipmentExpanded && (
+                  <View style={[styles.goalsGrid, { marginTop: 12 }]}>
+                    {PROFILE_EQUIPMENT.map(eq => {
+                      const selected = availableEquipment.includes(eq.id);
+                      return (
+                        <Pressable
+                          key={eq.id}
+                          onPress={() => setAvailableEquipment(prev =>
+                            prev.includes(eq.id) ? prev.filter(e => e !== eq.id) : [...prev, eq.id]
+                          )}
+                          style={[
+                            styles.goalChip,
+                            { backgroundColor: selected ? theme.primaryDim : theme.cardAlt, borderColor: selected ? theme.primary : theme.border },
+                          ]}
+                        >
+                          {selected && <Feather name="check" size={12} color={theme.primary} />}
+                          <Text style={{ color: selected ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                            {t(`equipment.${eq.id}`)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
               </Card>
             </View>
-            
-            {/* Nutrition Targets */}
-            <Card>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("profile.dailyTargets")}</Text>
-                {hasAnyIntake && (
-                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                    {t("common.today")}
-                  </Text>
-                )}
+
+            {/* Calorie suggestion banner */}
+            {nutritionSuggestion && (
+              <View style={{ backgroundColor: theme.primaryDim, borderRadius: 12, borderWidth: 1, borderColor: theme.primary + "50", padding: 12, gap: 6 }}>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                  Suggested for your goal
+                </Text>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                  {nutritionSuggestion.explanation}
+                </Text>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                  {[
+                    { label: "Cal", value: nutritionSuggestion.calorieGoal },
+                    { label: "Protein", value: `${nutritionSuggestion.proteinGoal}g` },
+                    { label: "Carbs", value: `${nutritionSuggestion.carbsGoal}g` },
+                    { label: "Fat", value: `${nutritionSuggestion.fatGoal}g` },
+                  ].map((item) => (
+                    <View key={item.label} style={{ flex: 1, backgroundColor: theme.card, borderRadius: 8, padding: 8, alignItems: "center", borderWidth: 1, borderColor: theme.border }}>
+                      <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>{item.value}</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{item.label}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Pressable
+                  onPress={() => {
+                    setCalorieGoal(String(nutritionSuggestion.calorieGoal));
+                    setProteinGoal(String(nutritionSuggestion.proteinGoal));
+                    setCarbsGoal(String(nutritionSuggestion.carbsGoal));
+                    setFatGoal(String(nutritionSuggestion.fatGoal));
+                    setNutritionExpanded(true);
+                    setNutritionSuggestion(null);
+                  }}
+                  style={{ backgroundColor: theme.primary, borderRadius: 8, padding: 8, alignItems: "center", marginTop: 2 }}
+                >
+                  <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Apply to my targets</Text>
+                </Pressable>
               </View>
+            )}
+
+            {/* Nutrition Targets — collapsible, collapsed by default */}
+            <Card>
+              <Pressable
+                onPress={() => setNutritionExpanded(v => !v)}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: nutritionExpanded ? 12 : 0 }}
+              >
+                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("profile.dailyTargets")}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  {hasAnyIntake && !nutritionExpanded && (
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                      {t("common.today")}
+                    </Text>
+                  )}
+                  <Feather name={nutritionExpanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
+                </View>
+              </Pressable>
+              {nutritionExpanded && (<>
 
               {/* Calories */}
               <View>
@@ -759,6 +888,7 @@ export default function ProfileScreen() {
                   </View>
                 )}
               </View>
+              </>)}
             </Card>
             
             <Button title={t("profile.saveProfile")} onPress={handleSave} loading={updateMutation.isPending} />
@@ -1000,6 +1130,16 @@ export default function ProfileScreen() {
               </View>
             </Card>
             
+            <Card>
+              <Pressable onPress={() => router.push("/settings/health" as any)} style={[styles.settingRow, { borderColor: theme.border }]}>
+                <View style={styles.settingLeft}>
+                  <Feather name="heart" size={18} color={theme.primary} />
+                  <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 15 }}>Health & Wearables</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={theme.textMuted} />
+              </Pressable>
+            </Card>
+
             <Card>
               <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.dangerZone")}</Text>
               <Pressable

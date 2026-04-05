@@ -9,6 +9,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "react-i18next";
 import { getExerciseById, EXERCISE_CATEGORIES } from "@/lib/exerciseLibrary";
+import BodyMuscleMap from "@/components/BodyMuscleMap";
 
 function difficultyColor(d: string, theme: any) {
   if (d === "Beginner") return theme.primary;
@@ -103,19 +104,34 @@ export default function ExerciseDetailScreen() {
           )}
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(40).duration(350)}>
-          <AnimatedSkeleton theme={theme} placeholderId={exercise.animationPlaceholder} t={t} />
+        <Animated.View entering={FadeInDown.delay(40).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Text style={[styles.cardTitle, { color: theme.text }]}>{t("exercises.muscleMap")}</Text>
+          {exercise && (
+            <BodyMuscleMap
+              primaryMuscles={[exercise.primaryMuscle]}
+              secondaryMuscles={exercise.secondaryMuscles}
+              size="full"
+            />
+          )}
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(80).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.text }]}>{t("exercises.formInstructions")}</Text>
-          <View style={{ gap: 10, marginTop: 8 }}>
+          <View style={{ gap: 8, marginTop: 8 }}>
             {exercise.instructions.map((step, i) => (
-              <View key={i} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
-                <View style={[styles.stepDot, { backgroundColor: theme.primary }]}>
-                  <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 10 }}>{i + 1}</Text>
-                </View>
-                <Text style={[styles.stepText, { color: theme.textMuted }]}>{step}</Text>
+              <View
+                key={i}
+                style={{
+                  borderLeftWidth: 3,
+                  borderLeftColor: "#00e676",
+                  paddingLeft: 10,
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={[styles.stepText, { color: theme.textMuted }]}>
+                  <Text style={{ color: "#00e676", fontFamily: "Inter_700Bold" }}>{i + 1}.  </Text>
+                  {step}
+                </Text>
               </View>
             ))}
           </View>
@@ -123,13 +139,21 @@ export default function ExerciseDetailScreen() {
 
         <Animated.View entering={FadeInDown.delay(120).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.text }]}>{t("exercises.commonMistakes")}</Text>
-          <View style={{ gap: 10, marginTop: 8 }}>
+          <View style={{ gap: 8, marginTop: 8 }}>
             {exercise.commonMistakes.map((mistake, i) => (
-              <View key={i} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
-                <View style={[styles.warningDot, { backgroundColor: (theme.warning || "#ffab40") + "20" }]}>
-                  <Feather name="alert-triangle" size={11} color={theme.warning || "#ffab40"} />
-                </View>
-                <Text style={[styles.stepText, { color: theme.textMuted }]}>{mistake}</Text>
+              <View
+                key={i}
+                style={{
+                  borderLeftWidth: 3,
+                  borderLeftColor: "#ff5252",
+                  paddingLeft: 10,
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={[styles.stepText, { color: theme.textMuted }]}>
+                  <Feather name="alert-triangle" size={14} color="#ff5252" /><Text style={{ color: "#ff5252" }}>{"  "}</Text>
+                  {mistake}
+                </Text>
               </View>
             ))}
           </View>

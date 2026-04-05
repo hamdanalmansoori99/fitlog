@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { db, mealsTable, mealFoodItemsTable, profilesTable, bodyMeasurementsTable, settingsTable } from "@workspace/db";
-import { eq, and, gte, lt, desc, sql, isNotNull } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql, isNotNull, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
-import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { anthropic, isAnthropicConfigured } from "@workspace/integrations-anthropic-ai";
 import { trackEvent } from "../services/analyticsService";
+import { logError } from "../lib/logger";
 
 const router = Router();
 
@@ -73,6 +74,7 @@ router.post("/barcode-lookup", requireAuth, async (req, res) => {
       `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode.trim())}.json`,
       {
         headers: { "User-Agent": "FitLog/1.0 (fitness-tracker-app)" },
+        signal: AbortSignal.timeout(10000),
       }
     );
 
@@ -113,7 +115,7 @@ router.post("/barcode-lookup", requireAuth, async (req, res) => {
 
     res.json({ food });
   } catch (err: any) {
-    console.error("Barcode lookup error:", err?.message);
+    logError("Barcode lookup error:", err);
     res.status(500).json({ error: "Failed to look up barcode" });
   }
 });
@@ -139,6 +141,11 @@ async function getMealWithFoodItems(mealId: number, userId: number) {
 
 router.post("/analyze-photo", requireAuth, async (req, res) => {
   try {
+    if (!isAnthropicConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+      return;
+    }
+
     const user = getUser(req) as any;
     const { getActiveSubscription } = await import("../services/subscriptionService");
     const sub = await getActiveSubscription(user.id, user.role ?? "user");
@@ -198,7 +205,8 @@ Rules:
 - All numbers must be integers or decimals, never strings
 - Return at minimum 1 food item when food is present`;
 
-    const response = await anthropic.messages.create({
+    const ANALYZE_TIMEOUT_MS = 45000;
+    const analysisPromise = anthropic.messages.create({
       model: "claude-haiku-4-5",
       max_tokens: 1024,
       messages: [
@@ -218,6 +226,10 @@ Rules:
         },
       ],
     });
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("ANALYZE_TIMEOUT")), ANALYZE_TIMEOUT_MS)
+    );
+    const response = await Promise.race([analysisPromise, timeoutPromise]);
 
     const raw = response.content[0].type === "text" ? response.content[0].text : "";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -226,7 +238,13 @@ Rules:
       return;
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch {
+      res.status(422).json({ error: "AI returned malformed JSON" });
+      return;
+    }
 
     if (parsed.notFood) {
       res.json({ notFood: true, mealName: "", foods: [], totals: { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 } });
@@ -255,8 +273,12 @@ Rules:
 
     res.json({ mealName: parsed.mealName || "AI-analyzed meal", foods, totals });
   } catch (err: any) {
-    console.error("Photo analysis error:", err?.message);
-    res.status(500).json({ error: "Failed to analyze photo" });
+    logError("Photo analysis error:", err);
+    if (err?.message === "ANALYZE_TIMEOUT") {
+      res.status(504).json({ error: "Analysis timed out. Please try again." });
+    } else {
+      res.status(500).json({ error: "Failed to analyze photo" });
+    }
   }
 });
 
@@ -276,12 +298,22 @@ router.get("/stats/nutrition", requireAuth, async (req, res) => {
     const recentMeals = await db.select().from(mealsTable)
       .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, thirtyDaysAgo)));
     
-    const mealWithItems = await Promise.all(
-      recentMeals.map(async m => {
-        const items = await db.select().from(mealFoodItemsTable).where(eq(mealFoodItemsTable.mealId, m.id));
-        return { ...m, foodItems: items };
-      })
-    );
+    // Batch-fetch all food items in one query instead of one per meal
+    let mealWithItems: (typeof recentMeals[number] & { foodItems: (typeof allFoodItems)[number][] })[];
+    if (recentMeals.length === 0) {
+      mealWithItems = [];
+    } else {
+      const mealIds = recentMeals.map(m => m.id);
+      const allFoodItems = await db.select().from(mealFoodItemsTable)
+        .where(inArray(mealFoodItemsTable.mealId, mealIds));
+      const itemsByMealId = new Map<number, typeof allFoodItems>();
+      for (const item of allFoodItems) {
+        const arr = itemsByMealId.get(item.mealId) ?? [];
+        arr.push(item);
+        itemsByMealId.set(item.mealId, arr);
+      }
+      mealWithItems = recentMeals.map(m => ({ ...m, foodItems: itemsByMealId.get(m.id) ?? [] }));
+    }
     
     // Daily calories over 30 days
     const dailyMap: Record<string, number> = {};
@@ -305,11 +337,15 @@ router.get("/stats/nutrition", requireAuth, async (req, res) => {
       goal: calorieGoal,
     }));
     
-    // Averages
+    // Averages — divide by actual array length to be safe against edge cases
     const last7Days = dailyCalories.slice(-7);
-    const avg7DayCalories = last7Days.reduce((s, d) => s + d.calories, 0) / 7;
-    const avg30DayCalories = dailyCalories.reduce((s, d) => s + d.calories, 0) / 30;
-    
+    const avg7DayCalories = last7Days.length > 0
+      ? last7Days.reduce((s, d) => s + d.calories, 0) / last7Days.length
+      : 0;
+    const avg30DayCalories = dailyCalories.length > 0
+      ? dailyCalories.reduce((s, d) => s + d.calories, 0) / dailyCalories.length
+      : 0;
+
     // Macro split
     let totalProtein = 0, totalCarbs = 0, totalFat = 0;
     mealWithItems.forEach(m => {
@@ -319,14 +355,15 @@ router.get("/stats/nutrition", requireAuth, async (req, res) => {
         totalFat += f.fatG;
       });
     });
-    
+
     const macroTotal = totalProtein + totalCarbs + totalFat;
+    // Return null when no data — a fake 33/34/33 split is misleading to the frontend
     const macroSplit = macroTotal > 0 ? {
       proteinPercentage: Math.round((totalProtein / macroTotal) * 100),
       carbsPercentage: Math.round((totalCarbs / macroTotal) * 100),
       fatPercentage: Math.round((totalFat / macroTotal) * 100),
-    } : { proteinPercentage: 33, carbsPercentage: 34, fatPercentage: 33 };
-    
+    } : null;
+
     res.json({ avg7DayCalories, avg30DayCalories, macroSplit, dailyCalories });
   } catch (err) {
     res.status(500).json({ error: "Failed to get nutrition stats" });
@@ -351,34 +388,60 @@ router.get("/", requireAuth, async (req, res) => {
       endDate.setDate(endDate.getDate() + 1);
     }
     
-    const meals = await db.select().from(mealsTable)
-      .where(and(
-        eq(mealsTable.userId, user.id),
-        gte(mealsTable.date, startDate),
-        lt(mealsTable.date, endDate)
-      ))
-      .orderBy(mealsTable.date);
-    
-    const mealsWithItems = await Promise.all(
-      meals.map(async m => {
-        const foodItems = await db.select().from(mealFoodItemsTable).where(eq(mealFoodItemsTable.mealId, m.id));
-        const totalCalories = foodItems.reduce((s, f) => s + f.calories, 0);
-        const totalProteinG = foodItems.reduce((s, f) => s + f.proteinG, 0);
-        const totalCarbsG = foodItems.reduce((s, f) => s + f.carbsG, 0);
-        const totalFatG = foodItems.reduce((s, f) => s + f.fatG, 0);
-        return { ...m, foodItems, totalCalories, totalProteinG, totalCarbsG, totalFatG };
-      })
-    );
-    
+    // Fetch meals and calorie goal in parallel
+    const [meals, profiles] = await Promise.all([
+      db.select().from(mealsTable)
+        .where(and(
+          eq(mealsTable.userId, user.id),
+          gte(mealsTable.date, startDate),
+          lt(mealsTable.date, endDate)
+        ))
+        .orderBy(mealsTable.date),
+      db.select({ dailyCalorieGoal: profilesTable.dailyCalorieGoal })
+        .from(profilesTable)
+        .where(eq(profilesTable.userId, user.id))
+        .limit(1),
+    ]);
+
+    // Batch-fetch all food items in one query instead of one per meal
+    type MealWithItems = typeof meals[number] & {
+      foodItems: any[];
+      totalCalories: number; totalProteinG: number; totalCarbsG: number; totalFatG: number;
+    };
+    let mealsWithItems: MealWithItems[] = [];
+
+    if (meals.length === 0) {
+      mealsWithItems = [];
+    } else {
+      const mealIds = meals.map(m => m.id);
+      const allFoodItems = await db.select().from(mealFoodItemsTable)
+        .where(inArray(mealFoodItemsTable.mealId, mealIds));
+      const itemsByMealId = new Map<number, typeof allFoodItems>();
+      for (const item of allFoodItems) {
+        const arr = itemsByMealId.get(item.mealId) ?? [];
+        arr.push(item);
+        itemsByMealId.set(item.mealId, arr);
+      }
+      mealsWithItems = meals.map(m => {
+        const foodItems = itemsByMealId.get(m.id) ?? [];
+        return {
+          ...m,
+          foodItems,
+          totalCalories: foodItems.reduce((s, f) => s + f.calories, 0),
+          totalProteinG: foodItems.reduce((s, f) => s + f.proteinG, 0),
+          totalCarbsG: foodItems.reduce((s, f) => s + f.carbsG, 0),
+          totalFatG: foodItems.reduce((s, f) => s + f.fatG, 0),
+        };
+      });
+    }
+
     const dailyTotals = mealsWithItems.reduce((acc, m) => ({
       calories: acc.calories + m.totalCalories,
       proteinG: acc.proteinG + m.totalProteinG,
       carbsG: acc.carbsG + m.totalCarbsG,
       fatG: acc.fatG + m.totalFatG,
     }), { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 });
-    
-    const profiles = await db.select().from(profilesTable).where(eq(profilesTable.userId, user.id)).limit(1);
-    
+
     res.json({
       date: dateStr || new Date().toISOString().split("T")[0],
       meals: mealsWithItems,
@@ -417,7 +480,7 @@ router.get("/recent-foods", requireAuth, async (req, res) => {
 
     res.json({ foods });
   } catch (err) {
-    console.error("recent-foods error:", err);
+    logError("recent-foods error:", err);
     res.status(500).json({ error: "Failed to get recent foods" });
   }
 });
@@ -456,7 +519,7 @@ router.get("/frequent", requireAuth, async (req, res) => {
     const rows = (result as any).rows ?? Array.from(result as any);
     res.json({ meals: rows });
   } catch (err) {
-    console.error("frequent meals error:", err);
+    logError("frequent meals error:", err);
     res.status(500).json({ error: "Failed to get frequent meals" });
   }
 });
@@ -528,7 +591,7 @@ router.get("/food-search", requireAuth, async (req, res) => {
 
     res.json({ results });
   } catch (err: any) {
-    console.error("food-search error:", err?.message);
+    logError("food-search error:", err);
     res.status(500).json({ error: "Failed to search foods" });
   }
 });
@@ -536,7 +599,9 @@ router.get("/food-search", requireAuth, async (req, res) => {
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const meal = await getMealWithFoodItems(parseInt(req.params.id as string), user.id);
+    const mealId = parseInt(req.params.id as string);
+    if (isNaN(mealId)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const meal = await getMealWithFoodItems(mealId, user.id);
     if (!meal) {
       res.status(404).json({ error: "Meal not found" });
       return;
@@ -586,7 +651,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     res.status(201).json(fullMeal);
   } catch (err) {
-    console.error("Create meal error:", err);
+    logError("Create meal error:", err);
     res.status(500).json({ error: "Failed to create meal" });
   }
 });
@@ -595,7 +660,8 @@ router.put("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const mealId = parseInt(req.params.id as string);
-    
+    if (isNaN(mealId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
     const existing = await db.select().from(mealsTable)
       .where(and(eq(mealsTable.id, mealId), eq(mealsTable.userId, user.id))).limit(1);
     
@@ -638,10 +704,11 @@ router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const mealId = parseInt(req.params.id as string);
+    if (isNaN(mealId)) { res.status(400).json({ error: "Invalid id" }); return; }
     const existing = await db.select().from(mealsTable)
       .where(and(eq(mealsTable.id, mealId), eq(mealsTable.userId, user.id))).limit(1);
     if (existing.length === 0) { res.status(404).json({ error: "Meal not found" }); return; }
-    await db.delete(mealsTable).where(eq(mealsTable.id, mealId));
+    await db.delete(mealsTable).where(and(eq(mealsTable.id, mealId), eq(mealsTable.userId, user.id)));
     res.json({ message: "Meal deleted" });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete meal" });
@@ -652,6 +719,7 @@ router.post("/:id/duplicate", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
     const mealId = parseInt(req.params.id as string);
+    if (isNaN(mealId)) { res.status(400).json({ error: "Invalid id" }); return; }
     const { targetDate } = req.body;
 
     const original = await getMealWithFoodItems(mealId, user.id);
@@ -690,19 +758,22 @@ router.post("/:id/duplicate", requireAuth, async (req, res) => {
     const full = await getMealWithFoodItems(newMeal.id, user.id);
     res.json(full);
   } catch (err) {
-    console.error("duplicate meal error:", err);
+    logError("duplicate meal error:", err);
     res.status(500).json({ error: "Failed to duplicate meal" });
   }
 });
 
 router.post("/generate-plan", requireAuth, async (req, res) => {
   try {
+    if (!isAnthropicConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+      return;
+    }
     const user = getUser(req);
-
     const { getActiveSubscription } = await import("../services/subscriptionService");
     const sub = await getActiveSubscription(user.id, user.role ?? "user");
-    if (!sub.plan.features.aiPhotoAnalysis) {
-      res.status(403).json({ error: "AI meal plan generation is a Premium feature" });
+    if (!sub.plan.features.advancedNutrition) {
+      res.status(403).json({ error: "AI meal plans are a Premium feature", feature: "advancedNutrition", upgradeAvailable: true });
       return;
     }
 
@@ -755,11 +826,14 @@ Return EXACTLY a JSON array (no markdown, no extra text) with 4 meal objects. Ea
 
 HARD CONSTRAINT: Sum of proteinG MUST be ≥ ${proteinGoal}g. Sum of calories close to ${calorieGoal}. Any plan below ${proteinGoal}g total protein is INVALID. Return only the JSON array.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const message = await Promise.race([
+      anthropic.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 1024,
+        messages: [{ role: "user", content: prompt }],
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
+    ]);
 
     const raw = (message.content[0] as any).text?.trim() ?? "";
     const jsonStart = raw.indexOf("[");
@@ -768,22 +842,31 @@ HARD CONSTRAINT: Sum of proteinG MUST be ≥ ${proteinGoal}g. Sum of calories cl
       res.status(500).json({ error: "Failed to parse meal plan from AI" });
       return;
     }
-    const meals = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    let meals: any;
+    try {
+      meals = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    } catch {
+      res.status(500).json({ error: "AI returned malformed meal plan JSON" });
+      return;
+    }
     res.json({ meals });
   } catch (err) {
-    console.error("generate-plan error:", err);
+    logError("generate-plan error:", err);
     res.status(500).json({ error: "Failed to generate meal plan" });
   }
 });
 
 router.post("/generate-day-plan", requireAuth, async (req, res) => {
   try {
+    if (!isAnthropicConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+      return;
+    }
     const user = getUser(req);
-
     const { getActiveSubscription } = await import("../services/subscriptionService");
     const sub = await getActiveSubscription(user.id, user.role ?? "user");
-    if (!sub.plan.features.aiPhotoAnalysis) {
-      res.status(403).json({ error: "AI day plan is a Premium feature" });
+    if (!sub.plan.features.advancedNutrition) {
+      res.status(403).json({ error: "AI meal plans are a Premium feature", feature: "advancedNutrition", upgradeAvailable: true });
       return;
     }
 
@@ -840,11 +923,14 @@ Return EXACTLY a JSON object (no markdown, no extra text):
 
 Exactly 4 meals (one of each category). Sum calories close to ${calorieGoal}. Sum proteinG ≥ ${proteinGoal}g. Return only the JSON object.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const message = await Promise.race([
+      anthropic.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 1024,
+        messages: [{ role: "user", content: prompt }],
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
+    ]);
 
     const raw = (message.content[0] as any).text?.trim() ?? "";
     const jsonStart = raw.indexOf("{");
@@ -853,22 +939,31 @@ Exactly 4 meals (one of each category). Sum calories close to ${calorieGoal}. Su
       res.status(500).json({ error: "Failed to parse day plan from AI" });
       return;
     }
-    const dayPlan = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    let dayPlan: any;
+    try {
+      dayPlan = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    } catch {
+      res.status(500).json({ error: "AI returned malformed day plan JSON" });
+      return;
+    }
     res.json(dayPlan);
   } catch (err) {
-    console.error("generate-day-plan error:", err);
+    logError("generate-day-plan error:", err);
     res.status(500).json({ error: "Failed to generate day plan" });
   }
 });
 
 router.post("/generate-week-plan", requireAuth, async (req, res) => {
   try {
+    if (!isAnthropicConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+      return;
+    }
     const user = getUser(req);
-
     const { getActiveSubscription } = await import("../services/subscriptionService");
     const sub = await getActiveSubscription(user.id, user.role ?? "user");
-    if (!sub.plan.features.aiPhotoAnalysis) {
-      res.status(403).json({ error: "AI weekly meal plan is a Premium feature" });
+    if (!sub.plan.features.advancedNutrition) {
+      res.status(403).json({ error: "AI meal plans are a Premium feature", feature: "advancedNutrition", upgradeAvailable: true });
       return;
     }
 
@@ -938,11 +1033,14 @@ HARD CONSTRAINT: EVERY DAY the sum of proteinG MUST be ≥ ${proteinGoal}g. Not 
 Vary meals across the week — no identical meals on consecutive days.
 Return only the JSON object.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const message = await Promise.race([
+      anthropic.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 4096,
+        messages: [{ role: "user", content: prompt }],
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
+    ]);
 
     const raw = (message.content[0] as any).text?.trim() ?? "";
     const jsonStart = raw.indexOf("{");
@@ -951,22 +1049,31 @@ Return only the JSON object.`;
       res.status(500).json({ error: "Failed to parse weekly meal plan from AI" });
       return;
     }
-    const plan = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    let plan: any;
+    try {
+      plan = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    } catch {
+      res.status(500).json({ error: "AI returned malformed weekly plan JSON" });
+      return;
+    }
     res.json(plan);
   } catch (err) {
-    console.error("generate-week-plan error:", err);
+    logError("generate-week-plan error:", err);
     res.status(500).json({ error: "Failed to generate weekly meal plan" });
   }
 });
 
 router.post("/generate-grocery-list", requireAuth, async (req, res) => {
   try {
+    if (!isAnthropicConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+      return;
+    }
     const user = getUser(req);
-
     const { getActiveSubscription } = await import("../services/subscriptionService");
     const sub = await getActiveSubscription(user.id, user.role ?? "user");
-    if (!sub.plan.features.aiPhotoAnalysis) {
-      res.status(403).json({ error: "Grocery list generation is a Premium feature" });
+    if (!sub.plan.features.advancedNutrition) {
+      res.status(403).json({ error: "AI grocery lists are a Premium feature", feature: "advancedNutrition", upgradeAvailable: true });
       return;
     }
 
@@ -1012,11 +1119,14 @@ Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
 
 Be practical — combine similar items, use standard grocery quantities in ${isMetric ? "metric" : "imperial"} units, and sort categories logically (Produce first, then Proteins, Dairy, etc.). Return only the JSON object.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 2048,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const message = await Promise.race([
+      anthropic.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 2048,
+        messages: [{ role: "user", content: prompt }],
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
+    ]);
 
     const raw = (message.content[0] as any).text?.trim() ?? "";
     const jsonStart = raw.indexOf("{");
@@ -1025,10 +1135,16 @@ Be practical — combine similar items, use standard grocery quantities in ${isM
       res.status(500).json({ error: "Failed to parse grocery list from AI" });
       return;
     }
-    const groceryList = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    let groceryList: any;
+    try {
+      groceryList = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+    } catch {
+      res.status(500).json({ error: "AI returned malformed grocery list JSON" });
+      return;
+    }
     res.json(groceryList);
   } catch (err) {
-    console.error("generate-grocery-list error:", err);
+    logError("generate-grocery-list error:", err);
     res.status(500).json({ error: "Failed to generate grocery list" });
   }
 });

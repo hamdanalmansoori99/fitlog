@@ -27,4 +27,5 @@ export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof usersTable.$inferSelect;
 export type UserRole = "user" | "premium" | "admin";
+export const insertSessionSchema = createInsertSchema(sessionsTable);
 export type Session = typeof sessionsTable.$inferSelect;

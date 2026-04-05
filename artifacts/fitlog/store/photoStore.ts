@@ -14,6 +14,7 @@ interface PhotoState {
   photos: ProgressPhoto[];
   addPhoto: (photo: Omit<ProgressPhoto, "id">) => void;
   deletePhoto: (id: string) => void;
+  resetStore: () => void;
 }
 
 export const usePhotoStore = create<PhotoState>()(
@@ -29,6 +30,7 @@ export const usePhotoStore = create<PhotoState>()(
         })),
       deletePhoto: (id) =>
         set((s) => ({ photos: s.photos.filter((p) => p.id !== id) })),
+      resetStore: () => set({ photos: [] }),
     }),
     {
       name: "fitlog-progress-photos",

@@ -1,12 +1,30 @@
 import { Router } from "express";
 import { db, mealsTable, mealFoodItemsTable } from "@workspace/db";
 import { requireAuth, getUser } from "../lib/auth";
-import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { anthropic, isAnthropicConfigured } from "@workspace/integrations-anthropic-ai";
+import { logError } from "../lib/logger";
 
 const router = Router();
 
 router.post("/analyze", requireAuth, async (req, res) => {
   try {
+    if (!isAnthropicConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+      return;
+    }
+
+    const user = getUser(req);
+    const { getActiveSubscription } = await import("../services/subscriptionService");
+    const sub = await getActiveSubscription(user.id, user.role ?? "user");
+    if (!sub.plan.features.aiPhotoAnalysis) {
+      res.status(403).json({
+        error: "AI meal photo analysis is a Premium feature",
+        feature: "aiPhotoAnalysis",
+        upgradeAvailable: true,
+      });
+      return;
+    }
+
     const { imageBase64, mimeType = "image/jpeg" } = req.body;
 
     if (!imageBase64) {
@@ -17,7 +35,7 @@ router.post("/analyze", requireAuth, async (req, res) => {
     const validMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     const safeMimeType = validMimeTypes.includes(mimeType) ? mimeType : "image/jpeg";
 
-    const ANALYZE_TIMEOUT_MS = 20000;
+    const ANALYZE_TIMEOUT_MS = 45000;
 
     const analysisPromise = anthropic.messages.create({
       model: "claude-haiku-4-5",
@@ -88,7 +106,11 @@ Respond ONLY with a valid JSON object in this exact format (no markdown, no extr
     } catch {
       const jsonMatch = content.text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("Could not parse AI response as JSON");
-      parsed = JSON.parse(jsonMatch[0]);
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch {
+        throw new Error("Could not parse AI response as JSON");
+      }
     }
 
     const items = (parsed.items || []).map((item: any) => ({
@@ -122,7 +144,7 @@ Respond ONLY with a valid JSON object in this exact format (no markdown, no extr
       },
     });
   } catch (err: any) {
-    console.error("Scan meal analyze error:", err);
+    logError("Scan meal analyze error:", err);
     if (err?.message === "ANALYZE_TIMEOUT") {
       res.status(504).json({ error: "Analysis timed out" });
     } else {
@@ -143,31 +165,35 @@ router.post("/log", requireAuth, async (req, res) => {
 
     const mealName = name || `AI Scanned Meal`;
 
-    const [meal] = await db.insert(mealsTable).values({
-      userId: user.id,
-      name: mealName,
-      category,
-      date: new Date(),
-      photoUrl: photoUrl || null,
-      notes: "Logged via AI meal scanner",
-    }).returning();
+    const meal = await db.transaction(async (tx: typeof db) => {
+      const [m] = await tx.insert(mealsTable).values({
+        userId: user.id,
+        name: mealName,
+        category,
+        date: new Date(),
+        photoUrl: photoUrl || null,
+        notes: "Logged via AI meal scanner",
+      }).returning();
 
-    await db.insert(mealFoodItemsTable).values(
-      items.map((item: any) => ({
-        mealId: meal.id,
-        name: String(item.name),
-        portionSize: Number(item.portionSize) || 100,
-        unit: String(item.portionUnit || item.unit || "g"),
-        calories: Number(item.calories) || 0,
-        proteinG: Number(item.proteinG) || 0,
-        carbsG: Number(item.carbsG) || 0,
-        fatG: Number(item.fatG) || 0,
-      }))
-    );
+      await tx.insert(mealFoodItemsTable).values(
+        items.map((item: any) => ({
+          mealId: m.id,
+          name: String(item.name),
+          portionSize: Number(item.portionSize) || 100,
+          unit: String(item.portionUnit || item.unit || "g"),
+          calories: Number(item.calories) || 0,
+          proteinG: Number(item.proteinG) || 0,
+          carbsG: Number(item.carbsG) || 0,
+          fatG: Number(item.fatG) || 0,
+        }))
+      );
+
+      return m;
+    });
 
     res.status(201).json({ success: true, mealId: meal.id });
   } catch (err) {
-    console.error("Scan meal log error:", err);
+    logError("Scan meal log error:", err);
     res.status(500).json({ error: "Failed to log scanned meal" });
   }
 });

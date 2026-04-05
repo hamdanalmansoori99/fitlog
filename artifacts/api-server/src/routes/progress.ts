@@ -2,64 +2,10 @@ import { Router } from "express";
 import { db, workoutsTable, mealsTable, workoutExercisesTable, workoutSetsTable, profilesTable, waterLogsTable, bodyMeasurementsTable, progressPhotosTable, sessionsTable, usersTable } from "@workspace/db";
 import { eq, and, gte, lte, lt, desc, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
+import { logError } from "../lib/logger";
+import { computeCurrentStreak, computeLongestStreak } from "../lib/streaks";
 
 const router = Router();
-
-function calcStreak(dates: Date[]): number {
-  if (dates.length === 0) return 0;
-  
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const dateDays = [...new Set(dates.map(d => {
-    const copy = new Date(d);
-    copy.setHours(0, 0, 0, 0);
-    return copy.getTime();
-  }))].sort((a, b) => b - a);
-  
-  let streak = 0;
-  let expectedDay = today.getTime();
-  
-  for (const dayTime of dateDays) {
-    if (dayTime === expectedDay) {
-      streak++;
-      expectedDay = dayTime - 86400000;
-    } else if (streak === 0 && dayTime === expectedDay - 86400000) {
-      streak = 1;
-      expectedDay = dayTime - 86400000;
-    } else {
-      break;
-    }
-  }
-  
-  return streak;
-}
-
-function calcLongestStreak(dates: Date[]): number {
-  if (dates.length === 0) return 0;
-
-  const dateDays = [...new Set(dates.map(d => {
-    const copy = new Date(d);
-    copy.setHours(0, 0, 0, 0);
-    return copy.getTime();
-  }))].sort((a, b) => a - b);
-
-  if (dateDays.length === 0) return 0;
-
-  let longest = 1;
-  let current = 1;
-
-  for (let i = 1; i < dateDays.length; i++) {
-    if (dateDays[i] - dateDays[i - 1] === 86400000) {
-      current++;
-      if (current > longest) longest = current;
-    } else {
-      current = 1;
-    }
-  }
-
-  return longest;
-}
 
 router.get("/streaks", requireAuth, async (req, res) => {
   try {
@@ -78,12 +24,12 @@ router.get("/streaks", requireAuth, async (req, res) => {
     const mealDates = meals.map(m => m.date);
     const hydrationDates = waterLogs.map(w => new Date(w.loggedAt));
     
-    const currentWorkoutStreak = calcStreak(workoutDates);
-    const currentMealStreak = calcStreak(mealDates);
-    const currentHydrationStreak = calcStreak(hydrationDates);
-    const longestWorkoutStreak = Math.max(calcLongestStreak(workoutDates), currentWorkoutStreak);
-    const longestMealStreak = Math.max(calcLongestStreak(mealDates), currentMealStreak);
-    const longestHydrationStreak = Math.max(calcLongestStreak(hydrationDates), currentHydrationStreak);
+    const currentWorkoutStreak = computeCurrentStreak(workoutDates);
+    const currentMealStreak = computeCurrentStreak(mealDates);
+    const currentHydrationStreak = computeCurrentStreak(hydrationDates);
+    const longestWorkoutStreak = Math.max(computeLongestStreak(workoutDates), currentWorkoutStreak);
+    const longestMealStreak = Math.max(computeLongestStreak(mealDates), currentMealStreak);
+    const longestHydrationStreak = Math.max(computeLongestStreak(hydrationDates), currentHydrationStreak);
 
     function toLocalDateStr(d: Date): string {
       const y = d.getFullYear();
@@ -123,37 +69,41 @@ router.get("/records", requireAuth, async (req, res) => {
       .orderBy(desc(workoutsTable.date));
     
     const records = [];
-    
-    // Best lifts - find max weight for common exercises
-    const exercises = await db.select({ 
-      name: workoutExercisesTable.name,
-    }).from(workoutExercisesTable)
+
+    // Batch-fetch all exercise rows and sets in 2 queries instead of O(exercises x workouts x sets)
+    const allExerciseRows = await db.select().from(workoutExercisesTable)
       .innerJoin(workoutsTable, eq(workoutExercisesTable.workoutId, workoutsTable.id))
       .where(eq(workoutsTable.userId, user.id));
-    
-    const uniqueExercises = [...new Set(exercises.map(e => e.name))];
-    
-    for (const exerciseName of uniqueExercises) {
-      const exerciseRows = await db.select().from(workoutExercisesTable)
-        .innerJoin(workoutsTable, eq(workoutExercisesTable.workoutId, workoutsTable.id))
-        .where(and(eq(workoutsTable.userId, user.id), eq(workoutExercisesTable.name, exerciseName)))
-        .limit(50);
-      
-      let maxWeight = 0;
-      let maxDate: Date | null = null;
-      
-      for (const row of exerciseRows) {
-        const sets = await db.select().from(workoutSetsTable)
-          .where(eq(workoutSetsTable.exerciseId, row.workout_exercises.id));
+
+    if (allExerciseRows.length > 0) {
+      const exerciseIds = allExerciseRows.map(r => r.workout_exercises.id);
+      const allSets = await db.select().from(workoutSetsTable)
+        .where(inArray(workoutSetsTable.exerciseId, exerciseIds));
+
+      // Group sets by exerciseId
+      const setsByExerciseId = new Map<number, typeof allSets>();
+      for (const set of allSets) {
+        const arr = setsByExerciseId.get(set.exerciseId) ?? [];
+        arr.push(set);
+        setsByExerciseId.set(set.exerciseId, arr);
+      }
+
+      // Find max weight per exercise name
+      const maxByName = new Map<string, { maxWeight: number; maxDate: Date | null }>();
+      for (const row of allExerciseRows) {
+        const name = row.workout_exercises.name;
+        const sets = setsByExerciseId.get(row.workout_exercises.id) ?? [];
         for (const set of sets) {
-          if (set.weightKg && set.weightKg > maxWeight) {
-            maxWeight = set.weightKg;
-            maxDate = row.workouts.date;
+          if (set.weightKg && set.weightKg > 0) {
+            const current = maxByName.get(name);
+            if (!current || set.weightKg > current.maxWeight) {
+              maxByName.set(name, { maxWeight: set.weightKg, maxDate: row.workouts.date });
+            }
           }
         }
       }
-      
-      if (maxWeight > 0) {
+
+      for (const [exerciseName, { maxWeight, maxDate }] of maxByName) {
         records.push({
           label: `Best ${exerciseName}`,
           value: `${maxWeight} kg`,
@@ -212,7 +162,7 @@ router.get("/records", requireAuth, async (req, res) => {
     
     res.json({ records });
   } catch (err) {
-    console.error("Records error:", err);
+    logError("Records error:", err);
     res.status(500).json({ error: "Failed to get personal records" });
   }
 });
@@ -269,7 +219,7 @@ router.get("/exercise-history", requireAuth, async (req, res) => {
 
     res.json({ exercises: result });
   } catch (err) {
-    console.error("exercise-history error:", err);
+    logError("exercise-history error:", err);
     res.status(500).json({ error: "Failed to get exercise history" });
   }
 });
@@ -312,7 +262,7 @@ router.get("/cardio-history", requireAuth, async (req, res) => {
 
     res.json({ sessions });
   } catch (err) {
-    console.error("cardio-history error:", err);
+    logError("cardio-history error:", err);
     res.status(500).json({ error: "Failed to get cardio history" });
   }
 });
@@ -372,7 +322,7 @@ router.get("/consistency", requireAuth, async (req, res) => {
 
     res.json({ workoutsThisWeek: thisWeek, workoutsLastWeek: lastWeek, weeklyGoal, level, recommendation, shouldDeload });
   } catch (err) {
-    console.error("consistency error:", err);
+    logError("consistency error:", err);
     res.status(500).json({ error: "Failed to get consistency data" });
   }
 });
@@ -538,7 +488,7 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
       insights: insights.slice(0, 3),
     });
   } catch (err) {
-    console.error("weekly-report error:", err);
+    logError("weekly-report error:", err);
     res.status(500).json({ error: "Failed to get weekly report" });
   }
 });
@@ -561,7 +511,7 @@ router.get("/photos", requireAuth, async (req, res) => {
       .orderBy(desc(progressPhotosTable.createdAt));
     res.json({ photos });
   } catch (err) {
-    console.error("photos list error:", err);
+    logError("photos list error:", err);
     res.status(500).json({ error: "Failed to get photos" });
   }
 });
@@ -605,7 +555,7 @@ router.get("/photos/:id/image", async (req, res) => {
     res.setHeader("Cache-Control", "private, max-age=86400");
     res.send(buffer);
   } catch (err) {
-    console.error("photos image error:", err);
+    logError("photos image error:", err);
     res.status(500).json({ error: "Failed to serve image" });
   }
 });
@@ -636,7 +586,7 @@ router.post("/photos", requireAuth, async (req, res) => {
       });
     res.json({ photo });
   } catch (err) {
-    console.error("photos create error:", err);
+    logError("photos create error:", err);
     res.status(500).json({ error: "Failed to save photo" });
   }
 });
@@ -651,7 +601,7 @@ router.delete("/photos/:id", requireAuth, async (req, res) => {
       .where(and(eq(progressPhotosTable.id, photoId), eq(progressPhotosTable.userId, user.id)));
     res.status(204).send();
   } catch (err) {
-    console.error("photos delete error:", err);
+    logError("photos delete error:", err);
     res.status(500).json({ error: "Failed to delete photo" });
   }
 });

@@ -1,9 +1,25 @@
 import { BlurView } from "expo-blur";
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
+
+let isLiquidGlassAvailable: () => boolean = () => false;
+try {
+  const glassEffect = require("expo-glass-effect");
+  if (typeof glassEffect?.isLiquidGlassAvailable === "function") {
+    isLiquidGlassAvailable = glassEffect.isLiquidGlassAvailable;
+  }
+} catch {}
+
+let NativeTabs: any = null;
+let Icon: any = null;
+let Label: any = null;
+try {
+  const nativeTabs = require("expo-router/unstable-native-tabs");
+  NativeTabs = nativeTabs.NativeTabs;
+  Icon = nativeTabs.Icon;
+  Label = nativeTabs.Label;
+} catch {}
 import { SymbolView } from "expo-symbols";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { I18nManager, Platform, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -24,6 +40,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "figure.run", selected: "figure.run" }} />
         <Label>{t("tabs.workouts")}</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="coach">
+        <Icon sf={{ default: "brain", selected: "brain.fill" }} />
+        <Label>Coach</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scan">
         <View
           style={[
@@ -38,8 +58,9 @@ function NativeTabLayout() {
             },
           ]}
         >
-          <Icon sf={{ default: "camera.viewfinder", selected: "camera.viewfinder" }} selectedColor="#000" />
+          <Icon sf={{ default: "fork.knife.circle.fill", selected: "fork.knife.circle.fill" }} selectedColor="#000" />
         </View>
+        <Label>Scan Meal</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="progress">
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
@@ -121,15 +142,27 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="coach"
+        options={{
+          title: "Coach",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="brain" tintColor={color} size={22} />
+            ) : (
+              <Feather name="cpu" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
         name="scan"
         options={{
-          title: t("tabs.scan"),
+          title: "Scan Meal",
           tabBarIcon: ({ focused }) => (
             <View style={[layoutStyles.scanHero, { backgroundColor: theme.primary }]}>
               {isIOS ? (
-                <SymbolView name="camera.viewfinder" tintColor="#000" size={22} />
+                <SymbolView name="fork.knife.circle.fill" tintColor="#000" size={22} />
               ) : (
-                <Feather name="camera" size={22} color="#000" />
+                <MaterialCommunityIcons name="barcode-scan" size={22} color="#000" />
               )}
             </View>
           ),
