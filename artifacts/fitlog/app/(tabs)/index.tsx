@@ -1128,12 +1128,9 @@ export default function HomeScreen() {
                         <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 16, lineHeight: 22 }}>
                           {bestStreak}
                         </Text>
-                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 22 }}>
-                          {bestStreak === 1 ? t("home.streakDay") : t("home.streakDays")}
-                        </Text>
                       </View>
                       <Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 4 }}>
-                        {getStreakNarrative(bestStreak).message}
+                        {t(getStreakNarrative(bestStreak).messageKey)}
                       </Text>
                       {daysToNext != null && daysToNext <= 7 && (
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 2 }}>
@@ -1328,16 +1325,16 @@ export default function HomeScreen() {
 
         <Animated.View entering={FadeInDown.delay(70).duration(120)} style={styles.section}>
           <Card style={{ marginBottom: 12, padding: 16 }}>
-            <Text style={{ fontSize: 13, color: theme.textMuted, marginBottom: 4 }}>Steps Today</Text>
+            <Text style={{ fontSize: 13, color: theme.textMuted, marginBottom: 4 }}>{t("home.stepsToday")}</Text>
             <Text style={{ fontSize: 28, fontWeight: "700", color: theme.text }}>
               {stepsData != null ? stepsData.toLocaleString() : "0"}
             </Text>
             <Text style={{ fontSize: 11, color: theme.textMuted, marginTop: 4 }}>
               {stepsData != null
-                ? "Synced from your health app"
+                ? t("home.healthSynced")
                 : isHealthIntegrationAvailable()
                   ? "Step data not available"
-                  : "Health sync requires a custom dev build"}
+                  : t("home.healthSyncDevBuild")}
             </Text>
           </Card>
         </Animated.View>

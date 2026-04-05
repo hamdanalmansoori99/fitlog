@@ -44,7 +44,7 @@ export function PremiumGate({ feature, message, children, compact = false, minHe
         feature={feature}
       />
 
-      <View style={{ position: "relative" }}>
+      <View style={{ position: "relative", marginVertical: 8, overflow: "hidden", borderRadius: 12 }}>
         <View style={{ opacity: 0.25, pointerEvents: "none" }}>
           {children}
         </View>

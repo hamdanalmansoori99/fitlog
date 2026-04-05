@@ -42,7 +42,7 @@ function NativeTabLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="coach">
         <Icon sf={{ default: "brain", selected: "brain.fill" }} />
-        <Label>Coach</Label>
+        <Label>{t("tabs.coach")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="scan">
         <View
@@ -60,7 +60,7 @@ function NativeTabLayout() {
         >
           <Icon sf={{ default: "fork.knife.circle.fill", selected: "fork.knife.circle.fill" }} selectedColor="#000" />
         </View>
-        <Label>Scan Meal</Label>
+        <Label>{t("tabs.scanMeal")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="progress">
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
@@ -144,7 +144,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="coach"
         options={{
-          title: "Coach",
+          title: t("tabs.coach"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="brain" tintColor={color} size={22} />
@@ -156,7 +156,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="scan"
         options={{
-          title: "Scan Meal",
+          title: t("tabs.scanMeal"),
           tabBarIcon: ({ focused }) => (
             <View style={[layoutStyles.scanHero, { backgroundColor: theme.primary }]}>
               {isIOS ? (

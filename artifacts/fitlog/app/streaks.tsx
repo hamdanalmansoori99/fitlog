@@ -12,7 +12,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { rtlIcon, dateLocale } from "@/lib/rtl";
-import { getStreakNarrative, getStreakLabel } from "@/lib/streakNarratives";
+import { getStreakNarrative, getStreakLabelKey } from "@/lib/streakNarratives";
 
 const MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -66,11 +66,11 @@ function StreakRing({
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <Feather name={narrative.icon as keyof typeof Feather.glyphMap} size={15} color={theme.textMuted} />
               <Text style={{ fontSize: 15, color: theme.textMuted, fontFamily: "Inter_400Regular", flex: 1 }}>
-                {narrative.message}
+                {t(narrative.messageKey)}
               </Text>
             </View>
             <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_400Regular", marginBottom: 4 }}>
-              {getStreakLabel(current)}
+              {t(getStreakLabelKey(current), { count: current })}
             </Text>
           </View>
         );

@@ -14,16 +14,6 @@ router.post("/analyze", requireAuth, async (req, res) => {
     }
 
     const user = getUser(req);
-    const { getActiveSubscription } = await import("../services/subscriptionService");
-    const sub = await getActiveSubscription(user.id, user.role ?? "user");
-    if (!sub.plan.features.aiPhotoAnalysis) {
-      res.status(403).json({
-        error: "AI meal photo analysis is a Premium feature",
-        feature: "aiPhotoAnalysis",
-        upgradeAvailable: true,
-      });
-      return;
-    }
 
     const { imageBase64, mimeType = "image/jpeg" } = req.body;
 

@@ -9,6 +9,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import {
   isHealthIntegrationAvailable,
@@ -20,6 +21,7 @@ import {
 
 export default function HealthSettingsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [available, setAvailable] = useState(false);
   const [permissions, setPermissions] = useState<HealthPermissions | null>(null);
@@ -62,7 +64,7 @@ export default function HealthSettingsScreen() {
         >
           <Feather name="arrow-left" size={20} color={theme.text} />
           <Text style={{ fontSize: 18, fontFamily: "Inter_700Bold", color: theme.text }}>
-            Health & Wearables
+            {t("health.title")}
           </Text>
         </Pressable>
 
@@ -93,8 +95,8 @@ export default function HealthSettingsScreen() {
               </Text>
               <Text style={{ fontSize: 12, color: theme.textMuted, marginTop: 2 }}>
                 {available
-                  ? "Available on this device"
-                  : "Requires a dev build — not available in Expo Go"}
+                  ? t("health.available")
+                  : t("health.requiresDevBuild")}
               </Text>
             </View>
           </View>
@@ -111,8 +113,7 @@ export default function HealthSettingsScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Feather name="alert-triangle" size={14} color={theme.primary} />
                 <Text style={{ fontSize: 13, color: theme.primary, flex: 1 }}>
-                  Health integration requires a native dev build. It will activate
-                  automatically once the app is built for the App Store / Play Store.
+                  {t("health.devBuildNotice")}
                 </Text>
               </View>
             </View>
@@ -135,7 +136,7 @@ export default function HealthSettingsScreen() {
                 <Text
                   style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#000" }}
                 >
-                  Connect {platformName}
+                  {t("health.connect", { platform: platformName })}
                 </Text>
               )}
             </Pressable>
@@ -144,10 +145,10 @@ export default function HealthSettingsScreen() {
           {permissions && (
             <View style={{ gap: 8 }}>
               {[
-                { key: "stepCount", label: "Steps", icon: "trending-up" },
-                { key: "heartRate", label: "Heart Rate", icon: "heart" },
-                { key: "sleep", label: "Sleep", icon: "moon" },
-                { key: "workouts", label: "Workouts", icon: "activity" },
+                { key: "stepCount", label: t("health.steps"), icon: "trending-up" },
+                { key: "heartRate", label: t("health.heartRate"), icon: "heart" },
+                { key: "sleep", label: t("health.sleep"), icon: "moon" },
+                { key: "workouts", label: t("health.workouts"), icon: "activity" },
               ].map((item) => (
                 <View
                   key={item.key}
@@ -174,14 +175,14 @@ export default function HealthSettingsScreen() {
                     }}
                   >
                     {permissions[item.key as keyof HealthPermissions]
-                      ? "Connected"
-                      : "Denied"}
+                      ? t("health.connected")
+                      : t("health.denied")}
                   </Text>
                 </View>
               ))}
               {todaySteps !== null && (
                 <Text style={{ fontSize: 13, color: theme.textMuted, marginTop: 8 }}>
-                  Today: {todaySteps.toLocaleString()} steps synced ✓
+                  {t("health.todaySteps", { count: todaySteps })}
                 </Text>
               )}
             </View>
@@ -199,24 +200,24 @@ export default function HealthSettingsScreen() {
             textTransform: "uppercase",
           }}
         >
-          What syncs
+          {t("health.whatSyncs")}
         </Text>
         {[
-          { icon: "trending-up", title: "Steps", desc: "Daily step count shown on home screen" },
+          { icon: "trending-up", title: t("health.steps"), desc: t("health.stepsDesc") },
           {
             icon: "heart",
-            title: "Heart Rate",
-            desc: "Resting HR used by AI coach for recovery advice",
+            title: t("health.heartRate"),
+            desc: t("health.heartRateDesc"),
           },
           {
             icon: "moon",
-            title: "Sleep",
-            desc: "Sleep hours fed to AI coach for strain scoring",
+            title: t("health.sleep"),
+            desc: t("health.sleepDesc"),
           },
           {
             icon: "activity",
-            title: "Workouts",
-            desc: "Workouts logged here sync to your health app",
+            title: t("health.workouts"),
+            desc: t("health.workoutsDesc"),
           },
         ].map((item) => (
           <View
@@ -263,11 +264,11 @@ export default function HealthSettingsScreen() {
             textTransform: "uppercase",
           }}
         >
-          Connected Devices
+          {t("health.connectedDevices")}
         </Text>
         {[
-          { name: "Whoop", icon: "zap", color: "#e53935", status: "Coming soon" },
-          { name: "Garmin", icon: "map", color: "#00897b", status: "Coming soon" },
+          { name: "Whoop", icon: "zap", color: "#e53935", status: t("health.comingSoon") },
+          { name: "Garmin", icon: "map", color: "#00897b", status: t("health.comingSoon") },
         ].map((device) => (
           <View
             key={device.name}

@@ -11,6 +11,27 @@ import { useTranslation } from "react-i18next";
 import { getExerciseById, EXERCISE_CATEGORIES } from "@/lib/exerciseLibrary";
 import BodyMuscleMap from "@/components/BodyMuscleMap";
 
+function muscleKey(name: string): string {
+  return "exercises.muscle_" + name.toLowerCase().replace(/[()]/g, "").replace(/\s+/g, "_");
+}
+
+function equipmentKey(name: string): string {
+  return "exercises.equipment_" + name.toLowerCase();
+}
+
+function translateMuscle(name: string, t: (key: string) => string): string {
+  const key = muscleKey(name);
+  const translated = t(key);
+  // If no translation found (returns the key itself), fall back to original name
+  return translated === key ? name : translated;
+}
+
+function translateEquipment(name: string, t: (key: string) => string): string {
+  const key = equipmentKey(name);
+  const translated = t(key);
+  return translated === key ? name.replace(/_/g, " ") : translated;
+}
+
 function difficultyColor(d: string, theme: any) {
   if (d === "Beginner") return theme.primary;
   if (d === "Intermediate") return theme.secondary;
@@ -79,7 +100,7 @@ export default function ExerciseDetailScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-        <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: theme.card }]} hitSlop={8}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
           <Feather name="arrow-left" size={20} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>
@@ -166,7 +187,7 @@ export default function ExerciseDetailScreen() {
               <Text style={[styles.muscleLabel, { color: theme.textMuted }]}>{t("exercises.primary")}</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
                 <View style={[styles.muscleChip, { backgroundColor: theme.primary + "18" }]}>
-                  <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{exercise.primaryMuscle}</Text>
+                  <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{translateMuscle(exercise.primaryMuscle, t)}</Text>
                 </View>
               </View>
             </View>
@@ -176,7 +197,7 @@ export default function ExerciseDetailScreen() {
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
                   {exercise.secondaryMuscles.map((m) => (
                     <View key={m} style={[styles.muscleChip, { backgroundColor: theme.border }]}>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>{m}</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>{translateMuscle(m, t)}</Text>
                     </View>
                   ))}
                 </View>
@@ -193,7 +214,7 @@ export default function ExerciseDetailScreen() {
                 <View key={eq} style={[styles.equipChip, { backgroundColor: theme.secondary + "18" }]}>
                   <Feather name="tool" size={11} color={theme.secondary} />
                   <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                    {eq.replace(/_/g, " ")}
+                    {translateEquipment(eq, t)}
                   </Text>
                 </View>
               ))}

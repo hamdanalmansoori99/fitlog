@@ -105,10 +105,6 @@ export default function CoachChatScreen() {
     t("home.coachChip2"),
     t("home.coachChipRecovery"),
     t("home.coachChipRest"),
-    t("home.coachChip4"),
-    t("home.coachChip5"),
-    t("home.coachChip3"),
-    t("home.coachChip6"),
   ];
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -723,17 +719,20 @@ function makeStyles(theme: any, isWeb: boolean, webTop: number, webBottom: numbe
     },
     suggestionsGrid: {
       width: "100%",
+      flexDirection: "row",
+      flexWrap: "wrap",
       gap: 6,
     },
     suggestionChip: {
+      width: "48%",
       borderRadius: 10,
       borderWidth: 1,
-      paddingHorizontal: 14,
+      paddingHorizontal: 12,
       paddingVertical: 8,
     },
     suggestionText: {
       fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      fontSize: 12,
       lineHeight: 18,
     },
     messagesList: {

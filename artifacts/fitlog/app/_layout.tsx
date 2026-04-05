@@ -125,6 +125,17 @@ function RootLayoutNav() {
       <Stack.Screen name="equipment/add" options={{ headerShown: false }} />
       <Stack.Screen name="measurements/add" options={{ headerShown: false }} />
       <Stack.Screen name="subscription" options={{ headerShown: false }} />
+      <Stack.Screen name="meals/index" options={{ headerShown: false }} />
+      <Stack.Screen name="workouts/exercise/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="workouts/exercises" options={{ headerShown: false }} />
+      <Stack.Screen name="workouts/edit" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/health" options={{ headerShown: false }} />
+      <Stack.Screen name="coach/chat" options={{ headerShown: false }} />
+      <Stack.Screen name="recovery" options={{ headerShown: false }} />
+      <Stack.Screen name="rank" options={{ headerShown: false }} />
+      <Stack.Screen name="water/add" options={{ headerShown: false }} />
+      <Stack.Screen name="measurements/edit" options={{ headerShown: false }} />
+      <Stack.Screen name="progress/weekly-report" options={{ headerShown: false }} />
     </Stack>
   );
 }
