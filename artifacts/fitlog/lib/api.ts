@@ -7,7 +7,7 @@ import i18n from "@/i18n";
 export const BASE_URL =
   Platform.OS === "web"
     ? "/api"
-    : (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/api");
+    : (process.env.EXPO_PUBLIC_API_URL ?? "https://fitlog-production-895f.up.railway.app/api");
 
 // AI generation endpoints that can legitimately take up to 60s.
 const AI_PATHS = [
