@@ -9,6 +9,9 @@ import { AppError } from "./lib/errors";
 
 const app: Express = express();
 
+// ── Reverse proxy (Railway, Render, etc.) ────────────────────────────────────
+app.set("trust proxy", 1);
+
 // ── Security headers ─────────────────────────────────────────────────────────
 app.use(helmet());
 
