@@ -59,7 +59,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
     limits: {
       maxSavedTemplates: 10,
       maxFavoriteMeals: 20,
-      aiRequestsPerDay: 50,
+      aiRequestsPerDay: 10,
       dataRetentionDays: 365,
       scansPerDay: 1,
     },
@@ -93,7 +93,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
     limits: {
       maxSavedTemplates: Infinity,
       maxFavoriteMeals: Infinity,
-      aiRequestsPerDay: Infinity,
+      aiRequestsPerDay: 50,
       dataRetentionDays: Infinity,
       scansPerDay: Infinity,
     },

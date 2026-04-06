@@ -4,6 +4,7 @@ import { eq, and, desc, gte, lte, lt, isNotNull, inArray, sql } from "drizzle-or
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic, isAnthropicConfigured } from "@workspace/integrations-anthropic-ai";
 import { logError } from "../lib/logger";
+import { getActiveSubscription } from "../services/subscriptionService";
 
 const conversations = conversationsTable;
 const messages = messagesTable;
@@ -642,6 +643,35 @@ Remember: the user can see and navigate to any of the workout templates listed a
 ${coachSummary}`;
 }
 
+// ─── AI model & rate limiting ─────────────────────────────────────────────────
+
+/** Count how many AI coach messages a user has sent today (UTC). */
+async function getTodayMessageCount(userId: number): Promise<number> {
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const result = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(messagesTable)
+    .innerJoin(conversationsTable, eq(messagesTable.conversationId, conversationsTable.id))
+    .where(
+      and(
+        eq(conversationsTable.userId, userId),
+        eq(messagesTable.role, "user"),
+        gte(messagesTable.createdAt, todayStart)
+      )
+    );
+  return Number(result[0]?.count ?? 0);
+}
+
+/** Pick model and token limit based on plan tier. */
+function getModelConfig(planKey: string): { model: string; maxTokens: number } {
+  if (planKey === "premium") {
+    return { model: "claude-sonnet-4-20250514", maxTokens: 2048 };
+  }
+  // Free tier stays on Haiku — fast and cheap
+  return { model: "claude-haiku-4-5", maxTokens: 1024 };
+}
+
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 router.get("/conversation", requireAuth, async (req, res) => {
@@ -712,6 +742,24 @@ router.post("/message", requireAuth, async (req, res) => {
 
     if (!content?.trim()) {
       res.status(400).json({ error: "Message content is required" });
+      return;
+    }
+
+    // ── Enforce daily AI message limit ──
+    const sub = await getActiveSubscription(user.id, user.role ?? "user");
+    const dailyLimit = sub.plan.limits.aiRequestsPerDay;
+    const todayCount = await getTodayMessageCount(user.id);
+    if (dailyLimit > 0 && todayCount >= dailyLimit) {
+      const isPremium = sub.effectivePlanKey === "premium";
+      res.status(429).json({
+        error: isPremium
+          ? `You've reached your daily limit of ${dailyLimit} messages. Your limit resets at midnight UTC.`
+          : `You've used all ${dailyLimit} free messages today. Upgrade to Premium for 50 messages/day with our smarter AI model.`,
+        limitReached: true,
+        used: todayCount,
+        limit: dailyLimit,
+        isPremium,
+      });
       return;
     }
 
@@ -861,10 +909,13 @@ router.post("/message", requireAuth, async (req, res) => {
       content: m.content,
     }));
 
+    // Pick model based on subscription tier
+    const modelConfig = getModelConfig(sub.effectivePlanKey);
+
     const aiResponse = await Promise.race([
       anthropic.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: 8192,
+        model: modelConfig.model,
+        max_tokens: modelConfig.maxTokens,
         system: systemPrompt,
         messages: chatMessages,
       }),
@@ -881,7 +932,8 @@ router.post("/message", requireAuth, async (req, res) => {
       content: fullResponse,
     });
 
-    res.json({ content: fullResponse });
+    const remaining = dailyLimit > 0 ? Math.max(0, dailyLimit - todayCount - 1) : -1;
+    res.json({ content: fullResponse, remaining, limit: dailyLimit });
   } catch (err) {
     logError("sendCoachMessage error:", err);
     res.status(500).json({ error: "Failed to send message" });

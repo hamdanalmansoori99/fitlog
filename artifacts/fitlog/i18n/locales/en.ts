@@ -1255,6 +1255,9 @@ export default {
     suggestion6: "What are the benefits of walking vs running for me?",
     suggestion7: "How many days a week should I train?",
     suggestion8: "Help me build a weekly plan",
+    messagesRemaining: "{{remaining}}/{{limit}} messages remaining today",
+    limitReached: "Daily message limit reached. Resets at midnight.",
+    limitReachedShort: "Daily limit reached",
   },
   profile: {
     title: "Profile",

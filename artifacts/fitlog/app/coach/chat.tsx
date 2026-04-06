@@ -114,6 +114,8 @@ export default function CoachChatScreen() {
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [proactiveMessage, setProactiveMessage] = useState<string | null>(null);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [dailyLimit, setDailyLimit] = useState<number | null>(null);
   const flatListRef = useRef<FlashListRef<ChatMessage>>(null);
 
   const isWeb = Platform.OS === "web";
@@ -311,11 +313,17 @@ export default function CoachChatScreen() {
           try {
             const errData = await response.json();
             if (errData?.error) errorMsg = errData.error;
+            if (errData?.limitReached) {
+              setRemaining(0);
+              setDailyLimit(errData.limit ?? null);
+            }
           } catch {}
           throw new Error(errorMsg);
         }
 
         const data = await response.json();
+        if (data.remaining != null) setRemaining(data.remaining);
+        if (data.limit != null) setDailyLimit(data.limit);
         const fullContent: string = data.content || "";
 
         // Animate the response word by word for a natural feel
@@ -599,10 +607,20 @@ export default function CoachChatScreen() {
             </ScrollView>
           )}
 
+          {remaining !== null && dailyLimit !== null && (
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 4, gap: 4 }}>
+              <Feather name="zap" size={11} color={remaining === 0 ? theme.danger || "#ef5350" : theme.textMuted} />
+              <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: remaining === 0 ? theme.danger || "#ef5350" : theme.textMuted }}>
+                {remaining === 0
+                  ? t("coach.limitReached")
+                  : t("coach.messagesRemaining", { remaining, limit: dailyLimit })}
+              </Text>
+            </View>
+          )}
           <View style={[styles.inputBar, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.background }]}
-              placeholder={t("coach.askPlaceholder")}
+              placeholder={remaining === 0 ? t("coach.limitReachedShort") : t("coach.askPlaceholder")}
               placeholderTextColor={theme.textMuted}
               value={input}
               onChangeText={setInput}
@@ -610,20 +628,21 @@ export default function CoachChatScreen() {
               maxLength={500}
               returnKeyType="send"
               onSubmitEditing={() => sendMessage(input)}
+              editable={remaining !== 0}
             />
             <Pressable
               style={({ pressed }) => [
                 styles.sendBtn,
-                { backgroundColor: input.trim() ? theme.primary : theme.border },
+                { backgroundColor: input.trim() && remaining !== 0 ? theme.primary : theme.border },
                 pressed && { opacity: 0.8 },
               ]}
               onPress={() => sendMessage(input)}
-              disabled={!input.trim()}
+              disabled={!input.trim() || remaining === 0}
             >
               {sending ? (
                 <ActivityIndicator size="small" color="#000" />
               ) : (
-                <Feather name="send" size={18} color={input.trim() ? "#000" : theme.textMuted} />
+                <Feather name="send" size={18} color={input.trim() && remaining !== 0 ? "#000" : theme.textMuted} />
               )}
             </Pressable>
           </View>

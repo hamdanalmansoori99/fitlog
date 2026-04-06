@@ -1172,6 +1172,9 @@ export default {
     suggestion6: "ما فوائد المشي مقابل الجري بالنسبة لي؟",
     suggestion7: "كم يوماً في الأسبوع يجب أن أتمرن؟",
     suggestion8: "ساعدني في بناء خطة أسبوعية",
+    messagesRemaining: "{{remaining}}/{{limit}} رسالة متبقية اليوم",
+    limitReached: "تم الوصول للحد اليومي. يتجدد عند منتصف الليل.",
+    limitReachedShort: "تم الوصول للحد اليومي",
   },
   profile: {
     title: "الملف الشخصي",
