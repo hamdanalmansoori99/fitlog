@@ -93,12 +93,12 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
     limits: {
       maxSavedTemplates: Infinity,
       maxFavoriteMeals: Infinity,
-      aiRequestsPerDay: 50,
+      aiRequestsPerDay: 25,
       dataRetentionDays: Infinity,
-      scansPerDay: Infinity,
+      scansPerDay: 15,
     },
-    priceMonthly: 999,
-    priceYearly: 7999,
+    priceMonthly: 699,
+    priceYearly: 6699,
     highlight: [
       "Everything in Free",
       "AI meal photo analysis",

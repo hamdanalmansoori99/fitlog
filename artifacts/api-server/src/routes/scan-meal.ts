@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, mealsTable, mealFoodItemsTable } from "@workspace/db";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
-import { anthropic, isAnthropicConfigured } from "@workspace/integrations-anthropic-ai";
+import { visionCompletion, isAIConfigured } from "../lib/aiProvider";
 import { logError } from "../lib/logger";
 import { getActiveSubscription } from "../services/subscriptionService";
 
@@ -50,8 +50,8 @@ router.get("/status", requireAuth, async (req, res) => {
 
 router.post("/analyze", requireAuth, async (req, res) => {
   try {
-    if (!isAnthropicConfigured()) {
-      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+    if (!isAIConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY." });
       return;
     }
 
@@ -85,24 +85,7 @@ router.post("/analyze", requireAuth, async (req, res) => {
 
     const ANALYZE_TIMEOUT_MS = 45000;
 
-    const analysisPromise = anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: safeMimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-                data: imageBase64,
-              },
-            },
-            {
-              type: "text",
-              text: `You are a nutrition expert. Analyze this meal photo and identify all food items visible.
+    const mealPrompt = `You are a nutrition expert. Analyze this meal photo and identify all food items visible.
 
 For each food item, estimate:
 - name: common food name in English
@@ -129,30 +112,27 @@ Respond ONLY with a valid JSON object in this exact format (no markdown, no extr
     }
   ],
   "mealDescription": "Brief description of the meal"
-}`,
-            },
-          ],
-        },
-      ],
+}`;
+
+    const analysisPromise = visionCompletion({
+      prompt: mealPrompt,
+      imageBase64,
+      mimeType: safeMimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+      maxTokens: 1024,
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("ANALYZE_TIMEOUT")), ANALYZE_TIMEOUT_MS)
     );
 
-    const response = await Promise.race([analysisPromise, timeoutPromise]);
-
-    const content = response.content[0];
-    if (content.type !== "text") {
-      throw new Error("Unexpected response type from AI");
-    }
+    const responseText = await Promise.race([analysisPromise, timeoutPromise]);
 
     let parsed: { items: any[]; mealDescription: string };
     try {
-      const jsonStr = content.text.trim();
+      const jsonStr = responseText.trim();
       parsed = JSON.parse(jsonStr);
     } catch {
-      const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("Could not parse AI response as JSON");
       try {
         parsed = JSON.parse(jsonMatch[0]);

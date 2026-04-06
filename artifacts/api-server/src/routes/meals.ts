@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, mealsTable, mealFoodItemsTable, profilesTable, bodyMeasurementsTable, settingsTable } from "@workspace/db";
 import { eq, and, gte, lt, desc, sql, isNotNull, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
-import { anthropic, isAnthropicConfigured } from "@workspace/integrations-anthropic-ai";
+import { chatCompletion, visionCompletion, isAIConfigured } from "../lib/aiProvider";
 import { trackEvent } from "../services/analyticsService";
 import { logError } from "../lib/logger";
 
@@ -141,8 +141,8 @@ async function getMealWithFoodItems(mealId: number, userId: number) {
 
 router.post("/analyze-photo", requireAuth, async (req, res) => {
   try {
-    if (!isAnthropicConfigured()) {
-      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+    if (!isAIConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY." });
       return;
     }
 
@@ -206,32 +206,16 @@ Rules:
 - Return at minimum 1 food item when food is present`;
 
     const ANALYZE_TIMEOUT_MS = 45000;
-    const analysisPromise = anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mimeType as any,
-                data: imageBase64,
-              },
-            },
-            { type: "text", text: prompt },
-          ],
-        },
-      ],
+    const analysisPromise = visionCompletion({
+      prompt,
+      imageBase64,
+      mimeType: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+      maxTokens: 1024,
     });
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("ANALYZE_TIMEOUT")), ANALYZE_TIMEOUT_MS)
     );
-    const response = await Promise.race([analysisPromise, timeoutPromise]);
-
-    const raw = response.content[0].type === "text" ? response.content[0].text : "";
+    const raw = await Promise.race([analysisPromise, timeoutPromise]);
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       res.status(422).json({ error: "Could not parse AI response", raw });
@@ -765,8 +749,8 @@ router.post("/:id/duplicate", requireAuth, async (req, res) => {
 
 router.post("/generate-plan", requireAuth, async (req, res) => {
   try {
-    if (!isAnthropicConfigured()) {
-      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+    if (!isAIConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY." });
       return;
     }
     const user = getUser(req);
@@ -826,16 +810,11 @@ Return EXACTLY a JSON array (no markdown, no extra text) with 4 meal objects. Ea
 
 HARD CONSTRAINT: Sum of proteinG MUST be ≥ ${proteinGoal}g. Sum of calories close to ${calorieGoal}. Any plan below ${proteinGoal}g total protein is INVALID. Return only the JSON array.`;
 
-    const message = await Promise.race([
-      anthropic.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const raw = await Promise.race([
+      chatCompletion({ system: "", messages: [{ role: "user", content: prompt }], maxTokens: 1024 }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
     ]);
 
-    const raw = (message.content[0] as any).text?.trim() ?? "";
     const jsonStart = raw.indexOf("[");
     const jsonEnd = raw.lastIndexOf("]");
     if (jsonStart === -1 || jsonEnd === -1) {
@@ -858,8 +837,8 @@ HARD CONSTRAINT: Sum of proteinG MUST be ≥ ${proteinGoal}g. Sum of calories cl
 
 router.post("/generate-day-plan", requireAuth, async (req, res) => {
   try {
-    if (!isAnthropicConfigured()) {
-      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+    if (!isAIConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY." });
       return;
     }
     const user = getUser(req);
@@ -923,16 +902,11 @@ Return EXACTLY a JSON object (no markdown, no extra text):
 
 Exactly 4 meals (one of each category). Sum calories close to ${calorieGoal}. Sum proteinG ≥ ${proteinGoal}g. Return only the JSON object.`;
 
-    const message = await Promise.race([
-      anthropic.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const raw = await Promise.race([
+      chatCompletion({ system: "", messages: [{ role: "user", content: prompt }], maxTokens: 1024 }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
     ]);
 
-    const raw = (message.content[0] as any).text?.trim() ?? "";
     const jsonStart = raw.indexOf("{");
     const jsonEnd = raw.lastIndexOf("}");
     if (jsonStart === -1 || jsonEnd === -1) {
@@ -955,8 +929,8 @@ Exactly 4 meals (one of each category). Sum calories close to ${calorieGoal}. Su
 
 router.post("/generate-week-plan", requireAuth, async (req, res) => {
   try {
-    if (!isAnthropicConfigured()) {
-      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+    if (!isAIConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY." });
       return;
     }
     const user = getUser(req);
@@ -1033,16 +1007,10 @@ HARD CONSTRAINT: EVERY DAY the sum of proteinG MUST be ≥ ${proteinGoal}g. Not 
 Vary meals across the week — no identical meals on consecutive days.
 Return only the JSON object.`;
 
-    const message = await Promise.race([
-      anthropic.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: 4096,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const raw = await Promise.race([
+      chatCompletion({ system: "", messages: [{ role: "user", content: prompt }], maxTokens: 4096 }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
     ]);
-
-    const raw = (message.content[0] as any).text?.trim() ?? "";
     const jsonStart = raw.indexOf("{");
     const jsonEnd = raw.lastIndexOf("}");
     if (jsonStart === -1 || jsonEnd === -1) {
@@ -1065,8 +1033,8 @@ Return only the JSON object.`;
 
 router.post("/generate-grocery-list", requireAuth, async (req, res) => {
   try {
-    if (!isAnthropicConfigured()) {
-      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+    if (!isAIConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY." });
       return;
     }
     const user = getUser(req);
@@ -1119,16 +1087,10 @@ Return EXACTLY a JSON object (no markdown, no extra text) with this structure:
 
 Be practical — combine similar items, use standard grocery quantities in ${isMetric ? "metric" : "imperial"} units, and sort categories logically (Produce first, then Proteins, Dairy, etc.). Return only the JSON object.`;
 
-    const message = await Promise.race([
-      anthropic.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: 2048,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const raw = await Promise.race([
+      chatCompletion({ system: "", messages: [{ role: "user", content: prompt }], maxTokens: 2048 }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
     ]);
-
-    const raw = (message.content[0] as any).text?.trim() ?? "";
     const jsonStart = raw.indexOf("{");
     const jsonEnd = raw.lastIndexOf("}");
     if (jsonStart === -1 || jsonEnd === -1) {

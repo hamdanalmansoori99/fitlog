@@ -53,8 +53,8 @@ export default function SubscriptionScreen() {
   ];
 
   const premiumPlan = availablePlans.find((p: any) => p.key === "premium") ?? {
-    priceMonthly: 999,
-    priceYearly: 7999,
+    priceMonthly: 699,
+    priceYearly: 6699,
   };
 
   const priceMonthly = (premiumPlan.priceMonthly / 100).toFixed(2);

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, conversationsTable, messagesTable, profilesTable, workoutsTable, workoutExercisesTable, workoutSetsTable, equipmentTable, mealsTable, mealFoodItemsTable, recoveryLogsTable, settingsTable, bodyMeasurementsTable } from "@workspace/db";
 import { eq, and, desc, gte, lte, lt, isNotNull, inArray, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
-import { anthropic, isAnthropicConfigured } from "@workspace/integrations-anthropic-ai";
+import { chatCompletion, isAIConfigured } from "../lib/aiProvider";
 import { logError } from "../lib/logger";
 import { getActiveSubscription } from "../services/subscriptionService";
 
@@ -663,13 +663,9 @@ async function getTodayMessageCount(userId: number): Promise<number> {
   return Number(result[0]?.count ?? 0);
 }
 
-/** Pick model and token limit based on plan tier. */
-function getModelConfig(planKey: string): { model: string; maxTokens: number } {
-  if (planKey === "premium") {
-    return { model: "claude-sonnet-4-20250514", maxTokens: 2048 };
-  }
-  // Free tier stays on Haiku — fast and cheap
-  return { model: "claude-haiku-4-5", maxTokens: 1024 };
+/** Token limit based on plan tier. Model is handled by aiProvider. */
+function getMaxTokens(planKey: string): number {
+  return planKey === "premium" ? 2048 : 1024;
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
@@ -732,8 +728,8 @@ router.delete("/conversation", requireAuth, async (req, res) => {
 
 router.post("/message", requireAuth, async (req, res) => {
   try {
-    if (!isAnthropicConfigured()) {
-      res.status(503).json({ error: "AI features require an API key. Add ANTHROPIC_API_KEY to your .env file." });
+    if (!isAIConfigured()) {
+      res.status(503).json({ error: "AI features require an API key. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY." });
       return;
     }
 
@@ -806,7 +802,7 @@ router.post("/message", requireAuth, async (req, res) => {
       .from(messages)
       .where(eq(messages.conversationId, conversation.id))
       .orderBy(desc(messages.createdAt))
-      .limit(12)
+      .limit(8)
       .then((rows) => rows.reverse());
 
     const [profile] = await db
@@ -905,26 +901,16 @@ router.post("/message", requireAuth, async (req, res) => {
     }
 
     const chatMessages = trimmedHistory.map((m) => ({
-      role: m.role as "user" | "assistant",
+      role: m.role as "user" | "assistant" | "system",
       content: m.content,
     }));
 
-    // Pick model based on subscription tier
-    const modelConfig = getModelConfig(sub.effectivePlanKey);
+    const maxTokens = getMaxTokens(sub.effectivePlanKey);
 
-    const aiResponse = await Promise.race([
-      anthropic.messages.create({
-        model: modelConfig.model,
-        max_tokens: modelConfig.maxTokens,
-        system: systemPrompt,
-        messages: chatMessages,
-      }),
+    const fullResponse = await Promise.race([
+      chatCompletion({ system: systemPrompt, messages: chatMessages, maxTokens }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
-    ]);
-
-    const fullResponse =
-      (aiResponse.content[0] as any)?.text?.trim() ||
-      "I'm having trouble generating a useful response. Try asking with your goal, equipment, and time available.";
+    ]) || "I'm having trouble generating a useful response. Try asking with your goal, equipment, and time available.";
 
     await db.insert(messages).values({
       conversationId: conversation.id,
@@ -944,7 +930,7 @@ router.post("/message", requireAuth, async (req, res) => {
 
 router.post("/proactive", requireAuth, async (req, res) => {
   try {
-    if (!isAnthropicConfigured()) {
+    if (!isAIConfigured()) {
       res.status(204).end();
       return;
     }
@@ -1076,17 +1062,16 @@ router.post("/proactive", requireAuth, async (req, res) => {
     const proactivePrompt = `Today is ${dayName}. Give me my opening brief — exactly 2 to 3 sentences. Lead with the single most important number from my data (workouts this week vs. goal, today's protein vs. target, days since last session, bodyweight trend, or weekly adherence %). Include one of these if relevant: ${strainContext} ${streakContext} ${rankContext} ${gymContext} End with one concrete action I should take right now. No greeting, no preamble, no sign-off. If there is no data to reference, say: "Log your first workout today — it's the only data point that matters right now."`;
 
     const aiResponse = await Promise.race([
-      anthropic.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: 512,
+      chatCompletion({
         system: systemPrompt,
         messages: [{ role: "user", content: proactivePrompt }],
+        maxTokens: 512,
       }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 45000)),
     ]);
 
     const content =
-      (aiResponse.content[0] as any)?.text?.trim() ||
+      aiResponse ||
       "Log your first workout today — it's the only data point that matters right now.";
 
     // Save ONLY the assistant message — no user message stored
