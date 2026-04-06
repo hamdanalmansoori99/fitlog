@@ -24,6 +24,7 @@ function getStaticContent(type: NotifType): { title: string; body: string } {
     streak:    { titleKey: "notifications.streakTitle", bodyKey: "notifications.streakBody" },
     recovery:  { titleKey: "notifications.recoveryTitle", bodyKey: "notifications.recoveryBody" },
     weekly:    { titleKey: "notifications.weeklyTitle", bodyKey: "notifications.weeklyBody" },
+    restDay:   { titleKey: "notifications.restDayTitle", bodyKey: "notifications.restDayBody" },
   };
   const entry = map[type];
   return { title: i18n.t(entry.titleKey), body: i18n.t(entry.bodyKey) };
@@ -122,15 +123,24 @@ export function computeActiveReminders(data: {
   weeklyData?: any;
   waterData?: any;
   enabledTypes: Set<NotifType>;
+  mealsLoggedToday?: number;
+  isRestDay?: boolean;
 }): ReminderData[] {
-  const { streaksData, todayStats, profile, workoutsData, weeklyData, waterData, enabledTypes } = data;
+  const { streaksData, todayStats, todayMealsData, profile, workoutsData, weeklyData, waterData, enabledTypes } = data;
 
   const hour = new Date().getHours();
   const dayOfWeek = new Date().getDay();
 
   const streak = streaksData?.currentWorkoutStreak ?? 0;
   const workoutsToday = todayStats?.workoutsCompleted ?? 0;
-  const mealsToday = todayStats?.mealsLogged ?? 0;
+
+  // Determine actual meals logged today from multiple sources:
+  // 1. Explicit mealsLoggedToday parameter (most reliable when provided)
+  // 2. todayMealsData array length (direct meal data)
+  // 3. todayStats.mealsLogged (aggregated stat, may be stale)
+  const mealsFromData = Array.isArray(todayMealsData) ? todayMealsData.length : (todayMealsData?.meals?.length ?? undefined);
+  const mealsToday = data.mealsLoggedToday ?? mealsFromData ?? todayStats?.mealsLogged ?? 0;
+
   const proteinToday = todayStats?.proteinToday ?? todayStats?.macros?.protein ?? 0;
   const proteinGoal = profile?.dailyProteinGoal ?? 0;
   const weeklyGoal = profile?.weeklyWorkoutDays ?? 3;
@@ -299,6 +309,19 @@ export function computeActiveReminders(data: {
         color: "#18ffff",
       });
     }
+  }
+
+  // Rest day streak notification — reassure users their streak is safe on rest days
+  const isRestDay = data.isRestDay ?? false;
+  if (enabledTypes.has("restDay") && isRestDay && streak > 0 && hour >= 8 && hour <= 20) {
+    candidates.push({
+      type: "restDay",
+      priority: 1,
+      title: t("notifications.restDayStreakTitle"),
+      body: t("notifications.restDayStreakBody", { streak }),
+      icon: "moon",
+      color: "#b388ff",
+    });
   }
 
   return candidates.sort((a, b) => a.priority - b.priority);

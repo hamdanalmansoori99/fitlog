@@ -37,17 +37,17 @@ function formatDuration(mins?: number | null) {
 
 function getActivityColor(type: string, theme: any) {
   const map: Record<string, string> = {
-    cycling: theme.secondary, running: theme.primary, walking: theme.cyan,
-    gym: theme.purple, swimming: "#4fc3f7", tennis: theme.warning,
-    yoga: theme.pink, other: theme.textMuted,
+    cardio: theme.primary, cycling: theme.secondary, running: theme.primary,
+    walking: theme.cyan, gym: theme.purple, swimming: "#4fc3f7",
+    other: theme.textMuted,
   };
   return map[type] || theme.primary;
 }
 
 function getActivityIcon(type: string): keyof typeof Feather.glyphMap {
   const map: Record<string, keyof typeof Feather.glyphMap> = {
-    cycling: "wind", running: "activity", walking: "navigation",
-    gym: "zap", swimming: "droplet", tennis: "circle", yoga: "heart",
+    cardio: "activity", cycling: "wind", running: "activity",
+    walking: "navigation", gym: "zap", swimming: "droplet",
   };
   return map[type] || "activity";
 }
@@ -466,13 +466,9 @@ export default function WorkoutsScreen() {
   }, [recommendations, t]);
 
   const quickLogItems = [
-    { label: t("workouts.run"), icon: "activity" as const, type: "running", color: theme.primary },
     { label: t("workouts.gym"), icon: "zap" as const, type: "gym", color: theme.purple },
-    { label: t("workouts.walk"), icon: "navigation" as const, type: "walking", color: theme.cyan },
-    { label: t("workouts.cycle"), icon: "wind" as const, type: "cycling", color: theme.secondary },
-    { label: t("workouts.swim"), icon: "droplet" as const, type: "swimming", color: "#4fc3f7" },
-    { label: t("workouts.yoga"), icon: "heart" as const, type: "yoga", color: theme.pink },
-    { label: t("workouts.tennis"), icon: "circle" as const, type: "tennis", color: theme.warning },
+    { label: t("workouts.cardio"), icon: "activity" as const, type: "cardio", color: theme.primary },
+    { label: t("workouts.otherActivity"), icon: "more-horizontal" as const, type: "other", color: theme.textMuted },
     { label: t("workouts.otherActivity"), icon: "more-horizontal" as const, type: "other", color: theme.textMuted },
   ];
 

@@ -30,6 +30,39 @@ function calcBMI(heightCm: number, weightKg: number): number {
   return weightKg / Math.pow(heightCm / 100, 2);
 }
 
+function calcMacros(data: OnboardingData) {
+  const weight = parseFloat(data.weightKg) || 70;
+  const height = parseFloat(data.heightCm) || 170;
+  const age = parseInt(data.age, 10) || 25;
+  // Mifflin-St Jeor (using male formula as default; could be enhanced with gender field)
+  const bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+  const actMultipliers: Record<string, number> = {
+    sedentary: 1.2, lightly_active: 1.375, moderately_active: 1.55,
+    very_active: 1.725, extra_active: 1.9,
+  };
+  const tdee = bmr * (actMultipliers[data.activityLevel] || 1.55);
+  // Goal adjustment
+  let calories: number;
+  let proteinPerKg: number;
+  if (data.fitnessGoal === "Lose weight") {
+    calories = tdee - 500;
+    proteinPerKg = 1.8;
+  } else if (data.fitnessGoal === "Build muscle" || data.fitnessGoal === "Get stronger") {
+    calories = tdee + 300;
+    proteinPerKg = 2.0;
+  } else {
+    calories = tdee;
+    proteinPerKg = 1.6;
+  }
+  calories = Math.round(Math.max(calories, 1200));
+  const protein = Math.round(proteinPerKg * weight);
+  const fatCals = calories * 0.25;
+  const fat = Math.round(fatCals / 9);
+  const carbCals = calories - (protein * 4) - fatCals;
+  const carbs = Math.round(Math.max(carbCals / 4, 50));
+  return { calories, protein, carbs, fat };
+}
+
 function bmiCategory(bmi: number): { label: string; color: string; motivation: string } {
   if (bmi < 18.5) return { label: "Underweight", color: "#4fc3f7", motivation: "Focus on building strength and healthy habits." };
   if (bmi < 25)   return { label: "Normal weight", color: "#00e676", motivation: "Great foundation! Keep up the healthy lifestyle." };
@@ -132,10 +165,17 @@ function EquipChip({
         },
       ]}
     >
-      <Feather name={icon} size={14} color={selected ? theme.primary : theme.textMuted} />
-      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: selected ? theme.primary : theme.text }}>
+      <View style={{
+        width: 28, height: 28, borderRadius: 8,
+        backgroundColor: selected ? theme.primary + "30" : theme.border + "40",
+        alignItems: "center", justifyContent: "center",
+      }}>
+        <Feather name={icon} size={14} color={selected ? theme.primary : theme.textMuted} />
+      </View>
+      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: selected ? theme.primary : theme.text, flex: 1 }}>
         {label}
       </Text>
+      {selected && <Feather name="check" size={14} color={theme.primary} />}
     </Pressable>
   );
 }
@@ -249,8 +289,10 @@ export default function OnboardingScreen() {
   };
 
   if (step === 5) {
+    const macros = calcMacros(data);
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad }]}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}>
         <Animated.View entering={ZoomIn.duration(500)} style={styles.doneWrap}>
           <View style={[styles.doneIcon, { backgroundColor: theme.primary }]}>
             <Feather name="check" size={40} color="#0f0f1a" />
@@ -261,6 +303,37 @@ export default function OnboardingScreen() {
           <Text style={{ fontFamily: "Inter_400Regular", fontSize: 16, color: theme.textMuted, textAlign: "center", lineHeight: 24, maxWidth: 300 }}>
             {t("onboarding.allSetMessage")}
           </Text>
+
+          {/* Daily Targets Card */}
+          <View style={{
+            width: "100%", backgroundColor: theme.card, borderRadius: 16,
+            borderWidth: 1, borderColor: theme.border, padding: 20, marginTop: 8,
+          }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: theme.text, textAlign: "center", marginBottom: 16 }}>
+              {t("onboarding.summaryTitle")}
+            </Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+              {[
+                { value: macros.calories, label: "kcal", color: theme.primary },
+                { value: `${macros.protein}g`, label: t("onboarding.protein"), color: "#42a5f5" },
+                { value: `${macros.carbs}g`, label: t("onboarding.carbs"), color: "#ffab40" },
+                { value: `${macros.fat}g`, label: t("onboarding.fat"), color: "#ef5350" },
+              ].map((item) => (
+                <View key={item.label} style={{ flex: 1, alignItems: "center", gap: 4 }}>
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: item.color }}>
+                    {item.value}
+                  </Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: theme.textMuted }}>
+                    {item.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: theme.textMuted, textAlign: "center", marginTop: 14, lineHeight: 18 }}>
+              {t("onboarding.summaryNote")}
+            </Text>
+          </View>
+
           <Pressable
             onPress={() => router.replace("/(tabs)")}
             style={[styles.doneBtn, { backgroundColor: theme.primary }]}
@@ -271,6 +344,7 @@ export default function OnboardingScreen() {
             <Feather name="arrow-right" size={20} color="#0f0f1a" />
           </Pressable>
         </Animated.View>
+        </ScrollView>
       </View>
     );
   }
@@ -388,14 +462,14 @@ export default function OnboardingScreen() {
           {step === 3 && (
             <>
               <StepHeader title={t("onboarding.whatEquipment")} subtitle={t("onboarding.equipmentOptionalSubtitle")} />
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                {EQUIPMENT_OPTIONS.map((eq) => (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-between" }}>
+                {EQUIPMENT_OPTIONS.map((eqOpt) => (
                   <EquipChip
-                    key={eq.id}
-                    selected={data.availableEquipment.includes(eq.id)}
-                    onPress={() => toggleEquip(eq.id)}
-                    icon={eq.icon}
-                    label={t(`onboarding.${eq.labelKey}`)}
+                    key={eqOpt.id}
+                    selected={data.availableEquipment.includes(eqOpt.id)}
+                    onPress={() => toggleEquip(eqOpt.id)}
+                    icon={eqOpt.icon}
+                    label={t(`onboarding.${eqOpt.labelKey}`)}
                     theme={theme}
                   />
                 ))}
@@ -544,8 +618,9 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   equipChip: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    paddingHorizontal: 14, paddingVertical: 11, borderRadius: 12, borderWidth: 1,
+    flexDirection: "row", alignItems: "center", gap: 10,
+    width: "48%" as any,
+    paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5,
   },
   input: {
     borderWidth: 1.5, borderRadius: 14,

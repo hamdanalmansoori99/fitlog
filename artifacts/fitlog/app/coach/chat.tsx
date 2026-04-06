@@ -502,7 +502,7 @@ export default function CoachChatScreen() {
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         >
           {messages.length === 0 ? (
             <ScrollView
@@ -631,7 +631,7 @@ export default function CoachChatScreen() {
           {isWeb ? (
             <View style={{ height: WEB_BOTTOM }} />
           ) : (
-            <View style={{ height: insets.bottom }} />
+            <View style={{ height: insets.bottom + 60 }} />
           )}
         </KeyboardAvoidingView>
       )}

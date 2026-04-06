@@ -81,6 +81,14 @@ function getServingSuggestions(name: string) {
   return [];
 }
 
+function getCategoryByTime(): string {
+  const hour = new Date().getHours();
+  if (hour < 10) return "Breakfast";
+  if (hour < 14) return "Lunch";
+  if (hour < 17) return "Snacks";
+  return "Dinner";
+}
+
 export default function AddMealScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -92,7 +100,7 @@ export default function AddMealScreen() {
   const isEditing = !!editId;
 
   const [mealName, setMealName] = useState("");
-  const [category, setCategory] = useState((params.category as string) || "Breakfast");
+  const [category, setCategory] = useState((params.category as string) || getCategoryByTime());
   const [notes, setNotes] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([emptyFood()]);
@@ -130,7 +138,7 @@ export default function AddMealScreen() {
   useEffect(() => {
     if (!existingMeal || prefilled) return;
     setMealName(existingMeal.name || "");
-    setCategory(existingMeal.category || "Breakfast");
+    setCategory(existingMeal.category || getCategoryByTime());
     setNotes(existingMeal.notes || "");
     const d = existingMeal.date ? new Date(existingMeal.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
     setDate(d);
@@ -712,20 +720,30 @@ export default function AddMealScreen() {
         <Input label={t("meals.mealName")} value={mealName} onChangeText={setMealName} placeholder={t("meals.mealNamePlaceholder")} />
         <Input label={t("workouts.date")} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
 
-        <View>
-          <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("meals.category")}</Text>
-          <View style={styles.categoryRow}>
-            {CATEGORY_OPTIONS.map(opt => (
-              <Pressable
-                key={opt.value}
-                onPress={() => setCategory(opt.value)}
-                style={[styles.catChip, { backgroundColor: category === opt.value ? theme.primaryDim : theme.card, borderColor: category === opt.value ? theme.primary : theme.border }]}
-              >
-                <Text style={{ color: category === opt.value ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t(opt.labelKey)}</Text>
-              </Pressable>
-            ))}
+        <Pressable
+          onPress={() => {
+            const opts = CATEGORY_OPTIONS.map(o => o.value) as string[];
+            const curIdx = opts.indexOf(category);
+            setCategory(opts[(curIdx + 1) % opts.length]);
+          }}
+          style={[styles.autoCategoryRow, { backgroundColor: theme.card, borderColor: theme.border }]}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Feather name="clock" size={14} color={theme.primary} />
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+              {t("meals.category")}:
+            </Text>
+            <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+              {t(CATEGORY_OPTIONS.find(o => o.value === category)?.labelKey || "meals.breakfast")}
+            </Text>
           </View>
-        </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+              {t("common.change") || "Tap to change"}
+            </Text>
+            <Feather name="chevron-right" size={14} color={theme.textMuted} />
+          </View>
+        </Pressable>
 
         {/* ── Quick Add from history ── */}
         {recentFoods.length > 0 && (
@@ -1049,6 +1067,7 @@ const styles = StyleSheet.create({
 
   categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   catChip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderWidth: 1.5, minHeight: 44, justifyContent: "center" },
+  autoCategoryRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, borderWidth: 1 },
 
   sectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   rescanBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },

@@ -73,7 +73,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    throw new Error(data.error || data.message || i18n.t("common.requestFailed"));
+    const err: any = new Error(data.error || data.message || i18n.t("common.requestFailed"));
+    err.status = res.status;
+    err.data = data;
+    throw err;
   }
 
   return data;
@@ -270,8 +273,10 @@ export const api = {
   getXp: () => request<{ xp: number }>("/xp"),
 
   // Scan Meal (AI Vision)
+  scanMealStatus: () =>
+    request<ScanStatus>("/scan-meal/status"),
   scanMealAnalyze: (body: { imageBase64: string; mimeType?: string }) =>
-    request<{ items: ScanMealItem[]; mealDescription: string; totals: MacroTotals }>("/scan-meal/analyze", {
+    request<{ items: ScanMealItem[]; mealDescription: string; totals: MacroTotals; scansPerDay: number; remainingScans: number }>("/scan-meal/analyze", {
       method: "POST",
       body: JSON.stringify(body),
     }),
@@ -297,4 +302,11 @@ export interface MacroTotals {
   proteinG: number;
   carbsG: number;
   fatG: number;
+}
+
+export interface ScanStatus {
+  scansUsedToday: number;
+  scansPerDay: number;
+  remainingScans: number;
+  isUnlimited: boolean;
 }

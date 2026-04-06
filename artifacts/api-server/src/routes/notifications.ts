@@ -16,6 +16,26 @@ import { computeCurrentStreak } from "../lib/streaks";
 
 const router = Router();
 
+/** Day-label to JS day-of-week mapping (0=Sun … 6=Sat). */
+const DAY_LABEL_TO_DOW: Record<string, number> = {
+  sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tuesday: 2,
+  wed: 3, wednesday: 3, thu: 4, thursday: 4, fri: 5, friday: 5,
+  sat: 6, saturday: 6,
+};
+
+/** Extract rest-day numbers from a savedWeeklyPlan, or undefined if unavailable. */
+function getRestDaysFromPlan(plan: any): number[] | undefined {
+  if (!Array.isArray(plan) || plan.length !== 7) return undefined;
+  const rest: number[] = [];
+  for (const entry of plan) {
+    if (entry?.rest && typeof entry.day === "string") {
+      const dow = DAY_LABEL_TO_DOW[entry.day.toLowerCase()];
+      if (dow !== undefined) rest.push(dow);
+    }
+  }
+  return rest.length > 0 ? rest : undefined;
+}
+
 type NotifType = "workout" | "meal" | "hydration" | "streak" | "recovery" | "weekly";
 
 // Inline streak milestone narratives (mirrors lib/streakNarratives.ts on the client)
@@ -175,7 +195,8 @@ router.get("/smart-content", requireAuth, async (req, res) => {
     }
 
     const recentDates = recentWorkouts.map((w) => new Date(w.date));
-    const streak = computeCurrentStreak(recentDates);
+    const restDays = getRestDaysFromPlan(profile?.savedWeeklyPlan);
+    const streak = computeCurrentStreak(recentDates, restDays);
     const consecutiveDays = streak;
 
     const candidates: SmartMessage[] = [];

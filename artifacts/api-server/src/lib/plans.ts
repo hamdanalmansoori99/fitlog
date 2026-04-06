@@ -25,6 +25,7 @@ export interface PlanLimits {
   maxFavoriteMeals: number;
   aiRequestsPerDay: number;
   dataRetentionDays: number;
+  scansPerDay: number;
 }
 
 export interface PlanDefinition {
@@ -60,6 +61,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       maxFavoriteMeals: 20,
       aiRequestsPerDay: 50,
       dataRetentionDays: 365,
+      scansPerDay: 1,
     },
     priceMonthly: 0,
     priceYearly: 0,
@@ -93,6 +95,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       maxFavoriteMeals: Infinity,
       aiRequestsPerDay: Infinity,
       dataRetentionDays: Infinity,
+      scansPerDay: Infinity,
     },
     priceMonthly: 999,
     priceYearly: 7999,

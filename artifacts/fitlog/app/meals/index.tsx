@@ -381,7 +381,12 @@ export default function MealsScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
-        <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("meals.title")}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Pressable onPress={() => router.back()} hitSlop={12}>
+            <Feather name="arrow-left" size={22} color={theme.text} />
+          </Pressable>
+          <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("meals.title")}</Text>
+        </View>
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
           <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/meals/weekly-plan" as any); }}

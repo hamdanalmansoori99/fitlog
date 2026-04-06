@@ -940,6 +940,116 @@ function RewardSignalChip({
   );
 }
 
+function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
+  theme: AppTheme;
+  recoveryData: any;
+  isLoading: boolean;
+}) {
+  const { t } = useTranslation();
+
+  if (isLoading) return null;
+
+  const hasLoggedToday = recoveryData && recoveryData.sleepHours != null;
+
+  if (hasLoggedToday) {
+    // Summary card — already logged today
+    const energyLabels: Record<string, string> = { low: "Low", moderate: "Moderate", high: "High" };
+    const stressLabels: Record<string, string> = { low: "Low", moderate: "Moderate", high: "High" };
+    return (
+      <Pressable
+        onPress={() => router.push("/recovery" as any)}
+        style={({ pressed }) => ({
+          backgroundColor: theme.card,
+          borderRadius: 14,
+          padding: 16,
+          borderWidth: 1,
+          borderColor: "#00bcd4" + "30",
+          opacity: pressed ? 0.85 : 1,
+          gap: 12,
+        })}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#00bcd4" + "18", alignItems: "center", justifyContent: "center" }}>
+            <Feather name="heart" size={18} color="#00bcd4" />
+          </View>
+          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14, flex: 1 }}>
+            {t("home.todaysRecovery") || "Today's Recovery"}
+          </Text>
+          <Feather name="chevron-right" size={14} color={theme.textMuted} />
+        </View>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {recoveryData.sleepHours != null && (
+            <View style={{ flex: 1, backgroundColor: "#448aff" + "14", borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10, alignItems: "center", gap: 2 }}>
+              <Feather name="moon" size={13} color="#448aff" />
+              <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>{recoveryData.sleepHours}h</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>Sleep</Text>
+            </View>
+          )}
+          {recoveryData.energyLevel && (
+            <View style={{ flex: 1, backgroundColor: "#00e676" + "14", borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10, alignItems: "center", gap: 2 }}>
+              <Feather name="zap" size={13} color="#00e676" />
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+                {energyLabels[recoveryData.energyLevel] || recoveryData.energyLevel}
+              </Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>Energy</Text>
+            </View>
+          )}
+          {recoveryData.stressLevel && (
+            <View style={{ flex: 1, backgroundColor: "#ff80ab" + "14", borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10, alignItems: "center", gap: 2 }}>
+              <Feather name="activity" size={13} color="#ff80ab" />
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+                {stressLabels[recoveryData.stressLevel] || recoveryData.stressLevel}
+              </Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>Stress</Text>
+            </View>
+          )}
+        </View>
+      </Pressable>
+    );
+  }
+
+  // Prompt card — not logged today
+  return (
+    <View style={{
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: "#00bcd4" + "20",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    }}>
+      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#00bcd4" + "18", alignItems: "center", justifyContent: "center" }}>
+        <Feather name="heart" size={20} color="#00bcd4" />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+          {t("home.howAreYouFeeling") || "How are you feeling today?"}
+        </Text>
+        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+          {t("home.recoveryCheckInSubtitle") || "Log your sleep, energy & stress"}
+        </Text>
+      </View>
+      <Pressable
+        onPress={() => router.push("/recovery" as any)}
+        style={{
+          backgroundColor: "#00bcd4",
+          borderRadius: 10,
+          paddingHorizontal: 14,
+          paddingVertical: 8,
+          minHeight: 36,
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+          {t("home.checkIn") || "Check in"}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function getGreeting(t: (key: string) => string) {
   const h = new Date().getHours();
   if (h < 12) return t("home.goodMorning");
@@ -1064,6 +1174,12 @@ export default function HomeScreen() {
     staleTime: 300000,
   });
 
+  const { data: recoveryData, isLoading: recoveryLoading, refetch: refetchRecovery } = useQuery({
+    queryKey: ["recoveryToday"],
+    queryFn: api.getRecoveryToday,
+    staleTime: 300_000,
+  });
+
   const { data: stepsData } = useQuery({
     queryKey: ["healthSteps"],
     queryFn: async () => {
@@ -1079,10 +1195,10 @@ export default function HomeScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
-      refetchMeals(), refetchProfile(), refetchWorkouts(), refetchStreaks(),
+      refetchMeals(), refetchProfile(), refetchWorkouts(), refetchStreaks(), refetchRecovery(),
     ]);
     setRefreshing(false);
-  }, [refetchMeals, refetchProfile, refetchWorkouts, refetchStreaks]);
+  }, [refetchMeals, refetchProfile, refetchWorkouts, refetchStreaks, refetchRecovery]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -1319,6 +1435,11 @@ export default function HomeScreen() {
             </View>
           </Pressable>
           )}
+        </Animated.View>
+
+        {/* ═══ RECOVERY CHECK-IN ═══ */}
+        <Animated.View entering={FadeInDown.delay(65).duration(120)} style={styles.section}>
+          <RecoveryCheckInCard theme={theme} recoveryData={recoveryData} isLoading={recoveryLoading} />
         </Animated.View>
 
         {/* ═══ ZONE 5 — STEPS ═══ */}

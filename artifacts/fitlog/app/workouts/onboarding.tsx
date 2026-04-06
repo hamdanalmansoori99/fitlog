@@ -41,9 +41,15 @@ const DAYS_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
 const DURATION_OPTIONS = ["15 minutes", "30 minutes", "45 minutes", "60+ minutes"];
 const EXPERIENCE_OPTIONS = ["Beginner", "Intermediate", "Advanced"];
 const TRAINING_PREF_OPTIONS = [
-  "Strength training", "Cardio", "Running", "Walking",
-  "Cycling", "Tennis", "Swimming", "Yoga",
-  "Stretching / mobility", "Calisthenics",
+  { id: "Strength training", label: "Strength training", icon: "zap" as const },
+  { id: "Cardio", label: "Cardio", icon: "heart" as const },
+  { id: "Running", label: "Running", icon: "navigation" as const },
+  { id: "Walking", label: "Walking", icon: "map-pin" as const },
+  { id: "Cycling", label: "Cycling", icon: "wind" as const },
+  { id: "Swimming", label: "Swimming", icon: "droplet" as const },
+  { id: "Stretching / mobility", label: "Stretching / mobility", icon: "minimize" as const },
+  { id: "Calisthenics", label: "Calisthenics", icon: "user" as const },
+  { id: "Other", label: "Other", icon: "activity" as const },
 ];
 
 interface OnboardingData {
@@ -149,7 +155,7 @@ export default function WorkoutOnboardingScreen() {
       subtitle: t("workouts.prioritise"),
       key: "trainingPreferences",
       type: "multiselect",
-      options: TRAINING_PREF_OPTIONS.map(t => ({ id: t, label: t })),
+      options: TRAINING_PREF_OPTIONS.map(tp => ({ id: tp.id, label: tp.label, icon: tp.icon })),
     },
   ];
 
@@ -251,24 +257,28 @@ export default function WorkoutOnboardingScreen() {
                   style={[
                     styles.optionChip,
                     {
-                      backgroundColor: isSelected ? theme.primaryDim : theme.card,
+                      backgroundColor: isSelected ? theme.primary + "18" : theme.card,
                       borderColor: isSelected ? theme.primary : theme.border,
                     },
                     currentStep.type === "number" ? styles.numberChip : {},
                   ]}
                 >
-                  {opt.icon && (
-                    <Feather name={opt.icon} size={16} color={isSelected ? theme.primary : theme.textMuted} />
+                  <View style={styles.chipContent}>
+                    {opt.icon && (
+                      <Feather name={opt.icon} size={16} color={isSelected ? theme.primary : theme.textMuted} />
+                    )}
+                    <Text style={[
+                      styles.optionLabel,
+                      { color: isSelected ? theme.primary : theme.text, fontFamily: isSelected ? "Inter_600SemiBold" : "Inter_400Regular" },
+                    ]}>
+                      {opt.label}
+                    </Text>
+                  </View>
+                  {isSelected && (
+                    <View style={[styles.checkBadge, { backgroundColor: theme.primary }]}>
+                      <Feather name="check" size={10} color="#fff" />
+                    </View>
                   )}
-                  {isSelected && !opt.icon && (
-                    <Feather name="check" size={14} color={theme.primary} />
-                  )}
-                  <Text style={[
-                    styles.optionLabel,
-                    { color: isSelected ? theme.primary : theme.text, fontFamily: isSelected ? "Inter_600SemiBold" : "Inter_400Regular" },
-                  ]}>
-                    {opt.label}
-                  </Text>
                 </Pressable>
               );
             })}
@@ -279,7 +289,7 @@ export default function WorkoutOnboardingScreen() {
       {/* Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Button
-          title={step === STEPS.length - 1 ? t("workouts.getMyPlan") : t("common.continue")}
+          title={step === STEPS.length - 1 ? t("workouts.getMyPlan") : t("common.continueText")}
           onPress={handleNext}
           disabled={!canContinue()}
           loading={mutation.isPending}
@@ -316,6 +326,13 @@ const styles = StyleSheet.create({
   },
   numberChip: { width: "30%", justifyContent: "center" },
   optionLabel: { fontSize: 14 },
+  chipContent: {
+    flexDirection: "row", alignItems: "center", gap: 8, flex: 1,
+  },
+  checkBadge: {
+    width: 18, height: 18, borderRadius: 9,
+    alignItems: "center", justifyContent: "center",
+  },
   footer: { paddingHorizontal: 20, gap: 4 },
   skipText: { fontSize: 14 },
 });

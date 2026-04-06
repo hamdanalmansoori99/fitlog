@@ -1,11 +1,61 @@
 import { Router } from "express";
-import { db, workoutsTable, workoutExercisesTable, workoutSetsTable, mealsTable, mealFoodItemsTable, profilesTable } from "@workspace/db";
+import { db, workoutsTable, workoutExercisesTable, workoutSetsTable, mealsTable, mealFoodItemsTable, profilesTable, achievementsTable } from "@workspace/db";
 import { eq, and, gte, lt, desc, sql, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { trackEvent } from "../services/analyticsService";
 import { logError } from "../lib/logger";
+import { computeStreaks } from "../lib/streaks";
 
 const router = Router();
+
+// Lightweight achievement definitions checked after workout save
+const WORKOUT_ACHIEVEMENTS = [
+  { key: "workouts_1",   title: "First Rep",      threshold: 1,  type: "count" },
+  { key: "workouts_5",   title: "Finding Rhythm",  threshold: 5,  type: "count" },
+  { key: "workouts_10",  title: "Double Digits",   threshold: 10, type: "count" },
+  { key: "workouts_25",  title: "Committed",       threshold: 25, type: "count" },
+  { key: "workouts_50",  title: "Halfway to 100",  threshold: 50, type: "count" },
+  { key: "workouts_100", title: "The Century",     threshold: 100,type: "count" },
+  { key: "workout_streak_3",  title: "Three Peat",      threshold: 3,  type: "streak" },
+  { key: "workout_streak_7",  title: "Week Warrior",     threshold: 7,  type: "streak" },
+  { key: "workout_streak_14", title: "Two Weeks Solid",  threshold: 14, type: "streak" },
+  { key: "workout_streak_30", title: "Monthly Grind",    threshold: 30, type: "streak" },
+] as const;
+
+async function checkNewAchievements(userId: number): Promise<{ key: string; title: string }[]> {
+  try {
+    const [countR, earnedRows, workoutDaysR] = await Promise.all([
+      db.select({ count: sql<number>`count(*)::int` }).from(workoutsTable).where(eq(workoutsTable.userId, userId)),
+      db.select().from(achievementsTable).where(eq(achievementsTable.userId, userId)),
+      db.execute(sql`
+        SELECT DISTINCT to_char(date AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day
+        FROM workouts WHERE user_id = ${userId}
+        ORDER BY day DESC
+      `),
+    ]);
+
+    const workoutCount = Number(countR[0]?.count ?? 0);
+    const workoutDates = ((workoutDaysR as any).rows ?? Array.from(workoutDaysR as any)).map((r: any) => new Date(r.day + "T00:00:00Z"));
+    const streakInfo = computeStreaks(workoutDates);
+    const earnedKeys = new Set(earnedRows.map(e => e.key));
+    const newlyEarned: { key: string; title: string }[] = [];
+
+    for (const ach of WORKOUT_ACHIEVEMENTS) {
+      if (earnedKeys.has(ach.key)) continue;
+      const met = ach.type === "count" ? workoutCount >= ach.threshold : streakInfo.current >= ach.threshold;
+      if (met) {
+        try {
+          await db.insert(achievementsTable).values({ userId, key: ach.key, title: ach.title });
+          void trackEvent(userId, "achievement.earned", { key: ach.key, title: ach.title });
+          newlyEarned.push({ key: ach.key, title: ach.title });
+        } catch {}
+      }
+    }
+    return newlyEarned;
+  } catch {
+    return [];
+  }
+}
 
 async function getWorkoutWithExercises(workoutId: number, userId: number) {
   const workouts = await db.select().from(workoutsTable)
@@ -449,6 +499,9 @@ router.post("/", requireAuth, async (req, res) => {
       .set({ xp: sql`${profilesTable.xp} + 50` })
       .where(eq(profilesTable.userId, user.id));
 
+    // Check for newly unlocked achievements
+    const newAchievements = await checkNewAchievements(user.id);
+
     void trackEvent(user.id, "workout.logged", {
       activityType: workout.activityType,
       durationMinutes: workout.durationMinutes,
@@ -456,7 +509,7 @@ router.post("/", requireAuth, async (req, res) => {
       exerciseCount: exercises?.length ?? 0,
     });
 
-    res.status(201).json(fullWorkout);
+    res.status(201).json({ ...fullWorkout, newAchievements });
   } catch (err) {
     logError("Create workout error:", err);
     res.status(500).json({ error: "Failed to create workout" });

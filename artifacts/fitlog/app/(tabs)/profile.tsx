@@ -75,7 +75,6 @@ export default function ProfileScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   
-  const [tab, setTab] = useState<"profile" | "settings">("profile");
   const { showToast } = useToast();
 
   const goalLabels: Record<string, string> = {
@@ -135,13 +134,11 @@ export default function ProfileScreen() {
     queryKey: ["meals", todayStr],
     queryFn: () => api.getMeals(todayStr),
     staleTime: 5 * 60 * 1000,
-    enabled: tab === "profile",
   });
   const { data: waterTodayData } = useQuery({
     queryKey: ["waterToday"],
     queryFn: api.getWaterToday,
     staleTime: 5 * 60 * 1000,
-    enabled: tab === "profile",
   });
 
   const { data: profile, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useQuery({
@@ -154,14 +151,12 @@ export default function ProfileScreen() {
     queryKey: ["workoutSummary"],
     queryFn: api.getWorkoutSummary,
     staleTime: 120_000,
-    enabled: tab === "profile",
   });
 
   const { data: streaksData } = useQuery({
     queryKey: ["streaks"],
     queryFn: api.getStreaks,
     staleTime: 300_000,
-    enabled: tab === "profile",
   });
 
   useEffect(() => {
@@ -452,34 +447,14 @@ export default function ProfileScreen() {
         <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("profile.title")}</Text>
       </View>
       
-      {/* Tabs */}
-      <View style={[styles.tabs, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <Pressable
-          onPress={() => setTab("profile")}
-          style={[styles.tab, { backgroundColor: tab === "profile" ? theme.primary : "transparent" }]}
-        >
-          <Text style={{ color: tab === "profile" ? "#0f0f1a" : theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-            {t("profile.profileTab")}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setTab("settings")}
-          style={[styles.tab, { backgroundColor: tab === "settings" ? theme.primary : "transparent" }]}
-        >
-          <Text style={{ color: tab === "settings" ? "#0f0f1a" : theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-            {t("profile.settingsTab")}
-          </Text>
-        </Pressable>
-      </View>
-      
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 + bottomPad, gap: 16, maxWidth: 600, width: "100%", alignSelf: "center" as const }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── PROFILE ERROR RETRY ── */}
-        {tab === "profile" && profileError && (
+        {/* ── ERROR RETRY ── */}
+        {profileError && (
           <View style={{ padding: 14, borderRadius: 12, backgroundColor: theme.danger + "18", borderWidth: 1, borderColor: theme.danger + "40", flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Feather name="alert-circle" size={18} color={theme.danger} />
             <Text style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("common.error")}</Text>
@@ -489,688 +464,320 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* ── PROFILE LOADING SKELETONS ── */}
-        {tab === "profile" && profileLoading && !profile && (
+        {/* ── LOADING SKELETONS ── */}
+        {profileLoading && !profile && (
           <View style={{ gap: 16 }}>
-            <SkeletonCard style={{ alignItems: "center", gap: 12, paddingVertical: 16 }}>
+            <SkeletonCard style={{ alignItems: "center", gap: 12, paddingVertical: 24 }}>
               <SkeletonBox width={80} height={80} borderRadius={40} />
               <SkeletonBox width={140} height={16} borderRadius={8} />
               <SkeletonBox width={200} height={13} borderRadius={6} />
             </SkeletonCard>
-            <SkeletonCard style={{ gap: 6 }}>
-              <SkeletonBox width="100%" height={6} borderRadius={3} />
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <SkeletonBox width={80} height={11} borderRadius={4} />
-                <SkeletonBox width={100} height={11} borderRadius={4} />
-              </View>
-            </SkeletonCard>
-            {[1, 2, 3].map((i) => (
-              <SkeletonCard key={i} style={{ gap: 10 }}>
-                <SkeletonBox width={100} height={14} borderRadius={7} />
-                <SkeletonBox width="100%" height={44} borderRadius={10} />
-              </SkeletonCard>
-            ))}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+              {[1, 2, 3, 4].map((i) => (
+                <SkeletonCard key={i} style={{ flex: 1, minWidth: "45%", height: 80 }}>
+                  <SkeletonBox width={24} height={24} borderRadius={6} />
+                  <SkeletonBox width={80} height={13} borderRadius={6} />
+                </SkeletonCard>
+              ))}
+            </View>
           </View>
         )}
 
-        {tab === "profile" ? (
-          <>
-            {/* ── RANK HERO ── */}
-            {(() => {
-              const xp: number = (profile as any)?.xp ?? 0;
-              const rank = getRankByXp(xp);
-              const xpProgress = getXpProgress(xp);
-              const IconComponent = RANK_ICON_MAP[rank.tier];
-              return (
-                <Card>
-                  {/* Icon + rank name */}
-                  <View style={{ alignItems: "center", gap: 10, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: theme.border }}>
-                    <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: rank.bgColor, borderWidth: 3, borderColor: rank.borderColor, alignItems: "center", justifyContent: "center" }}>
-                      {IconComponent && <IconComponent color={rank.borderColor} size={48} />}
-                    </View>
-                    <Pressable onPress={() => router.push("/rank")}>
-                      <Text style={{ color: rank.textColor, fontFamily: "Inter_700Bold", fontSize: 22 }}>
-                        {rank.name}
-                      </Text>
-                    </Pressable>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", lineHeight: 18, maxWidth: 260 }}>
-                      {rank.flavorText}
-                    </Text>
-                    {/* XP bar */}
-                    <View style={{ width: "100%", gap: 6 }}>
-                      <View style={{ height: 6, backgroundColor: theme.border, borderRadius: 3, overflow: "hidden" }}>
-                        <View style={{ height: 6, width: `${Math.round(xpProgress.percent * 100)}%` as any, backgroundColor: rank.borderColor, borderRadius: 3 }} />
-                      </View>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                          {xp.toLocaleString()} XP
-                        </Text>
-                        {xpProgress.needed > 0 && (
-                          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                            {xpProgress.needed.toLocaleString()} to next rank
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Avatar + name */}
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: theme.border }}>
-                    <View style={[styles.avatar, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}>
-                      {profile?.photoUrl ? (
-                        <Image source={{ uri: profile.photoUrl }} style={{ width: "100%", height: "100%", borderRadius: 40 }} resizeMode="cover" />
-                      ) : (
-                        <Text style={[styles.avatarLetter, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
-                          {firstName[0]?.toUpperCase() || user?.firstName?.[0]?.toUpperCase() || "U"}
-                        </Text>
-                      )}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 17 }}>
-                        {firstName} {lastName}
-                      </Text>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-                        {user?.email}
-                      </Text>
-                    </View>
-                  </View>
-
-                </Card>
-              );
-            })()}
-
-            {/* BMI Card */}
-            {profileLoaded && profile?.heightCm && profile?.weightKg && (() => {
-              const bmi = profile.weightKg / Math.pow(profile.heightCm / 100, 2);
-              type BmiCat = { label: string; color: string };
-              const cat: BmiCat =
-                bmi < 18.5 ? { label: "Underweight", color: "#4fc3f7" } :
-                bmi < 25   ? { label: "Normal weight", color: "#00e676" } :
-                bmi < 30   ? { label: "Overweight", color: "#ffab40" } :
-                             { label: "Obese", color: "#ef5350" };
-              return (
-                <Card>
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                    <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>
-                      BMI
-                    </Text>
-                    <View style={{ backgroundColor: cat.color + "20", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3 }}>
-                      <Text style={{ color: cat.color, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{cat.label}</Text>
-                    </View>
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginBottom: 8 }}>
-                    <Text style={{ color: cat.color, fontFamily: "Inter_700Bold", fontSize: 36 }}>
-                      {bmi.toFixed(1)}
-                    </Text>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
-                      kg/m²
-                    </Text>
-                  </View>
-                  <View style={{ flexDirection: "row", gap: 8, marginBottom: 4 }}>
-                    {[{ label: "Height", value: `${profile.heightCm} cm` }, { label: "Weight", value: `${profile.weightKg} kg` }, ...((profile as any).waistCm ? [{ label: "Waist", value: `${(profile as any).waistCm} cm` }] : [])].map((s) => (
-                      <View key={s.label} style={{ flex: 1, backgroundColor: theme.cardAlt, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: theme.border }}>
-                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{s.label}</Text>
-                        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14, marginTop: 2 }}>{s.value}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </Card>
-              );
-            })()}
-
-            {/* Personal Info */}
+        {/* ══════════════════════════════════════════════════════════════════
+            SECTION 1 — USER CARD
+            ══════════════════════════════════════════════════════════════════ */}
+        {profile && (() => {
+          const xp: number = (profile as any)?.xp ?? 0;
+          const rank = getRankByXp(xp);
+          const xpProgress = getXpProgress(xp);
+          const IconComponent = RANK_ICON_MAP[rank.tier];
+          const currentStreak = streaksData?.currentWorkoutStreak ?? 0;
+          return (
             <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.personalInfo")}</Text>
-              <View style={styles.fieldGroup}>
-                <View style={styles.row}>
-                  <View style={{ flex: 1 }}>
-                    <Input label={t("profile.firstName")} value={firstName} onChangeText={setFirstName} placeholder={t("profile.firstNamePlaceholder")} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Input label={t("profile.lastName")} value={lastName} onChangeText={setLastName} placeholder={t("profile.lastNamePlaceholder")} />
-                  </View>
-                </View>
-
-                {/* Body Stats collapsible */}
-                <Pressable
-                  onPress={() => setBodyStatsExpanded(v => !v)}
-                  style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10, borderTopWidth: 1, borderTopColor: theme.border }}
-                >
-                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                    {t("profile.bodyStatsSection")}
-                  </Text>
-                  <Feather name={bodyStatsExpanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
-                </Pressable>
-
-                {bodyStatsExpanded && (
-                  <View style={{ gap: 12 }}>
-                    <Input label={t("profile.age")} value={age} onChangeText={setAge} placeholder="28" keyboardType="numeric" />
-                    <View>
-                      <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("profile.gender")}</Text>
-                      <View style={styles.chipRow}>
-                        {["Male", "Female", "Other"].map(g => {
-                          const genderLabels: Record<string, string> = { "Male": t("profile.male"), "Female": t("profile.female"), "Other": t("profile.other") };
-                          return (
-                            <Pressable
-                              key={g}
-                              onPress={() => setGender(gender === g ? "" : g)}
-                              style={[styles.chip, { backgroundColor: gender === g ? theme.primaryDim : "transparent", borderColor: gender === g ? theme.primary : theme.border }]}
-                            >
-                              <Text style={{ color: gender === g ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{genderLabels[g]}</Text>
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    </View>
-                    {unitSystem === "imperial" ? (
-                      <View style={styles.row}>
-                        <View style={{ flex: 1 }}>
-                          <Input label={t("profile.heightFt")} value={heightFt} onChangeText={setHeightFt} placeholder="5" keyboardType="decimal-pad" />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Input label={t("profile.heightIn")} value={heightIn} onChangeText={setHeightIn} placeholder="10" keyboardType="decimal-pad" />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Input label={t("profile.weightLbs")} value={weightLbs} onChangeText={setWeightLbs} placeholder="165" keyboardType="decimal-pad" />
-                        </View>
-                      </View>
-                    ) : (
-                      <View style={styles.row}>
-                        <View style={{ flex: 1 }}>
-                          <Input label={t("profile.heightCm")} value={heightCm} onChangeText={setHeightCm} placeholder="175" keyboardType="numeric" />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Input label={t("profile.weightKg")} value={weightKg} onChangeText={setWeightKg} placeholder="75" keyboardType="numeric" />
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            </Card>
-            
-            {/* Fitness Goals — collapsible */}
-            <Card>
-              <Pressable
-                onPress={() => setGoalsExpanded(v => !v)}
-                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-              >
-                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("profile.fitnessGoals")}</Text>
-                <Feather name={goalsExpanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
-              </Pressable>
-              {goalsExpanded && (
-                <View style={[styles.goalsGrid, { marginTop: 12 }]}>
-                  {FITNESS_GOALS.map(goal => (
-                    <Pressable
-                      key={goal}
-                      onPress={() => {
-                        setFitnessGoals(
-                          fitnessGoals.includes(goal) ? fitnessGoals.filter(g => g !== goal) : [...fitnessGoals, goal]
-                        );
-                        setNutritionSuggestion(null);
-                        api.getNutritionTargets().then(setNutritionSuggestion).catch(() => {});
-                      }}
-                      style={[
-                        styles.goalChip,
-                        { backgroundColor: fitnessGoals.includes(goal) ? theme.primaryDim : theme.cardAlt, borderColor: fitnessGoals.includes(goal) ? theme.primary : theme.border },
-                      ]}
-                    >
-                      {fitnessGoals.includes(goal) && <Feather name="check" size={12} color={theme.primary} />}
-                      <Text style={{ color: fitnessGoals.includes(goal) ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-                        {goalLabels[goal] || goal}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </Card>
-
-            {/* Activity Level — collapsible */}
-            <Card>
-              <Pressable
-                onPress={() => setActivityExpanded(v => !v)}
-                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-              >
-                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("profile.activityLevel")}</Text>
-                <Feather name={activityExpanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
-              </Pressable>
-              {activityExpanded && (
-                <View style={{ marginTop: 12 }}>
-                  {ACTIVITY_LEVELS.map(level => (
-                    <Pressable
-                      key={level}
-                      onPress={() => setActivityLevel(level)}
-                      style={[styles.levelRow, { borderColor: activityLevel === level ? theme.primary : theme.border }]}
-                    >
-                      <View style={[styles.radio, { borderColor: activityLevel === level ? theme.primary : theme.border }]}>
-                        {activityLevel === level && <View style={[styles.radioDot, { backgroundColor: theme.primary }]} />}
-                      </View>
-                      <Text style={{ color: activityLevel === level ? theme.primary : theme.text, fontFamily: "Inter_500Medium", fontSize: 14 }}>
-                        {activityLabels[level] || level}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </Card>
-
-            {/* Equipment — collapsible, collapsed by default */}
-            <View onLayout={(e) => { equipmentCardY.current = e.nativeEvent.layout.y; }}>
-              <Card>
-                <Pressable
-                  onPress={() => setEquipmentExpanded(v => !v)}
-                  style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-                >
-                  <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("profile.availableEquipment")}</Text>
-                  <Feather name={equipmentExpanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
-                </Pressable>
-                {equipmentExpanded && (
-                  <View style={[styles.goalsGrid, { marginTop: 12 }]}>
-                    {PROFILE_EQUIPMENT.map(eq => {
-                      const selected = availableEquipment.includes(eq.id);
-                      return (
-                        <Pressable
-                          key={eq.id}
-                          onPress={() => setAvailableEquipment(prev =>
-                            prev.includes(eq.id) ? prev.filter(e => e !== eq.id) : [...prev, eq.id]
-                          )}
-                          style={[
-                            styles.goalChip,
-                            { backgroundColor: selected ? theme.primaryDim : theme.cardAlt, borderColor: selected ? theme.primary : theme.border },
-                          ]}
-                        >
-                          {selected && <Feather name="check" size={12} color={theme.primary} />}
-                          <Text style={{ color: selected ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
-                            {t(`equipment.${eq.id}`)}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                )}
-              </Card>
-            </View>
-
-            {/* Calorie suggestion banner */}
-            {nutritionSuggestion && (
-              <View style={{ backgroundColor: theme.primaryDim, borderRadius: 12, borderWidth: 1, borderColor: theme.primary + "50", padding: 12, gap: 6 }}>
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
-                  Suggested for your goal
-                </Text>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                  {nutritionSuggestion.explanation}
-                </Text>
-                <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
-                  {[
-                    { label: "Cal", value: nutritionSuggestion.calorieGoal },
-                    { label: "Protein", value: `${nutritionSuggestion.proteinGoal}g` },
-                    { label: "Carbs", value: `${nutritionSuggestion.carbsGoal}g` },
-                    { label: "Fat", value: `${nutritionSuggestion.fatGoal}g` },
-                  ].map((item) => (
-                    <View key={item.label} style={{ flex: 1, backgroundColor: theme.card, borderRadius: 8, padding: 8, alignItems: "center", borderWidth: 1, borderColor: theme.border }}>
-                      <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>{item.value}</Text>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{item.label}</Text>
-                    </View>
-                  ))}
-                </View>
-                <Pressable
-                  onPress={() => {
-                    setCalorieGoal(String(nutritionSuggestion.calorieGoal));
-                    setProteinGoal(String(nutritionSuggestion.proteinGoal));
-                    setCarbsGoal(String(nutritionSuggestion.carbsGoal));
-                    setFatGoal(String(nutritionSuggestion.fatGoal));
-                    setNutritionExpanded(true);
-                    setNutritionSuggestion(null);
-                  }}
-                  style={{ backgroundColor: theme.primary, borderRadius: 8, padding: 8, alignItems: "center", marginTop: 2 }}
-                >
-                  <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Apply to my targets</Text>
-                </Pressable>
-              </View>
-            )}
-
-            {/* Nutrition Targets — collapsible, collapsed by default */}
-            <Card>
-              <Pressable
-                onPress={() => setNutritionExpanded(v => !v)}
-                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: nutritionExpanded ? 12 : 0 }}
-              >
-                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold", marginBottom: 0 }]}>{t("profile.dailyTargets")}</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  {hasAnyIntake && !nutritionExpanded && (
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                      {t("common.today")}
+              <View style={{ alignItems: "center", gap: 12, paddingVertical: 8 }}>
+                {/* Avatar */}
+                <View style={[styles.avatar, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}>
+                  {profile?.photoUrl ? (
+                    <Image source={{ uri: profile.photoUrl }} style={{ width: "100%", height: "100%", borderRadius: 40 }} resizeMode="cover" />
+                  ) : (
+                    <Text style={[styles.avatarLetter, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
+                      {firstName[0]?.toUpperCase() || user?.firstName?.[0]?.toUpperCase() || "U"}
                     </Text>
                   )}
-                  <Feather name={nutritionExpanded ? "chevron-up" : "chevron-down"} size={18} color={theme.textMuted} />
                 </View>
-              </Pressable>
-              {nutritionExpanded && (<>
 
-              {/* Calories */}
-              <View>
-                <Input label={t("profile.calorieGoalLabel")} value={calorieGoal} onChangeText={setCalorieGoal} placeholder="2000" keyboardType="numeric" />
-                {todayCaloriesConsumed > 0 && !!calorieGoal && (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: -4, marginBottom: 8 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: intakeStatusColor(todayCaloriesConsumed, parseInt(calorieGoal) || 0) ?? theme.textMuted }} />
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                      {todayCaloriesConsumed} / {calorieGoal} {t("common.kcal")}
+                {/* Name */}
+                <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 20 }}>
+                  {firstName} {lastName}
+                </Text>
+
+                {/* XP badge + rank */}
+                <Pressable onPress={() => router.push("/rank")} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: rank.bgColor, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: rank.borderColor + "40" }}>
+                    {IconComponent && <IconComponent color={rank.borderColor} size={16} />}
+                    <Text style={{ color: rank.textColor, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+                      {rank.name}
+                    </Text>
+                    <Text style={{ color: rank.textColor + "90", fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                      {xp.toLocaleString()} XP
                     </Text>
                   </View>
-                )}
-              </View>
-
-              <View style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <Input label={t("profile.proteinG")} value={proteinGoal} onChangeText={setProteinGoal} placeholder="150" keyboardType="numeric" />
-                  {todayProteinConsumed > 0 && !!proteinGoal && (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: -4 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: intakeStatusColor(todayProteinConsumed, parseInt(proteinGoal) || 0) ?? theme.textMuted }} />
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
-                        {todayProteinConsumed}g
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <View style={{ flex: 1 }}><Input label={t("profile.carbsG")} value={carbsGoal} onChangeText={setCarbsGoal} placeholder="200" keyboardType="numeric" /></View>
-                <View style={{ flex: 1 }}><Input label={t("profile.fatG")} value={fatGoal} onChangeText={setFatGoal} placeholder="60" keyboardType="numeric" /></View>
-              </View>
-
-              {/* Water */}
-              <View>
-                <Input label={t("profile.dailyWaterGoal")} value={waterGoalMl} onChangeText={setWaterGoalMl} placeholder="2000" keyboardType="numeric" />
-                {todayWaterConsumed > 0 && !!waterGoalMl && (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: -4 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: intakeStatusColor(todayWaterConsumed, parseInt(waterGoalMl) || 0) ?? theme.textMuted }} />
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                      {todayWaterConsumed} / {waterGoalMl} ml
-                    </Text>
-                  </View>
-                )}
-              </View>
-              </>)}
-            </Card>
-            
-            <Button title={t("profile.saveProfile")} onPress={handleSave} loading={updateMutation.isPending} />
-            
-            <Pressable onPress={handleLogout} style={[styles.logoutBtn, { borderColor: theme.border }]}>
-              <Feather name="log-out" size={18} color={theme.danger} />
-              <Text style={{ color: theme.danger, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.signOut")}</Text>
-            </Pressable>
-          </>
-        ) : (
-          <>
-            {/* ── Plan ── */}
-            <Card>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: subscriptionData?.upgradeAvailable ? 14 : 0 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <View style={[styles.planIcon, { backgroundColor: subscriptionData?.plan?.key === "premium" ? "#448aff20" : theme.primaryDim }]}>
-                    <Feather name="zap" size={18} color={subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary} />
-                  </View>
-                  <View>
-                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("profile.currentPlan")}</Text>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                      {subscriptionData?.plan?.name ?? t("profile.free")} · {(subscriptionData?.subscription?.status ?? t("profile.active")).charAt(0).toUpperCase() + (subscriptionData?.subscription?.status ?? t("profile.active")).slice(1)}
-                    </Text>
-                  </View>
-                </View>
-                <View style={[styles.planBadge, {
-                  backgroundColor: subscriptionData?.plan?.key === "premium" ? "#448aff20" : theme.primaryDim,
-                }]}>
-                  <Text style={{
-                    color: subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary,
-                    fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 0.8,
-                  }}>
-                    {(subscriptionData?.plan?.key ?? "free").toUpperCase()}
-                  </Text>
-                </View>
-              </View>
-
-              {subscriptionData?.upgradeAvailable && (
-                <Pressable
-                  onPress={() => router.push("/subscription" as any)}
-                  style={[styles.upgradeRow, { backgroundColor: "#448aff0d", borderColor: "#448aff35" }]}
-                >
-                  <Feather name="trending-up" size={16} color="#448aff" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: "#448aff", fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("profile.upgrade")}</Text>
-                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                      {t("profile.premiumFeatures")}
-                    </Text>
-                  </View>
-                  <Feather name={rtlIcon("chevron-right")} size={14} color="#448aff" />
                 </Pressable>
-              )}
-            </Card>
 
-            {/* ── Achievements ── */}
-            <Pressable
-              onPress={() => router.push("/achievements" as any)}
-              style={[styles.achieveRow, { backgroundColor: theme.card, borderColor: theme.border }]}
-            >
-              <View style={[styles.achieveIcon, { backgroundColor: "#e040fb" + "18" }]}>
-                <Feather name="award" size={18} color="#e040fb" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("achievements.title")}</Text>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("profile.badgesStreaksRecords")}</Text>
-              </View>
-              <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
-            </Pressable>
-
-            {/* ── Recovery & Wellness ── */}
-            <Pressable
-              onPress={() => router.push("/recovery" as any)}
-              style={[styles.achieveRow, { backgroundColor: theme.card, borderColor: theme.border }]}
-            >
-              <View style={[styles.achieveIcon, { backgroundColor: "#00bcd4" + "18" }]}>
-                <Feather name="heart" size={18} color="#00bcd4" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("profile.recoveryWellness")}</Text>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("profile.sleepEnergyStress")}</Text>
-              </View>
-              <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
-            </Pressable>
-
-            {/* ── Notifications ── */}
-            <Card>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: globalEnabled ? 16 : 0 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <View style={[{ width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-                    { backgroundColor: globalEnabled ? theme.primaryDim : theme.card }]}>
-                    <Feather name="bell" size={18} color={globalEnabled ? theme.primary : theme.textMuted} />
-                  </View>
-                  <View>
-                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("profile.notifications")}</Text>
+                {/* Streak with fire icon */}
+                {currentStreak > 0 && (
+                  <Pressable onPress={() => router.push("/streaks" as any)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <Feather name="zap" size={14} color="#ff6b35" />
+                    <Text style={{ color: "#ff6b35", fontFamily: "Inter_700Bold", fontSize: 14 }}>
+                      {currentStreak}
+                    </Text>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                      {globalEnabled ? t("profile.allNotifications") : t("profile.allNotifications")}
-                    </Text>
-                  </View>
-                </View>
-                <Switch
-                  value={globalEnabled}
-                  onValueChange={handleToggleGlobalNotifs}
-                  trackColor={{ false: theme.border, true: theme.primary + "80" }}
-                  thumbColor={globalEnabled ? theme.primary : theme.textMuted}
-                />
-              </View>
-
-              {globalEnabled && NOTIF_TYPES.map((type, i) => {
-                const meta = NOTIF_META[type];
-                const pref = prefs[type];
-                const isLast = i === NOTIF_TYPES.length - 1;
-                const expanded = expandedNotifType === type;
-
-                return (
-                  <View
-                    key={type}
-                    style={[
-                      { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 },
-                      !isLast && { paddingBottom: 12 },
-                    ]}
-                  >
-                    {/* Row: icon + label + toggle */}
-                    <Pressable
-                      onPress={() => setExpandedNotifType(expanded ? null : type)}
-                      style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-                    >
-                      <View style={[{ width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-                        { backgroundColor: pref.enabled ? meta.color + "20" : theme.card }]}>
-                        <Feather name={meta.icon as any} size={15} color={pref.enabled ? meta.color : theme.textMuted} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 14 }}>{t(meta.labelKey)}</Text>
-                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
-                          {pref.enabled ? t("profile.dailyAt", { time: fmtTime(pref.time) }) : t(meta.descriptionKey)}
-                        </Text>
-                      </View>
-                      <Switch
-                        value={pref.enabled}
-                        onValueChange={(v) => handleToggleType(type, v)}
-                        trackColor={{ false: theme.border, true: meta.color + "80" }}
-                        thumbColor={pref.enabled ? meta.color : theme.textMuted}
-                      />
-                    </Pressable>
-
-                    {/* Time picker (expanded) */}
-                    {expanded && pref.enabled && (
-                      <View style={{ marginTop: 10 }}>
-                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginBottom: 8 }}>
-                          {t("profile.reminderTime")}
-                        </Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          <View style={{ flexDirection: "row", gap: 6 }}>
-                            {PRESET_TIMES.map((pt) => {
-                              const sel = pref.time === pt;
-                              return (
-                                <Pressable
-                                  key={pt}
-                                  onPress={() => handleSetTime(type, pt)}
-                                  style={[{
-                                    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
-                                    borderWidth: 1.5,
-                                    backgroundColor: sel ? meta.color + "20" : "transparent",
-                                    borderColor: sel ? meta.color : theme.border,
-                                  }]}
-                                >
-                                  <Text style={{
-                                    color: sel ? meta.color : theme.textMuted,
-                                    fontFamily: sel ? "Inter_600SemiBold" : "Inter_400Regular",
-                                    fontSize: 12,
-                                  }}>
-                                    {fmtTime(pt)}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-                        </ScrollView>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </Card>
-
-            {/* Settings */}
-            <Card>
-              <SettingRow label={t("profile.darkMode")} icon="moon" theme={theme}>
-                <Switch
-                  value={isDark}
-                  onValueChange={setDarkMode}
-                  trackColor={{ false: theme.border, true: theme.primary + "80" }}
-                  thumbColor={isDark ? theme.primary : theme.textMuted}
-                />
-              </SettingRow>
-            </Card>
-            
-            <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.language")}</Text>
-              <View style={styles.chipRow}>
-                {[{ key: "en", label: t("profile.english") }, { key: "ar", label: t("profile.arabic") }].map(lng => (
-                  <Pressable
-                    key={lng.key}
-                    onPress={() => {
-                      if (lng.key !== language) {
-                        Alert.alert(
-                          t("profile.languageChangeTitle"),
-                          t("profile.languageChangeMessage"),
-                          [
-                            { text: t("common.cancel"), style: "cancel" },
-                            { text: t("profile.languageChangeConfirm"), onPress: () => changeLanguage(lng.key as "en" | "ar") },
-                          ]
-                        );
-                      }
-                    }}
-                    style={[styles.chip, { backgroundColor: language === lng.key ? theme.primaryDim : "transparent", borderColor: language === lng.key ? theme.primary : theme.border, flex: 1 }]}
-                  >
-                    <Text style={{ color: language === lng.key ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
-                      {lng.label}
+                      day streak
                     </Text>
                   </Pressable>
-                ))}
+                )}
               </View>
             </Card>
+          );
+        })()}
 
-            <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.unitSystem")}</Text>
-              <View style={styles.chipRow}>
-                {["metric", "imperial"].map(u => (
-                  <Pressable
-                    key={u}
-                    onPress={() => setUnitSystem(u as any)}
-                    style={[styles.chip, { backgroundColor: unitSystem === u ? theme.primaryDim : "transparent", borderColor: unitSystem === u ? theme.primary : theme.border, flex: 1 }]}
-                  >
-                    <Text style={{ color: unitSystem === u ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
-                      {u === "metric" ? t("profile.metric") : t("profile.imperial")}
-                    </Text>
-                  </Pressable>
-                ))}
+        {/* ══════════════════════════════════════════════════════════════════
+            SECTION 2 — MENU GRID (2x2)
+            ══════════════════════════════════════════════════════════════════ */}
+        <View style={styles.menuGrid}>
+          {([
+            { icon: "trending-up" as const, title: t("progress.title") || "Progress", onPress: () => router.push("/(tabs)/progress" as any), color: theme.primary },
+            { icon: "award" as const, title: t("achievements.title") || "Achievements", onPress: () => router.push("/achievements" as any), color: "#e040fb" },
+            { icon: "heart" as const, title: t("profile.recoveryWellness") || "Recovery", onPress: () => router.push("/recovery" as any), color: "#00bcd4" },
+            { icon: "calendar" as const, title: t("profile.workoutPlan") || "Workout Plan", onPress: () => router.push("/workouts/plan" as any), color: theme.secondary },
+          ]).map((item) => (
+            <Pressable
+              key={item.title}
+              onPress={item.onPress}
+              style={[styles.menuCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={[styles.menuIcon, { backgroundColor: item.color + "18" }]}>
+                  <Feather name={item.icon} size={18} color={item.color} />
+                </View>
+                <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
               </View>
-            </Card>
-            
-            <Card>
-              <Pressable onPress={() => router.push("/settings/health" as any)} style={[styles.settingRow, { borderColor: theme.border }]}>
-                <View style={styles.settingLeft}>
-                  <Feather name="heart" size={18} color={theme.primary} />
-                  <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 15 }}>Health & Wearables</Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={theme.textMuted} />
-              </Pressable>
-            </Card>
-
-            <Card>
-              <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("profile.dangerZone")}</Text>
-              <Pressable
-                onPress={() => router.push("/(tabs)/progress" as any)}
-                style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
-              >
-                <View style={styles.settingLeft}>
-                  <Feather name="download" size={18} color={theme.secondary} />
-                  <Text style={{ color: theme.text, fontFamily: "Inter_400Regular", fontSize: 15 }}>{t("profile.exportData")}</Text>
-                </View>
-                <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
-              </Pressable>
-              
-              <Pressable onPress={handleDeleteAccount} style={styles.settingRow}>
-                <View style={styles.settingLeft}>
-                  <Feather name="trash-2" size={18} color={theme.danger} />
-                  <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 15 }}>{t("profile.deleteAccount")}</Text>
-                </View>
-                <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
-              </Pressable>
-            </Card>
-            
-            <View style={styles.versionInfo}>
-              <Text style={[styles.versionText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                {t("profile.appVersion", { version: "1.0.0" })}
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14, marginTop: 10 }}>
+                {item.title}
               </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            SECTION 3 — SETTINGS LIST
+            ══════════════════════════════════════════════════════════════════ */}
+        <Card>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>
+            {t("profile.settingsTab")}
+          </Text>
+
+          {/* Notifications */}
+          <View style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: (globalEnabled ? theme.primary : theme.textMuted) + "18" }]}>
+                <Feather name="bell" size={16} color={globalEnabled ? theme.primary : theme.textMuted} />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.notifications")}</Text>
             </View>
-          </>
-        )}
+            <Switch
+              value={globalEnabled}
+              onValueChange={handleToggleGlobalNotifs}
+              trackColor={{ false: theme.border, true: theme.primary + "80" }}
+              thumbColor={globalEnabled ? theme.primary : theme.textMuted}
+            />
+          </View>
+
+          {/* Language */}
+          <Pressable
+            onPress={() => {
+              const nextLang = language === "en" ? "ar" : "en";
+              Alert.alert(
+                t("profile.languageChangeTitle"),
+                t("profile.languageChangeMessage"),
+                [
+                  { text: t("common.cancel"), style: "cancel" },
+                  { text: t("profile.languageChangeConfirm"), onPress: () => changeLanguage(nextLang as "en" | "ar") },
+                ]
+              );
+            }}
+            style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: theme.secondary + "18" }]}>
+                <Feather name="globe" size={16} color={theme.secondary} />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.language")}</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                {language === "en" ? t("profile.english") : t("profile.arabic")}
+              </Text>
+              <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+            </View>
+          </Pressable>
+
+          {/* Units */}
+          <Pressable
+            onPress={() => setUnitSystem(unitSystem === "metric" ? "imperial" : "metric")}
+            style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: (theme.warning || "#ffab40") + "18" }]}>
+                <Feather name="sliders" size={16} color={theme.warning || "#ffab40"} />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.unitSystem")}</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                {unitSystem === "metric" ? t("profile.metric") : t("profile.imperial")}
+              </Text>
+              <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+            </View>
+          </Pressable>
+
+          {/* Dark Mode */}
+          <View style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: theme.primary + "18" }]}>
+                <Feather name="moon" size={16} color={theme.primary} />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.darkMode")}</Text>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={setDarkMode}
+              trackColor={{ false: theme.border, true: theme.primary + "80" }}
+              thumbColor={isDark ? theme.primary : theme.textMuted}
+            />
+          </View>
+
+          {/* Health & Wearables */}
+          <Pressable
+            onPress={() => router.push("/settings/health" as any)}
+            style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: "#00e676" + "18" }]}>
+                <Feather name="activity" size={16} color="#00e676" />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>Health & Wearables</Text>
+            </View>
+            <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+          </Pressable>
+
+          {/* Export Data */}
+          <Pressable
+            onPress={() => {
+              if (subscriptionData?.plan?.key !== "premium") {
+                router.push("/subscription" as any);
+              } else {
+                router.push("/(tabs)/progress" as any);
+              }
+            }}
+            style={styles.settingRow}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: "#448aff" + "18" }]}>
+                <Feather name="download" size={16} color="#448aff" />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.exportData")}</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              {subscriptionData?.plan?.key !== "premium" && (
+                <View style={{ backgroundColor: "#448aff20", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                  <Text style={{ color: "#448aff", fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 0.5 }}>PRO</Text>
+                </View>
+              )}
+              <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+            </View>
+          </Pressable>
+        </Card>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            SECTION 4 — ACCOUNT
+            ══════════════════════════════════════════════════════════════════ */}
+        <Card>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>
+            Account
+          </Text>
+
+          {/* Plan info */}
+          <Pressable
+            onPress={() => router.push("/subscription" as any)}
+            style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: (subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary) + "18" }]}>
+                <Feather name="zap" size={16} color={subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary} />
+              </View>
+              <View>
+                <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.currentPlan")}</Text>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                  {subscriptionData?.plan?.name ?? t("profile.free")}
+                </Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={[styles.planBadge, {
+                backgroundColor: subscriptionData?.plan?.key === "premium" ? "#448aff20" : theme.primaryDim,
+              }]}>
+                <Text style={{
+                  color: subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary,
+                  fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 0.8,
+                }}>
+                  {(subscriptionData?.plan?.key ?? "free").toUpperCase()}
+                </Text>
+              </View>
+              <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+            </View>
+          </Pressable>
+
+          {/* Edit Profile — save current profile data */}
+          <Pressable
+            onPress={handleSave}
+            style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: theme.textMuted + "18" }]}>
+                <Feather name="edit-2" size={16} color={theme.textMuted} />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.saveProfile")}</Text>
+            </View>
+            {updateMutation.isPending ? (
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>...</Text>
+            ) : (
+              <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+            )}
+          </Pressable>
+
+          {/* Logout */}
+          <Pressable
+            onPress={handleLogout}
+            style={styles.settingRow}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: theme.danger + "18" }]}>
+                <Feather name="log-out" size={16} color={theme.danger} />
+              </View>
+              <Text style={{ color: theme.danger, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.signOut")}</Text>
+            </View>
+          </Pressable>
+        </Card>
+
+        {/* Version info */}
+        <View style={styles.versionInfo}>
+          <Text style={[styles.versionText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+            {t("profile.appVersion", { version: "1.0.0" })}
+          </Text>
+        </View>
       </ScrollView>
-      
+
     </View>
   );
 }
@@ -1191,19 +798,37 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 12 },
   title: { fontSize: 28 },
-  tabs: {
-    flexDirection: "row", marginHorizontal: 20, marginBottom: 4,
-    borderRadius: 12, padding: 4, borderWidth: 1,
-  },
-  tab: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center", minHeight: 44 },
-  avatarSection: { alignItems: "center", gap: 8, paddingVertical: 8 },
   avatar: {
     width: 80, height: 80, borderRadius: 40, borderWidth: 2,
     alignItems: "center", justifyContent: "center", overflow: "hidden",
   },
   avatarLetter: { fontSize: 32 },
-  userName: { fontSize: 20 },
-  userEmail: { fontSize: 14 },
+  menuGrid: {
+    flexDirection: "row", flexWrap: "wrap", gap: 12,
+  },
+  menuCard: {
+    width: "47%", flexGrow: 1,
+    borderRadius: 14, padding: 16,
+    borderWidth: 1,
+  },
+  menuIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+  },
+  settingRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingVertical: 12, minHeight: 48,
+  },
+  settingLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  settingIcon: {
+    width: 32, height: 32, borderRadius: 8,
+    alignItems: "center", justifyContent: "center",
+  },
+  planBadge: {
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+  },
+  versionInfo: { alignItems: "center", paddingVertical: 8 },
+  versionText: { fontSize: 13 },
   sectionTitle: { fontSize: 16, marginBottom: 12 },
   fieldGroup: { gap: 12 },
   fieldLabel: { fontSize: 13, marginBottom: 6 },
@@ -1222,35 +847,8 @@ const styles = StyleSheet.create({
   },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   radioDot: { width: 10, height: 10, borderRadius: 5 },
-  settingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, minHeight: 44 },
-  settingLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
   logoutBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
     padding: 14, borderRadius: 12, borderWidth: 1,
-  },
-  versionInfo: { alignItems: "center", paddingVertical: 8 },
-  versionText: { fontSize: 13 },
-  achieveRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    padding: 14, borderRadius: 14, borderWidth: 1,
-  },
-  achieveIcon: {
-    width: 40, height: 40, borderRadius: 12,
-    alignItems: "center", justifyContent: "center",
-  },
-  planIcon: {
-    width: 40, height: 40, borderRadius: 12,
-    alignItems: "center", justifyContent: "center",
-  },
-  planBadge: {
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
-  },
-  upgradeRow: {
-    flexDirection: "row", alignItems: "center", gap: 10,
-    padding: 12, borderRadius: 10, borderWidth: 1,
-  },
-  soonBadge: {
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
-    backgroundColor: "#448aff20",
   },
 });

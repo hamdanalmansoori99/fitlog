@@ -7,27 +7,63 @@ import { computeCurrentStreak, computeLongestStreak } from "../lib/streaks";
 
 const router = Router();
 
+/** Day-label to JS day-of-week mapping (0=Sun … 6=Sat). */
+const DAY_LABEL_TO_DOW: Record<string, number> = {
+  sun: 0, sunday: 0,
+  mon: 1, monday: 1,
+  tue: 2, tuesday: 2,
+  wed: 3, wednesday: 3,
+  thu: 4, thursday: 4,
+  fri: 5, friday: 5,
+  sat: 6, saturday: 6,
+};
+
+/**
+ * Extract rest-day numbers from a user profile's savedWeeklyPlan.
+ * Returns an array like [0, 6] for Sun/Sat rest days, or undefined
+ * if no plan is available.
+ */
+function getRestDaysFromProfile(
+  profile?: { savedWeeklyPlan: any } | null,
+): number[] | undefined {
+  const plan = profile?.savedWeeklyPlan;
+  if (!Array.isArray(plan) || plan.length !== 7) return undefined;
+
+  const restDays: number[] = [];
+  for (const entry of plan) {
+    if (entry?.rest && typeof entry.day === "string") {
+      const dow = DAY_LABEL_TO_DOW[entry.day.toLowerCase()];
+      if (dow !== undefined) restDays.push(dow);
+    }
+  }
+  return restDays.length > 0 ? restDays : undefined;
+}
+
 router.get("/streaks", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    
-    const workouts = await db.select({ date: workoutsTable.date })
-      .from(workoutsTable).where(eq(workoutsTable.userId, user.id));
-    
-    const meals = await db.select({ date: mealsTable.date })
-      .from(mealsTable).where(eq(mealsTable.userId, user.id));
 
-    const waterLogs = await db.select({ loggedAt: waterLogsTable.loggedAt })
-      .from(waterLogsTable).where(eq(waterLogsTable.userId, user.id));
-    
+    const [workouts, meals, waterLogs, profileRows] = await Promise.all([
+      db.select({ date: workoutsTable.date })
+        .from(workoutsTable).where(eq(workoutsTable.userId, user.id)),
+      db.select({ date: mealsTable.date })
+        .from(mealsTable).where(eq(mealsTable.userId, user.id)),
+      db.select({ loggedAt: waterLogsTable.loggedAt })
+        .from(waterLogsTable).where(eq(waterLogsTable.userId, user.id)),
+      db.select({ savedWeeklyPlan: profilesTable.savedWeeklyPlan })
+        .from(profilesTable).where(eq(profilesTable.userId, user.id)).limit(1),
+    ]);
+
+    const restDays = getRestDaysFromProfile(profileRows[0]);
+
     const workoutDates = workouts.map(w => w.date);
     const mealDates = meals.map(m => m.date);
     const hydrationDates = waterLogs.map(w => new Date(w.loggedAt));
-    
-    const currentWorkoutStreak = computeCurrentStreak(workoutDates);
+
+    const currentWorkoutStreak = computeCurrentStreak(workoutDates, restDays);
     const currentMealStreak = computeCurrentStreak(mealDates);
     const currentHydrationStreak = computeCurrentStreak(hydrationDates);
-    const longestWorkoutStreak = Math.max(computeLongestStreak(workoutDates), currentWorkoutStreak);
+    const longestWorkoutStreak = Math.max(computeLongestStreak(workoutDates, restDays), currentWorkoutStreak);
     const longestMealStreak = Math.max(computeLongestStreak(mealDates), currentMealStreak);
     const longestHydrationStreak = Math.max(computeLongestStreak(hydrationDates), currentHydrationStreak);
 
@@ -343,7 +379,7 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
     // Clamp "this week" upper bound to now to exclude future-dated entries
     const nowDate = new Date(now);
 
-    const [thisWeekWorkouts, lastWeekWorkouts, allWorkouts] = await Promise.all([
+    const [thisWeekWorkouts, lastWeekWorkouts, allWorkouts, profileRows] = await Promise.all([
       db.select().from(workoutsTable)
         .where(and(eq(workoutsTable.userId, user.id), gte(workoutsTable.date, thisMonday), lte(workoutsTable.date, nowDate)))
         .orderBy(desc(workoutsTable.date)),
@@ -354,7 +390,11 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
       // Full history for accurate streak calculation
       db.select({ date: workoutsTable.date }).from(workoutsTable)
         .where(eq(workoutsTable.userId, user.id)),
+      db.select({ savedWeeklyPlan: profilesTable.savedWeeklyPlan })
+        .from(profilesTable).where(eq(profilesTable.userId, user.id)).limit(1),
     ]);
+
+    const restDays = getRestDaysFromProfile(profileRows[0]);
 
     const thisWeekMeals = await db.select().from(mealsTable)
       .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, thisMonday), lte(mealsTable.date, nowDate)));
@@ -434,7 +474,7 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
     }
 
     // Use full history for accurate streak (not just 2-week window)
-    const totalStreak = calcStreak(allWorkouts.map(w => w.date));
+    const totalStreak = computeCurrentStreak(allWorkouts.map(w => w.date), restDays);
 
     const dailyWorkoutMap: Record<string, number> = {};
     for (const w of thisWeekWorkouts) {

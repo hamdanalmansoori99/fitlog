@@ -1,10 +1,52 @@
 import { Router } from "express";
 import { db, mealsTable, mealFoodItemsTable } from "@workspace/db";
+import { eq, and, gte, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { anthropic, isAnthropicConfigured } from "@workspace/integrations-anthropic-ai";
 import { logError } from "../lib/logger";
+import { getActiveSubscription } from "../services/subscriptionService";
+
+/** Count how many AI-scanned meals the user has logged today (UTC day boundary). */
+async function getTodayScanCount(userId: number): Promise<number> {
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+
+  const rows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(mealsTable)
+    .where(
+      and(
+        eq(mealsTable.userId, userId),
+        gte(mealsTable.createdAt, todayStart),
+        eq(mealsTable.notes, "Logged via AI meal scanner")
+      )
+    );
+
+  return rows[0]?.count ?? 0;
+}
 
 const router = Router();
+
+/** GET /scan-meal/status — returns remaining scans for today */
+router.get("/status", requireAuth, async (req, res) => {
+  try {
+    const user = getUser(req);
+    const sub = await getActiveSubscription(user.id, user.role);
+    const limit = sub.plan.limits.scansPerDay;
+    const used = await getTodayScanCount(user.id);
+    const remaining = limit === Infinity ? -1 : Math.max(0, limit - used);
+
+    res.json({
+      scansUsedToday: used,
+      scansPerDay: limit === Infinity ? -1 : limit,
+      remainingScans: remaining,
+      isUnlimited: limit === Infinity,
+    });
+  } catch (err) {
+    logError("Scan status error:", err);
+    res.status(500).json({ error: "Failed to get scan status" });
+  }
+});
 
 router.post("/analyze", requireAuth, async (req, res) => {
   try {
@@ -14,6 +56,22 @@ router.post("/analyze", requireAuth, async (req, res) => {
     }
 
     const user = getUser(req);
+
+    // ── Scan limit check ──
+    const sub = await getActiveSubscription(user.id, user.role);
+    const limit = sub.plan.limits.scansPerDay;
+    if (limit !== Infinity) {
+      const used = await getTodayScanCount(user.id);
+      if (used >= limit) {
+        res.status(429).json({
+          error: "Daily scan limit reached. Upgrade to Premium for unlimited scans.",
+          scansUsedToday: used,
+          scansPerDay: limit,
+          remainingScans: 0,
+        });
+        return;
+      }
+    }
 
     const { imageBase64, mimeType = "image/jpeg" } = req.body;
 
@@ -123,6 +181,10 @@ Respond ONLY with a valid JSON object in this exact format (no markdown, no extr
       { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
     );
 
+    // Compute remaining scans for the response
+    const usedAfter = limit === Infinity ? 0 : (await getTodayScanCount(user.id));
+    const remainingScans = limit === Infinity ? -1 : Math.max(0, limit - usedAfter);
+
     res.json({
       items,
       mealDescription: parsed.mealDescription || "Scanned meal",
@@ -132,6 +194,8 @@ Respond ONLY with a valid JSON object in this exact format (no markdown, no extr
         carbsG: Math.round(totals.carbsG * 10) / 10,
         fatG: Math.round(totals.fatG * 10) / 10,
       },
+      scansPerDay: limit === Infinity ? -1 : limit,
+      remainingScans,
     });
   } catch (err: any) {
     logError("Scan meal analyze error:", err);

@@ -16,10 +16,11 @@ import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 
 const ACTIVITY_TYPES = [
+  { id: "gym", labelKey: "workouts.activityLabelGym", icon: "zap" as const },
+  { id: "cardio", labelKey: "workouts.activityLabelCardio", icon: "activity" as const },
   { id: "cycling", labelKey: "workouts.activityLabelCycling", icon: "wind" as const },
   { id: "running", labelKey: "workouts.activityLabelRunning", icon: "activity" as const },
   { id: "walking", labelKey: "workouts.activityLabelWalking", icon: "navigation" as const },
-  { id: "gym", labelKey: "workouts.activityLabelGym", icon: "zap" as const },
   { id: "swimming", labelKey: "workouts.activityLabelSwimming", icon: "droplet" as const },
   { id: "tennis", labelKey: "workouts.activityLabelTennis", icon: "circle" as const },
   { id: "yoga", labelKey: "workouts.activityLabelYoga", icon: "heart" as const },

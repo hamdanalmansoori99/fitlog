@@ -51,6 +51,26 @@ function datesToObjects(dateStrings: string[]): Date[] {
   return dateStrings.map(s => new Date(s + "T00:00:00Z"));
 }
 
+/** Day-label to JS day-of-week mapping (0=Sun … 6=Sat). */
+const DAY_LABEL_TO_DOW: Record<string, number> = {
+  sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tuesday: 2,
+  wed: 3, wednesday: 3, thu: 4, thursday: 4, fri: 5, friday: 5,
+  sat: 6, saturday: 6,
+};
+
+/** Extract rest-day numbers from a savedWeeklyPlan, or undefined if unavailable. */
+function getRestDaysFromPlan(plan: any): number[] | undefined {
+  if (!Array.isArray(plan) || plan.length !== 7) return undefined;
+  const rest: number[] = [];
+  for (const entry of plan) {
+    if (entry?.rest && typeof entry.day === "string") {
+      const dow = DAY_LABEL_TO_DOW[entry.day.toLowerCase()];
+      if (dow !== undefined) rest.push(dow);
+    }
+  }
+  return rest.length > 0 ? rest : undefined;
+}
+
 function parseRows(result: any): any[] {
   return (result as any).rows ?? Array.from(result as any);
 }
@@ -87,7 +107,8 @@ router.get("/", requireAuth, async (req, res) => {
     `);
     const hydrationDates: string[] = parseRows(hydrationR).map((r: any) => r.day);
 
-    const workoutStreak = computeStreaks(datesToObjects(workoutDates));
+    const restDays = getRestDaysFromPlan(profileR[0]?.savedWeeklyPlan);
+    const workoutStreak = computeStreaks(datesToObjects(workoutDates), restDays);
     const mealStreak = computeStreaks(datesToObjects(mealDates));
     const hydrationStreak = computeStreaks(datesToObjects(hydrationDates));
 

@@ -21,12 +21,16 @@ import { usePendingWorkoutsStore } from "@/store/pendingWorkoutsStore";
 import { isNetworkError } from "@/hooks/usePendingWorkoutSync";
 
 const ACTIVITY_TYPES = [
-  { id: "cycling", labelKey: "workouts.activityLabelCycling", icon: "wind" as const, color: "secondary" },
-  { id: "running", labelKey: "workouts.activityLabelRunning", icon: "activity" as const, color: "primary" },
-  { id: "walking", labelKey: "workouts.activityLabelWalking", icon: "navigation" as const, color: "cyan" },
   { id: "gym", labelKey: "workouts.activityLabelGym", icon: "zap" as const, color: "purple" },
-  { id: "swimming", labelKey: "workouts.activityLabelSwimming", icon: "droplet" as const, color: "secondary" },
+  { id: "cardio", labelKey: "workouts.activityLabelCardio", icon: "activity" as const, color: "primary" },
   { id: "other", labelKey: "workouts.activityLabelOther", icon: "more-horizontal" as const, color: "textMuted" },
+];
+
+const CARDIO_SUB_TYPES = [
+  { id: "running", labelKey: "workouts.activityLabelRunning", icon: "activity" as const },
+  { id: "cycling", labelKey: "workouts.activityLabelCycling", icon: "wind" as const },
+  { id: "walking", labelKey: "workouts.activityLabelWalking", icon: "navigation" as const },
+  { id: "swimming", labelKey: "workouts.activityLabelSwimming", icon: "droplet" as const },
 ];
 
 const MOOD_OPTIONS = [
@@ -66,6 +70,7 @@ export default function LogWorkoutScreen() {
 
   const [step, setStep] = useState<"select" | "form">("select");
   const [activityType, setActivityType] = useState("");
+  const [cardioSubType, setCardioSubType] = useState("");
   
   // Common fields
   const [durationH, setDurationH] = useState("0");
@@ -136,6 +141,7 @@ export default function LogWorkoutScreen() {
   }, [exerciseHistoryMap]);
 
   const [success, setSuccess] = useState(false);
+  const [newAchievements, setNewAchievements] = useState<{ key: string; title: string }[]>([]);
   const [error, setError] = useState("");
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [savedTemplateName, setSavedTemplateName] = useState("");
@@ -147,7 +153,7 @@ export default function LogWorkoutScreen() {
 
   const mutation = useMutation({
     mutationFn: api.createWorkout,
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
       queryClient.invalidateQueries({ queryKey: ["todayStats"] });
       queryClient.invalidateQueries({ queryKey: ["weeklyStats"] });
@@ -155,6 +161,10 @@ export default function LogWorkoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["workoutSummary"] });
       queryClient.invalidateQueries({ queryKey: ["streaks"] });
       queryClient.invalidateQueries({ queryKey: ["achievements"] });
+      if (data?.newAchievements?.length > 0) {
+        setNewAchievements(data.newAchievements);
+        if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
       setSuccess(true);
     },
     onError: (err: any) => {
@@ -194,7 +204,13 @@ export default function LogWorkoutScreen() {
 
   useEffect(() => {
     if (params.prefillType) {
-      setActivityType(params.prefillType);
+      const cardioIds = ["running", "cycling", "walking", "swimming"];
+      if (cardioIds.includes(params.prefillType)) {
+        setActivityType("cardio");
+        setCardioSubType(params.prefillType);
+      } else {
+        setActivityType(params.prefillType);
+      }
       setStep("form");
     }
     if (params.prefillName) {
@@ -275,9 +291,9 @@ export default function LogWorkoutScreen() {
     } else if (durationMinutes > 0) {
       const mets: Record<string, number> = {
         cycling: 7, running: 9, walking: 4, gym: 5,
-        swimming: 8, other: 5,
+        swimming: 8, cardio: 7, other: 5,
       };
-      const met = mets[activityType] || 5;
+      const met = (activityType === "cardio" && cardioSubType ? mets[cardioSubType] : mets[activityType]) || 5;
       estimatedCals = Math.round(met * 70 * (durationMinutes / 60)); // ~70kg default
     }
     
@@ -301,8 +317,11 @@ export default function LogWorkoutScreen() {
       metadata.paceMinPerKm = parseFloat((durationMinutes / parsedDistance).toFixed(2));
     }
 
+    // Store the specific sub-type for cardio workouts to keep data backward-compatible
+    const storedActivityType = activityType === "cardio" && cardioSubType ? cardioSubType : activityType;
+
     const payload = {
-      activityType,
+      activityType: storedActivityType,
       name: workoutName || undefined,
       date: new Date(date + "T" + new Date().toTimeString().slice(0, 5)).toISOString(),
       durationMinutes: durationMinutes || undefined,
@@ -319,7 +338,8 @@ export default function LogWorkoutScreen() {
   
   if (success) {
     const activityType_ = ACTIVITY_TYPES.find(a => a.id === activityType);
-    const activityLabel = activityType_ ? t(activityType_.labelKey) : t("workouts.activityLabelOther");
+    const cardioSub_ = activityType === "cardio" ? CARDIO_SUB_TYPES.find(s => s.id === cardioSubType) : null;
+    const activityLabel = cardioSub_ ? t(cardioSub_.labelKey) : (activityType_ ? t(activityType_.labelKey) : t("workouts.activityLabelOther"));
     const completedExercises = exercises.filter(e => e.name && e.sets.some(s => s.reps || s.weight));
     return (
       <View style={[styles.successScreen, { backgroundColor: theme.background }]}>
@@ -327,6 +347,35 @@ export default function LogWorkoutScreen() {
           title={t("workouts.workoutLogged")}
           subtitle={t("workouts.recordedKeepUp", { activity: activityLabel })}
         />
+        {newAchievements.length > 0 && (
+          <View style={{ width: "100%", paddingHorizontal: 20, marginBottom: 8 }}>
+            {newAchievements.map((ach) => (
+              <View
+                key={ach.key}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 12,
+                  backgroundColor: theme.primary + "18", borderColor: theme.primary + "40",
+                  borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 8,
+                }}
+              >
+                <View style={{
+                  width: 40, height: 40, borderRadius: 20,
+                  backgroundColor: theme.primary + "30", alignItems: "center", justifyContent: "center",
+                }}>
+                  <Feather name="award" size={20} color={theme.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 11, marginBottom: 2 }}>
+                    {t("achievements.newlyUnlocked")}
+                  </Text>
+                  <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>
+                    {ach.title}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
         {activityType === "gym" && completedExercises.length > 0 && (
           <View style={{ width: "100%", paddingHorizontal: 20, gap: 8 }}>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center", marginBottom: 4 }}>
@@ -451,8 +500,7 @@ export default function LogWorkoutScreen() {
           </View>
         ) : (
           <View style={styles.form}>
-            {/* Date */}
-            <Input label={t("workouts.date")} value={date} onChangeText={setDate} placeholder={t("meals.datePlaceholder")} />
+            {/* Date — auto-filled silently, hidden from UI */}
             
             {/* Name (optional, gym required) */}
             {activityType === "gym" && (
@@ -477,19 +525,50 @@ export default function LogWorkoutScreen() {
               </View>
             </View>
             
+            {/* Cardio sub-type selector */}
+            {activityType === "cardio" && (
+              <View>
+                <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.cardioType")}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={{ flexDirection: "row", gap: 8, paddingBottom: 4 }}>
+                    {CARDIO_SUB_TYPES.map((sub) => (
+                      <Pressable
+                        key={sub.id}
+                        onPress={() => setCardioSubType(cardioSubType === sub.id ? "" : sub.id)}
+                        style={[
+                          styles.chip,
+                          {
+                            backgroundColor: cardioSubType === sub.id ? theme.primaryDim : theme.card,
+                            borderColor: cardioSubType === sub.id ? theme.primary : theme.border,
+                            flexDirection: "row", alignItems: "center", gap: 6,
+                          },
+                        ]}
+                      >
+                        <Feather name={sub.icon} size={14} color={cardioSubType === sub.id ? theme.primary : theme.textMuted} />
+                        <Text style={{
+                          color: cardioSubType === sub.id ? theme.primary : theme.textMuted,
+                          fontFamily: "Inter_500Medium", fontSize: 13,
+                        }}>{t(sub.labelKey)}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
+
             {/* Distance */}
-            {["cycling", "running", "walking", "swimming"].includes(activityType) && (
+            {activityType === "cardio" && cardioSubType && (
               <Input
-                label={activityType === "swimming" ? t("workouts.distanceMeters") : t("workouts.distanceKm")}
+                label={cardioSubType === "swimming" ? t("workouts.distanceMeters") : t("workouts.distanceKm")}
                 value={distanceKm}
                 onChangeText={setDistanceKm}
-                placeholder={activityType === "swimming" ? "1000" : "5.0"}
+                placeholder={cardioSubType === "swimming" ? "1000" : "5.0"}
                 keyboardType="decimal-pad"
               />
             )}
             
             {/* Activity specific fields */}
-            {activityType === "cycling" && (
+            {activityType === "cardio" && cardioSubType === "cycling" && (
               <>
                 <ChipGroup
                   label={t("workouts.routeType")}
@@ -517,7 +596,7 @@ export default function LogWorkoutScreen() {
               </>
             )}
             
-            {activityType === "running" && (
+            {activityType === "cardio" && cardioSubType === "running" && (
               <>
                 <ChipGroup
                   label={t("workouts.terrainLabel")}
@@ -546,7 +625,7 @@ export default function LogWorkoutScreen() {
               </>
             )}
             
-            {activityType === "walking" && (
+            {activityType === "cardio" && cardioSubType === "walking" && (
               <>
                 <Input label={t("workouts.stepsOptional")} value={steps} onChangeText={setSteps} placeholder="8000" keyboardType="numeric" />
                 <ChipGroup
@@ -574,7 +653,7 @@ export default function LogWorkoutScreen() {
               </>
             )}
             
-            {activityType === "swimming" && (
+            {activityType === "cardio" && cardioSubType === "swimming" && (
               <>
                 <Input label={t("workouts.lapsLabel")} value={laps} onChangeText={setLaps} placeholder="20" keyboardType="numeric" />
                 <ChipGroup
@@ -839,20 +918,6 @@ export default function LogWorkoutScreen() {
                   ))}
                 </View>
               </ScrollView>
-            </View>
-            
-            {/* Notes */}
-            <View>
-              <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.notesOptional")}</Text>
-              <TextInput
-                value={notes}
-                onChangeText={setNotes}
-                placeholder={t("workouts.notesPlaceholder")}
-                placeholderTextColor={theme.textMuted}
-                multiline
-                numberOfLines={3}
-                style={[styles.notesInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card, fontFamily: "Inter_400Regular" }]}
-              />
             </View>
             
             {error ? (

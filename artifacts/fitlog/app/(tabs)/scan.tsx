@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   Image,
 } from "react-native";
-import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
+import { CameraView, useCameraPermissions, CameraType, BarcodeScanningResult } from "expo-camera";
 import Animated, {
   FadeIn,
   FadeOut,
@@ -29,16 +29,17 @@ import Animated, {
 } from "react-native-reanimated";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
-import { api, ScanMealItem, MacroTotals } from "@/lib/api";
+import { api, ScanMealItem, MacroTotals, ScanStatus } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useTranslation } from "react-i18next";
 
 type ScreenState = "camera" | "scanning" | "results";
 type MealCategory = "Breakfast" | "Lunch" | "Dinner" | "Snacks";
+type ScanMode = "photo" | "barcode";
 
 const CATEGORIES: MealCategory[] = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
@@ -280,6 +281,32 @@ export default function ScanScreen() {
   const [footerHeight, setFooterHeight] = useState(160);
   const clientTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Barcode mode state
+  const [scanMode, setScanMode] = useState<ScanMode>("photo");
+  const [barcodeLooking, setBarcodeLooking] = useState(false);
+  const barcodeProcessed = useRef(false);
+  const [barcodeResult, setBarcodeResult] = useState<{
+    name: string;
+    brand?: string;
+    calories: number;
+    proteinG: number;
+    carbsG: number;
+    fatG: number;
+    servingG?: number;
+  } | null>(null);
+
+  // Scan limit status
+  const { data: scanStatus, refetch: refetchScanStatus } = useQuery<ScanStatus>({
+    queryKey: ["scan-status"],
+    queryFn: () => api.scanMealStatus(),
+    staleTime: 30_000,
+  });
+
+  const scanLimitReached =
+    scanStatus != null &&
+    !scanStatus.isUnlimited &&
+    scanStatus.remainingScans <= 0;
+
   const captureButtonScale = useSharedValue(1);
   const captureStyle = useAnimatedStyle(() => ({
     transform: [{ scale: captureButtonScale.value }],
@@ -374,6 +401,7 @@ export default function ScanScreen() {
       setTotals(result.totals);
       setMealDescription(result.mealDescription);
       setScreenState("results");
+      refetchScanStatus();
 
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -387,6 +415,13 @@ export default function ScanScreen() {
       if (err?.message === "CLIENT_TIMEOUT") {
         return;
       }
+      // Handle scan limit reached (429)
+      if (err?.status === 429) {
+        refetchScanStatus();
+        setScreenState("camera");
+        showToast(t("scan.dailyLimitReached") || "Daily scan limit reached", "error");
+        return;
+      }
       const isServerTimeout =
         err?.status === 504 ||
         (typeof err?.message === "string" && err.message.includes("timed out"));
@@ -398,7 +433,7 @@ export default function ScanScreen() {
       setScreenState("camera");
       showToast(t("scan.analyzeFailed"), "error");
     }
-  }, [screenState, captureButtonScale, t, showToast]);
+  }, [screenState, captureButtonScale, t, showToast, refetchScanStatus]);
 
   const handleLogMeal = async () => {
     if (items.length === 0) return;
@@ -413,6 +448,7 @@ export default function ScanScreen() {
 
       queryClient.invalidateQueries({ queryKey: ["meals"] });
       queryClient.invalidateQueries({ queryKey: ["today-nutrition"] });
+      refetchScanStatus();
 
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -454,6 +490,78 @@ export default function ScanScreen() {
     setScreenState("camera");
   }, []);
 
+  const onBarcodeScanned = useCallback(async (result: BarcodeScanningResult) => {
+    if (barcodeProcessed.current || barcodeLooking) return;
+    const code = result.data;
+    if (!code || !/^\d{4,14}$/.test(code)) return;
+    barcodeProcessed.current = true;
+
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    setBarcodeLooking(true);
+
+    try {
+      const { food } = await api.barcodeLookup(code);
+      setBarcodeResult({
+        name: food.name,
+        brand: food.brand,
+        calories: food.calories || 0,
+        proteinG: food.proteinG || 0,
+        carbsG: food.carbsG || 0,
+        fatG: food.fatG || 0,
+        servingG: food.servingG,
+      });
+    } catch (err: any) {
+      const msg = err.message || t("scan.productNotFound");
+      showToast(msg.includes("not found") ? t("scan.productNotFound") : msg, "error");
+      barcodeProcessed.current = false;
+    } finally {
+      setBarcodeLooking(false);
+    }
+  }, [barcodeLooking, t, showToast]);
+
+  const handleLogBarcodeItem = async () => {
+    if (!barcodeResult) return;
+    setIsLogging(true);
+    try {
+      const displayName = barcodeResult.brand
+        ? `${barcodeResult.name} (${barcodeResult.brand})`
+        : barcodeResult.name;
+      const scanItem: ScanMealItem = {
+        name: displayName,
+        portionSize: barcodeResult.servingG || 100,
+        portionUnit: "g",
+        calories: barcodeResult.calories,
+        proteinG: barcodeResult.proteinG,
+        carbsG: barcodeResult.carbsG,
+        fatG: barcodeResult.fatG,
+      };
+      await api.scanMealLog({
+        items: [scanItem],
+        category,
+        name: displayName,
+      });
+      queryClient.invalidateQueries({ queryKey: ["meals"] });
+      queryClient.invalidateQueries({ queryKey: ["today-nutrition"] });
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      showToast(t("scan.mealLogged"), "success");
+      setBarcodeResult(null);
+      barcodeProcessed.current = false;
+    } catch (err) {
+      showToast(t("scan.logFailed"), "error");
+    } finally {
+      setIsLogging(false);
+    }
+  };
+
+  const handleBarcodeScanAnother = () => {
+    setBarcodeResult(null);
+    barcodeProcessed.current = false;
+  };
+
   if (!permission) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -488,7 +596,7 @@ export default function ScanScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: "#000" }]}>
-      {(screenState === "camera" || screenState === "scanning") && (
+      {(screenState === "camera" || screenState === "scanning") && scanMode === "photo" && (
         <CameraView
           ref={cameraRef}
           style={StyleSheet.absoluteFillObject}
@@ -496,45 +604,217 @@ export default function ScanScreen() {
         />
       )}
 
+      {scanMode === "barcode" && screenState === "camera" && !barcodeResult && (
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
+          facing="back"
+          barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }}
+          onBarcodeScanned={onBarcodeScanned}
+        />
+      )}
+
       {screenState === "camera" && (
         <Animated.View
           entering={FadeIn.duration(300)}
           style={StyleSheet.absoluteFillObject}
+          pointerEvents="box-none"
         >
           <View style={[styles.cameraTopBar, { paddingTop: insets.top + 12 }]}>
             <Text style={[styles.cameraTitle, { fontFamily: "Inter_700Bold" }]}>
               {t("scan.title")}
             </Text>
-            <Text style={[styles.cameraTagline, { fontFamily: "Inter_400Regular" }]}>
-              {t("scan.tagline")}
-            </Text>
-          </View>
 
-          <View style={styles.cameraHint}>
-            <View style={[styles.hintPill, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
-              <Feather name="info" size={12} color="rgba(255,255,255,0.8)" />
-              <Text style={[styles.hintText, { fontFamily: "Inter_400Regular" }]}>
-                {t("scan.hintText")}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.cameraBottom, { paddingBottom: insets.bottom + 24 }]}>
-            <Pressable
-              style={styles.flipBtn}
-              onPress={() => setFacing((f) => (f === "back" ? "front" : "back"))}
-            >
-              <Feather name="refresh-cw" size={22} color="#fff" />
-            </Pressable>
-
-            <Animated.View style={captureStyle}>
-              <Pressable onPress={handleCapture} style={styles.captureOuter}>
-                <View style={styles.captureInner} />
+            {/* Scan mode toggle */}
+            <View style={[styles.modeToggle, { marginTop: 12 }]}>
+              <Pressable
+                onPress={() => { setScanMode("photo"); setBarcodeResult(null); barcodeProcessed.current = false; }}
+                style={[
+                  styles.modeToggleBtn,
+                  { backgroundColor: scanMode === "photo" ? theme.primary : theme.card },
+                ]}
+              >
+                <Feather name="camera" size={14} color={scanMode === "photo" ? "#000" : theme.text} />
+                <Text style={[styles.modeToggleText, {
+                  color: scanMode === "photo" ? "#000" : theme.text,
+                  fontFamily: scanMode === "photo" ? "Inter_600SemiBold" : "Inter_400Regular",
+                }]}>
+                  {t("scan.scanMeal") || "Scan Meal"}
+                </Text>
               </Pressable>
-            </Animated.View>
+              <Pressable
+                onPress={() => { setScanMode("barcode"); barcodeProcessed.current = false; }}
+                style={[
+                  styles.modeToggleBtn,
+                  { backgroundColor: scanMode === "barcode" ? theme.primary : theme.card },
+                ]}
+              >
+                <Feather name="maximize" size={14} color={scanMode === "barcode" ? "#000" : theme.text} />
+                <Text style={[styles.modeToggleText, {
+                  color: scanMode === "barcode" ? "#000" : theme.text,
+                  fontFamily: scanMode === "barcode" ? "Inter_600SemiBold" : "Inter_400Regular",
+                }]}>
+                  {t("scan.barcode") || "Barcode"}
+                </Text>
+              </Pressable>
+            </View>
 
-            <View style={styles.flipBtn} />
+            {/* Remaining scans badge */}
+            {scanStatus && !scanStatus.isUnlimited && scanMode === "photo" && (
+              <View style={[styles.scanCountBadge, { backgroundColor: scanLimitReached ? "rgba(255,82,82,0.18)" : "rgba(0,0,0,0.5)", marginTop: 10 }]}>
+                <Feather name="zap" size={12} color={scanLimitReached ? "#ff5252" : theme.primary} />
+                <Text style={[styles.scanCountText, {
+                  color: scanLimitReached ? "#ff5252" : "#fff",
+                  fontFamily: "Inter_500Medium",
+                }]}>
+                  {scanLimitReached
+                    ? (t("scan.noScansLeft") || "No scans left today")
+                    : `${scanStatus.remainingScans}/${scanStatus.scansPerDay} ${t("scan.scansRemaining") || "scans remaining today"}`
+                  }
+                </Text>
+              </View>
+            )}
           </View>
+
+          {/* Photo mode UI */}
+          {scanMode === "photo" && (
+            <>
+              {scanLimitReached ? (
+                /* ── Upsell card when daily limit is reached ── */
+                <View style={[styles.upsellOverlay, { paddingBottom: insets.bottom + 24 }]}>
+                  <View style={[styles.upsellCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                    <View style={[styles.upsellIconCircle, { backgroundColor: theme.primary + "18" }]}>
+                      <Feather name="lock" size={28} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.upsellTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                      {t("scan.dailyLimitTitle") || "Daily Scan Limit Reached"}
+                    </Text>
+                    <Text style={[styles.upsellDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {t("scan.dailyLimitDesc") || "Free accounts get 1 meal scan per day. Upgrade to Premium for unlimited AI-powered scans."}
+                    </Text>
+                    <Pressable
+                      onPress={() => router.push("/premium" as any)}
+                      style={[styles.upsellBtn, { backgroundColor: theme.primary }]}
+                    >
+                      <Feather name="star" size={16} color="#000" />
+                      <Text style={{ color: "#000", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                        {t("scan.upgradePremium") || "Upgrade to Premium"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.cameraHint}>
+                    <View style={[styles.hintPill, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
+                      <Feather name="info" size={12} color="rgba(255,255,255,0.8)" />
+                      <Text style={[styles.hintText, { fontFamily: "Inter_400Regular" }]}>
+                        {t("scan.hintText")}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.cameraBottom, { paddingBottom: insets.bottom + 24 }]}>
+                    <Pressable
+                      style={styles.flipBtn}
+                      onPress={() => setFacing((f) => (f === "back" ? "front" : "back"))}
+                    >
+                      <Feather name="refresh-cw" size={22} color="#fff" />
+                    </Pressable>
+
+                    <Animated.View style={captureStyle}>
+                      <Pressable onPress={handleCapture} style={styles.captureOuter}>
+                        <View style={styles.captureInner} />
+                      </Pressable>
+                    </Animated.View>
+
+                    <View style={styles.flipBtn} />
+                  </View>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Barcode mode UI */}
+          {scanMode === "barcode" && !barcodeResult && (
+            <>
+              {barcodeLooking ? (
+                <View style={styles.barcodeLoadingCenter}>
+                  <ActivityIndicator size="large" color={theme.primary} />
+                  <Text style={{ color: "#fff", fontFamily: "Inter_500Medium", fontSize: 15, marginTop: 12 }}>
+                    {t("scan.lookingUpProduct") || "Looking up product..."}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.barcodeHintCenter}>
+                  <View style={styles.barcodeFrame}>
+                    <View style={[styles.barcodeCorner, styles.barcodeCornerTL, { borderColor: theme.primary }]} />
+                    <View style={[styles.barcodeCorner, styles.barcodeCornerTR, { borderColor: theme.primary }]} />
+                    <View style={[styles.barcodeCorner, styles.barcodeCornerBL, { borderColor: theme.primary }]} />
+                    <View style={[styles.barcodeCorner, styles.barcodeCornerBR, { borderColor: theme.primary }]} />
+                  </View>
+                  <Text style={styles.barcodeHintText}>
+                    {t("scan.pointAtBarcode") || "Point camera at a barcode"}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {/* Barcode result display */}
+          {scanMode === "barcode" && barcodeResult && (
+            <View style={[styles.barcodeResultOverlay, { paddingBottom: tabBarHeight + 16 }]}>
+              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.85)" }]} />
+              <View style={[styles.barcodeResultCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <View style={[styles.barcodeResultBadge, { backgroundColor: theme.primary + "18" }]}>
+                  <Feather name="check-circle" size={14} color={theme.primary} />
+                  <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+                    {t("scan.productFound") || "Product Found"}
+                  </Text>
+                </View>
+                <Text style={[styles.barcodeResultName, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
+                  {barcodeResult.name}
+                </Text>
+                {barcodeResult.brand && (
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginBottom: 12 }}>
+                    {barcodeResult.brand}
+                  </Text>
+                )}
+                <View style={styles.barcodeResultMacros}>
+                  <MacroPill label={t("common.calories")} value={barcodeResult.calories} unit="kcal" color={theme.primary} />
+                  <MacroPill label={t("common.protein")} value={barcodeResult.proteinG} unit="g" color="#448aff" />
+                  <MacroPill label={t("common.carbs")} value={barcodeResult.carbsG} unit="g" color="#ffab40" />
+                  <MacroPill label={t("common.fat")} value={barcodeResult.fatG} unit="g" color="#ff5252" />
+                </View>
+                {barcodeResult.servingG && (
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, textAlign: "center", marginTop: 8 }}>
+                    {t("scan.perServing") || "Per serving"}: {barcodeResult.servingG}g
+                  </Text>
+                )}
+                <Pressable
+                  onPress={handleLogBarcodeItem}
+                  disabled={isLogging}
+                  style={[styles.barcodeLogBtn, { backgroundColor: theme.primary, opacity: isLogging ? 0.7 : 1 }]}
+                >
+                  {isLogging ? (
+                    <ActivityIndicator color="#000" size="small" />
+                  ) : (
+                    <>
+                      <Feather name="check" size={18} color="#000" />
+                      <Text style={{ color: "#000", fontFamily: "Inter_700Bold", fontSize: 16 }}>
+                        {t("scan.logMeal")}
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+                <Pressable onPress={handleBarcodeScanAnother} style={styles.barcodeScanAnotherBtn}>
+                  <Feather name="maximize" size={14} color={theme.textMuted} />
+                  <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                    {t("scan.scanAnother") || "Scan another"}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
         </Animated.View>
       )}
 
@@ -1148,4 +1428,194 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   invalidPortion: {},
+  modeToggle: {
+    flexDirection: "row",
+    gap: 6,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderRadius: 14,
+    padding: 4,
+  },
+  modeToggleBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 11,
+  },
+  modeToggleText: {
+    fontSize: 13,
+  },
+  barcodeLoadingCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  barcodeHintCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  barcodeFrame: {
+    width: 260,
+    height: 160,
+    position: "relative",
+  },
+  barcodeCorner: {
+    position: "absolute",
+    width: 28,
+    height: 28,
+    borderWidth: 3,
+  },
+  barcodeCornerTL: {
+    top: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 8,
+  },
+  barcodeCornerTR: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+    borderTopRightRadius: 8,
+  },
+  barcodeCornerBL: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 8,
+  },
+  barcodeCornerBR: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    borderBottomRightRadius: 8,
+  },
+  barcodeHintText: {
+    color: "#fff",
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    marginTop: 24,
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.7)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  barcodeResultOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  barcodeResultCard: {
+    width: "100%",
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 24,
+    alignItems: "center",
+    gap: 4,
+  },
+  barcodeResultBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  barcodeResultName: {
+    fontSize: 20,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  barcodeResultMacros: {
+    flexDirection: "row",
+    gap: 8,
+    width: "100%",
+    marginTop: 8,
+  },
+  barcodeLogBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 14,
+    width: "100%",
+    marginTop: 16,
+  },
+  barcodeScanAnotherBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+
+  // ── Scan limit styles ──
+  scanCountBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: "center",
+  },
+  scanCountText: {
+    fontSize: 12,
+  },
+  upsellOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingHorizontal: 24,
+  },
+  upsellCard: {
+    width: "100%",
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 28,
+    alignItems: "center",
+  },
+  upsellIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  upsellTitle: {
+    fontSize: 18,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  upsellDesc: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  upsellBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 28,
+    width: "100%",
+  },
 });

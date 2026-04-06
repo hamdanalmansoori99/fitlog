@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-export type NotifType = "workout" | "meal" | "hydration" | "streak" | "recovery" | "weekly";
+export type NotifType = "workout" | "meal" | "hydration" | "streak" | "recovery" | "weekly" | "restDay";
 
 export interface NotifPrefs {
   enabled: boolean;
@@ -24,6 +24,7 @@ const DEFAULTS: Record<NotifType, NotifPrefs> = {
   streak:    { enabled: true,  time: "19:00" },
   recovery:  { enabled: true,  time: "09:00" },
   weekly:    { enabled: true,  time: "10:00" },
+  restDay:   { enabled: true,  time: "09:00" },
 };
 
 export const useNotificationStore = create<NotificationState>()(
@@ -56,6 +57,7 @@ export const NOTIF_META: Record<
   streak:    { labelKey: "profile.notif.streakLabel",    descriptionKey: "profile.notif.streakDesc",    icon: "zap",         color: "#ffab40" },
   recovery:  { labelKey: "profile.notif.recoveryLabel",  descriptionKey: "profile.notif.recoveryDesc",  icon: "heart",       color: "#ea80fc" },
   weekly:    { labelKey: "profile.notif.weeklyLabel",    descriptionKey: "profile.notif.weeklyDesc",    icon: "bar-chart-2", color: "#18ffff" },
+  restDay:   { labelKey: "profile.notif.restDayLabel",   descriptionKey: "profile.notif.restDayDesc",   icon: "moon",        color: "#b388ff" },
 };
 
-export const NOTIF_TYPES: NotifType[] = ["workout", "meal", "hydration", "streak", "recovery", "weekly"];
+export const NOTIF_TYPES: NotifType[] = ["workout", "meal", "hydration", "streak", "recovery", "weekly", "restDay"];

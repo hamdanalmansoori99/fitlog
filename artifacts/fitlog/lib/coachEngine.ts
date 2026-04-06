@@ -51,6 +51,16 @@ const DIFFICULTY_MAP: Record<string, number> = {
   Advanced: 3,
 };
 
+// Maps user-facing training preferences to the template activityTypes they favour
+const PREFERENCE_TO_ACTIVITY: Record<string, string[]> = {
+  cycling:            ["cycling"],
+  running:            ["running"],
+  "strength training": ["gym"],
+  swimming:           ["swimming"],
+  walking:            ["walking"],
+  cardio:             ["running", "cycling", "swimming", "walking", "cardio"],
+};
+
 // ─── Comprehensive substitutions database ─────────────────────────────────────
 // Format: exerciseName → { needs: equipment_id, alternatives: [{ name, requiresEquipment? }] }
 // If no requiresEquipment specified, the alternative is bodyweight-friendly.
@@ -792,12 +802,35 @@ export function getRecommendations(
     }
 
     // ── 3. Training preferences ───────────────────────────────────────────
-    const prefMatch = prefs.some((p) =>
+    // Build the set of activityTypes the user's preferences map to
+    const preferredActivities = new Set<string>();
+    for (const p of prefs) {
+      const mapped = PREFERENCE_TO_ACTIVITY[p.toLowerCase()];
+      if (mapped) mapped.forEach((a) => preferredActivities.add(a));
+    }
+
+    // Direct preference → activityType match (strong signal)
+    const activityMatch = preferredActivities.has(template.activityType);
+    // Fallback: tag-level match (original loose matching)
+    const tagMatch = prefs.some((p) =>
       template.tags.some((t) => p.toLowerCase().includes(t) || t.includes(p.toLowerCase().split(" ")[0]))
     );
-    if (prefMatch) {
-      score += 15;
+
+    if (activityMatch) {
+      score += 50;
       reasons.push("Matches your preferred training style");
+    } else if (tagMatch) {
+      score += 25;
+      reasons.push("Related to your training preferences");
+    }
+
+    // Deprioritize gym-only templates when user didn't select Strength training
+    if (
+      prefs.length > 0 &&
+      !prefs.some((p) => p.toLowerCase() === "strength training") &&
+      template.activityType === "gym"
+    ) {
+      score -= 20;
     }
 
     // ── 4. Difficulty match ───────────────────────────────────────────────
@@ -852,7 +885,7 @@ export function getRecommendations(
     // ── 8. Location match ─────────────────────────────────────────────────
     if (profile.workoutLocation === "Home" && template.requiredEquipment.length === 0) score += 8;
     else if (profile.workoutLocation === "Gym" && (equipment.includes("barbell") || equipment.includes("cable_machine"))) score += 8;
-    else if (profile.workoutLocation === "Outdoors" && ["running", "walking", "cycling"].includes(template.activityType)) score += 8;
+    else if (profile.workoutLocation === "Outdoors" && ["running", "walking", "cycling", "cardio"].includes(template.activityType)) score += 8;
 
     // ── Build explanation ─────────────────────────────────────────────────
     const whyGoodForYou =
@@ -926,7 +959,7 @@ function inferMuscleGroupsFromWorkout(name: string, activityType: string): strin
   if (/lower|leg|squat|glute|quad|hamstring/.test(n)) groups.add("lower");
   if (/core|abs/.test(n)) groups.add("core");
   if (/full.?body/.test(n)) groups.add("full");
-  if (["running", "cycling", "swimming", "walking"].includes(t)) groups.add("cardio");
+  if (["running", "cycling", "swimming", "walking", "cardio"].includes(t)) groups.add("cardio");
 
   const matchedTemplate = WORKOUT_TEMPLATES.find(
     (tmpl) => tmpl.name.toLowerCase() === n || tmpl.id === n
@@ -946,6 +979,7 @@ export interface TodayRecommendation {
   isRestDayRecommended: boolean;
   progressionLevel: "returning" | "normal" | "progressing";
   daysSinceLast: number;
+  recoveryWarning?: boolean;
 }
 
 // ─── Coach Insights ───────────────────────────────────────────────────────────
@@ -1309,6 +1343,15 @@ export function getTodayRecommendation(
         if (rec.template.durationMinutes > 40) todayScore -= 8;
       }
 
+      // High stress → prefer lighter, shorter sessions
+      if (recovery.stressLevel !== undefined && recovery.stressLevel >= 4) {
+        if (templateLevel > 1) todayScore -= 15;
+        if (rec.template.durationMinutes > 40) todayScore -= 8;
+      } else if (recovery.stressLevel !== undefined && recovery.stressLevel <= 2) {
+        // Low stress → slight bonus for harder sessions
+        if (templateLevel >= 2) todayScore += 5;
+      }
+
       // High energy / great sleep → reward harder sessions
       if (recovery.energyLevel !== undefined && recovery.energyLevel >= 4) {
         if (templateLevel === 3) todayScore += 12;
@@ -1427,6 +1470,29 @@ export function getTodayRecommendation(
     profile.fitnessGoals || []
   );
 
+  // ── Recovery warning: flag when the user should take it easy ──────────
+  let recoveryWarning = false;
+  if (recovery) {
+    const poorSleep = recovery.sleepQuality !== undefined && recovery.sleepQuality <= 2;
+    const highStress = recovery.stressLevel !== undefined && recovery.stressLevel >= 4;
+    const soreness = recovery.soreness ?? {};
+    const allSore = Object.values(soreness);
+    const highSorenessCount = allSore.filter((v) => v >= 2).length;
+    const lowEnergy = recovery.energyLevel !== undefined && recovery.energyLevel <= 2;
+
+    // Trigger warning when at least two poor-recovery signals are present,
+    // or a single severe one (very poor sleep or extreme stress)
+    const poorSignals =
+      (poorSleep ? 1 : 0) +
+      (highStress ? 1 : 0) +
+      (highSorenessCount >= 2 ? 1 : 0) +
+      (lowEnergy ? 1 : 0);
+
+    if (poorSignals >= 2 || (recovery.sleepQuality !== undefined && recovery.sleepQuality <= 1) || (recovery.stressLevel !== undefined && recovery.stressLevel >= 5)) {
+      recoveryWarning = true;
+    }
+  }
+
   return {
     recommendation: { ...best.rec, whyGoodForYou: personalReason },
     reasonPills: pills.slice(0, 3),
@@ -1434,6 +1500,7 @@ export function getTodayRecommendation(
     isRestDayRecommended,
     progressionLevel,
     daysSinceLast,
+    recoveryWarning,
   };
 }
 
@@ -1606,6 +1673,7 @@ export function getActivityBenefits(activityType: string): string[] {
     gym: ["Builds strength and muscle", "Improves bone density", "Boosts resting metabolism", "Supports long-term body composition"],
     cycling: ["Effective cardiovascular workout", "Lower joint impact than running", "Improves leg endurance and power", "Great calorie burner"],
     swimming: ["Full-body conditioning", "Zero joint impact", "Builds lung capacity", "Excellent for recovery"],
+    cardio: ["Builds cardiovascular endurance", "Burns significant calories", "Strengthens the heart and lungs", "Improves mental health and mood"],
     other: ["Keeps you active and moving", "Burns calories", "Variety is key to long-term consistency"],
   };
   return map[activityType] || map.other;

@@ -120,6 +120,7 @@ export default function ExercisesScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chips}
+          style={{ flexGrow: 0, flexShrink: 0 }}
         >
           <Pressable
             onPress={() => setSelectedCategory(null)}
@@ -168,6 +169,7 @@ export default function ExercisesScreen() {
           data={EXERCISE_CATEGORIES}
           keyExtractor={(item) => item.id}
           numColumns={2}
+          style={{ flex: 1 }}
           contentContainerStyle={styles.gridContent}
           columnWrapperStyle={styles.gridRow}
           renderItem={({ item: cat }) => {
@@ -213,6 +215,7 @@ export default function ExercisesScreen() {
         />
       ) : (
         /* Exercise list (filtered view) */
+        <View style={{ flex: 1 }}>
         <FlashList
           data={filtered}
           keyExtractor={(item) => item.id}
@@ -257,6 +260,7 @@ export default function ExercisesScreen() {
             </View>
           }
         />
+        </View>
       )}
     </SafeAreaView>
   );
@@ -296,9 +300,11 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 5,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    height: 32,
+    minWidth: 60,
     borderRadius: 20,
     borderWidth: 1,
   },
@@ -306,6 +312,7 @@ const styles = StyleSheet.create({
   gridRow: { gap: 12, marginBottom: 12 },
   categoryCard: {
     flex: 1,
+    maxHeight: 130,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
