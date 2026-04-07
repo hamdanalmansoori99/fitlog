@@ -743,14 +743,17 @@ export default function WorkoutsScreen() {
           </View>
 
           {/* ── GROUPED TEMPLATES ── */}
-          {[
-            { label: "Strength & Muscle", goals: ["Build muscle", "Get stronger"] },
-            { label: "Endurance & Fat Loss", goals: ["Improve endurance", "Lose weight"] },
-            { label: "General Fitness", goals: ["Stay active"] },
-          ].map(({ label, goals: sectionGoals }) => {
+          {(() => {
+            const shownIds = new Set<string>();
+            return [
+              { label: "Strength & Muscle", goals: ["Build muscle", "Get stronger"] },
+              { label: "Endurance & Fat Loss", goals: ["Improve endurance", "Lose weight"] },
+              { label: "General Fitness", goals: ["Stay active"] },
+            ].map(({ label, goals: sectionGoals }) => {
             const sectionTemplates = WORKOUT_TEMPLATES.filter((tmpl) =>
-              sectionGoals.some((g) => tmpl.goals.includes(g as any))
+              !shownIds.has(tmpl.id) && sectionGoals.some((g) => tmpl.goals.includes(g as any))
             );
+            sectionTemplates.forEach((tmpl) => shownIds.add(tmpl.id));
             if (sectionTemplates.length === 0) return null;
             return (
               <View key={label} style={{ marginBottom: 14 }}>
@@ -794,7 +797,8 @@ export default function WorkoutsScreen() {
                 </ScrollView>
               </View>
             );
-          })}
+          });
+          })()}
         </Animated.View>
 
         {/* ── EXERCISE LIBRARY ── */}

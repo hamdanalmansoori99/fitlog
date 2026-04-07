@@ -62,10 +62,6 @@ function NativeTabLayout() {
         </View>
         <Label>{t("tabs.scanMeal")}</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="progress">
-        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
-        <Label>{t("tabs.progress")}</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
         <Label>{t("tabs.profile")}</Label>
@@ -172,13 +168,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="progress"
         options={{
-          title: t("tabs.progress"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="chart.bar" tintColor={color} size={22} />
-            ) : (
-              <Feather name="trending-up" size={22} color={color} />
-            ),
+          href: null,
         }}
       />
       <Tabs.Screen
