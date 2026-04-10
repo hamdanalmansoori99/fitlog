@@ -441,7 +441,7 @@ export default function MealsScreen() {
               <Text style={[styles.quickLogSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("meals.quickLogSubtitle")}</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
-              <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 }}>
+              <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingEnd: 28 }}>
                 {/* Favourites */}
                 {favorites.map((fav: any) => (
                   <View key={`fav-${fav.id}`} style={[styles.favCard, { backgroundColor: theme.card, borderColor: theme.primary + "30" }]}>

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -128,6 +129,13 @@ export default function CoachChatScreen() {
     return () => {
       abortControllerRef.current?.abort();
     };
+  }, []);
+
+  useEffect(() => {
+    const sub = Keyboard.addListener("keyboardDidShow", () => {
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
@@ -310,7 +318,7 @@ export default function CoachChatScreen() {
         });
 
         if (!response.ok) {
-          let errorMsg = t("coach.connectionError");
+          let errorMsg = `${t("coach.connectionError")} (${response.status})`;
           try {
             const errData = await response.json();
             if (errData?.error) {
@@ -519,7 +527,7 @@ export default function CoachChatScreen() {
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+          keyboardVerticalOffset={0}
         >
           {messages.length === 0 ? (
             <ScrollView
@@ -636,7 +644,7 @@ export default function CoachChatScreen() {
           {isWeb ? (
             <View style={{ height: WEB_BOTTOM }} />
           ) : (
-            <View style={{ height: insets.bottom + 60 }} />
+            <View style={{ height: insets.bottom + 8 }} />
           )}
         </KeyboardAvoidingView>
       )}

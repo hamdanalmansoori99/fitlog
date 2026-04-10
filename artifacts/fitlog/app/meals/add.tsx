@@ -754,7 +754,7 @@ export default function AddMealScreen() {
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("meals.tapToAdd")}</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
-              <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingRight: 28, paddingTop: 6, paddingBottom: 4 }}>
+              <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingEnd: 28, paddingTop: 6, paddingBottom: 4 }}>
                 {recentFoods.map((food: any, idx: number) => {
                   const isFrequent = Number(food.useCount) >= 5;
                   return (

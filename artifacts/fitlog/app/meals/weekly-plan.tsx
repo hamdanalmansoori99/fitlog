@@ -156,7 +156,7 @@ function DayCard({
           name={open ? "chevron-up" : "chevron-down"}
           size={18}
           color={theme.textMuted}
-          style={{ marginLeft: 4 }}
+          style={{ marginStart: 4 }}
         />
       </Pressable>
 

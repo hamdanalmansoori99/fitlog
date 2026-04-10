@@ -22,6 +22,8 @@ import {
 import { getTemplateById, WorkoutTemplate } from "@/lib/workoutTemplates";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { useSubscription } from "@/hooks/useSubscription";
+import { UpsellModal } from "@/components/UpsellModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -183,6 +185,9 @@ export default function WeeklyPlanScreen() {
     fitnessGoals: profile?.fitnessGoals || [],
   };
 
+  const { features } = useSubscription();
+  const [upsellVisible, setUpsellVisible] = useState(false);
+
   const [plan, setPlan] = useState<PlanDay[] | null>(null);
   const [saved, setSaved] = useState(false);
   const [editingDayIdx, setEditingDayIdx] = useState<number | null>(null);
@@ -230,6 +235,10 @@ export default function WeeklyPlanScreen() {
   });
 
   const regenerate = () => {
+    if (!features.smartProgression) {
+      setUpsellVisible(true);
+      return;
+    }
     setPlan(generateWeeklyPlan(userProfile, recentWorkouts));
     setSaved(false);
   };
@@ -527,6 +536,8 @@ export default function WeeklyPlanScreen() {
           onClose={() => setEditingDayIdx(null)}
         />
       )}
+
+      <UpsellModal visible={upsellVisible} onClose={() => setUpsellVisible(false)} feature="smartProgression" />
     </View>
   );
 }
@@ -588,5 +599,5 @@ const swap = StyleSheet.create({
   recName: { fontSize: 14 },
   recMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   recMetaText: { fontSize: 11 },
-  recWhy: { fontSize: 12, lineHeight: 16, paddingLeft: 42 },
+  recWhy: { fontSize: 12, lineHeight: 16, paddingStart: 42 },
 });

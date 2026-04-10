@@ -538,7 +538,7 @@ export default function WorkoutsScreen() {
             </Pressable>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
-              <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 }}>
+              <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingEnd: 28 }}>
                 {userTemplates.map((tmpl: any) => {
                   const tColor = getActivityColor(tmpl.activityType, theme);
                   const tIcon = getActivityIcon(tmpl.activityType);
@@ -590,7 +590,7 @@ export default function WorkoutsScreen() {
             </Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
-            <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 }}>
+            <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingEnd: 28 }}>
               {WORKOUT_TEMPLATES.map((tmpl) => {
                 const { level: matchLevel } = hasCompletedOnboarding
                   ? getEquipmentMatchLevel(tmpl, coachProfile.availableEquipment)
@@ -651,7 +651,7 @@ export default function WorkoutsScreen() {
           </View>
           {/* Category chips */}
           {!exerciseSearch && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 8, paddingRight: 8, alignItems: "center" }} style={{ marginBottom: 12 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 8, paddingEnd: 8, alignItems: "center" }} style={{ marginBottom: 12 }}>
                 <Pressable
                   onPress={() => setSelectedCategory(null)}
                   style={[
@@ -937,7 +937,7 @@ const styles = StyleSheet.create({
   todayStat: { flexDirection: "row", alignItems: "center", gap: 4 },
   todayStatText: { fontSize: 12 },
   recScroll: { marginHorizontal: -20 },
-  recRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 },
+  recRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingEnd: 28 },
   recCardWrap: { width: 270 },
   recCard: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 8 },
   recHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
@@ -956,7 +956,7 @@ const styles = StyleSheet.create({
   matchBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   matchBadgeText: { fontSize: 10 },
   diffDot: { width: 6, height: 6, borderRadius: 3 },
-  templateRow: { flexDirection: "row", gap: 10, paddingRight: 8 },
+  templateRow: { flexDirection: "row", gap: 10, paddingEnd: 8 },
   templateCard: { width: 130, borderRadius: 14, borderWidth: 1, padding: 10, gap: 6 },
   templateIcon: { width: 32, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   templateName: { fontSize: 12, lineHeight: 16 },
@@ -971,10 +971,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 12, padding: 12,
   },
   historyFilterChip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5 },
-  historyCard: { gap: 8, paddingVertical: 12 },
+  historyCard: { gap: 8, paddingVertical: 16 },
   historyHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   historyIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  historyName: { fontSize: 14, marginBottom: 4 },
+  historyName: { fontSize: 14, marginBottom: 6 },
   historyDate: { fontSize: 11, marginTop: 1 },
   deleteBtn: { padding: 8 },
   historyStats: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

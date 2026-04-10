@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput,
-  Platform, Alert, Vibration, Modal, Share,
+  Platform, Alert, Vibration, Modal, Share, InteractionManager,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -554,7 +554,7 @@ export default function ExecuteWorkoutScreen() {
                 onPress={() => { sharePR(); setPrModal(null); }}
                 style={[styles.prBtn, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.primary, flex: 1 }]}
               >
-                <Feather name="share-2" size={14} color={theme.primary} style={{ marginRight: 4 }} />
+                <Feather name="share-2" size={14} color={theme.primary} style={{ marginEnd: 4 }} />
                 <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 15 }}>
                   {t("pr.share")}
                 </Text>
@@ -660,7 +660,7 @@ export default function ExecuteWorkoutScreen() {
         };
       });
     });
-    if (isGym) checkForPR(capturedExIdx, capturedSetIdx);
+    if (isGym) InteractionManager.runAfterInteractions(() => checkForPR(capturedExIdx, capturedSetIdx));
     advance(exerciseIdx, setIdx);
   }
 

@@ -268,6 +268,8 @@ export default function LogWorkoutScreen() {
     if (steps) metadata.steps = steps;
     if (laps) metadata.laps = laps;
     
+    const parsedDistance = distanceKm ? parseFloat(distanceKm) : undefined;
+
     // Estimate calories
     let estimatedCals: number | undefined;
     if (caloriesBurned) {
@@ -279,6 +281,19 @@ export default function LogWorkoutScreen() {
       };
       const met = (activityType === "cardio" && cardioSubType ? mets[cardioSubType] : mets[activityType]) || 5;
       estimatedCals = Math.round(met * 70 * (durationMinutes / 60)); // ~70kg default
+    } else if (parsedDistance && parsedDistance > 0) {
+      // Estimate duration from average pace when only distance is provided
+      const avgPace: Record<string, number> = {
+        running: 6, cycling: 3, walking: 12, swimming: 25,
+      };
+      const paceMinPerKm = (activityType === "cardio" && cardioSubType ? avgPace[cardioSubType] : avgPace[activityType]) || 6;
+      const estimatedDuration = parsedDistance * paceMinPerKm;
+      const mets: Record<string, number> = {
+        cycling: 7, running: 9, walking: 4, gym: 5,
+        swimming: 8, cardio: 7, other: 5,
+      };
+      const met = (activityType === "cardio" && cardioSubType ? mets[cardioSubType] : mets[activityType]) || 5;
+      estimatedCals = Math.round(met * 70 * (estimatedDuration / 60));
     }
     
     const gymExercises = activityType === "gym"
@@ -296,7 +311,6 @@ export default function LogWorkoutScreen() {
         }))
       : [];
     
-    const parsedDistance = distanceKm ? parseFloat(distanceKm) : undefined;
     if (parsedDistance && parsedDistance > 0 && durationMinutes > 0) {
       metadata.paceMinPerKm = parseFloat((durationMinutes / parsedDistance).toFixed(2));
     }
@@ -331,11 +345,9 @@ export default function LogWorkoutScreen() {
           subtitle={t("workouts.recordedKeepUp", { activity: activityLabel })}
         />
         {lastPayload.current?.caloriesBurned != null && lastPayload.current.caloriesBurned > 0 && (
-          <View style={{ alignItems: "center", marginBottom: 4 }}>
-            <Text style={{ fontSize: 28, fontFamily: "Inter_700Bold", color: theme.primary, textAlign: "center" }}>
-              {"🔥 ~"}{lastPayload.current.caloriesBurned}{" cal burned"}
-            </Text>
-          </View>
+          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: theme.textMuted, textAlign: "center", marginTop: -4 }}>
+            {"~"}{lastPayload.current.caloriesBurned}{" "}{t("home.calBurned")}
+          </Text>
         )}
         {newAchievements.length > 0 && (
           <View style={{ width: "100%", paddingHorizontal: 20, marginBottom: 8 }}>

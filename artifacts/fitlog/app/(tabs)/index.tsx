@@ -1289,11 +1289,7 @@ export default function HomeScreen() {
                       <Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: "Inter_400Regular", marginTop: 4 }}>
                         {t(getStreakNarrative(bestStreak).messageKey)}
                       </Text>
-                      {daysToNext != null && daysToNext <= 7 && (
-                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 }}>
-                          {t("home.streakNextMilestone", { count: daysToNext })}
-                        </Text>
-                      )}
+
                     </View>
                   ) : (
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>

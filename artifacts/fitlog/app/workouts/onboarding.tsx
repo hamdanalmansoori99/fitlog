@@ -28,14 +28,39 @@ const EQUIPMENT_OPTIONS = [
   { id: "yoga_mat", icon: "heart" as const },
 ];
 
-const LOCATION_OPTIONS = ["Home", "Gym", "Outdoors", "Mixed"];
-const GOAL_OPTIONS = [
-  "Lose weight", "Build muscle", "Get stronger",
-  "Stay active", "Improve endurance", "Improve flexibility",
+const LOCATION_OPTIONS = [
+  { id: "Home", icon: "home" as const },
+  { id: "Gym", icon: "award" as const },
+  { id: "Outdoors", icon: "sun" as const },
+  { id: "Mixed", icon: "shuffle" as const },
 ];
+const GOAL_OPTIONS = [
+  { id: "Lose weight", icon: "trending-down" as const },
+  { id: "Build muscle", icon: "zap" as const },
+  { id: "Get stronger", icon: "shield" as const },
+  { id: "Stay active", icon: "heart" as const },
+  { id: "Improve endurance", icon: "wind" as const },
+  { id: "Improve flexibility", icon: "maximize-2" as const },
+];
+const GOAL_KEY: Record<string, string> = {
+  "Lose weight": "loseWeight", "Build muscle": "buildMuscle", "Get stronger": "getStronger",
+  "Stay active": "stayActive", "Improve endurance": "improveEndurance", "Improve flexibility": "improveFlexibility",
+};
 const DAYS_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
-const DURATION_OPTIONS = ["15 minutes", "30 minutes", "45 minutes", "60+ minutes"];
-const EXPERIENCE_OPTIONS = ["Beginner", "Intermediate", "Advanced"];
+const DURATION_OPTIONS = [
+  { id: "15 minutes", icon: "clock" as const },
+  { id: "30 minutes", icon: "clock" as const },
+  { id: "45 minutes", icon: "clock" as const },
+  { id: "60+ minutes", icon: "clock" as const },
+];
+const DURATION_KEY: Record<string, string> = {
+  "15 minutes": "dur15", "30 minutes": "dur30", "45 minutes": "dur45", "60+ minutes": "dur60plus",
+};
+const EXPERIENCE_OPTIONS = [
+  { id: "Beginner", icon: "star" as const },
+  { id: "Intermediate", icon: "award" as const },
+  { id: "Advanced", icon: "target" as const },
+];
 const TRAINING_PREF_OPTIONS = [
   { id: "Strength training", label: "Strength training", icon: "zap" as const },
   { id: "Cardio", label: "Cardio", icon: "heart" as const },
@@ -116,35 +141,35 @@ export default function WorkoutOnboardingScreen() {
       subtitle: t("workouts.pickLocation"),
       key: "workoutLocation",
       type: "single",
-      options: LOCATION_OPTIONS.map(l => ({ id: l, label: l })),
+      options: LOCATION_OPTIONS.map(l => ({ id: l.id, label: t(`onboarding.${l.id.toLowerCase()}`), icon: l.icon })),
     },
     {
       title: t("workouts.mainGoalTitle"),
       subtitle: t("workouts.updateAnytime"),
       key: "fitnessGoals",
       type: "multiselect",
-      options: GOAL_OPTIONS.map(g => ({ id: g, label: g })),
+      options: GOAL_OPTIONS.map(g => ({ id: g.id, label: t(`onboarding.${GOAL_KEY[g.id] || g.id}`), icon: g.icon })),
     },
     {
       title: t("workouts.howManyDaysTitle"),
       subtitle: t("workouts.buildAroundThis"),
       key: "weeklyWorkoutDays",
       type: "number",
-      options: DAYS_OPTIONS.map(d => ({ id: String(d), label: `${d} day${d !== 1 ? "s" : ""}` })),
+      options: DAYS_OPTIONS.map(d => ({ id: String(d), label: `${d} ${d !== 1 ? t("home.streakDays") || "days" : t("home.streakDay") || "day"}`, icon: "calendar" as const })),
     },
     {
       title: t("workouts.howLongTitle"),
       subtitle: t("workouts.typicalSession"),
       key: "preferredWorkoutDuration",
       type: "single",
-      options: DURATION_OPTIONS.map(d => ({ id: d, label: d })),
+      options: DURATION_OPTIONS.map(d => ({ id: d.id, label: t(`workouts.${DURATION_KEY[d.id]}`), icon: d.icon })),
     },
     {
       title: t("workouts.experienceLevelTitle"),
       subtitle: t("workouts.beHonest"),
       key: "experienceLevel",
       type: "single",
-      options: EXPERIENCE_OPTIONS.map(e => ({ id: e, label: e })),
+      options: EXPERIENCE_OPTIONS.map(e => ({ id: e.id, label: t(`onboarding.${e.id.toLowerCase()}`), icon: e.icon })),
     },
     {
       title: t("workouts.whatTrainingTitle"),
@@ -309,7 +334,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, justifyContent: "center" },
   progressBar: { flex: 1, height: 4, borderRadius: 2, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 2 },
-  stepCount: { fontSize: 12, minWidth: 36, textAlign: "right" },
+  stepCount: { fontSize: 12, minWidth: 36, textAlign: "right" as const },
   content: { paddingHorizontal: 16, paddingTop: 8 },
   questionHeader: { marginBottom: 28 },
   questionTitle: { fontSize: 28, lineHeight: 36, marginBottom: 8 },

@@ -147,7 +147,7 @@ export default function RankScreen() {
                 ]}
               >
                 <RankBadge xp={rank.minXp} size="sm" />
-                <View style={{ flex: 1, marginLeft: 10 }}>
+                <View style={{ flex: 1, marginStart: 10 }}>
                   <Text
                     style={{
                       color: isCurrent ? rank.textColor : isEarned ? theme.text : theme.textMuted,
