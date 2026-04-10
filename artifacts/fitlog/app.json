@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "5",
+      "buildNumber": "6",
       "bundleIdentifier": "com.yesha.fitlog",
       "infoPlist": {
         "NSHealthShareUsageDescription": "FitLog reads your steps, heart rate, and sleep to give your AI coach accurate recovery data.",
