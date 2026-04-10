@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -68,14 +68,15 @@ const SORENESS_PARTS = [
 ];
 
 const SORENESS_LEVELS_DATA = [
-  { value: 0, labelKey: "none", color: null },
-  { value: 1, labelKey: "mild", color: "#ffab40" },
-  { value: 2, labelKey: "moderate", color: "#ff7043" },
-  { value: 3, labelKey: "severe", color: "#ef5350" },
+  { value: 0, labelKey: "fine", color: null },
+  { value: 1, labelKey: "sore", color: "#ffab40" },
+  { value: 2, labelKey: "verySore", color: "#ef5350" },
 ];
 
 function sorenessColor(level: number): string | null {
-  return SORENESS_LEVELS_DATA[level]?.color ?? null;
+  // Backwards compat: old "severe" (3) maps to "very sore" (2)
+  const clamped = level >= 3 ? 2 : level;
+  return SORENESS_LEVELS_DATA[clamped]?.color ?? null;
 }
 
 function getRecoveryInfluence(log: RecoveryLog, t: any): string | null {
@@ -109,19 +110,6 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
   const [stressLevel, setStressLevel] = useState<number>(todayLog?.stressLevel ?? 3);
   const [soreness, setSoreness] = useState<Record<string, number>>(todayLog?.soreness ?? {});
 
-  const cycleSoreness = useCallback((key: string) => {
-    setSoreness((prev) => {
-      const cur = prev[key] ?? 0;
-      const next = (cur + 1) % 4;
-      if (next === 0) {
-        const n = { ...prev };
-        delete n[key];
-        return n;
-      }
-      return { ...prev, [key]: next };
-    });
-  }, []);
-
   const mutation = useMutation({
     mutationFn: () => {
       const hrs = sleepCustom
@@ -151,7 +139,9 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
   });
 
   const sorenessLabel = (level: number): string => {
-    const key = SORENESS_LEVELS_DATA[level]?.labelKey ?? "none";
+    // Backwards compat: old "severe" (3) maps to "very sore" (2)
+    const clamped = level >= 3 ? 2 : level;
+    const key = SORENESS_LEVELS_DATA[clamped]?.labelKey ?? "fine";
     return t(`components.recoveryCheckIn.${key}`);
   };
 
@@ -345,29 +335,40 @@ export function RecoveryCheckIn({ todayLog, theme }: Props) {
         ))}
       </View>
 
-      <Text style={s.sectionLabel}>{t("components.recoveryCheckIn.muscleSoreness")}  <Text style={s.tapHint}>{t("components.recoveryCheckIn.tapToCycle")}</Text></Text>
+      <Text style={s.sectionLabel}>{t("components.recoveryCheckIn.muscleSoreness")}</Text>
       <View style={s.sorenessGrid}>
         {SORENESS_PARTS.map((part) => {
-          const level = soreness[part.key] ?? 0;
-          const col = sorenessColor(level);
+          // Backwards compat: old "severe" (3) maps to "very sore" (2)
+          const rawLevel = soreness[part.key] ?? 0;
+          const level = rawLevel >= 3 ? 2 : rawLevel;
           return (
-            <Pressable
-              key={part.key}
-              style={[
-                s.sorenessCell,
-                col
-                  ? { borderColor: col, backgroundColor: col + "22" }
-                  : { borderColor: theme.border },
-              ]}
-              onPress={() => cycleSoreness(part.key)}
-            >
-              <Text style={[s.sorenessCellLabel, col ? { color: col } : { color: theme.textMuted }]}>
+            <View key={part.key} style={s.sorenessRow}>
+              <Text style={[s.sorenessRowLabel, { color: theme.text }]}>
                 {t(`components.recoveryCheckIn.${part.labelKey}`)}
               </Text>
-              <Text style={[s.sorenessCellLevel, col ? { color: col } : { color: theme.textMuted }]}>
-                {sorenessLabel(level)}
-              </Text>
-            </Pressable>
+              <View style={s.sorenessPills}>
+                {SORENESS_LEVELS_DATA.map((sl) => {
+                  const isSelected = level === sl.value;
+                  const pillBg = isSelected && sl.color ? sl.color + "22" : "transparent";
+                  const pillBorder = isSelected ? (sl.color ?? theme.primary) : theme.border;
+                  const pillTextColor = isSelected ? (sl.color ?? theme.primary) : theme.textMuted;
+                  return (
+                    <Pressable
+                      key={sl.value}
+                      style={[
+                        s.sorenessPill,
+                        { backgroundColor: pillBg, borderColor: pillBorder },
+                      ]}
+                      onPress={() => setSoreness((prev) => ({ ...prev, [part.key]: sl.value }))}
+                    >
+                      <Text style={[s.sorenessPillText, { color: pillTextColor }]}>
+                        {sorenessLabel(sl.value)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
           );
         })}
       </View>
@@ -551,12 +552,32 @@ function styles(theme: any) {
       letterSpacing: 0.5,
       marginBottom: 8,
     },
-    tapHint: {
-      color: theme.textMuted,
-      fontFamily: "Inter_400Regular",
+    sorenessRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 6,
+    },
+    sorenessRowLabel: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      width: 80,
+    },
+    sorenessPills: {
+      flexDirection: "row",
+      gap: 6,
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    sorenessPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    sorenessPillText: {
+      fontFamily: "Inter_500Medium",
       fontSize: 11,
-      textTransform: "none",
-      letterSpacing: 0,
     },
     chipRow: {
       flexDirection: "row",
@@ -625,27 +646,8 @@ function styles(theme: any) {
       color: theme.primary,
     },
     sorenessGrid: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 8,
+      gap: 2,
       marginBottom: 16,
-    },
-    sorenessCell: {
-      width: "29%",
-      paddingVertical: 8,
-      paddingHorizontal: 8,
-      borderRadius: 10,
-      borderWidth: 1,
-      alignItems: "center",
-    },
-    sorenessCellLabel: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 12,
-      marginBottom: 2,
-    },
-    sorenessCellLevel: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 10,
     },
     saveBtn: {
       backgroundColor: theme.primary,

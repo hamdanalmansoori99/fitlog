@@ -254,15 +254,15 @@ async function buildRecoveryTrend(userId: number): Promise<string | null> {
 const RANK_TIERS = [
   { name: "Hollow",            minXp: 0,      maxXp: 99     },
   { name: "Ash Walker",        minXp: 100,    maxXp: 299    },
-  { name: "Iron Seeker",       minXp: 300,    maxXp: 599    },
-  { name: "Bronze Forger",     minXp: 600,    maxXp: 1199   },
-  { name: "Stone Sentinel",    minXp: 1200,   maxXp: 2399   },
-  { name: "Silver Vanguard",   minXp: 2400,   maxXp: 4799   },
-  { name: "Gold Templar",      minXp: 4800,   maxXp: 9599   },
-  { name: "Obsidian Titan",    minXp: 9600,   maxXp: 19199  },
+  { name: "Cinder Acolyte",    minXp: 300,    maxXp: 599    },
+  { name: "Molten Apprentice", minXp: 600,    maxXp: 1199   },
+  { name: "Basalt Watcher",    minXp: 1200,   maxXp: 2399   },
+  { name: "Spectral Vanguard", minXp: 2400,   maxXp: 4799   },
+  { name: "Auric Templar",     minXp: 4800,   maxXp: 9599   },
+  { name: "Void Colossus",     minXp: 9600,   maxXp: 19199  },
   { name: "Crimson Champion",  minXp: 19200,  maxXp: 38399  },
   { name: "Arcane Sovereign",  minXp: 38400,  maxXp: 76799  },
-  { name: "Eternal Ascendant", minXp: 76800,  maxXp: null   },
+  { name: "The Infinite",      minXp: 76800,  maxXp: null   },
 ];
 
 function getRankInfo(xp: number): { rankName: string; xpToNext: number | null } {
@@ -600,7 +600,7 @@ RECOVERY-TO-TRAINING RULES (follow these strictly):
 - If STRAIN SCORE is LOW (<4): user is fresh, can push hard — good time for PRs or personal bests.
 
 GAMIFICATION & MOTIVATION RULES:
-- Mention the user's current rank and XP occasionally as motivation, especially when they hit a milestone or are close to the next rank (e.g. "You're 50 XP away from Silver Vanguard").
+- Mention the user's current rank and XP occasionally as motivation, especially when they hit a milestone or are close to the next rank (e.g. "You're 50 XP away from Spectral Vanguard").
 - Reference the workout streak count when relevant (e.g. "You're on a 5-day streak — don't break it now.").
 - When suggesting weight increases for exercises, always say the actual target number (e.g. "Try 70kg instead of 67.5kg").
 - If the user has completed sets at their current weight for 2+ sessions in a row with good completion, tell them they're ready to increase weight by 2.5-5kg — be specific about which exercise.

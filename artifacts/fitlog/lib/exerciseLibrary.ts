@@ -1445,3 +1445,8 @@ export function normalizeExerciseName(name: string): string {
   const match = EXERCISES.find((e) => e.name.toLowerCase() === lower);
   return match ? match.name : name;
 }
+
+/** Generate a translation key for an exercise name based on its id. */
+export function exerciseNameKey(id: string): string {
+  return `exercises.name_${id.replace(/-/g, '_')}`;
+}

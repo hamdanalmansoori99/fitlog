@@ -18,7 +18,7 @@ import { WORKOUT_TEMPLATES, WorkoutTemplate } from "@/lib/workoutTemplates";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { useTranslation } from "react-i18next";
-import { EXERCISE_CATEGORIES, EXERCISES, ExerciseCategory } from "@/lib/exerciseLibrary";
+import { EXERCISE_CATEGORIES, EXERCISES, ExerciseCategory, exerciseNameKey } from "@/lib/exerciseLibrary";
 
 const GOAL_KEY: Record<string, string> = {
   "Stay active": "stayActive",
@@ -906,7 +906,7 @@ export default function WorkoutsScreen() {
                       </View>
                       <View style={{ flex: 1, gap: 2 }}>
                         <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>
-                          {ex.name}
+                          {t(exerciseNameKey(ex.id), { defaultValue: ex.name })}
                         </Text>
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
                           {ex.primaryMuscle}

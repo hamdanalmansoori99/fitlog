@@ -48,13 +48,13 @@ const STREAK_MILESTONES: { day: number; message: string }[] = [
   { day: 10,  message: "Double digits. You're not stopping." },
   { day: 14,  message: "Two weeks forged. Others are still deciding to start." },
   { day: 21,  message: "21 days. Science says this is a habit now. You're different." },
-  { day: 30,  message: "A full month. Bronze Forger energy." },
+  { day: 30,  message: "A full month. Molten Apprentice energy." },
   { day: 45,  message: "45 days. The grind is second nature." },
   { day: 60,  message: "Two months. Most people quit by week 2. You're not most people." },
   { day: 90,  message: "90 days. Elite territory." },
-  { day: 100, message: "100 days. You've entered rare air. The Obsidian path calls." },
+  { day: 100, message: "100 days. You've entered rare air. The Void beckons." },
   { day: 180, message: "Half a year. The realm has noticed." },
-  { day: 365, message: "One year. The Eternal Ascendant watches and nods." },
+  { day: 365, message: "One year. The Infinite watches and nods." },
 ];
 
 function getStreakNarrativeMessage(days: number): string {
@@ -196,12 +196,13 @@ router.get("/smart-content", requireAuth, async (req, res) => {
 
     const recentDates = recentWorkouts.map((w) => new Date(w.date));
     const restDays = getRestDaysFromPlan(profile?.savedWeeklyPlan);
+    const isRestDay = restDays?.includes(dayOfWeek) ?? false;
     const streak = computeCurrentStreak(recentDates, restDays);
     const consecutiveDays = streak;
 
     const candidates: SmartMessage[] = [];
 
-    if (streak > 1 && workoutsTodayCount === 0 && hour >= 16) {
+    if (streak > 1 && workoutsTodayCount === 0 && hour >= 16 && !isRestDay) {
       candidates.push({
         id: "streak:at-risk",
         type: "streak",
@@ -211,7 +212,7 @@ router.get("/smart-content", requireAuth, async (req, res) => {
       });
     }
 
-    if (streak === 0 && workoutsTodayCount === 0 && hour >= 16 && hour <= 22) {
+    if (streak === 0 && workoutsTodayCount === 0 && hour >= 16 && hour <= 22 && !isRestDay) {
       candidates.push({
         id: "streak:start",
         type: "streak",
@@ -221,13 +222,23 @@ router.get("/smart-content", requireAuth, async (req, res) => {
       });
     }
 
-    if (workoutsTodayCount === 0 && hour >= 6 && hour <= 14) {
+    if (workoutsTodayCount === 0 && hour >= 6 && hour <= 14 && !isRestDay) {
       candidates.push({
         id: "workout:morning-nudge",
         type: "workout",
         priority: 2,
         title: "Ready to train today?",
         body: `A ${preferredDuration} session is all it takes — let's get moving!`,
+      });
+    }
+
+    if (isRestDay && workoutsTodayCount === 0) {
+      candidates.push({
+        id: "rest:scheduled",
+        type: "recovery",
+        priority: 3,
+        title: "Rest day — you've earned it",
+        body: "Recovery is when your muscles grow. Stay hydrated and get good sleep tonight.",
       });
     }
 

@@ -585,29 +585,6 @@ export default function CoachChatScreen() {
             </>
           )}
 
-          {messages.length > 0 && !sending && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.quickChips}
-              keyboardShouldPersistTaps="handled"
-            >
-              {suggestions.slice(0, 4).map((s, i) => (
-                <Pressable
-                  key={i}
-                  style={({ pressed }) => [
-                    styles.quickChip,
-                    { backgroundColor: theme.card, borderColor: theme.border },
-                    pressed && { opacity: 0.7 },
-                  ]}
-                  onPress={() => sendMessage(s)}
-                >
-                  <Text style={[styles.quickChipText, { color: theme.textMuted }]}>{s}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
-
           {remaining !== null && dailyLimit !== null && (
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 4, gap: 4 }}>
               <Feather name="zap" size={11} color={remaining === 0 ? theme.danger || "#ef5350" : theme.textMuted} />
@@ -828,21 +805,6 @@ function makeStyles(theme: any, isWeb: boolean, webTop: number, webBottom: numbe
       alignItems: "center",
       justifyContent: "center",
       flexShrink: 0,
-    },
-    quickChips: {
-      paddingHorizontal: 12,
-      paddingBottom: 8,
-      gap: 8,
-    },
-    quickChip: {
-      borderRadius: 20,
-      borderWidth: 1,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-    },
-    quickChipText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
     },
   });
 }

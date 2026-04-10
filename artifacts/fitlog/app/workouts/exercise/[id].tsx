@@ -9,7 +9,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "react-i18next";
 import { rtlIcon } from "@/lib/rtl";
-import { getExerciseById, EXERCISE_CATEGORIES } from "@/lib/exerciseLibrary";
+import { getExerciseById, EXERCISE_CATEGORIES, exerciseNameKey } from "@/lib/exerciseLibrary";
 import BodyMuscleMap from "@/components/BodyMuscleMap";
 
 function muscleKey(name: string): string {
@@ -72,7 +72,7 @@ function AnimatedSkeleton({ theme, placeholderId, t }: { theme: any; placeholder
 
 export default function ExerciseDetailScreen() {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -105,7 +105,7 @@ export default function ExerciseDetailScreen() {
           <Feather name={rtlIcon("arrow-left")} size={20} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>
-          {exercise.name}
+          {t(exerciseNameKey(exercise.id), { defaultValue: exercise.name })}
         </Text>
         <View style={{ width: 36 }} />
       </View>
@@ -136,6 +136,25 @@ export default function ExerciseDetailScreen() {
             />
           )}
         </Animated.View>
+
+        {i18n.language !== 'en' && (
+          <Animated.View entering={FadeInDown.delay(70).duration(350)}>
+            <View style={{
+              backgroundColor: theme.primaryDim,
+              borderRadius: 8,
+              padding: 10,
+              marginBottom: 12,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+            }}>
+              <Feather name="info" size={14} color={theme.primary} />
+              <Text style={{ fontSize: 12, color: theme.primary, flex: 1 }}>
+                {t("exercises.contentInEnglish")}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
 
         <Animated.View entering={FadeInDown.delay(80).duration(350)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.text }]}>{t("exercises.formInstructions")}</Text>

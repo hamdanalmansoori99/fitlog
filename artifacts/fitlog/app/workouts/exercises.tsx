@@ -15,7 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "react-i18next";
 import { rtlIcon } from "@/lib/rtl";
-import { EXERCISES, EXERCISE_CATEGORIES } from "@/lib/exerciseLibrary";
+import { EXERCISES, EXERCISE_CATEGORIES, exerciseNameKey } from "@/lib/exerciseLibrary";
 
 function muscleKey(name: string): string {
   return "exercises.muscle_" + name.toLowerCase().replace(/[()]/g, "").replace(/\s+/g, "_");
@@ -237,7 +237,7 @@ export default function ExercisesScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }} numberOfLines={1}>
-                    {ex.name}
+                    {t(exerciseNameKey(ex.id), { defaultValue: ex.name })}
                   </Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, flex: 1 }} numberOfLines={1}>

@@ -14,23 +14,18 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 
 const EQUIPMENT_OPTIONS = [
-  { id: "none", label: "Bodyweight only", icon: "user" as const },
-  { id: "dumbbells", label: "Dumbbells", icon: "zap" as const },
-  { id: "barbell", label: "Barbell", icon: "minus" as const },
-  { id: "bench", label: "Bench", icon: "layout" as const },
-  { id: "pullup_bar", label: "Pull-up bar", icon: "chevrons-up" as const },
-  { id: "resistance_bands", label: "Resistance bands", icon: "link" as const },
-  { id: "kettlebells", label: "Kettlebells", icon: "disc" as const },
-  { id: "cable_machine", label: "Cable machine", icon: "anchor" as const },
-  { id: "smith_machine", label: "Smith machine", icon: "sliders" as const },
-  { id: "leg_press", label: "Leg press", icon: "chevron-down" as const },
-  { id: "treadmill", label: "Treadmill", icon: "activity" as const },
-  { id: "stationary_bike", label: "Stationary bike", icon: "wind" as const },
-  { id: "rowing_machine", label: "Rowing machine", icon: "navigation" as const },
-  { id: "yoga_mat", label: "Yoga mat", icon: "heart" as const },
-  { id: "jump_rope", label: "Jump rope", icon: "repeat" as const },
-  { id: "tennis_racket", label: "Tennis racket", icon: "circle" as const },
-  { id: "swimming_pool", label: "Swimming pool", icon: "droplet" as const },
+  { id: "none", icon: "user" as const },
+  { id: "dumbbells", icon: "zap" as const },
+  { id: "barbell", icon: "minus" as const },
+  { id: "bench", icon: "layout" as const },
+  { id: "pullup_bar", icon: "chevrons-up" as const },
+  { id: "resistance_bands", icon: "link" as const },
+  { id: "cable_machine", icon: "anchor" as const },
+  { id: "smith_machine", icon: "sliders" as const },
+  { id: "leg_press", icon: "chevron-down" as const },
+  { id: "treadmill", icon: "activity" as const },
+  { id: "stationary_bike", icon: "wind" as const },
+  { id: "yoga_mat", icon: "heart" as const },
 ];
 
 const LOCATION_OPTIONS = ["Home", "Gym", "Outdoors", "Mixed"];

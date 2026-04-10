@@ -164,6 +164,7 @@ export default function WeeklyPlanScreen() {
 
   const { data: profile, isLoading: profileLoading } = useQuery({ queryKey: ["profile"], queryFn: api.getProfile, staleTime: 300_000 });
   const { data: workoutsData } = useQuery({ queryKey: ["workouts", { limit: 100 }], queryFn: () => api.getWorkouts({ limit: 100 }), staleTime: 120_000 });
+  const { data: recoveryToday } = useQuery({ queryKey: ["recoveryToday"], queryFn: api.getRecoveryToday, staleTime: 120_000 });
 
   const recentWorkouts = (workoutsData?.workouts || []).slice(0, 14).map((w: any) => ({
     name: w.name,
@@ -360,6 +361,38 @@ export default function WeeklyPlanScreen() {
           )}
         </Card>
 
+        {/* Recovery readiness banner */}
+        {recoveryToday && (() => {
+          const energy = recoveryToday.energyLevel ?? 3;
+          const sleep = recoveryToday.sleepHours ?? 8;
+          const sorenessVals = Object.values(recoveryToday.soreness ?? {}) as number[];
+          const hasHighSoreness = sorenessVals.some((v: number) => v >= 2);
+          const isRest = energy <= 1 && sleep < 5;
+          const isLow = energy <= 2 || hasHighSoreness;
+
+          if (isRest) {
+            return (
+              <Animated.View entering={FadeInDown.duration(250)} style={[styles.readinessBanner, { backgroundColor: "#ef535018", borderColor: "#ef5350" }]}>
+                <Feather name="alert-triangle" size={16} color="#ef5350" />
+                <Text style={[styles.readinessText, { color: "#ef5350" }]}>
+                  {t("workouts.restRecommended", { defaultValue: "Rest day recommended \u2014 low energy and poor sleep" })}
+                </Text>
+              </Animated.View>
+            );
+          }
+          if (isLow) {
+            return (
+              <Animated.View entering={FadeInDown.duration(250)} style={[styles.readinessBanner, { backgroundColor: "#ffab4018", borderColor: "#ffab40" }]}>
+                <Feather name="alert-triangle" size={16} color="#ffab40" />
+                <Text style={[styles.readinessText, { color: "#ffab40" }]}>
+                  {t("workouts.lowReadiness", { defaultValue: "Your body may need lighter work today" })}
+                </Text>
+              </Animated.View>
+            );
+          }
+          return null;
+        })()}
+
         {/* Day cards */}
         {plan.map((day, idx) => {
           const isToday = day.day === today;
@@ -537,6 +570,8 @@ const styles = StyleSheet.create({
   diffBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   dayNote: { fontSize: 12, lineHeight: 16, marginTop: 4 },
   footer: { position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 12, gap: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  readinessBanner: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12 },
+  readinessText: { fontFamily: "Inter_500Medium", fontSize: 13, flex: 1, lineHeight: 18 },
 });
 
 const swap = StyleSheet.create({

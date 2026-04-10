@@ -460,7 +460,7 @@ function PRCelebrationBanner({ pr, onDismiss, theme }: {
       }}
     >
       <View style={{ width: 3, backgroundColor: accent, alignSelf: "stretch" }} />
-      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: accent + "20", alignItems: "center", justifyContent: "center", marginLeft: 12, marginVertical: 12 }}>
+      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: accent + "20", alignItems: "center", justifyContent: "center", marginStart: 12, marginVertical: 12 }}>
         <Feather name="award" size={17} color={accent} />
       </View>
       <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 11, gap: 6 }}>
@@ -651,7 +651,7 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
               onPress={handleShare}
               style={[styles.modalBtn, { backgroundColor: theme.primary, flex: 1 }]}
             >
-              <Feather name="share-2" size={14} color="#0f0f1a" style={{ marginRight: 4 }} />
+              <Feather name="share-2" size={14} color="#0f0f1a" style={{ marginEnd: 4 }} />
               <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 15 }}>
                 {t("common.share")}
               </Text>
@@ -953,8 +953,8 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
 
   if (hasLoggedToday) {
     // Summary card — already logged today
-    const energyLabels: Record<string, string> = { low: "Low", moderate: "Moderate", high: "High" };
-    const stressLabels: Record<string, string> = { low: "Low", moderate: "Moderate", high: "High" };
+    const energyLabels: Record<string, string> = { low: t("home.energyLow"), moderate: t("home.energyModerate"), high: t("home.energyHigh") };
+    const stressLabels: Record<string, string> = { low: t("home.stressLow"), moderate: t("home.stressModerate"), high: t("home.stressHigh") };
     return (
       <Pressable
         onPress={() => router.push("/recovery" as any)}
@@ -991,7 +991,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
               <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
                 {energyLabels[recoveryData.energyLevel] || recoveryData.energyLevel}
               </Text>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>Energy</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.energy")}</Text>
             </View>
           )}
           {recoveryData.stressLevel && (
@@ -1000,7 +1000,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
               <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
                 {stressLabels[recoveryData.stressLevel] || recoveryData.stressLevel}
               </Text>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>Stress</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.stress")}</Text>
             </View>
           )}
         </View>
@@ -1010,16 +1010,17 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
 
   // Prompt card — not logged today
   return (
-    <View style={{
+    <Pressable onPress={() => router.push("/recovery" as any)} style={({ pressed }) => ({
       backgroundColor: theme.card,
       borderRadius: 14,
       padding: 16,
       borderWidth: 1,
       borderColor: "#00bcd4" + "20",
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
       gap: 12,
-    }}>
+      opacity: pressed ? 0.85 : 1,
+    })}>
       <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#00bcd4" + "18", alignItems: "center", justifyContent: "center" }}>
         <Feather name="heart" size={20} color="#00bcd4" />
       </View>
@@ -1031,8 +1032,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
           {t("home.recoveryCheckInSubtitle") || "Log your sleep, energy & stress"}
         </Text>
       </View>
-      <Pressable
-        onPress={() => router.push("/recovery" as any)}
+      <View
         style={{
           backgroundColor: "#00bcd4",
           borderRadius: 10,
@@ -1045,8 +1045,8 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
         <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
           {t("home.checkIn") || "Check in"}
         </Text>
-      </Pressable>
-    </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -1190,6 +1190,12 @@ export default function HomeScreen() {
     enabled: isHealthIntegrationAvailable(),
   });
 
+  const { data: waterData } = useQuery({
+    queryKey: ["waterToday"],
+    queryFn: api.getWaterToday,
+    staleTime: 30000,
+  });
+
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(async () => {
@@ -1221,7 +1227,7 @@ export default function HomeScreen() {
         {/* ═══ ZONE 1 — HERO ═══ */}
 
         <Animated.View entering={FadeInDown.duration(200)} style={styles.header}>
-          <View style={{ flex: 1, marginRight: 10 }}>
+          <View style={{ flex: 1, marginEnd: 10 }}>
             <Text style={[styles.name, { color: theme.text, fontFamily: "Inter_700Bold", marginBottom: 2 }]}>
               {getGreeting(t)}, {user?.firstName || t("home.friend")}!
             </Text>
@@ -1240,8 +1246,8 @@ export default function HomeScreen() {
                   {bestStreak > 0 ? (
                     <View style={{ gap: 4 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <MaterialCommunityIcons name="fire" size={14} color="#ff6b35" />
-                        <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 16, lineHeight: 22 }}>
+                        <MaterialCommunityIcons name="fire" size={18} color="#ff6b35" />
+                        <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 20, lineHeight: 26 }}>
                           {bestStreak}
                         </Text>
                       </View>
@@ -1249,7 +1255,7 @@ export default function HomeScreen() {
                         {t(getStreakNarrative(bestStreak).messageKey)}
                       </Text>
                       {daysToNext != null && daysToNext <= 7 && (
-                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 2 }}>
+                        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 }}>
                           {t("home.streakNextMilestone", { count: daysToNext })}
                         </Text>
                       )}
@@ -1363,10 +1369,10 @@ export default function HomeScreen() {
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 20 }}>
-                    {streaksData?.currentHydrationStreak ?? 0}
+                    {waterData?.totalMl ?? 0}
                   </Text>
                   <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                    {t("home.dayStreak")}
+                    {t("home.mlToday")}
                   </Text>
                 </View>
               </View>
@@ -1375,7 +1381,7 @@ export default function HomeScreen() {
                 style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
               >
                 <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                  Log
+                  {t("home.log")}
                 </Text>
                 <Feather name={rtlIcon("chevron-right")} size={13} color={theme.primary} />
               </Pressable>
@@ -1419,19 +1425,19 @@ export default function HomeScreen() {
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.mealsLabel")}</Text>
             </View>
             <View style={{ width: 1, height: 36, backgroundColor: theme.border }} />
-            {/* Weekly adherence streak */}
+            {/* Hydration streak */}
             <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                <Feather name="calendar" size={11} color={theme.secondary} />
+                <Feather name="droplet" size={11} color="#448aff" />
                 <Text style={{
-                  color: weeklyAdherenceStreak != null ? theme.secondary : theme.textMuted,
+                  color: "#448aff",
                   fontFamily: "Inter_700Bold",
                   fontSize: 16,
                 }}>
-                  {weeklyAdherenceStreak ?? 0}
+                  {streaksData?.currentHydrationStreak ?? 0}
                 </Text>
               </View>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.weeklyStreakLabel")}</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.hydrationLabel")}</Text>
             </View>
           </Pressable>
           )}

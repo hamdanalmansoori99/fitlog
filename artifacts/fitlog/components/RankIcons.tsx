@@ -36,7 +36,7 @@ export function AshWalkerIcon({ color, size }: IconProps) {
   );
 }
 
-// 3. Iron Seeker — armored gauntlet fist
+// 3. Cinder Acolyte — armored gauntlet fist
 export function IronSeekerIcon({ color, size }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -58,7 +58,7 @@ export function IronSeekerIcon({ color, size }: IconProps) {
   );
 }
 
-// 4. Bronze Forger — anvil with spark
+// 4. Molten Apprentice — anvil with spark
 export function BronzeForgerIcon({ color, size }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -77,7 +77,7 @@ export function BronzeForgerIcon({ color, size }: IconProps) {
   );
 }
 
-// 5. Stone Sentinel — shield with runic mark
+// 5. Basalt Watcher — shield with runic mark
 export function StoneSentinelIcon({ color, size }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -94,7 +94,7 @@ export function StoneSentinelIcon({ color, size }: IconProps) {
   );
 }
 
-// 6. Silver Vanguard — winged helmet
+// 6. Spectral Vanguard — winged helmet
 export function SilverVanguardIcon({ color, size }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -122,7 +122,7 @@ export function SilverVanguardIcon({ color, size }: IconProps) {
   );
 }
 
-// 7. Gold Templar — upright sword with crossguard
+// 7. Auric Templar — upright sword with crossguard
 export function GoldTemplarIcon({ color, size }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -140,7 +140,7 @@ export function GoldTemplarIcon({ color, size }: IconProps) {
   );
 }
 
-// 8. Obsidian Titan — skull
+// 8. Void Colossus — skull
 export function ObsidianTitanIcon({ color, size }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -206,7 +206,7 @@ export function ArcaneSovereignIcon({ color, size }: IconProps) {
   );
 }
 
-// 11. Eternal Ascendant — figure rising with crown of rays
+// 11. The Infinite — figure rising with crown of rays
 export function EternalAscendantIcon({ color, size }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
