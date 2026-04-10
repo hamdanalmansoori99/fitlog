@@ -39,7 +39,7 @@ export default function WaterAddScreen() {
   const mutation = useMutation({
     mutationFn: (ml: number) => api.logWater(ml),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["water-today"] });
+      queryClient.invalidateQueries({ queryKey: ["waterToday"] });
       queryClient.invalidateQueries({ queryKey: ["streaks"] });
       router.back();
     },

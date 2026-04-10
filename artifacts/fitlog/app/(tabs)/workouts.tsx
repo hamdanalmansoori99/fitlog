@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  RefreshControl, Platform, Alert, TextInput, Modal,
+  RefreshControl, Platform, Alert, TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { getRecommendations, getTodaySuggestion, getEquipmentMatchLevel } from "@/lib/coachEngine";
-import { WORKOUT_TEMPLATES, WorkoutTemplate } from "@/lib/workoutTemplates";
+import { WORKOUT_TEMPLATES } from "@/lib/workoutTemplates";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { useTranslation } from "react-i18next";
@@ -200,75 +200,11 @@ function daysAgoFromDate(dateStr: string): number {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
 }
 
-function buildLastTrainedMap(workouts: any[]): Record<string, number> {
-  const result: Record<string, number> = {};
-  for (const w of workouts) {
-    const days = daysAgoFromDate(w.date);
-    const type = w.activityType as string;
-    if (!(type in result) || days < result[type]) result[type] = days;
-  }
-  return result;
-}
-
 function formatLastTrained(days: number, t: any): string {
   if (days === 0) return t("workouts.lastTrainedToday");
   if (days === 1) return t("workouts.lastTrainedYesterday");
   return t("workouts.lastTrainedDays", { days });
 }
-
-// ─── For You Today Mini Card ───────────────────────────────────────────────────
-
-const ForYouTodayMiniCard = React.memo(function ForYouTodayMiniCard({
-  template,
-  reason,
-  needsGear,
-  lastDays,
-  onPress,
-}: {
-  template: WorkoutTemplate;
-  reason: string;
-  needsGear: boolean;
-  lastDays?: number;
-  onPress: () => void;
-}) {
-  const { theme } = useTheme();
-  const { t } = useTranslation();
-  const color = getActivityColor(template.activityType, theme);
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.fyCard,
-        { backgroundColor: theme.card, borderColor: needsGear ? theme.warning + "60" : theme.border, opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
-      ]}
-    >
-      <View style={[styles.fyIcon, { backgroundColor: color + "20" }]}>
-        <Feather name={getActivityIcon(template.activityType)} size={18} color={color} />
-      </View>
-      <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, marginTop: 8 }} numberOfLines={2}>
-        {t(`workouts.templates.${template.id}.name`, { defaultValue: template.name })}
-      </Text>
-      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 3 }}>
-        {template.durationMinutes}{t("common.min")} · {t(`workouts.plan.difficulty.${template.difficulty}`)}
-      </Text>
-      <Text style={{ color: color, fontFamily: "Inter_500Medium", fontSize: 11, marginTop: 4 }} numberOfLines={1}>
-        {reason}
-      </Text>
-      {needsGear && (
-        <View style={[styles.needsGearBadge, { backgroundColor: theme.warning + "18", borderColor: theme.warning + "40" }]}>
-          <Feather name="tool" size={9} color={theme.warning} />
-          <Text style={{ color: theme.warning, fontFamily: "Inter_500Medium", fontSize: 10 }}>{t("workouts.needsGear")}</Text>
-        </View>
-      )}
-      {lastDays !== undefined && (
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 4, opacity: 0.8 }}>
-          {formatLastTrained(lastDays, t)}
-        </Text>
-      )}
-    </Pressable>
-  );
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -353,7 +289,6 @@ export default function WorkoutsScreen() {
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [historyFilter, setHistoryFilter] = useState("all");
-  const [quickLogModalVisible, setQuickLogModalVisible] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const { showToast } = useToast();
 
@@ -437,38 +372,13 @@ export default function WorkoutsScreen() {
     ? getTodaySuggestion(coachProfile, recentWorkouts)
     : null;
 
-  const lastTrainedMap = useMemo(() => buildLastTrainedMap(workouts), [workouts]);
-
-  const forYouTemplates = useMemo(() => {
-    if (recommendations.length > 0) {
-      return recommendations.slice(0, 3).map((rec: any) => {
-        let reason: string;
-        if (rec.equipmentMatch === "full" && rec.template.requiredEquipment.length > 0)
-          reason = t("workouts.reasonBasedOnEquipment");
-        else if (rec.template.goals.some((g: string) => coachProfile.fitnessGoals.includes(g)))
-          reason = t("workouts.reasonMatchesGoal");
-        else
-          reason = t("workouts.reasonBasedOnHistory");
-        return {
-          template: rec.template as WorkoutTemplate,
-          reason,
-          equipmentMatch: rec.equipmentMatch as string,
-          needsGear: rec.equipmentMatch === "none",
-        };
-      });
-    }
-    return WORKOUT_TEMPLATES.slice(0, 3).map((tmpl) => ({
-      template: tmpl,
-      reason: "",
-      equipmentMatch: "full",
-      needsGear: false,
-    }));
-  }, [recommendations, t]);
 
   const quickLogItems = [
     { label: t("workouts.gym"), icon: "zap" as const, type: "gym", color: theme.purple },
-    { label: t("workouts.cardio"), icon: "activity" as const, type: "cardio", color: theme.primary },
-    { label: t("workouts.otherActivity"), icon: "more-horizontal" as const, type: "other", color: theme.textMuted },
+    { label: t("workouts.activityType.running", { defaultValue: "Running" }), icon: "navigation" as const, type: "running", color: theme.primary },
+    { label: t("workouts.activityType.cycling", { defaultValue: "Cycling" }), icon: "disc" as const, type: "cycling", color: theme.secondary },
+    { label: t("workouts.activityType.swimming", { defaultValue: "Swimming" }), icon: "droplet" as const, type: "swimming", color: theme.cyan ?? "#4fc3f7" },
+    { label: t("workouts.activityType.walking", { defaultValue: "Walking" }), icon: "map" as const, type: "walking", color: theme.warning ?? "#ffab40" },
   ];
 
   return (
@@ -515,25 +425,18 @@ export default function WorkoutsScreen() {
           </View>
         )}
 
-        {/* ── COACH ONBOARDING PROMPT ── */}
+        {/* ── COACH ONBOARDING BANNER (small) ── */}
         {!hasCompletedOnboarding && (
-          <Animated.View entering={FadeInDown.duration(400)} style={styles.section}>
+          <Animated.View entering={FadeInDown.duration(400)} style={{ paddingHorizontal: 20, marginBottom: 8 }}>
             <Pressable
               onPress={() => router.push("/workouts/onboarding" as any)}
-              style={[styles.onboardingCard, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}
+              style={[styles.coachBanner, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "40" }]}
             >
-              <View style={styles.onboardingIcon}>
-                <Feather name="zap" size={28} color={theme.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.onboardingTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-                  {t("workouts.setUpCoach")}
-                </Text>
-                <Text style={[styles.onboardingSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {t("workouts.coachSetupMessage")}
-                </Text>
-              </View>
-              <Feather name={rtlIcon("arrow-right")} size={20} color={theme.primary} />
+              <Feather name="zap" size={16} color={theme.primary} />
+              <Text style={{ flex: 1, color: theme.text, fontFamily: "Inter_500Medium", fontSize: 13 }} numberOfLines={1}>
+                {t("workouts.setUpCoach")}
+              </Text>
+              <Feather name={rtlIcon("chevron-right")} size={14} color={theme.primary} />
             </Pressable>
           </Animated.View>
         )}
@@ -580,53 +483,32 @@ export default function WorkoutsScreen() {
           </Animated.View>
         )}
 
-        {/* ── QUICK LOG BUTTON ── */}
+        {/* ── QUICK LOG ── */}
         <Animated.View entering={FadeInDown.delay(150).duration(400)} style={styles.section}>
-          <Pressable
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setQuickLogModalVisible(true); }}
-            style={[styles.quickLogBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
-          >
-            <View style={[styles.quickLogIcon, { backgroundColor: theme.primaryDim }]}>
-              <Feather name="zap" size={18} color={theme.primary} />
-            </View>
-            <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14, flex: 1 }}>{t("workouts.quickLog")}</Text>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("workouts.selectActivity")}</Text>
-            <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
-          </Pressable>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.quickLog")}</Text>
+          </View>
+          <View style={styles.quickLogGrid}>
+            {quickLogItems.map((act) => (
+              <Pressable
+                key={act.type}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push({ pathname: "/workouts/log" as any, params: { prefillType: act.type } });
+                }}
+                style={({ pressed }) => [
+                  styles.quickLogCard,
+                  { backgroundColor: act.color + "14", borderColor: act.color + "30", opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] },
+                ]}
+              >
+                <View style={[styles.quickLogCardIcon, { backgroundColor: act.color + "22" }]}>
+                  <Feather name={act.icon} size={18} color={act.color} />
+                </View>
+                <Text style={[styles.quickLogCardLabel, { color: theme.text, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>{act.label}</Text>
+              </Pressable>
+            ))}
+          </View>
         </Animated.View>
-
-        {/* ── QUICK LOG MODAL ── */}
-        <Modal
-          visible={quickLogModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setQuickLogModalVisible(false)}
-        >
-          <Pressable style={styles.modalOverlay} onPress={() => setQuickLogModalVisible(false)}>
-            <Pressable style={[styles.modalSheet, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={() => {}}>
-              <View style={[styles.modalHandle, { backgroundColor: theme.border }]} />
-              <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 17, marginBottom: 16 }}>{t("workouts.quickLog")}</Text>
-              <View style={styles.quickGrid}>
-                {quickLogItems.map((act) => (
-                  <Pressable
-                    key={act.type}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setQuickLogModalVisible(false);
-                      router.push({ pathname: "/workouts/log" as any, params: { prefillType: act.type } });
-                    }}
-                    style={[styles.quickChip, { backgroundColor: theme.background, borderColor: theme.border }]}
-                  >
-                    <View style={[styles.quickIcon, { backgroundColor: act.color + "20" }]}>
-                      <Feather name={act.icon} size={18} color={act.color} />
-                    </View>
-                    <Text style={[styles.quickLabel, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{act.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </Pressable>
-          </Pressable>
-        </Modal>
 
         {/* ── MY TEMPLATES ── */}
         <Animated.View entering={FadeInDown.delay(175).duration(400)} style={styles.section}>
@@ -700,104 +582,48 @@ export default function WorkoutsScreen() {
           )}
         </Animated.View>
 
-        {/* ── BROWSE TEMPLATES ── */}
+        {/* ── ALL WORKOUTS (flattened) ── */}
         <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.browseTemplatesTitle")}</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              {t("workouts.browseTemplatesTitle", { defaultValue: "All Workouts" })}
+            </Text>
           </View>
-
-          {/* ── FOR YOU TODAY sub-section ── */}
-          <View style={{ marginBottom: 12 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Feather name="star" size={13} color={theme.primary} />
-                <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                  {recommendations.length > 0 ? t("workouts.forYouToday") : t("workouts.topTemplates")}
-                </Text>
-              </View>
-              {recommendations.length > 0 && (
-                <Pressable onPress={() => router.push("/workouts/onboarding" as any)}>
-                  <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("workouts.editPrefs")}</Text>
-                </Pressable>
-              )}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
+            <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 }}>
+              {WORKOUT_TEMPLATES.map((tmpl) => {
+                const { level: matchLevel } = hasCompletedOnboarding
+                  ? getEquipmentMatchLevel(tmpl, coachProfile.availableEquipment)
+                  : { level: "full" as const };
+                const showNeedsGear = matchLevel === "none";
+                return (
+                  <Pressable
+                    key={tmpl.id}
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: "/workouts/template" as any, params: { id: tmpl.id } }); }}
+                    style={[styles.templateCard, { backgroundColor: theme.card, borderColor: showNeedsGear ? theme.warning + "60" : theme.border }]}
+                  >
+                    <View style={[styles.templateIcon, { backgroundColor: getActivityColor(tmpl.activityType, theme) + "20" }]}>
+                      <Feather name={getActivityIcon(tmpl.activityType)} size={16} color={getActivityColor(tmpl.activityType, theme)} />
+                    </View>
+                    <Text style={[styles.templateName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
+                      {t(`workouts.templates.${tmpl.id}.name`, { defaultValue: tmpl.name })}
+                    </Text>
+                    <View style={styles.templateMeta}>
+                      <Text style={[styles.templateMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                        {tmpl.durationMinutes}{t("common.min")} · {t(`workouts.plan.difficulty.${tmpl.difficulty}`)}
+                      </Text>
+                    </View>
+                    {showNeedsGear && (
+                      <View style={[styles.needsGearBadge, { backgroundColor: theme.warning + "18", borderColor: theme.warning + "40" }]}>
+                        <Feather name="tool" size={9} color={theme.warning} />
+                        <Text style={{ color: theme.warning, fontFamily: "Inter_500Medium", fontSize: 10 }}>{t("workouts.needsGear")}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
-              <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 }}>
-                {forYouTemplates.map((item) => (
-                  <View key={item.template.id} style={{ width: 150 }}>
-                    <ForYouTodayMiniCard
-                      template={item.template}
-                      reason={item.reason || t("workouts.topTemplates")}
-                      needsGear={item.needsGear}
-                      lastDays={lastTrainedMap[item.template.activityType]}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        router.push({ pathname: "/workouts/template" as any, params: { id: item.template.id, whyGoodForYou: item.reason } });
-                      }}
-                    />
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
-
-          {/* ── GROUPED TEMPLATES ── */}
-          {(() => {
-            const shownIds = new Set<string>();
-            return [
-              { label: "Strength & Muscle", goals: ["Build muscle", "Get stronger"] },
-              { label: "Endurance & Fat Loss", goals: ["Improve endurance", "Lose weight"] },
-              { label: "General Fitness", goals: ["Stay active"] },
-            ].map(({ label, goals: sectionGoals }) => {
-            const sectionTemplates = WORKOUT_TEMPLATES.filter((tmpl) =>
-              !shownIds.has(tmpl.id) && sectionGoals.some((g) => tmpl.goals.includes(g as any))
-            );
-            sectionTemplates.forEach((tmpl) => shownIds.add(tmpl.id));
-            if (sectionTemplates.length === 0) return null;
-            return (
-              <View key={label} style={{ marginBottom: 14 }}>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>
-                  {label}
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }}>
-                  <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingRight: 28 }}>
-                    {sectionTemplates.map((tmpl) => {
-                      const { level: matchLevel } = hasCompletedOnboarding
-                        ? getEquipmentMatchLevel(tmpl, coachProfile.availableEquipment)
-                        : { level: "full" as const };
-                      const showNeedsGear = matchLevel === "none";
-                      return (
-                        <Pressable
-                          key={tmpl.id}
-                          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: "/workouts/template" as any, params: { id: tmpl.id } }); }}
-                          style={[styles.templateCard, { backgroundColor: theme.card, borderColor: showNeedsGear ? theme.warning + "60" : theme.border }]}
-                        >
-                          <View style={[styles.templateIcon, { backgroundColor: getActivityColor(tmpl.activityType, theme) + "20" }]}>
-                            <Feather name={getActivityIcon(tmpl.activityType)} size={16} color={getActivityColor(tmpl.activityType, theme)} />
-                          </View>
-                          <Text style={[styles.templateName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={2}>
-                            {t(`workouts.templates.${tmpl.id}.name`, { defaultValue: tmpl.name })}
-                          </Text>
-                          <View style={styles.templateMeta}>
-                            <Text style={[styles.templateMetaText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                              {tmpl.durationMinutes}{t("common.min")} · {t(`workouts.plan.difficulty.${tmpl.difficulty}`)}
-                            </Text>
-                          </View>
-                          {showNeedsGear && (
-                            <View style={[styles.needsGearBadge, { backgroundColor: theme.warning + "18", borderColor: theme.warning + "40" }]}>
-                              <Feather name="tool" size={9} color={theme.warning} />
-                              <Text style={{ color: theme.warning, fontFamily: "Inter_500Medium", fontSize: 10 }}>{t("workouts.needsGear")}</Text>
-                            </View>
-                          )}
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </ScrollView>
-              </View>
-            );
-          });
-          })()}
+          </ScrollView>
         </Animated.View>
 
         {/* ── EXERCISE LIBRARY ── */}
@@ -1092,13 +918,10 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   sectionTitle: { fontSize: 16 },
   editPrefs: { fontSize: 13 },
-  onboardingCard: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    padding: 16, borderRadius: 16, borderWidth: 1.5,
+  coachBanner: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, borderWidth: 1,
   },
-  onboardingIcon: { width: 50, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  onboardingTitle: { fontSize: 15, marginBottom: 4 },
-  onboardingSub: { fontSize: 13, lineHeight: 18 },
   todayCard: {},
   todayInner: { borderRadius: 16, borderWidth: 1.5, padding: 16, gap: 10 },
   todayTop: { flexDirection: "row", alignItems: "center", gap: 12 },
@@ -1133,12 +956,6 @@ const styles = StyleSheet.create({
   matchBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   matchBadgeText: { fontSize: 10 },
   diffDot: { width: 6, height: 6, borderRadius: 3 },
-  quickRow: { flexDirection: "row", gap: 10, paddingRight: 8 },
-  quickChip: {
-    alignItems: "center", gap: 6, padding: 12, borderRadius: 12, borderWidth: 1, minWidth: 72,
-  },
-  quickIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  quickLabel: { fontSize: 12 },
   templateRow: { flexDirection: "row", gap: 10, paddingRight: 8 },
   templateCard: { width: 130, borderRadius: 14, borderWidth: 1, padding: 10, gap: 6 },
   templateIcon: { width: 32, height: 32, borderRadius: 9, alignItems: "center", justifyContent: "center" },
@@ -1193,36 +1010,21 @@ const styles = StyleSheet.create({
     width: 38, height: 38, borderRadius: 10,
     alignItems: "center", justifyContent: "center",
   },
-  fyCard: {
-    borderRadius: 14, borderWidth: 1, padding: 12, flex: 1,
-  },
-  fyIcon: {
-    width: 38, height: 38, borderRadius: 10,
-    alignItems: "center", justifyContent: "center",
-  },
   needsGearBadge: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1,
     marginTop: 6, alignSelf: "flex-start" as const,
   },
-  quickLogBtn: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    padding: 14, borderRadius: 16, borderWidth: 1,
-  },
-  quickLogIcon: {
-    width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center",
-  },
-  modalOverlay: {
-    flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end",
-  },
-  modalSheet: {
-    borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1,
-    padding: 20, paddingBottom: 36,
-  },
-  modalHandle: {
-    width: 40, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 16,
-  },
-  quickGrid: {
+  quickLogGrid: {
     flexDirection: "row", flexWrap: "wrap", gap: 10,
   },
+  quickLogCard: {
+    width: "30%" as any, minWidth: 95, alignItems: "center", gap: 6,
+    paddingVertical: 14, paddingHorizontal: 8, borderRadius: 14, borderWidth: 1,
+    flexGrow: 1,
+  },
+  quickLogCardIcon: {
+    width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center",
+  },
+  quickLogCardLabel: { fontSize: 12, textAlign: "center" },
 });

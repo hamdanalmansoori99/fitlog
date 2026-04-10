@@ -34,22 +34,6 @@ const CARDIO_SUB_TYPES = [
   { id: "swimming", labelKey: "workouts.activityLabelSwimming", icon: "droplet" as const },
 ];
 
-const MOOD_OPTIONS = [
-  { value: "Exhausted",   icon: "frown", labelKey: "workouts.moodExhausted" },
-  { value: "Tough",       icon: "shield", labelKey: "workouts.moodTough" },
-  { value: "Good",        icon: "smile", labelKey: "workouts.moodGood" },
-  { value: "Great",       icon: "zap", labelKey: "workouts.moodGreat" },
-  { value: "Crushing it", icon: "award", labelKey: "workouts.moodCrushingIt" },
-] as const;
-
-
-const RPE_LABEL_KEYS = [
-  "workouts.rpeVeryEasy", "workouts.rpeEasy", "workouts.rpeModerate",
-  "workouts.rpeHard", "workouts.rpeMaxEffort",
-];
-const RPE_VALUES = [2, 4, 6, 8, 10];
-const RPE_ICONS = ["circle", "circle", "circle", "circle", "zap"] as const;
-const RPE_COLORS = ["#4caf50", "#ffeb3b", "#ff9800", "#f44336", "#ff6b35"];
 
 interface GymExercise {
   name: string;
@@ -77,7 +61,6 @@ export default function LogWorkoutScreen() {
   const [durationH, setDurationH] = useState("0");
   const [durationM, setDurationM] = useState("");
   const [distanceKm, setDistanceKm] = useState("");
-  const [mood, setMood] = useState("");
   const [notes, setNotes] = useState("");
   const [workoutName, setWorkoutName] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -328,7 +311,6 @@ export default function LogWorkoutScreen() {
       durationMinutes: durationMinutes || undefined,
       distanceKm: parsedDistance,
       caloriesBurned: estimatedCals,
-      mood: mood || undefined,
       notes: notes || undefined,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       exercises: gymExercises,
@@ -348,6 +330,13 @@ export default function LogWorkoutScreen() {
           title={t("workouts.workoutLogged")}
           subtitle={t("workouts.recordedKeepUp", { activity: activityLabel })}
         />
+        {lastPayload.current?.caloriesBurned != null && lastPayload.current.caloriesBurned > 0 && (
+          <View style={{ alignItems: "center", marginBottom: 4 }}>
+            <Text style={{ fontSize: 28, fontFamily: "Inter_700Bold", color: theme.primary, textAlign: "center" }}>
+              {"🔥 ~"}{lastPayload.current.caloriesBurned}{" cal burned"}
+            </Text>
+          </View>
+        )}
         {newAchievements.length > 0 && (
           <View style={{ width: "100%", paddingHorizontal: 20, marginBottom: 8 }}>
             {newAchievements.map((ach) => (
@@ -511,7 +500,8 @@ export default function LogWorkoutScreen() {
               <Input label={t("workouts.activityName")} value={workoutName} onChangeText={setWorkoutName} placeholder={t("workouts.activityNameExample")} />
             )}
             
-            {/* Duration */}
+            {/* Duration — hidden for gym (auto-timer in execute handles it) */}
+            {activityType !== "gym" && (
             <View>
               <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.duration")}</Text>
               <View style={styles.durationRow}>
@@ -525,6 +515,7 @@ export default function LogWorkoutScreen() {
                 </View>
               </View>
             </View>
+            )}
             
             {/* Cardio sub-type selector */}
             {activityType === "cardio" && (
@@ -846,40 +837,6 @@ export default function LogWorkoutScreen() {
                       <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.addSet")}</Text>
                     </Pressable>
 
-                    {/* RPE Selector */}
-                    <View style={{ marginTop: 12 }}>
-                      <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 6 }]}>
-                        {t("workouts.effortLevel")}
-                      </Text>
-                      <View style={{ flexDirection: "row", gap: 6 }}>
-                        {RPE_VALUES.map((rpeVal, rpeIdx) => {
-                          const selected = ex.rpe === rpeVal;
-                          return (
-                            <Pressable
-                              key={rpeVal}
-                              onPress={() => {
-                                const newEx = [...exercises];
-                                newEx[exIdx].rpe = selected ? undefined : rpeVal;
-                                setExercises(newEx);
-                              }}
-                              style={[
-                                styles.rpeChip,
-                                {
-                                  backgroundColor: selected ? theme.primary + "20" : theme.card,
-                                  borderColor: selected ? theme.primary : theme.border,
-                                  flex: 1,
-                                },
-                              ]}
-                            >
-                              <Feather name={RPE_ICONS[rpeIdx]} size={14} color={selected ? theme.primary : RPE_COLORS[rpeIdx]} />
-                              <Text style={{ color: selected ? theme.primary : theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 9, textAlign: "center" }}>
-                                {t(RPE_LABEL_KEYS[rpeIdx])}
-                              </Text>
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    </View>
                   </Card>
                 ))}
                 
@@ -892,34 +849,6 @@ export default function LogWorkoutScreen() {
                 </Pressable>
               </View>
             )}
-            
-            {/* Mood */}
-            <View>
-              <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("workouts.mood")}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.moodRow}>
-                  {MOOD_OPTIONS.map(opt => (
-                    <Pressable
-                      key={opt.value}
-                      onPress={() => setMood(opt.value)}
-                      style={[
-                        styles.moodChip,
-                        {
-                          backgroundColor: mood === opt.value ? theme.primaryDim : theme.card,
-                          borderColor: mood === opt.value ? theme.primary : theme.border,
-                        },
-                      ]}
-                    >
-                      <Feather name={opt.icon as keyof typeof Feather.glyphMap} size={18} color={mood === opt.value ? theme.primary : theme.textMuted} />
-                      <Text style={[
-                        styles.moodLabel,
-                        { color: mood === opt.value ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium" },
-                      ]}>{t(opt.labelKey)}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
             
             {error ? (
               <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13 }}>{error}</Text>
@@ -992,12 +921,6 @@ const styles = StyleSheet.create({
   durationRow: { flexDirection: "row", gap: 12 },
   durationUnit: { fontSize: 11, marginTop: 4, textAlign: "center" },
   chip: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 20, borderWidth: 1.5, minHeight: 44, justifyContent: "center" },
-  moodRow: { flexDirection: "row", gap: 8 },
-  moodChip: {
-    paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5,
-    alignItems: "center", gap: 4, minHeight: 52,
-  },
-  moodLabel: { fontSize: 11 },
   notesInput: {
     borderWidth: 1.5, borderRadius: 12, padding: 12, minHeight: 80,
     textAlignVertical: "top", fontSize: 15,
@@ -1051,16 +974,6 @@ const styles = StyleSheet.create({
   },
   progressionBadgeText: { fontSize: 11 },
   progressionBadgeTarget: { fontSize: 12 },
-  rpeChip: {
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 3,
-    minHeight: 52,
-    justifyContent: "center",
-  },
   successCircle: { width: 100, height: 100, borderRadius: 50, alignItems: "center", justifyContent: "center" },
   successTitle: { fontSize: 26 },
   successSub: { fontSize: 15 },

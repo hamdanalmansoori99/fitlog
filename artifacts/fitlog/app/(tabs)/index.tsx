@@ -35,6 +35,7 @@ import * as Sharing from "expo-sharing";
 import { ShareCard } from "@/components/ShareCard";
 import { RankBadge } from "@/components/RankBadge";
 import { getRankByXp, getXpProgress } from "@/lib/ranks";
+import { RecoveryCheckIn } from "@/components/RecoveryCheckIn";
 
 type AppTheme = (typeof Colors)["dark"];
 
@@ -946,6 +947,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
   isLoading: boolean;
 }) {
   const { t } = useTranslation();
+  const [recoveryExpanded, setRecoveryExpanded] = useState(false);
 
   if (isLoading) return null;
 
@@ -955,6 +957,15 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
     // Summary card — already logged today
     const energyLabels: Record<string, string> = { low: t("home.energyLow"), moderate: t("home.energyModerate"), high: t("home.energyHigh") };
     const stressLabels: Record<string, string> = { low: t("home.stressLow"), moderate: t("home.stressModerate"), high: t("home.stressHigh") };
+
+    const recText = (() => {
+      const energy = recoveryData?.energyLevel ?? 3;
+      const stress = recoveryData?.stressLevel ?? 3;
+      if (energy <= 2) return t("home.recRestDay");
+      if (energy === 3 || stress >= 4) return t("home.recLightWorkout");
+      return t("home.recFullWorkout");
+    })();
+
     return (
       <Pressable
         onPress={() => router.push("/recovery" as any)}
@@ -1004,49 +1015,73 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
             </View>
           )}
         </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 2 }}>
+          <Feather name="info" size={13} color="#00bcd4" />
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12, flex: 1 }}>
+            {recText}
+          </Text>
+        </View>
       </Pressable>
     );
   }
 
   // Prompt card — not logged today
   return (
-    <Pressable onPress={() => router.push("/recovery" as any)} style={({ pressed }) => ({
-      backgroundColor: theme.card,
-      borderRadius: 14,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: "#00bcd4" + "20",
-      flexDirection: "row" as const,
-      alignItems: "center" as const,
-      gap: 12,
-      opacity: pressed ? 0.85 : 1,
-    })}>
-      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#00bcd4" + "18", alignItems: "center", justifyContent: "center" }}>
-        <Feather name="heart" size={20} color="#00bcd4" />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-          {t("home.howAreYouFeeling") || "How are you feeling today?"}
-        </Text>
-        <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-          {t("home.recoveryCheckInSubtitle") || "Log your sleep, energy & stress"}
-        </Text>
-      </View>
-      <View
-        style={{
-          backgroundColor: "#00bcd4",
-          borderRadius: 10,
-          paddingHorizontal: 14,
-          paddingVertical: 8,
-          minHeight: 36,
-          justifyContent: "center",
-        }}
-      >
-        <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
-          {t("home.checkIn") || "Check in"}
-        </Text>
-      </View>
-    </Pressable>
+    <View>
+      <Pressable onPress={() => setRecoveryExpanded(!recoveryExpanded)} style={({ pressed }) => ({
+        backgroundColor: theme.card,
+        borderRadius: 14,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: "#00bcd4" + "20",
+        flexDirection: "row" as const,
+        alignItems: "center" as const,
+        gap: 12,
+        opacity: pressed ? 0.85 : 1,
+        ...(recoveryExpanded ? { borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottomWidth: 0 } : {}),
+      })}>
+        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#00bcd4" + "18", alignItems: "center", justifyContent: "center" }}>
+          <Feather name="heart" size={20} color="#00bcd4" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+            {t("home.howAreYouFeeling") || "How are you feeling today?"}
+          </Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+            {t("home.recoveryCheckInSubtitle") || "Log your sleep, energy & stress"}
+          </Text>
+        </View>
+        <View
+          style={{
+            backgroundColor: "#00bcd4",
+            borderRadius: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            minHeight: 36,
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
+            {t("home.checkIn") || "Check in"}
+          </Text>
+        </View>
+      </Pressable>
+      {recoveryExpanded && (
+        <View style={{
+          backgroundColor: theme.card,
+          borderRadius: 14,
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          borderWidth: 1,
+          borderColor: "#00bcd4" + "20",
+          borderTopWidth: 0,
+          paddingHorizontal: 8,
+          paddingBottom: 8,
+        }}>
+          <RecoveryCheckIn todayLog={null} theme={theme} />
+        </View>
+      )}
+    </View>
   );
 }
 

@@ -372,6 +372,9 @@ export default {
     stressHigh: "عالي",
     hydrationLabel: "الترطيب",
     mlToday: "مل اليوم",
+    recRestDay: "مُوصى: يوم راحة اليوم",
+    recLightWorkout: "مُوصى: تمرين خفيف اليوم",
+    recFullWorkout: "مُوصى: تمرين كامل اليوم",
   },
   weeklyReport: {
     title: "التقرير الأسبوعي",

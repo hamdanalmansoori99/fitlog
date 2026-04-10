@@ -97,17 +97,6 @@ function estimateCals(durationMin: number, activityType: string): number {
   return Math.round((mets[activityType] || 5) * 70 * (durationMin / 60));
 }
 
-const MOOD_OPTIONS = [
-  { value: "Exhausted",   icon: "frown", labelKey: "workouts.moodExhausted" },
-  { value: "Tough",       icon: "shield", labelKey: "workouts.moodTough" },
-  { value: "Good",        icon: "smile", labelKey: "workouts.moodGood" },
-  { value: "Great",       icon: "zap", labelKey: "workouts.moodGreat" },
-  { value: "Crushing it", icon: "award", labelKey: "workouts.moodCrushingIt" },
-] as const;
-const RPE_VALUES = [2, 4, 6, 8, 10];
-const RPE_ICONS = ["circle", "circle", "circle", "circle", "zap"] as const;
-// RPE scale colors are semantically fixed (green=easy → red=hard) — intentionally not theme-adaptive
-const RPE_COLORS = ["#4caf50", "#ffeb3b", "#ff9800", "#f44336", "#ff6b35"];
 
 // ─── Swipeable set card ───────────────────────────────────────────────────────
 
@@ -198,7 +187,6 @@ export default function ExecuteWorkoutScreen() {
   const [phase, setPhase] = useState<"active" | "rest" | "done">("active");
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
   const elapsedSecondsRef = useRef(0);
-  const [mood, setMood] = useState("");
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [templateSaved, setTemplateSaved] = useState(false);
@@ -447,17 +435,6 @@ export default function ExecuteWorkoutScreen() {
       );
       return next;
     });
-  }, []);
-
-  const setRpe = useCallback((exI: number, sI: number, rpe: number | undefined) => {
-    setExercises((prev) =>
-      prev.map((e, ei) =>
-        ei !== exI ? e : {
-          ...e,
-          sets: e.sets.map((s, si) => si !== sI ? s : { ...s, rpe }),
-        }
-      )
-    );
   }, []);
 
   function advance(fromExI: number, fromSetI: number) {
@@ -796,7 +773,6 @@ export default function ExecuteWorkoutScreen() {
       date: new Date().toISOString(),
       durationMinutes: durationMin || template.durationMinutes,
       caloriesBurned: cals,
-      mood: mood || undefined,
       exercises: gymExercises,
       metadata: { source: "execute", templateId: template.id },
     };
@@ -980,34 +956,6 @@ export default function ExecuteWorkoutScreen() {
                 );
               })}
             </Card>
-          </Animated.View>
-
-          {/* Mood */}
-          <Animated.View entering={FadeInDown.delay(220).duration(400)}>
-            <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13, marginBottom: 10 }}>
-              {t("workouts.howDidItFeelQuestion")}
-            </Text>
-            <View style={styles.moodRow}>
-              {MOOD_OPTIONS.map(opt => (
-                <Pressable
-                  key={opt.value}
-                  onPress={() => setMood(opt.value)}
-                  style={[
-                    styles.moodChip,
-                    {
-                      backgroundColor: mood === opt.value ? theme.primaryDim : theme.card,
-                      borderColor: mood === opt.value ? theme.primary : theme.border,
-                      flex: 1,
-                    },
-                  ]}
-                >
-                  <Feather name={opt.icon as keyof typeof Feather.glyphMap} size={18} color={mood === opt.value ? theme.primary : theme.textMuted} />
-                  <Text style={{ color: mood === opt.value ? theme.primary : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 10, textAlign: "center" }}>
-                    {t(opt.labelKey)}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
           </Animated.View>
 
           {/* Save as Template */}
@@ -1419,10 +1367,6 @@ export default function ExecuteWorkoutScreen() {
                   progression!.prevWeightKg != null ? `${progression!.prevWeightKg}${t("common.kg")}` : null,
                 ].filter(Boolean).join(" × ")
               : null;
-            const rpeIdx = RPE_VALUES.indexOf(s.rpe ?? -1);
-            const rpeIcon = rpeIdx >= 0 ? RPE_ICONS[rpeIdx] : null;
-            const rpeColor = rpeIdx >= 0 ? RPE_COLORS[rpeIdx] : theme.textMuted;
-
             return (
               <SwipeableSetCard
                 key={si}
@@ -1537,24 +1481,6 @@ export default function ExecuteWorkoutScreen() {
                     />
                   </View>
 
-                  {/* RPE button */}
-                  <Pressable
-                    onPress={!s.completed && isActive ? () => {
-                      const cur = s.rpe;
-                      const idx = RPE_VALUES.indexOf(cur ?? -1);
-                      const next = idx < RPE_VALUES.length - 1 ? RPE_VALUES[idx + 1] : undefined;
-                      setRpe(exerciseIdx, si, next);
-                    } : undefined}
-                    style={[
-                      styles.rpeQuickBtn,
-                      {
-                        backgroundColor: s.rpe != null ? theme.primary + "15" : theme.background,
-                        borderColor: s.rpe != null ? theme.primary + "50" : theme.border,
-                      },
-                    ]}
-                  >
-                    {rpeIcon ? <Feather name={rpeIcon} size={16} color={rpeColor} /> : <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: "Inter_500Medium" }}>RPE</Text>}
-                  </Pressable>
                 </View>
               </SwipeableSetCard>
             );
@@ -1749,11 +1675,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold", fontSize: 18, textAlign: "center",
     minWidth: 64,
   },
-  rpeQuickBtn: {
-    width: 44, height: 44, borderRadius: 12, borderWidth: 1,
-    alignItems: "center", justifyContent: "center",
-  },
-
   // Set management (add/remove)
   setMgmtBtn: {
     flexDirection: "row", alignItems: "center", gap: 4,
@@ -1817,11 +1738,6 @@ const styles = StyleSheet.create({
   },
   summaryExRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10 },
   exNumDot: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  moodRow: { flexDirection: "row", gap: 6 },
-  moodChip: {
-    alignItems: "center", paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, gap: 4,
-    minHeight: 44,
-  },
   prOverlay: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center", alignItems: "center", padding: 32,

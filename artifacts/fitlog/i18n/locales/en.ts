@@ -372,6 +372,9 @@ export default {
     stressHigh: "High",
     hydrationLabel: "Hydration",
     mlToday: "ml today",
+    recRestDay: "Recommended: Rest day today",
+    recLightWorkout: "Recommended: Light workout today",
+    recFullWorkout: "Recommended: Full workout today",
   },
   weeklyReport: {
     title: "Weekly Report",

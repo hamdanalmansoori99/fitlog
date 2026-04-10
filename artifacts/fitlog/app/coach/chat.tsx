@@ -313,12 +313,20 @@ export default function CoachChatScreen() {
           let errorMsg = t("coach.connectionError");
           try {
             const errData = await response.json();
-            if (errData?.error) errorMsg = errData.error;
+            if (errData?.error) {
+              errorMsg = errData.error;
+            } else if (response.status === 503) {
+              errorMsg = "AI service temporarily unavailable";
+            }
             if (errData?.limitReached) {
               setRemaining(0);
               setDailyLimit(errData.limit ?? null);
             }
-          } catch {}
+          } catch {
+            if (response.status === 503) {
+              errorMsg = "AI service temporarily unavailable";
+            }
+          }
           throw new Error(errorMsg);
         }
 
@@ -354,7 +362,7 @@ export default function CoachChatScreen() {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? { ...m, content: t("coach.connectionError"), streaming: false, failed: true, retryText: trimmed }
+                ? { ...m, content: err?.message || t("coach.connectionError"), streaming: false, failed: true, retryText: trimmed }
                 : m
             )
           );

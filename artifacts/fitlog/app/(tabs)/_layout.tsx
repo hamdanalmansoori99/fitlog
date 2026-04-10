@@ -158,7 +158,7 @@ function ClassicTabLayout() {
               {isIOS ? (
                 <SymbolView name="fork.knife.circle.fill" tintColor="#000" size={22} />
               ) : (
-                <MaterialCommunityIcons name="barcode-scan" size={22} color="#000" />
+                <MaterialCommunityIcons name="camera" size={22} color="#000" />
               )}
             </View>
           ),

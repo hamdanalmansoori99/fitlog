@@ -535,9 +535,8 @@ export default function ProfileScreen() {
             ══════════════════════════════════════════════════════════════════ */}
         <View style={styles.menuGrid}>
           {([
-            { icon: "trending-up" as const, title: t("progress.title") || "Progress", onPress: () => router.push("/(tabs)/progress" as any), color: theme.primary },
+            { icon: "trending-up" as const, title: t("progress.title") || "Progress", onPress: () => router.push("/progress" as any), color: theme.primary },
             { icon: "award" as const, title: t("achievements.title") || "Achievements", onPress: () => router.push("/achievements" as any), color: "#e040fb" },
-            { icon: "heart" as const, title: t("profile.recoveryWellness") || "Recovery", onPress: () => router.push("/recovery" as any), color: "#00bcd4" },
             { icon: "calendar" as const, title: t("profile.workoutPlan") || "Workout Plan", onPress: () => router.push("/workouts/plan" as any), color: theme.secondary },
           ]).map((item) => (
             <Pressable

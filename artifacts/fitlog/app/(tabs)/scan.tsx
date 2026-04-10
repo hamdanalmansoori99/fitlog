@@ -42,7 +42,13 @@ type ScreenState = "camera" | "scanning" | "results";
 type MealCategory = "Breakfast" | "Lunch" | "Dinner" | "Snacks";
 type ScanMode = "photo" | "barcode";
 
-const CATEGORIES: MealCategory[] = ["Breakfast", "Lunch", "Dinner", "Snacks"];
+function getAutoCategory(): MealCategory {
+  const hour = new Date().getHours();
+  if (hour < 11) return "Breakfast";
+  if (hour < 15) return "Lunch";
+  if (hour < 21) return "Dinner";
+  return "Snacks";
+}
 
 function MacroPill({
   label,
@@ -275,7 +281,7 @@ export default function ScanScreen() {
   const [items, setItems] = useState<ScanMealItem[]>([]);
   const [totals, setTotals] = useState<MacroTotals>({ calories: 0, proteinG: 0, carbsG: 0, fatG: 0 });
   const [mealDescription, setMealDescription] = useState("");
-  const [category, setCategory] = useState<MealCategory>("Lunch");
+  const category = getAutoCategory();
   const [editingItem, setEditingItem] = useState<ScanMealItem | null>(null);
   const [isLogging, setIsLogging] = useState(false);
   const [scanTimedOut, setScanTimedOut] = useState(false);
@@ -849,35 +855,6 @@ export default function ScanScreen() {
           >
             <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
 
-            {/* ── Category selector (MOVED TO TOP) ── */}
-            <View style={[styles.categoryRow, { borderBottomColor: theme.border, borderBottomWidth: 1, marginBottom: 12 }]}>
-              {CATEGORIES.map((cat) => (
-                <Pressable
-                  key={cat}
-                  onPress={() => setCategory(cat)}
-                  style={[
-                    styles.catChip,
-                    {
-                      backgroundColor: category === cat ? theme.primary : theme.cardAlt,
-                      borderColor: category === cat ? theme.primary : theme.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.catChipText,
-                      {
-                        color: category === cat ? "#000" : theme.textMuted,
-                        fontFamily: category === cat ? "Inter_600SemiBold" : "Inter_400Regular",
-                      },
-                    ]}
-                  >
-                    {t(`scan.categories.${cat.toLowerCase()}`)}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
             {mealDescription ? (
               <Text style={[styles.mealDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                 {mealDescription}
@@ -1312,21 +1289,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-  },
-  categoryRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingVertical: 12,
-  },
-  catChip: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 7,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  catChipText: {
-    fontSize: 11,
   },
   mealHistoryLink: {
     flexDirection: "row",
