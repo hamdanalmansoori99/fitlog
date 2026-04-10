@@ -601,11 +601,36 @@ router.post("/", requireAuth, async (req, res) => {
     const user = getUser(req);
     const { name, category, date, photoUrl, notes, foodItems } = req.body;
 
+    const allowedCategories = ["Breakfast", "Lunch", "Dinner", "Snacks"];
+    if (category && !allowedCategories.includes(category)) {
+      res.status(400).json({ error: `Invalid category. Must be one of: ${allowedCategories.join(", ")}` });
+      return;
+    }
+
+    if (!foodItems || !Array.isArray(foodItems) || foodItems.length === 0) {
+      res.status(400).json({ error: "At least one food item is required" });
+      return;
+    }
+
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      res.status(400).json({ error: "Invalid date" });
+      return;
+    }
+
+    // Clamp food item macros to reasonable bounds
+    for (const item of foodItems) {
+      if (typeof item.calories === "number") item.calories = Math.max(0, Math.min(item.calories, 10000));
+      if (typeof item.proteinG === "number") item.proteinG = Math.max(0, Math.min(item.proteinG, 1000));
+      if (typeof item.carbsG === "number") item.carbsG = Math.max(0, Math.min(item.carbsG, 1000));
+      if (typeof item.fatG === "number") item.fatG = Math.max(0, Math.min(item.fatG, 1000));
+    }
+
     const [meal] = await db.insert(mealsTable).values({
       userId: user.id,
       name,
       category,
-      date: new Date(date),
+      date: parsedDate,
       photoUrl,
       notes,
     }).returning();
@@ -656,26 +681,45 @@ router.put("/:id", requireAuth, async (req, res) => {
     
     const { name, category, date, photoUrl, notes, foodItems } = req.body;
 
-    await db.update(mealsTable).set({ name, category, date: new Date(date), photoUrl, notes, updatedAt: new Date() })
-      .where(eq(mealsTable.id, mealId));
-    
-    if (foodItems) {
-      await db.delete(mealFoodItemsTable).where(eq(mealFoodItemsTable.mealId, mealId));
-      if (foodItems.length > 0) {
-        await db.insert(mealFoodItemsTable).values(
-          foodItems.map((item: any) => ({
-            mealId,
-            name: item.name,
-            portionSize: item.portionSize,
-            unit: item.unit,
-            calories: item.calories,
-            proteinG: item.proteinG,
-            carbsG: item.carbsG,
-            fatG: item.fatG,
-          }))
-        );
-      }
+    const allowedCategories = ["Breakfast", "Lunch", "Dinner", "Snacks"];
+    if (category && !allowedCategories.includes(category)) {
+      res.status(400).json({ error: `Invalid category. Must be one of: ${allowedCategories.join(", ")}` });
+      return;
     }
+
+    if (foodItems && Array.isArray(foodItems) && foodItems.length === 0) {
+      res.status(400).json({ error: "At least one food item is required" });
+      return;
+    }
+
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      res.status(400).json({ error: "Invalid date" });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.update(mealsTable).set({ name, category, date: parsedDate, photoUrl, notes, updatedAt: new Date() })
+        .where(eq(mealsTable.id, mealId));
+
+      if (foodItems) {
+        await tx.delete(mealFoodItemsTable).where(eq(mealFoodItemsTable.mealId, mealId));
+        if (foodItems.length > 0) {
+          await tx.insert(mealFoodItemsTable).values(
+            foodItems.map((item: any) => ({
+              mealId,
+              name: item.name,
+              portionSize: item.portionSize,
+              unit: item.unit,
+              calories: item.calories,
+              proteinG: item.proteinG,
+              carbsG: item.carbsG,
+              fatG: item.fatG,
+            }))
+          );
+        }
+      }
+    });
 
     const fullMeal = await getMealWithFoodItems(mealId, user.id);
     res.json(fullMeal);

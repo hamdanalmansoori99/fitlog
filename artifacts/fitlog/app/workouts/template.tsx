@@ -8,6 +8,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeIn, SlideInRight, ZoomIn } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { getTemplateById } from "@/lib/workoutTemplates";
 import { getFilteredExercises, getActivityBenefits, getEquipmentMatchLevel } from "@/lib/coachEngine";
@@ -76,7 +77,7 @@ function BenefitRow({ benefit, index }: { benefit: string; index: number }) {
   const [expanded, setExpanded] = useState(false);
 
   const key = BENEFIT_KEYS[benefit];
-  const label = key ? t(`workouts.template.benefits.${key}`) : benefit;
+  const label = key ? t(`workouts.template.benefits.${key}`, { defaultValue: benefit }) : benefit;
   const tip = key ? t(`workouts.template.tips.${key}`, { defaultValue: "" }) : "";
 
   return (
@@ -230,7 +231,7 @@ export default function WorkoutTemplateScreen() {
       {/* Nav */}
       <View style={[styles.navBar, { paddingTop: topPad + 8 }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={24} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
         </Pressable>
         <Pressable
           onPress={() => setSaved(!saved)}

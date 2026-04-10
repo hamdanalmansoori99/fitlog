@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import { rtlIcon } from "@/lib/rtl";
 import {
   ProgressionTarget,
   StrengthTarget,
@@ -67,7 +68,7 @@ function StrengthDisplay({ target, compact }: { target: StrengthTarget; compact?
       )}
       {target.previousDisplay && (
         <View style={[styles.arrow, { backgroundColor: theme.border }]}>
-          <Feather name="arrow-right" size={14} color={trendColor} />
+          <Feather name={rtlIcon("arrow-right")} size={14} color={trendColor} />
         </View>
       )}
       <View style={styles.col}>
@@ -123,7 +124,7 @@ function CardioDisplay({ target, compact }: { target: CardioTarget; compact?: bo
       )}
       {target.previousDisplay && targetDisplay && (
         <View style={[styles.arrow, { backgroundColor: theme.border }]}>
-          <Feather name="arrow-right" size={14} color={trendColor} />
+          <Feather name={rtlIcon("arrow-right")} size={14} color={trendColor} />
         </View>
       )}
       {targetDisplay ? (

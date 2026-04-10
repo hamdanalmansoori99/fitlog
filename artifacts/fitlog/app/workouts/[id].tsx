@@ -11,7 +11,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { useTranslation } from "react-i18next";
-import { dateLocale } from "@/lib/rtl";
+import { dateLocale, rtlIcon } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -192,7 +192,7 @@ export default function WorkoutDetailScreen() {
       {/* Nav bar */}
       <View style={[styles.navBar, { paddingTop: topPad + 8, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
           {t("workouts.workoutDetail")}

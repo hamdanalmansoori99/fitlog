@@ -454,6 +454,11 @@ router.post("/", requireAuth, async (req, res) => {
       }
     }
 
+    // Filter out exercises with zero completed sets
+    const validExercises = exercises?.filter(
+      (ex: any) => ex.sets && Array.isArray(ex.sets) && ex.sets.length > 0
+    );
+
     const workout = await db.transaction(async (tx: typeof db) => {
       const [w] = await tx.insert(workoutsTable).values({
         userId: user.id,
@@ -468,8 +473,8 @@ router.post("/", requireAuth, async (req, res) => {
         metadata,
       }).returning();
 
-      if (exercises && exercises.length > 0) {
-        for (const ex of exercises) {
+      if (validExercises && validExercises.length > 0) {
+        for (const ex of validExercises) {
           const [exercise] = await tx.insert(workoutExercisesTable).values({
             workoutId: w.id,
             name: ex.name,
@@ -506,7 +511,7 @@ router.post("/", requireAuth, async (req, res) => {
       activityType: workout.activityType,
       durationMinutes: workout.durationMinutes,
       caloriesBurned: workout.caloriesBurned,
-      exerciseCount: exercises?.length ?? 0,
+      exerciseCount: validExercises?.length ?? 0,
     });
 
     res.status(201).json({ ...fullWorkout, newAchievements });

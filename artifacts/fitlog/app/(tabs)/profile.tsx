@@ -42,21 +42,10 @@ function fmtTime(timeStr: string): string {
 
 const FITNESS_GOALS = ["Lose Weight", "Build Muscle", "Stay Active", "Improve Endurance", "Improve Flexibility"];
 const ACTIVITY_LEVELS = ["Sedentary", "Lightly Active", "Moderately Active", "Very Active"];
-const PROFILE_EQUIPMENT: { id: string; label: string }[] = [
-  { id: "none", label: "Bodyweight only" },
-  { id: "dumbbells", label: "Dumbbells" },
-  { id: "barbell", label: "Barbell" },
-  { id: "bench", label: "Bench" },
-  { id: "pullup_bar", label: "Pull-up bar" },
-  { id: "resistance_bands", label: "Resistance bands" },
-  { id: "kettlebells", label: "Kettlebells" },
-  { id: "cable_machine", label: "Cable machine" },
-  { id: "smith_machine", label: "Smith machine" },
-  { id: "leg_press", label: "Leg press" },
-  { id: "treadmill", label: "Treadmill" },
-  { id: "stationary_bike", label: "Stationary bike" },
-  { id: "rowing_machine", label: "Rowing machine" },
-  { id: "jump_rope", label: "Jump rope" },
+const PROFILE_EQUIPMENT_IDS = [
+  "none", "dumbbells", "barbell", "bench", "pullup_bar",
+  "resistance_bands", "kettlebells", "cable_machine", "smith_machine",
+  "leg_press", "treadmill", "stationary_bike", "rowing_machine", "jump_rope",
 ];
 
 export default function ProfileScreen() {
@@ -683,15 +672,15 @@ export default function ProfileScreen() {
             style={styles.settingRow}
           >
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: "#448aff" + "18" }]}>
-                <Feather name="download" size={16} color="#448aff" />
+              <View style={[styles.settingIcon, { backgroundColor: theme.secondary + "18" }]}>
+                <Feather name="download" size={16} color={theme.secondary} />
               </View>
               <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.exportData")}</Text>
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               {subscriptionData?.plan?.key !== "premium" && (
-                <View style={{ backgroundColor: "#448aff20", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                  <Text style={{ color: "#448aff", fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 0.5 }}>PRO</Text>
+                <View style={{ backgroundColor: theme.secondary + "20", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                  <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 0.5 }}>PRO</Text>
                 </View>
               )}
               <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
@@ -713,8 +702,8 @@ export default function ProfileScreen() {
             style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
           >
             <View style={styles.settingLeft}>
-              <View style={[styles.settingIcon, { backgroundColor: (subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary) + "18" }]}>
-                <Feather name="zap" size={16} color={subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary} />
+              <View style={[styles.settingIcon, { backgroundColor: (subscriptionData?.plan?.key === "premium" ? theme.secondary : theme.primary) + "18" }]}>
+                <Feather name="zap" size={16} color={subscriptionData?.plan?.key === "premium" ? theme.secondary : theme.primary} />
               </View>
               <View>
                 <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.currentPlan")}</Text>
@@ -725,10 +714,10 @@ export default function ProfileScreen() {
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <View style={[styles.planBadge, {
-                backgroundColor: subscriptionData?.plan?.key === "premium" ? "#448aff20" : theme.primaryDim,
+                backgroundColor: subscriptionData?.plan?.key === "premium" ? theme.secondary + "20" : theme.primaryDim,
               }]}>
                 <Text style={{
-                  color: subscriptionData?.plan?.key === "premium" ? "#448aff" : theme.primary,
+                  color: subscriptionData?.plan?.key === "premium" ? theme.secondary : theme.primary,
                   fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 0.8,
                 }}>
                   {(subscriptionData?.plan?.key ?? "free").toUpperCase()}

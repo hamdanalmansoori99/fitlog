@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: MUTED,
     marginTop: 2,
-    paddingLeft: 14,
+    paddingStart: 14,
   },
   footer: {
     alignItems: "center",

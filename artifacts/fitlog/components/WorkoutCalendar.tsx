@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
-import { dateLocale } from "@/lib/rtl";
+import { dateLocale, rtlIcon } from "@/lib/rtl";
 import * as Haptics from "expo-haptics";
 
 const DAY_LABEL_KEYS = [
@@ -123,7 +123,7 @@ export function WorkoutCalendar() {
     <View style={[s.container, { backgroundColor: theme.card, borderColor: theme.border }]}>
       <View style={s.header}>
         <Pressable onPress={() => goMonth(-1)} hitSlop={10} style={s.arrow}>
-          <Feather name="chevron-left" size={20} color={theme.textMuted} />
+          <Feather name={rtlIcon("chevron-left")} size={20} color={theme.textMuted} />
         </Pressable>
         <View style={{ alignItems: "center" }}>
           <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
@@ -142,7 +142,7 @@ export function WorkoutCalendar() {
           disabled={year === now.getFullYear() && month === now.getMonth() + 1}
         >
           <Feather
-            name="chevron-right"
+            name={rtlIcon("chevron-right")}
             size={20}
             color={year === now.getFullYear() && month === now.getMonth() + 1 ? theme.border : theme.textMuted}
           />

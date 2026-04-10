@@ -13,17 +13,20 @@ import { Card } from "@/components/ui/Card";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useTranslation } from "react-i18next";
-import { dateLocale } from "@/lib/rtl";
+import { rtlIcon, dateLocale } from "@/lib/rtl";
 
 type AchievementCategory = "all" | "workouts" | "streaks" | "nutrition" | "hydration" | "prs";
 
-const CAT_COLORS: Record<string, string> = {
-  workouts:  "#00e676",
-  streaks:   "#ff6d00",
-  nutrition: "#ffab40",
-  hydration: "#448aff",
-  prs:       "#e040fb",
-};
+function getCatColor(category: string, theme: any): string {
+  switch (category) {
+    case "workouts": return theme.success;
+    case "streaks": return theme.orange;
+    case "nutrition": return theme.warning;
+    case "hydration": return theme.secondary;
+    case "prs": return theme.purple;
+    default: return theme.primary;
+  }
+}
 
 const CAT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   workouts:  "activity",
@@ -81,9 +84,9 @@ function WeekDots({ perDay, theme }: { perDay: any[]; theme: any }) {
             {d.label}
           </Text>
           <View style={styles.weekDotStack}>
-            <View style={[styles.dot, { backgroundColor: d.workout ? "#00e676" : theme.border }]} />
-            <View style={[styles.dot, { backgroundColor: d.meal    ? "#ffab40" : theme.border }]} />
-            <View style={[styles.dot, { backgroundColor: d.hydration ? "#448aff" : theme.border }]} />
+            <View style={[styles.dot, { backgroundColor: d.workout ? theme.success : theme.border }]} />
+            <View style={[styles.dot, { backgroundColor: d.meal    ? theme.warning : theme.border }]} />
+            <View style={[styles.dot, { backgroundColor: d.hydration ? theme.secondary : theme.border }]} />
           </View>
         </View>
       ))}
@@ -93,7 +96,7 @@ function WeekDots({ perDay, theme }: { perDay: any[]; theme: any }) {
 
 function AchievementBadge({ item, theme }: { item: any; theme: any }) {
   const { t } = useTranslation();
-  const color = CAT_COLORS[item.category] ?? theme.primary;
+  const color = getCatColor(item.category, theme);
   const icon = TYPE_ICONS[item.type] ?? "award";
   const progress = item.progress;
   const pct = progress ? Math.min(progress.current / progress.total, 1) : 0;
@@ -119,7 +122,7 @@ function AchievementBadge({ item, theme }: { item: any; theme: any }) {
               </View>
             )}
           </View>
-          {!item.earned && <Feather name="lock" size={12} color={theme.textMuted} style={{ position: "absolute", top: 6, right: 6 }} />}
+          {!item.earned && <Feather name="lock" size={12} color={theme.textMuted} style={{ position: "absolute", top: 6, end: 6 }} />}
         </View>
 
         <Text style={[styles.badgeTitle, { color: item.earned ? theme.text : theme.textMuted, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
@@ -189,7 +192,7 @@ export default function AchievementsScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.navBar, { paddingTop: topPad + 8 }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={24} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("achievements.title")}</Text>
@@ -242,9 +245,9 @@ export default function AchievementsScreen() {
           <Animated.View entering={FadeInDown.duration(350)} style={{ gap: 10 }}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("achievements.currentStreaks")}</Text>
             <View style={styles.streaksRow}>
-              <StreakCounter label={t("achievements.workouts")} icon="activity" value={streaks?.workout?.current ?? 0} best={streaks?.workout?.best ?? 0} color="#00e676" theme={theme} />
-              <StreakCounter label={t("achievements.meals")}    icon="coffee"   value={streaks?.meal?.current ?? 0}    best={streaks?.meal?.best ?? 0}    color="#ffab40" theme={theme} />
-              <StreakCounter label={t("achievements.hydration")} icon="droplet" value={streaks?.hydration?.current ?? 0} best={streaks?.hydration?.best ?? 0} color="#448aff" theme={theme} />
+              <StreakCounter label={t("achievements.workouts")} icon="activity" value={streaks?.workout?.current ?? 0} best={streaks?.workout?.best ?? 0} color={theme.success} theme={theme} />
+              <StreakCounter label={t("achievements.meals")}    icon="coffee"   value={streaks?.meal?.current ?? 0}    best={streaks?.meal?.best ?? 0}    color={theme.warning} theme={theme} />
+              <StreakCounter label={t("achievements.hydration")} icon="droplet" value={streaks?.hydration?.current ?? 0} best={streaks?.hydration?.best ?? 0} color={theme.secondary} theme={theme} />
             </View>
           </Animated.View>
 
@@ -267,7 +270,7 @@ export default function AchievementsScreen() {
                 </View>
                 {weekly.perDay && <WeekDots perDay={weekly.perDay} theme={theme} />}
                 <View style={styles.legendRow}>
-                  {[["#00e676", t("achievements.workout")], ["#ffab40", t("achievements.meals")], ["#448aff", t("achievements.hydration")]].map(([color, label]) => (
+                  {[[theme.success, t("achievements.workout")], [theme.warning, t("achievements.meals")], [theme.secondary, t("achievements.hydration")]].map(([color, label]) => (
                     <View key={label} style={styles.legendItem}>
                       <View style={[styles.legendDot, { backgroundColor: color }]} />
                       <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{label}</Text>
@@ -289,13 +292,13 @@ export default function AchievementsScreen() {
                     style={[
                       styles.filterChip,
                       {
-                        backgroundColor: filter === f.key ? (f.key === "all" ? theme.primary : CAT_COLORS[f.key] ?? theme.primary) : theme.card,
+                        backgroundColor: filter === f.key ? (f.key === "all" ? theme.primary : getCatColor(f.key, theme)) : theme.card,
                         borderColor: filter === f.key ? "transparent" : theme.border,
                       },
                     ]}
                   >
                     <Text style={{
-                      color: filter === f.key ? "#0f0f1a" : theme.textMuted,
+                      color: filter === f.key ? theme.background : theme.textMuted,
                       fontFamily: "Inter_600SemiBold", fontSize: 13,
                     }}>
                       {f.label}
@@ -326,8 +329,8 @@ export default function AchievementsScreen() {
                       i < recentPRs.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
                     ]}
                   >
-                    <View style={[styles.prIcon, { backgroundColor: "#e040fb" + "18" }]}>
-                      <Feather name="trending-up" size={16} color="#e040fb" />
+                    <View style={[styles.prIcon, { backgroundColor: theme.purple + "18" }]}>
+                      <Feather name="trending-up" size={16} color={theme.purple} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{pr.exercise}</Text>
@@ -337,11 +340,11 @@ export default function AchievementsScreen() {
                         </Text>
                       )}
                     </View>
-                    <View style={[styles.prBadge, { backgroundColor: "#e040fb" + "18" }]}>
-                      <Text style={{ color: "#e040fb", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                    <View style={[styles.prBadge, { backgroundColor: theme.purple + "18" }]}>
+                      <Text style={{ color: theme.purple, fontFamily: "Inter_700Bold", fontSize: 15 }}>
                         {pr.weightKg % 1 === 0 ? pr.weightKg : pr.weightKg.toFixed(1)}
                       </Text>
-                      <Text style={{ color: "#e040fb", fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("common.kg")}</Text>
+                      <Text style={{ color: theme.purple, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("common.kg")}</Text>
                     </View>
                   </View>
                 ))}
@@ -405,7 +408,7 @@ const styles = StyleSheet.create({
   badge: { borderRadius: 14, borderWidth: 1.5, padding: 12, gap: 4 },
   badgeTop: { position: "relative", alignSelf: "flex-start", marginBottom: 6 },
   badgeIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  earnedTick: { position: "absolute", bottom: -4, right: -4, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  earnedTick: { position: "absolute", bottom: -4, end: -4, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   badgeTitle: { fontSize: 13 },
   badgeDesc: { fontSize: 11, lineHeight: 15 },
   badgeDate: { fontSize: 11, marginTop: 4 },

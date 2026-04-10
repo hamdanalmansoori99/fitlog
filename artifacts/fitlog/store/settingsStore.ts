@@ -13,6 +13,7 @@ interface SettingsState {
   setLanguage: (val: "en" | "ar") => void;
   syncToServer: () => Promise<void>;
   fetchFromServer: () => Promise<void>;
+  resetStore: () => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -47,6 +48,8 @@ export const useSettingsStore = create<SettingsState>()(
           console.warn("[SettingsStore] sync to server failed:", err);
         }
       },
+
+      resetStore: () => set({ darkMode: true, unitSystem: "metric", language: "en", lastSynced: null }),
 
       fetchFromServer: async () => {
         try {

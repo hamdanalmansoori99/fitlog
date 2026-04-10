@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, favoriteMealsTable, mealsTable, mealFoodItemsTable } from "@workspace/db";
-import { eq, and, gte, lt, desc } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
 const router = Router();
@@ -13,7 +13,8 @@ router.get("/", requireAuth, async (req, res) => {
       .where(eq(favoriteMealsTable.userId, user.id))
       .orderBy(desc(favoriteMealsTable.usageCount), desc(favoriteMealsTable.createdAt));
     res.json({ favorites });
-  } catch {
+  } catch (err) {
+    console.error("Get favorites error:", err);
     res.status(500).json({ error: "Failed to get favorite meals" });
   }
 });
@@ -63,7 +64,8 @@ router.post("/", requireAuth, async (req, res) => {
     }).returning();
 
     res.status(201).json({ favorite });
-  } catch {
+  } catch (err) {
+    console.error("Save favourite error:", err);
     res.status(500).json({ error: "Failed to save favourite meal" });
   }
 });
@@ -77,7 +79,8 @@ router.delete("/:id", requireAuth, async (req, res) => {
     await db.delete(favoriteMealsTable)
       .where(and(eq(favoriteMealsTable.id, id), eq(favoriteMealsTable.userId, user.id)));
     res.json({ ok: true });
-  } catch {
+  } catch (err) {
+    console.error("Delete favourite error:", err);
     res.status(500).json({ error: "Failed to delete favourite meal" });
   }
 });
@@ -121,11 +124,12 @@ router.post("/:id/log", requireAuth, async (req, res) => {
 
     // Increment usage count
     await db.update(favoriteMealsTable)
-      .set({ usageCount: (fav.usageCount || 0) + 1, lastUsedAt: new Date() })
+      .set({ usageCount: sql`${favoriteMealsTable.usageCount} + 1`, lastUsedAt: new Date() })
       .where(eq(favoriteMealsTable.id, id));
 
     res.status(201).json({ meal: { ...meal, foodItems: fav.foodItems } });
-  } catch {
+  } catch (err) {
+    console.error("Log favourite error:", err);
     res.status(500).json({ error: "Failed to log favourite meal" });
   }
 });
@@ -139,11 +143,13 @@ router.post("/duplicate-day", requireAuth, async (req, res) => {
     if (!fromDate) { res.status(400).json({ error: "fromDate required" }); return; }
 
     const from = new Date(fromDate);
+    if (isNaN(from.getTime())) { res.status(400).json({ error: "Invalid fromDate" }); return; }
     from.setHours(0, 0, 0, 0);
     const fromEnd = new Date(from);
     fromEnd.setDate(from.getDate() + 1);
 
     const to = toDate ? new Date(toDate) : new Date();
+    if (isNaN(to.getTime())) { res.status(400).json({ error: "Invalid toDate" }); return; }
     to.setHours(12, 0, 0, 0);
 
     // Fetch source meals
@@ -191,7 +197,8 @@ router.post("/duplicate-day", requireAuth, async (req, res) => {
     }
 
     res.status(201).json({ count: created.length, meals: created });
-  } catch {
+  } catch (err) {
+    console.error("Duplicate meals error:", err);
     res.status(500).json({ error: "Failed to duplicate meals" });
   }
 });

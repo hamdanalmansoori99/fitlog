@@ -245,7 +245,7 @@ export function WaterTracker({ workedOutToday = false }: { workedOutToday?: bool
                 <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 13, flex: 1 }}>
                   {useImperial ? `${(log.amountMl / ML_PER_OZ).toFixed(1)} oz` : `${log.amountMl}ml`}
                 </Text>
-                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginRight: 10 }}>
+                <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginEnd: 10 }}>
                   {fmtTime(log.loggedAt)}
                 </Text>
                 <Pressable onPress={() => handleDelete(log.id)} hitSlop={8}>

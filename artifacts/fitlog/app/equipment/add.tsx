@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 
 const EQUIPMENT_IDS = [
   { id: "dumbbells", labelKey: "equipment.dumbbells", icon: "zap" as const },
@@ -65,7 +66,7 @@ export default function AddEquipmentScreen() {
     <View style={[{ flex: 1, backgroundColor: theme.background }]}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingTop: topPad + 8, paddingHorizontal: 16, paddingBottom: 12 }}>
         <Pressable onPress={() => router.back()} style={{ width: 44, height: 44, justifyContent: "center" }}>
-          <Feather name="arrow-left" size={24} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
         </Pressable>
         <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 17 }}>{t("equipment.addEquipment")}</Text>
       </View>

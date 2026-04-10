@@ -5,6 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
+import { rtlIcon } from "@/lib/rtl";
 import { useWorkoutStore } from "@/store/workoutStore";
 import { getTemplateById } from "@/lib/workoutTemplates";
 
@@ -97,7 +98,7 @@ export function ActiveWorkoutPill() {
         >
           {t("workouts.activePill", { name: activeWorkoutTemplateName ?? "" })}
         </Text>
-        <Feather name="chevron-right" size={14} color="#0f0f1a" />
+        <Feather name={rtlIcon("chevron-right")} size={14} color="#0f0f1a" />
       </Pressable>
     </Animated.View>
   );

@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/store/authStore";
 import { api, BASE_URL } from "@/lib/api";
 import { useTheme } from "@/hooks/useTheme";
+import { rtlIcon } from "@/lib/rtl";
 
 interface ChatMessage {
   id: string;
@@ -309,7 +310,7 @@ export default function CoachChatScreen() {
         });
 
         if (!response.ok) {
-          let errorMsg = "Failed to connect to coach";
+          let errorMsg = t("coach.connectionError");
           try {
             const errData = await response.json();
             if (errData?.error) errorMsg = errData.error;
@@ -466,7 +467,7 @@ export default function CoachChatScreen() {
 
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.headerBtn} hitSlop={8}>
-          <Feather name="arrow-left" size={22} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
         </Pressable>
         <View style={styles.headerCenter}>
           <View style={styles.headerDot} />
@@ -558,8 +559,8 @@ export default function CoachChatScreen() {
                     padding: 12,
                     backgroundColor: theme.card,
                     borderRadius: 12,
-                    borderLeftWidth: 3,
-                    borderLeftColor: theme.primary,
+                    borderStartWidth: 3,
+                    borderStartColor: theme.primary,
                   }}
                 >
                   <Text style={{ fontSize: 11, color: theme.primary, fontFamily: "Inter_600SemiBold", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>

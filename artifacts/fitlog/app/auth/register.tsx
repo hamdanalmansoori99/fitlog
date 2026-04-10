@@ -12,6 +12,7 @@ import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { rtlIcon } from "@/lib/rtl";
 
 type FormState = { firstName: string; lastName: string; email: string; password: string };
 type FormAction = { field: keyof FormState; value: string };
@@ -90,7 +91,7 @@ export default function RegisterScreen() {
       >
         <View style={[styles.inner, Platform.OS === "web" ? { maxWidth: MAX_W, alignSelf: "center", width: "100%" } : {}]}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Feather name="arrow-left" size={24} color={theme.text} />
+            <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
           </Pressable>
 
           <View style={styles.header}>

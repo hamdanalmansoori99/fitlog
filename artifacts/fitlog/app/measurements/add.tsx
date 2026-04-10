@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 
 export default function AddMeasurementScreen() {
   const { theme } = useTheme();
@@ -114,7 +115,7 @@ export default function AddMeasurementScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.navBar, { paddingTop: topPad + 8 }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={24} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("measurements.logMeasurement")}</Text>
         <View style={{ width: 44 }} />

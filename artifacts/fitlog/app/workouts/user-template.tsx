@@ -9,6 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -118,7 +119,7 @@ export default function UserTemplateScreen() {
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={[styles.nav, { paddingTop: topPad + 8 }]}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Feather name="arrow-left" size={24} color={theme.text} />
+            <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
           </Pressable>
         </View>
         <View style={{ paddingHorizontal: 16, paddingTop: 16, gap: 14 }}>
@@ -141,7 +142,7 @@ export default function UserTemplateScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.nav, { paddingTop: topPad + 8, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={24} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
           {template.name}

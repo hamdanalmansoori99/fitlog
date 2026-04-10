@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   TextInput, Platform, KeyboardAvoidingView,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +14,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 
 const TOTAL_STEPS = 6;
 
@@ -63,11 +65,11 @@ function calcMacros(data: OnboardingData) {
   return { calories, protein, carbs, fat };
 }
 
-function bmiCategory(bmi: number): { label: string; color: string; motivation: string } {
-  if (bmi < 18.5) return { label: "Underweight", color: "#4fc3f7", motivation: "Focus on building strength and healthy habits." };
-  if (bmi < 25)   return { label: "Normal weight", color: "#00e676", motivation: "Great foundation! Keep up the healthy lifestyle." };
-  if (bmi < 30)   return { label: "Overweight", color: "#ffab40", motivation: "Consistent training and nutrition will get you there." };
-  return            { label: "Obese", color: "#ef5350", motivation: "Every workout counts. You're already taking the right steps." };
+function bmiCategory(bmi: number, t: (k: string) => string): { label: string; color: string; motivation: string } {
+  if (bmi < 18.5) return { label: t("onboarding.bmiUnderweight"), color: "#4fc3f7", motivation: t("onboarding.bmiUnderweightMotiv") };
+  if (bmi < 25)   return { label: t("onboarding.bmiNormal"), color: "#00e676", motivation: t("onboarding.bmiNormalMotiv") };
+  if (bmi < 30)   return { label: t("onboarding.bmiOverweight"), color: "#ffab40", motivation: t("onboarding.bmiOverweightMotiv") };
+  return            { label: t("onboarding.bmiObese"), color: "#ef5350", motivation: t("onboarding.bmiObeseMotiv") };
 }
 
 const FITNESS_GOALS = [
@@ -229,6 +231,30 @@ export default function OnboardingScreen() {
     activityLevel: "",
     availableEquipment: [],
   });
+  const restoredRef = useRef(false);
+
+  // Restore onboarding progress on mount
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    AsyncStorage.getItem("onboarding_progress").then((saved) => {
+      if (!saved) return;
+      try {
+        const state = JSON.parse(saved);
+        if (state.step != null && state.step < 5) setStep(state.step);
+        if (state.data) setData((prev) => ({ ...prev, ...state.data }));
+      } catch {}
+    }).catch(() => {});
+  }, []);
+
+  // Persist onboarding progress on every change
+  useEffect(() => {
+    if (step >= 5) {
+      AsyncStorage.removeItem("onboarding_progress").catch(() => {});
+      return;
+    }
+    AsyncStorage.setItem("onboarding_progress", JSON.stringify({ step, data })).catch(() => {});
+  }, [step, data]);
 
   const mutation = useMutation({
     mutationFn: (payload: any) => api.updateProfile(payload),
@@ -238,7 +264,7 @@ export default function OnboardingScreen() {
       setStep(5);
     },
     onError: (err: any) => {
-      setSubmitError(err?.message || "Something went wrong. Please try again.");
+      setSubmitError(err?.message || t("common.errorOccurred"));
     },
   });
 
@@ -341,7 +367,7 @@ export default function OnboardingScreen() {
             <Text style={{ fontFamily: "Inter_700Bold", fontSize: 17, color: "#0f0f1a" }}>
               {t("onboarding.letsGo")}
             </Text>
-            <Feather name="arrow-right" size={20} color="#0f0f1a" />
+            <Feather name={rtlIcon("arrow-right")} size={20} color="#0f0f1a" />
           </Pressable>
         </Animated.View>
         </ScrollView>
@@ -357,7 +383,7 @@ export default function OnboardingScreen() {
       <View style={[styles.topBar, { paddingTop: topPad + 8 }]}>
         {step > 0 ? (
           <Pressable onPress={() => setStep(step - 1)} style={[styles.backBtn, { backgroundColor: theme.card }]} hitSlop={8}>
-            <Feather name="arrow-left" size={20} color={theme.text} />
+            <Feather name={rtlIcon("arrow-left")} size={20} color={theme.text} />
           </Pressable>
         ) : (
           <View style={{ width: 38 }} />
@@ -482,7 +508,7 @@ export default function OnboardingScreen() {
             const w = parseFloat(data.weightKg);
             const hasBMI = h > 0 && w > 0;
             const bmi = hasBMI ? calcBMI(h, w) : null;
-            const cat = bmi !== null ? bmiCategory(bmi) : null;
+            const cat = bmi !== null ? bmiCategory(bmi, t) : null;
             return (
               <>
                 <StepHeader title={t("onboarding.yourBodyStats")} subtitle={t("onboarding.bodyStatsSummary")} />
@@ -548,7 +574,7 @@ export default function OnboardingScreen() {
                     label={t("onboarding.waistLabel")}
                     value={data.waistCm}
                     onChangeText={(v) => setData({ ...data, waistCm: v })}
-                    placeholder="e.g. 85"
+                    placeholder={t("onboarding.waistPlaceholder")}
                     keyboardType="decimal-pad"
                     theme={theme}
                   />
@@ -589,7 +615,7 @@ export default function OnboardingScreen() {
               <Text style={styles.nextBtnText}>
                 {step === 4 ? t("onboarding.buildMyPlan") : t("common.continueText")}
               </Text>
-              <Feather name="arrow-right" size={18} color="#0f0f1a" />
+              <Feather name={rtlIcon("arrow-right")} size={18} color="#0f0f1a" />
             </>
           )}
         </Pressable>

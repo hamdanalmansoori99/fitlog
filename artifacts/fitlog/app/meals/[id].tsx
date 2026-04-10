@@ -12,7 +12,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { useTranslation } from "react-i18next";
-import { dateLocale } from "@/lib/rtl";
+import { dateLocale, rtlIcon } from "@/lib/rtl";
 
 const CAT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   Breakfast: "sun", Lunch: "cloud", Dinner: "moon", Snacks: "coffee", snacks: "coffee",
@@ -141,7 +141,7 @@ export default function MealDetailScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.navBar, { paddingTop: topPad + 8, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
           {t("meals.mealDetail")}

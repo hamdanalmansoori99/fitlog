@@ -36,6 +36,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api, ScanMealItem, MacroTotals, ScanStatus } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 
 type ScreenState = "camera" | "scanning" | "results";
 type MealCategory = "Breakfast" | "Lunch" | "Dinner" | "Snacks";
@@ -941,7 +942,7 @@ export default function ScanScreen() {
                 <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
                   {t("scan.viewMealHistory")}
                 </Text>
-                <Feather name="chevron-right" size={14} color={theme.primary} />
+                <Feather name={rtlIcon("chevron-right")} size={14} color={theme.primary} />
               </Pressable>
             </ScrollView>
 

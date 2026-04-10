@@ -14,6 +14,7 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 import { EXERCISES, EXERCISE_CATEGORIES } from "@/lib/exerciseLibrary";
 
 function muscleKey(name: string): string {
@@ -84,7 +85,7 @@ export default function ExercisesScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
         </Pressable>
         <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
           {t("exercises.exercisesTitle")}
@@ -247,7 +248,7 @@ export default function ExercisesScreen() {
                     </View>
                   </View>
                 </View>
-                <Feather name="chevron-right" size={14} color={theme.textMuted} />
+                <Feather name={rtlIcon("chevron-right")} size={14} color={theme.textMuted} />
               </Pressable>
             );
           }}

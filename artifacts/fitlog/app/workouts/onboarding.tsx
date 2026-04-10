@@ -8,6 +8,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInRight, FadeOutLeft } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
@@ -211,7 +212,7 @@ export default function WorkoutOnboardingScreen() {
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
         {step > 0 && (
           <Pressable onPress={() => setStep(s => s - 1)} style={styles.backBtn}>
-            <Feather name="arrow-left" size={22} color={theme.text} />
+            <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
           </Pressable>
         )}
         <View style={[styles.progressBar, { backgroundColor: theme.border }]}>

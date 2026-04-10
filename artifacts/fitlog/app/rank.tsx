@@ -14,6 +14,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { RANKS, getRankByXp, getXpProgress } from "@/lib/ranks";
 import { RankBadge } from "@/components/RankBadge";
+import { rtlIcon } from "@/lib/rtl";
 
 export default function RankScreen() {
   const { theme } = useTheme();
@@ -35,7 +36,7 @@ export default function RankScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
           Your Rank

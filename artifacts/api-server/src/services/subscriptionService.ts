@@ -30,12 +30,15 @@ export async function getActiveSubscription(
 
   const row = rows[0];
 
-  const planKey = row?.planKey ?? "free";
+  const now = new Date();
+  const isTrialing = row?.status === "trialing" && row?.trialEndsAt && now < row.trialEndsAt;
+  const isExpired = row?.status === "cancelled" && row?.periodEnd && now > row.periodEnd;
+
+  // Expired subscriptions fall back to free plan
+  const planKey = isExpired ? "free" : (row?.planKey ?? "free");
   const effectivePlanKey = getEffectivePlanKey(userRole, planKey);
   const plan = getPlan(effectivePlanKey);
-
-  const isTrialing = row?.status === "trialing" && row?.trialEndsAt && new Date() < row.trialEndsAt;
-  const effectiveStatus = isTrialing ? "trialing" : (row?.status ?? "active");
+  const effectiveStatus = isExpired ? "expired" : isTrialing ? "trialing" : (row?.status ?? "active");
 
   return {
     plan,

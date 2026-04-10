@@ -9,8 +9,6 @@ import { useTheme } from "@/hooks/useTheme";
 import { useSubscription, type SubscriptionFeatures } from "@/hooks/useSubscription";
 import { useTranslation } from "react-i18next";
 
-const BLUE = "#448aff";
-
 interface FeatureContent {
   icon: keyof typeof Feather.glyphMap;
   titleKey: string;
@@ -98,7 +96,7 @@ export function UpsellModal({ visible, onClose, feature }: Props) {
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      <Pressable style={[styles.backdrop, { backgroundColor: theme.overlay }]} onPress={onClose} />
 
       <View style={[styles.sheet, { backgroundColor: theme.card }]}>
         {/* Drag handle */}
@@ -111,8 +109,8 @@ export function UpsellModal({ visible, onClose, feature }: Props) {
 
         {/* Icon + headline */}
         <View style={styles.hero}>
-          <View style={[styles.iconWrap, { backgroundColor: BLUE + "18" }]}>
-            <Feather name={content.icon} size={28} color={BLUE} />
+          <View style={[styles.iconWrap, { backgroundColor: theme.secondary + "18" }]}>
+            <Feather name={content.icon} size={28} color={theme.secondary} />
           </View>
           <Text style={[styles.title, { color: theme.text }]}>{t(content.titleKey)}</Text>
           <Text style={[styles.subtitle, { color: theme.textMuted }]}>{t("upsell.subtitle")}</Text>
@@ -122,8 +120,8 @@ export function UpsellModal({ visible, onClose, feature }: Props) {
         <View style={styles.benefits}>
           {content.benefits.map((key) => (
             <View key={key} style={styles.benefitRow}>
-              <View style={[styles.benefitCheck, { backgroundColor: BLUE + "18" }]}>
-                <Feather name="check" size={12} color={BLUE} />
+              <View style={[styles.benefitCheck, { backgroundColor: theme.secondary + "18" }]}>
+                <Feather name="check" size={12} color={theme.secondary} />
               </View>
               <Text style={[styles.benefitText, { color: theme.text }]}>{t(key)}</Text>
             </View>
@@ -142,13 +140,13 @@ export function UpsellModal({ visible, onClose, feature }: Props) {
           </Pressable>
           <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setBillingCycle("yearly"); }}
-            style={[styles.billingOption, billingCycle === "yearly" && { backgroundColor: BLUE + "22" }]}
+            style={[styles.billingOption, billingCycle === "yearly" && { backgroundColor: theme.secondary + "22" }]}
           >
-            <Text style={[styles.billingText, { color: billingCycle === "yearly" ? BLUE : theme.textMuted }]}>
+            <Text style={[styles.billingText, { color: billingCycle === "yearly" ? theme.secondary : theme.textMuted }]}>
               {t("subscription.yearly")}
             </Text>
             {savings > 0 && (
-              <View style={[styles.saveBadge, { backgroundColor: BLUE }]}>
+              <View style={[styles.saveBadge, { backgroundColor: theme.secondary }]}>
                 <Text style={styles.saveBadgeText}>{t("subscription.savePct", { pct: savings })}</Text>
               </View>
             )}
@@ -165,7 +163,7 @@ export function UpsellModal({ visible, onClose, feature }: Props) {
         {/* CTA */}
         <Pressable
           onPress={handleCTA}
-          style={[styles.ctaBtn, { backgroundColor: BLUE }]}
+          style={[styles.ctaBtn, { backgroundColor: theme.secondary }]}
         >
           <Feather name="zap" size={18} color="#fff" />
           <Text style={styles.ctaText}>{t("upsell.cta")}</Text>
@@ -182,7 +180,6 @@ export function UpsellModal({ visible, onClose, feature }: Props) {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "#00000060",
   },
   sheet: {
     borderTopLeftRadius: 24,
@@ -197,7 +194,7 @@ const styles = StyleSheet.create({
     alignSelf: "center", marginBottom: 4,
   },
   closeBtn: {
-    position: "absolute", top: 16, right: 20, padding: 4,
+    position: "absolute", top: 16, end: 20, padding: 4,
   },
   hero: { alignItems: "center", gap: 8, paddingTop: 8 },
   iconWrap: {

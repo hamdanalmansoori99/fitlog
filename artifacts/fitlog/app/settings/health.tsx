@@ -11,6 +11,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
+import { rtlIcon } from "@/lib/rtl";
 import {
   isHealthIntegrationAvailable,
   requestHealthPermissions,
@@ -62,7 +63,7 @@ export default function HealthSettingsScreen() {
           onPress={() => router.back()}
           style={{ flexDirection: "row", alignItems: "center", marginBottom: 24, gap: 8 }}
         >
-          <Feather name="arrow-left" size={20} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={20} color={theme.text} />
           <Text style={{ fontSize: 18, fontFamily: "Inter_700Bold", color: theme.text }}>
             {t("health.title")}
           </Text>

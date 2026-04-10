@@ -18,7 +18,7 @@ import { useToast } from "@/components/ui/Toast";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useTranslation } from "react-i18next";
-import { dateLocale } from "@/lib/rtl";
+import { dateLocale, rtlIcon } from "@/lib/rtl";
 
 const CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
@@ -383,7 +383,7 @@ export default function MealsScreen() {
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Feather name="arrow-left" size={22} color={theme.text} />
+            <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
           </Pressable>
           <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("meals.title")}</Text>
         </View>
@@ -407,13 +407,13 @@ export default function MealsScreen() {
       {/* Date picker */}
       <View style={[styles.datePicker, { borderColor: theme.border }]}>
         <Pressable onPress={() => changeDate(-1)} style={styles.dateArrow}>
-          <Feather name="chevron-left" size={22} color={theme.textMuted} />
+          <Feather name={rtlIcon("chevron-left")} size={22} color={theme.textMuted} />
         </Pressable>
         <Text style={[styles.dateText, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
           {isToday ? t("common.today") : new Date(selectedDate + "T12:00:00").toLocaleDateString(dateLocale(), { month: "short", day: "numeric" })}
         </Text>
         <Pressable onPress={() => changeDate(1)} style={styles.dateArrow} disabled={isToday}>
-          <Feather name="chevron-right" size={22} color={isToday ? theme.border : theme.textMuted} />
+          <Feather name={rtlIcon("chevron-right")} size={22} color={isToday ? theme.border : theme.textMuted} />
         </Pressable>
         {!isToday && (
           <Pressable
@@ -559,7 +559,7 @@ export default function MealsScreen() {
                     </Text>
                   </View>
                   {!generatePlanMutation.isPending && (
-                    <Feather name="chevron-right" size={18} color={theme.secondary} />
+                    <Feather name={rtlIcon("chevron-right")} size={18} color={theme.secondary} />
                   )}
                 </Pressable>
               ) : (

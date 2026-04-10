@@ -741,49 +741,67 @@ router.post("/message", requireAuth, async (req, res) => {
       return;
     }
 
-    // ── Enforce daily AI message limit ──
+    if (content.length > 2000) {
+      res.status(400).json({ error: "Message too long (max 2000 characters)" });
+      return;
+    }
+
+    // ── Enforce daily AI message limit (atomic check + insert) ──
     const sub = await getActiveSubscription(user.id, user.role ?? "user");
     const dailyLimit = sub.plan.limits.aiRequestsPerDay;
-    const todayCount = await getTodayMessageCount(user.id);
-    if (dailyLimit > 0 && todayCount >= dailyLimit) {
+
+    // Safety check — bypass AI entirely if triggered
+    const safetyResponse = detectSafetyIssue(content.trim());
+
+    // Atomic: get/create conversation, check rate limit, insert message in one transaction
+    let conversation: any;
+    const rateLimitResult = await db.transaction(async (tx: typeof db) => {
+      // Advisory lock per user prevents concurrent requests from bypassing the limit
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${user.id})`);
+
+      conversation = await tx
+        .select()
+        .from(conversations)
+        .where(eq(conversations.userId, user.id))
+        .orderBy(desc(conversations.createdAt))
+        .limit(1)
+        .then((rows) => rows[0] ?? null);
+
+      if (!conversation) {
+        const [created] = await tx
+          .insert(conversations)
+          .values({ userId: user.id, title: "AI Coach" })
+          .returning();
+        conversation = created;
+      }
+
+      // Count inside the transaction (serialized by advisory lock)
+      const todayCount = await getTodayMessageCount(user.id);
+      if (dailyLimit > 0 && todayCount >= dailyLimit) {
+        return { limited: true, todayCount };
+      }
+
+      await tx.insert(messages).values({
+        conversationId: conversation.id,
+        role: "user",
+        content: content.trim(),
+      });
+      return { limited: false, todayCount };
+    });
+
+    if (rateLimitResult.limited) {
       const isPremium = sub.effectivePlanKey === "premium";
       res.status(429).json({
         error: isPremium
           ? `You've reached your daily limit of ${dailyLimit} messages. Your limit resets at midnight UTC.`
-          : `You've used all ${dailyLimit} free messages today. Upgrade to Premium for 50 messages/day with our smarter AI model.`,
+          : `You've used all ${dailyLimit} free messages today. Upgrade to Premium for 25 messages/day with our smarter AI model.`,
         limitReached: true,
-        used: todayCount,
+        used: rateLimitResult.todayCount,
         limit: dailyLimit,
         isPremium,
       });
       return;
     }
-
-    // Safety check — bypass AI entirely if triggered
-    const safetyResponse = detectSafetyIssue(content.trim());
-
-    let conversation = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.userId, user.id))
-      .orderBy(desc(conversations.createdAt))
-      .limit(1)
-      .then((rows) => rows[0] ?? null);
-
-    if (!conversation) {
-      const [created] = await db
-        .insert(conversations)
-        .values({ userId: user.id, title: "AI Coach" })
-        .returning();
-      conversation = created;
-    }
-
-    // Save user message
-    await db.insert(messages).values({
-      conversationId: conversation.id,
-      role: "user",
-      content: content.trim(),
-    });
 
     if (safetyResponse) {
       await db.insert(messages).values({

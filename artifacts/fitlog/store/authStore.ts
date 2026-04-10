@@ -4,6 +4,9 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { useWorkoutStore } from "./workoutStore";
 import { usePhotoStore } from "./photoStore";
 import { usePendingWorkoutsStore } from "./pendingWorkoutsStore";
+import { useSettingsStore } from "./settingsStore";
+import { useNotificationStore } from "./notificationStore";
+import { useWeeklyPlanStore } from "./weeklyPlanStore";
 
 interface AuthState {
   token: string | null;
@@ -31,6 +34,9 @@ export const useAuthStore = create<AuthState>()(
         useWorkoutStore.getState().resetStore();
         usePhotoStore.getState().resetStore();
         usePendingWorkoutsStore.getState().resetStore();
+        useSettingsStore.getState().resetStore();
+        useNotificationStore.getState().resetStore();
+        useWeeklyPlanStore.getState().clearPlan();
       },
       setHydrated: () => set({ _hydrated: true }),
     }),

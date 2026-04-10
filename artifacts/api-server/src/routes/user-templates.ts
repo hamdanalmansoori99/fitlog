@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, userWorkoutTemplatesTable, workoutsTable, workoutExercisesTable, workoutSetsTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 
 const router = Router();
@@ -17,7 +17,8 @@ router.get("/", requireAuth, async (req, res) => {
         desc(userWorkoutTemplatesTable.createdAt)
       );
     res.json({ templates });
-  } catch {
+  } catch (err) {
+    console.error("Get templates error:", err);
     res.status(500).json({ error: "Failed to get templates" });
   }
 });
@@ -88,7 +89,8 @@ router.post("/", requireAuth, async (req, res) => {
     }).returning();
 
     res.status(201).json({ template });
-  } catch {
+  } catch (err) {
+    console.error("Create template error:", err);
     res.status(500).json({ error: "Failed to create template" });
   }
 });
@@ -115,7 +117,8 @@ router.put("/:id", requireAuth, async (req, res) => {
 
     if (!template) { res.status(404).json({ error: "Template not found" }); return; }
     res.json({ template });
-  } catch {
+  } catch (err) {
+    console.error("Update template error:", err);
     res.status(500).json({ error: "Failed to update template" });
   }
 });
@@ -128,7 +131,8 @@ router.delete("/:id", requireAuth, async (req, res) => {
     await db.delete(userWorkoutTemplatesTable)
       .where(and(eq(userWorkoutTemplatesTable.id, id), eq(userWorkoutTemplatesTable.userId, user.id)));
     res.json({ ok: true });
-  } catch {
+  } catch (err) {
+    console.error("Delete template error:", err);
     res.status(500).json({ error: "Failed to delete template" });
   }
 });
@@ -147,7 +151,8 @@ router.post("/:id/favorite", requireAuth, async (req, res) => {
       .where(eq(userWorkoutTemplatesTable.id, id))
       .returning();
     res.json({ template });
-  } catch {
+  } catch (err) {
+    console.error("Toggle favorite error:", err);
     res.status(500).json({ error: "Failed to toggle favorite" });
   }
 });
@@ -162,12 +167,13 @@ router.post("/:id/use", requireAuth, async (req, res) => {
     if (!existing) { res.status(404).json({ error: "Template not found" }); return; }
 
     const [template] = await db.update(userWorkoutTemplatesTable)
-      .set({ usageCount: (existing.usageCount || 0) + 1, lastUsedAt: new Date(), updatedAt: new Date() })
+      .set({ usageCount: sql`${userWorkoutTemplatesTable.usageCount} + 1`, lastUsedAt: new Date(), updatedAt: new Date() })
       .where(eq(userWorkoutTemplatesTable.id, id))
       .returning();
 
     res.json({ template });
-  } catch {
+  } catch (err) {
+    console.error("Record usage error:", err);
     res.status(500).json({ error: "Failed to record usage" });
   }
 });

@@ -9,10 +9,11 @@ interface InputProps extends TextInputProps {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   secureEntry?: boolean;
+  accessibilityLabel?: string;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(function Input(
-  { label, error, leftIcon, rightIcon, secureEntry, onFocus, onBlur, ...props },
+  { label, error, leftIcon, rightIcon, secureEntry, accessibilityLabel, onFocus, onBlur, ...props },
   ref,
 ) {
   const { theme } = useTheme();
@@ -40,6 +41,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           ref={ref}
           {...props}
           secureTextEntry={secure}
+          accessibilityLabel={accessibilityLabel ?? label ?? props.placeholder}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);
@@ -51,7 +53,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           style={[
             styles.input,
             { color: theme.text, fontFamily: "Inter_400Regular" },
-            leftIcon ? { paddingLeft: 0 } : {},
+            leftIcon ? { paddingStart: 0 } : {},
           ]}
           placeholderTextColor={theme.textMuted}
         />
@@ -80,7 +82,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     minHeight: 52,
   },
-  icon: { marginRight: 8, justifyContent: "center", alignItems: "center" },
+  icon: { marginEnd: 8, justifyContent: "center", alignItems: "center" },
   input: { flex: 1, fontSize: 15, paddingVertical: 12 },
   error: { fontSize: 12, marginTop: 2 },
 });

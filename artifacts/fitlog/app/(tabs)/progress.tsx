@@ -25,7 +25,7 @@ import { usePhotoStore } from "@/store/photoStore";
 import * as ImagePicker from "expo-image-picker";
 import { Image as ExpoImage } from "expo-image";
 import { useTranslation } from "react-i18next";
-import { dateLocale } from "@/lib/rtl";
+import { dateLocale, rtlIcon } from "@/lib/rtl";
 
 const MiniLineChart = React.memo(function MiniLineChart({ data, color, unit, showTrend = true }: { data: number[]; color: string; unit?: string; showTrend?: boolean }) {
   const { theme } = useTheme();
@@ -466,8 +466,8 @@ export default function ProgressScreen() {
         setPendingPhoto(null);
         setPendingNote("");
         return;
-      } catch {
-        // Fall back to local-only storage
+      } catch (err) {
+        console.warn("Failed to save photo to server, falling back to local storage:", err);
       }
     }
 
@@ -647,15 +647,15 @@ export default function ProgressScreen() {
         <Animated.View entering={FadeInDown.duration(280)}>
           <View style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: theme.border }}>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 14 }}>
-              {t("progress.title")} Overview
+              {t("progress.overview")}
             </Text>
             <View style={{ flexDirection: "row", gap: 0 }}>
               {[
                 { label: t("progress.thisMonth"), value: summaryLoading ? "—" : String(workoutSummary?.totalThisMonth ?? 0), icon: "zap" as const, color: theme.primary },
                 { label: t("progress.nutrition"), value: nutritionLoading ? "—" : String(Math.round(nutritionStats?.avg7DayCalories ?? 0)), icon: "coffee" as const, color: theme.orange ?? "#ff9800", sub: "kcal/day" },
-                { label: "Streak", value: streaksLoading ? "—" : String(streaks?.currentWorkoutStreak ?? 0), icon: "award" as const, color: "#ffab40", sub: "days" },
+                { label: t("progress.streak"), value: streaksLoading ? "—" : String(streaks?.currentWorkoutStreak ?? 0), icon: "award" as const, color: theme.warning, sub: t("progress.days") },
               ].map((item, i) => (
-                <View key={i} style={{ flex: 1, alignItems: "center", borderLeftWidth: i > 0 ? StyleSheet.hairlineWidth : 0, borderLeftColor: theme.border }}>
+                <View key={i} style={{ flex: 1, alignItems: "center", borderStartWidth: i > 0 ? StyleSheet.hairlineWidth : 0, borderStartColor: theme.border }}>
                   <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: item.color + "18", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
                     <Feather name={item.icon} size={14} color={item.color} />
                   </View>
@@ -775,8 +775,8 @@ export default function ProgressScreen() {
               padding: 18,
               borderWidth: 1,
               borderColor: theme.primary + "55",
-              borderLeftWidth: 4,
-              borderLeftColor: theme.primary,
+              borderStartWidth: 4,
+              borderStartColor: theme.primary,
               flexDirection: "row",
               alignItems: "center",
               gap: 14,
@@ -871,7 +871,7 @@ export default function ProgressScreen() {
                 {t("home.weeklyReportSummary")}
               </Text>
             </View>
-            <Feather name="chevron-right" size={18} color={theme.primary} />
+            <Feather name={rtlIcon("chevron-right")} size={18} color={theme.primary} />
           </Pressable>
         </Animated.View>
 
@@ -1482,7 +1482,7 @@ export default function ProgressScreen() {
         {/* ── COACH SUMMARY ── */}
         {!summaryLoading && !streaksLoading && coachSummary && (
           <Animated.View entering={FadeInDown.delay(70).duration(350)}>
-            <Card style={{ borderLeftWidth: 3, borderLeftColor: theme.primary + "60" }}>
+            <Card style={{ borderStartWidth: 3, borderStartColor: theme.primary + "60" }}>
               <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 10 }}>
                 {t("progress.coachSummaryTitle")}
               </Text>
@@ -1701,5 +1701,5 @@ const styles = StyleSheet.create({
   photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   photoCell: { width: "47%", alignItems: "center" },
   photoThumb: { width: "100%", aspectRatio: 0.75, borderRadius: 10, borderWidth: 1 },
-  photoDeleteBtn: { position: "absolute", top: 6, right: 6, width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  photoDeleteBtn: { position: "absolute", top: 6, end: 6, width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center" },
 });

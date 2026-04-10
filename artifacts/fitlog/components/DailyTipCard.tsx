@@ -21,7 +21,7 @@ export function DailyTipCard() {
             <Feather name={icon} size={13} color={color} />
           </View>
           <Text style={[styles.label, { color, fontFamily: "Inter_600SemiBold" }]}>{label}</Text>
-          <View style={styles.proBadge}>
+          <View style={[styles.proBadge, { backgroundColor: theme.purple }]}>
             <Text style={[styles.proText, { fontFamily: "Inter_700Bold" }]}>PRO</Text>
           </View>
         </View>
@@ -66,7 +66,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   proBadge: {
-    backgroundColor: "#7c4dff",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,

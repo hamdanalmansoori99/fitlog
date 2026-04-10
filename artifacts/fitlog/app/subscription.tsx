@@ -17,6 +17,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 
 export default function SubscriptionScreen() {
   const { theme } = useTheme();
@@ -96,7 +97,7 @@ export default function SubscriptionScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 12, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
-          <Feather name="chevron-left" size={24} color={theme.text} />
+          <Feather name={rtlIcon("chevron-left")} size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text }]}>{t("subscription.plans")}</Text>
         <View style={{ width: 40 }} />
@@ -107,8 +108,8 @@ export default function SubscriptionScreen() {
         contentContainerStyle={{ paddingBottom: 60, paddingHorizontal: 20, gap: 20, paddingTop: 24 }}
       >
         <View style={styles.hero}>
-          <View style={[styles.heroIcon, { backgroundColor: "#448aff18" }]}>
-            <Feather name="zap" size={28} color="#448aff" />
+          <View style={[styles.heroIcon, { backgroundColor: theme.secondary + "18" }]}>
+            <Feather name="zap" size={28} color={theme.secondary} />
           </View>
           <Text style={[styles.heroTitle, { color: theme.text }]}>{t("subscription.unlockPotential")}</Text>
           <Text style={[styles.heroSub, { color: theme.textMuted }]}>
@@ -117,10 +118,10 @@ export default function SubscriptionScreen() {
         </View>
 
         <View style={[styles.currentPlanRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <View style={[styles.currentPlanDot, { backgroundColor: isPremium ? "#448aff" : theme.primary }]} />
+          <View style={[styles.currentPlanDot, { backgroundColor: isPremium ? theme.secondary : theme.primary }]} />
           <Text style={[styles.currentPlanText, { color: theme.text }]}>
             {t("subscription.currentPlanLabel")}{" "}
-            <Text style={{ color: isPremium ? "#448aff" : theme.primary, fontFamily: "Inter_700Bold" }}>
+            <Text style={{ color: isPremium ? theme.secondary : theme.primary, fontFamily: "Inter_700Bold" }}>
               {plan?.name ?? t("subscription.free")}
             </Text>
             {subscription?.status && subscription.status !== "active" && (
@@ -149,15 +150,15 @@ export default function SubscriptionScreen() {
               onPress={() => setBillingCycle("yearly")}
               style={[
                 styles.billingOption,
-                billingCycle === "yearly" && { backgroundColor: "#448aff22" },
+                billingCycle === "yearly" && { backgroundColor: theme.secondary + "22" },
               ]}
             >
               <Text style={[
                 styles.billingOptionText,
-                { color: billingCycle === "yearly" ? "#448aff" : theme.textMuted },
+                { color: billingCycle === "yearly" ? theme.secondary : theme.textMuted },
               ]}>{t("subscription.yearly")}</Text>
               {savings > 0 && (
-                <View style={[styles.savingsBadge, { backgroundColor: "#448aff" }]}>
+                <View style={[styles.savingsBadge, { backgroundColor: theme.secondary }]}>
                   <Text style={styles.savingsBadgeText}>{t("subscription.savePct", { pct: savings })}</Text>
                 </View>
               )}
@@ -187,13 +188,13 @@ export default function SubscriptionScreen() {
             </View>
           </View>
 
-          <View style={[styles.planCard, styles.premiumCard, { backgroundColor: "#448aff0a", borderColor: "#448aff" }]}>
-            <View style={[styles.premiumGlow, { backgroundColor: "#448aff" }]} />
+          <View style={[styles.planCard, styles.premiumCard, { backgroundColor: theme.secondary + "0a", borderColor: theme.secondary }]}>
+            <View style={[styles.premiumGlow, { backgroundColor: theme.secondary }]} />
             <View style={styles.planCardHeader}>
               <Text style={[styles.planName, { color: theme.text }]}>{t("subscription.premium")}</Text>
               {isPremium && (
-                <View style={[styles.currentBadge, { backgroundColor: "#448aff22" }]}>
-                  <Text style={[styles.currentBadgeText, { color: "#448aff" }]}>{t("subscription.active")}</Text>
+                <View style={[styles.currentBadge, { backgroundColor: theme.secondary + "22" }]}>
+                  <Text style={[styles.currentBadgeText, { color: theme.secondary }]}>{t("subscription.active")}</Text>
                 </View>
               )}
             </View>
@@ -205,12 +206,12 @@ export default function SubscriptionScreen() {
             </Text>
             <View style={styles.featureList}>
               <View style={styles.featureRow}>
-                <Feather name="check" size={13} color="#448aff" />
+                <Feather name="check" size={13} color={theme.secondary} />
                 <Text style={[styles.featureText, { color: theme.textMuted }]}>{t("subscription.everythingInFree")}</Text>
               </View>
               {PREMIUM_FEATURES.map((f) => (
                 <View key={f.key} style={styles.featureRow}>
-                  <Feather name={f.icon} size={13} color="#448aff" />
+                  <Feather name={f.icon} size={13} color={theme.secondary} />
                   <Text style={[styles.featureText, { color: theme.textMuted }]}>{f.label}</Text>
                 </View>
               ))}
@@ -223,7 +224,7 @@ export default function SubscriptionScreen() {
             <Pressable
               onPress={handleUpgrade}
               disabled={upgrading}
-              style={[styles.ctaBtn, { backgroundColor: "#448aff", opacity: upgrading ? 0.7 : 1 }]}
+              style={[styles.ctaBtn, { backgroundColor: theme.secondary, opacity: upgrading ? 0.7 : 1 }]}
             >
               <Feather name="zap" size={18} color="#fff" />
               <Text style={styles.ctaBtnText}>
@@ -236,7 +237,7 @@ export default function SubscriptionScreen() {
           </View>
         ) : (
           <View style={[styles.manageCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Feather name="check-circle" size={18} color="#448aff" />
+            <Feather name="check-circle" size={18} color={theme.secondary} />
             <Text style={[styles.manageText, { color: theme.text }]}>
               {t("subscription.premiumThanks")}
             </Text>
@@ -257,9 +258,9 @@ export default function SubscriptionScreen() {
               <Pressable
                 onPress={() => handleSimulate("premium")}
                 disabled={simulating}
-                style={[styles.devBtn, { borderColor: "#448aff" }]}
+                style={[styles.devBtn, { borderColor: theme.secondary }]}
               >
-                <Text style={[styles.devBtnText, { color: "#448aff" }]}>→ {t("subscription.premium")}</Text>
+                <Text style={[styles.devBtnText, { color: theme.secondary }]}>→ {t("subscription.premium")}</Text>
               </Pressable>
             </View>
           </View>

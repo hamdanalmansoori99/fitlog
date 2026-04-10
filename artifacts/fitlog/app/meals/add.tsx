@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/Card";
 import { PremiumGate } from "@/components/PremiumGate";
 import { useToast } from "@/components/ui/Toast";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 
 const CATEGORY_OPTIONS = [
   { value: "Breakfast", labelKey: "meals.breakfast" },
@@ -526,7 +527,7 @@ export default function AddMealScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.navBar, { paddingTop: topPad + 8 }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={24} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
           {isEditing ? t("meals.editMeal") : t("meals.logMealTitle")}
@@ -559,7 +560,7 @@ export default function AddMealScreen() {
                   {t("meals.scanBarcodeDesc")}
                 </Text>
               </View>
-              <Feather name="chevron-right" size={18} color={theme.primary} />
+              <Feather name={rtlIcon("chevron-right")} size={18} color={theme.primary} />
             </Pressable>
 
             <PremiumGate feature="aiPhotoAnalysis" minHeight={72} compact>
@@ -576,7 +577,7 @@ export default function AddMealScreen() {
                     {t("meals.scanWithAIDesc")}
                   </Text>
                 </View>
-                <Feather name="chevron-right" size={18} color={theme.secondary} />
+                <Feather name={rtlIcon("chevron-right")} size={18} color={theme.secondary} />
               </Pressable>
             </PremiumGate>
           </View>
@@ -741,7 +742,7 @@ export default function AddMealScreen() {
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>
               {t("common.change") || "Tap to change"}
             </Text>
-            <Feather name="chevron-right" size={14} color={theme.textMuted} />
+            <Feather name={rtlIcon("chevron-right")} size={14} color={theme.textMuted} />
           </View>
         </Pressable>
 

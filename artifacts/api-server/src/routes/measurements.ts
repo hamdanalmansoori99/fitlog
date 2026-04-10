@@ -33,9 +33,14 @@ router.post("/", requireAuth, async (req, res) => {
       return;
     }
     const numericFields: Record<string, unknown> = { weightKg, bodyFatPercent, chestCm, waistCm, hipsCm, armsCm };
+    const maxBounds: Record<string, number> = { weightKg: 1000, bodyFatPercent: 100, chestCm: 500, waistCm: 500, hipsCm: 500, armsCm: 500 };
     for (const [field, val] of Object.entries(numericFields)) {
       if (val !== undefined && (typeof val !== "number" || !isFinite(val) || val < 0)) {
         res.status(400).json({ error: `${field} must be a non-negative number` });
+        return;
+      }
+      if (val !== undefined && typeof val === "number" && maxBounds[field] && val > maxBounds[field]) {
+        res.status(400).json({ error: `${field} exceeds maximum allowed value of ${maxBounds[field]}` });
         return;
       }
     }

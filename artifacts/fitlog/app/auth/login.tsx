@@ -49,7 +49,8 @@ export default function LoginScreen() {
         } else {
           router.replace("/(tabs)");
         }
-      } catch {
+      } catch (err) {
+        console.warn("Profile fetch after login failed:", err);
         router.replace("/(tabs)");
       }
     } catch (err: any) {
@@ -154,7 +155,7 @@ export default function LoginScreen() {
                   setAuth(res.token, res.user);
                   router.replace("/(tabs)");
                 } catch (err: any) {
-                  setError(err.message || "Demo login failed. Is the server running?");
+                  setError(err.message || t("auth.demoLoginFailed"));
                 } finally {
                   setLoading(false);
                 }
@@ -163,7 +164,7 @@ export default function LoginScreen() {
             >
               <Feather name="zap" size={13} color={theme.primary} />
               <Text style={[styles.demoText, { color: theme.primary, fontFamily: "Inter_600SemiBold" }]}>
-                Try Demo Account
+                {t("auth.tryDemo")}
               </Text>
             </Pressable>
           </View>

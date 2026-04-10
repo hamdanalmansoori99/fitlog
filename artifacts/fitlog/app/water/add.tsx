@@ -14,7 +14,9 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
+import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
+import { rtlIcon } from "@/lib/rtl";
 
 const QUICK_AMOUNTS = [
   { label: "250 ml", value: 250 },
@@ -25,6 +27,7 @@ const QUICK_AMOUNTS = [
 
 export default function WaterAddScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<number | null>(null);
@@ -41,14 +44,14 @@ export default function WaterAddScreen() {
       router.back();
     },
     onError: (err: any) => {
-      setError(err?.message || "Failed to log water. Please try again.");
+      setError(err?.message || t("water.logError"));
     },
   });
 
   function handleLog() {
     setError(null);
     if (!amount || isNaN(amount) || amount <= 0) {
-      setError("Please select or enter a valid amount.");
+      setError(t("water.invalidAmount"));
       return;
     }
     mutation.mutate(amount);
@@ -75,20 +78,20 @@ export default function WaterAddScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
-            <Feather name="chevron-left" size={24} color={theme.text} />
+            <Feather name={rtlIcon("chevron-left")} size={24} color={theme.text} />
           </Pressable>
-          <Text style={[styles.title, { color: theme.text }]}>Log Water</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{t("water.addTitle")}</Text>
           <View style={{ width: 36 }} />
         </View>
 
         <View style={styles.content}>
           {/* Icon + label */}
           <View style={styles.iconRow}>
-            <View style={[styles.iconWrap, { backgroundColor: "#4fc3f720" }]}>
-              <Feather name="droplet" size={32} color="#4fc3f7" />
+            <View style={[styles.iconWrap, { backgroundColor: theme.cyan + "20" }]}>
+              <Feather name="droplet" size={32} color={theme.cyan} />
             </View>
             <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-              How much water did you drink?
+              {t("water.prompt")}
             </Text>
           </View>
 
@@ -103,8 +106,8 @@ export default function WaterAddScreen() {
                   style={[
                     styles.chip,
                     {
-                      backgroundColor: active ? "#4fc3f7" : theme.card,
-                      borderColor: active ? "#4fc3f7" : theme.border,
+                      backgroundColor: active ? theme.cyan : theme.card,
+                      borderColor: active ? theme.cyan : theme.border,
                     },
                   ]}
                 >
@@ -112,7 +115,7 @@ export default function WaterAddScreen() {
                     style={[
                       styles.chipText,
                       {
-                        color: active ? "#000" : theme.text,
+                        color: active ? theme.background : theme.text,
                         fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular",
                       },
                     ]}
@@ -132,14 +135,14 @@ export default function WaterAddScreen() {
                 styles.customInput,
                 {
                   backgroundColor: theme.card,
-                  borderColor: custom ? "#4fc3f7" : theme.border,
+                  borderColor: custom ? theme.cyan : theme.border,
                   color: theme.text,
                   fontFamily: "Inter_400Regular",
                 },
               ]}
               value={custom}
               onChangeText={handleCustomChange}
-              placeholder="e.g. 330"
+              placeholder={t("water.placeholder")}
               placeholderTextColor={theme.textMuted}
               keyboardType="number-pad"
               returnKeyType="done"
@@ -149,9 +152,9 @@ export default function WaterAddScreen() {
 
           {/* Error */}
           {error && (
-            <View style={[styles.errorBanner, { backgroundColor: "#b71c1c20", borderColor: "#ef5350" }]}>
-              <Feather name="alert-circle" size={14} color="#ef5350" />
-              <Text style={{ color: "#ef5350", fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 }}>
+            <View style={[styles.errorBanner, { backgroundColor: theme.dangerDim, borderColor: theme.danger }]}>
+              <Feather name="alert-circle" size={14} color={theme.danger} />
+              <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 }}>
                 {error}
               </Text>
             </View>
@@ -164,16 +167,16 @@ export default function WaterAddScreen() {
             style={[
               styles.logBtn,
               {
-                backgroundColor: amount && !isNaN(amount) && amount > 0 ? "#4fc3f7" : theme.border,
+                backgroundColor: amount && !isNaN(amount) && amount > 0 ? theme.cyan : theme.border,
                 opacity: mutation.isPending ? 0.7 : 1,
               },
             ]}
           >
             {mutation.isPending ? (
-              <ActivityIndicator color="#000" />
+              <ActivityIndicator color={theme.background} />
             ) : (
-              <Text style={[styles.logBtnText, { color: amount ? "#000" : theme.textMuted }]}>
-                Log {amount && !isNaN(amount) && amount > 0 ? `${amount} ml` : "Water"}
+              <Text style={[styles.logBtnText, { color: amount ? theme.background : theme.textMuted }]}>
+                {t("water.logAmount", { amount: amount && !isNaN(amount) && amount > 0 ? `${amount} ml` : t("water.water") })}
               </Text>
             )}
           </Pressable>

@@ -15,6 +15,7 @@ interface NotificationState {
   setGlobalEnabled: (val: boolean) => void;
   setEnabled: (type: NotifType, val: boolean) => void;
   setTime: (type: NotifType, time: string) => void;
+  resetStore: () => void;
 }
 
 const DEFAULTS: Record<NotifType, NotifPrefs> = {
@@ -37,6 +38,7 @@ export const useNotificationStore = create<NotificationState>()(
         set((s) => ({ prefs: { ...s.prefs, [type]: { ...s.prefs[type], enabled } } })),
       setTime: (type, time) =>
         set((s) => ({ prefs: { ...s.prefs, [type]: { ...s.prefs[type], time } } })),
+      resetStore: () => set({ globalEnabled: false, prefs: DEFAULTS }),
     }),
     {
       name: "fitlog-notifications",

@@ -591,7 +591,7 @@ export default function WorkoutsScreen() {
             </View>
             <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14, flex: 1 }}>{t("workouts.quickLog")}</Text>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>{t("workouts.selectActivity")}</Text>
-            <Feather name="chevron-right" size={16} color={theme.textMuted} />
+            <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
           </Pressable>
         </Animated.View>
 
@@ -924,7 +924,7 @@ export default function WorkoutsScreen() {
                         <View style={[{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: dColor + "18" }]}>
                           <Text style={{ color: dColor, fontFamily: "Inter_500Medium", fontSize: 11 }}>{t(`exercises.difficulty${ex.difficulty}`)}</Text>
                         </View>
-                        <Feather name="chevron-right" size={14} color={theme.textMuted} />
+                        <Feather name={rtlIcon("chevron-right")} size={14} color={theme.textMuted} />
                       </View>
                     </Pressable>
                   );
@@ -937,7 +937,7 @@ export default function WorkoutsScreen() {
                     <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
                       {t("workouts.viewAllExercises", { count: EXERCISES.length })}
                     </Text>
-                    <Feather name="arrow-right" size={13} color={theme.primary} />
+                    <Feather name={rtlIcon("arrow-right")} size={13} color={theme.primary} />
                   </Pressable>
                 )}
               </View>

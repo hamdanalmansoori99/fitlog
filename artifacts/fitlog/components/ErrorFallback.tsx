@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   },
   topButton: {
     position: "absolute",
-    right: 16,
+    end: 16,
     width: 44,
     height: 44,
     borderRadius: 8,

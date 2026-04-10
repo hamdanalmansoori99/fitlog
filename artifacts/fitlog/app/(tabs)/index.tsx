@@ -975,7 +975,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
           <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14, flex: 1 }}>
             {t("home.todaysRecovery") || "Today's Recovery"}
           </Text>
-          <Feather name="chevron-right" size={14} color={theme.textMuted} />
+          <Feather name={rtlIcon("chevron-right")} size={14} color={theme.textMuted} />
         </View>
         <View style={{ flexDirection: "row", gap: 8 }}>
           {recoveryData.sleepHours != null && (
@@ -1322,7 +1322,7 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                 </View>
-                <Feather name="chevron-right" size={14} color={theme.textMuted} />
+                <Feather name={rtlIcon("chevron-right")} size={14} color={theme.textMuted} />
               </Pressable>
             </Animated.View>
           );
@@ -1377,7 +1377,7 @@ export default function HomeScreen() {
                 <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
                   Log
                 </Text>
-                <Feather name="chevron-right" size={13} color={theme.primary} />
+                <Feather name={rtlIcon("chevron-right")} size={13} color={theme.primary} />
               </Pressable>
             </View>
           </Card>

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput,
   Platform, Alert, Vibration, Modal, Share,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,6 +16,7 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkoutStore } from "@/store/workoutStore";
 import { usePendingWorkoutsStore } from "@/store/pendingWorkoutsStore";
@@ -33,7 +35,7 @@ import * as Sharing from "expo-sharing";
 import { ShareCard } from "@/components/ShareCard";
 
 // ─── Isolated elapsed timer display — only this component re-renders per tick ─
-function ElapsedTimer({ elapsedRef }: { elapsedRef: React.MutableRefObject<number> }) {
+function ElapsedTimer({ elapsedRef, color }: { elapsedRef: React.MutableRefObject<number>; color: string }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setDisplay(elapsedRef.current), 1000);
@@ -42,7 +44,7 @@ function ElapsedTimer({ elapsedRef }: { elapsedRef: React.MutableRefObject<numbe
   const mins = Math.floor(display / 60);
   const secs = display % 60;
   const str = `${mins}:${secs.toString().padStart(2, "0")}`;
-  return <Text style={{ color: "#e0e0f0", fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{str}</Text>;
+  return <Text style={{ color, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>{str}</Text>;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -104,6 +106,7 @@ const MOOD_OPTIONS = [
 ] as const;
 const RPE_VALUES = [2, 4, 6, 8, 10];
 const RPE_ICONS = ["circle", "circle", "circle", "circle", "zap"] as const;
+// RPE scale colors are semantically fixed (green=easy → red=hard) — intentionally not theme-adaptive
 const RPE_COLORS = ["#4caf50", "#ffeb3b", "#ff9800", "#f44336", "#ff6b35"];
 
 // ─── Swipeable set card ───────────────────────────────────────────────────────
@@ -113,12 +116,14 @@ function SwipeableSetCard({
   completed,
   cardStyle,
   onSwipeComplete,
+  flashColor,
   children,
 }: {
   isActive: boolean;
   completed: boolean;
   cardStyle: object | object[];
   onSwipeComplete: () => void;
+  flashColor: string;
   children: React.ReactNode;
 }) {
   const translateX = useSharedValue(0);
@@ -155,7 +160,7 @@ function SwipeableSetCard({
       <Animated.View style={[cardStyle, animStyle]}>
         {children}
         <Animated.View
-          style={[StyleSheet.absoluteFill, { backgroundColor: "#00e676", borderRadius: 14 }, flashStyle]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: flashColor, borderRadius: 14 }, flashStyle]}
           pointerEvents="none"
         />
       </Animated.View>
@@ -204,6 +209,8 @@ export default function ExecuteWorkoutScreen() {
 
   const prShareRef = useRef<View>(null);
   const completionShareRef = useRef<View>(null);
+  const recoveryKey = `workout_recovery_${templateId}`;
+  const recoveryLoaded = useRef(false);
 
   // ── Workout store (active pill + session PR tracking) ──────────────────────
   const {
@@ -251,6 +258,49 @@ export default function ExecuteWorkoutScreen() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Crash recovery: restore session from AsyncStorage ─────────────────────
+  useEffect(() => {
+    if (recoveryLoaded.current) return;
+    (async () => {
+      try {
+        const saved = await AsyncStorage.getItem(recoveryKey);
+        if (!saved) return;
+        const state = JSON.parse(saved);
+        if (state.exercises?.length > 0) {
+          Alert.alert(
+            t("workouts.resumeSession"),
+            t("workouts.resumeSessionDesc"),
+            [
+              { text: t("common.discard"), style: "destructive", onPress: () => AsyncStorage.removeItem(recoveryKey) },
+              {
+                text: t("workouts.resume"),
+                onPress: () => {
+                  setExercises(state.exercises);
+                  setExerciseIdx(state.exerciseIdx ?? 0);
+                  setSetIdx(state.setIdx ?? 0);
+                  elapsedSecondsRef.current = state.elapsed ?? 0;
+                },
+              },
+            ]
+          );
+        }
+      } catch {}
+      recoveryLoaded.current = true;
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Crash recovery: persist session state on set completion ───────────────
+  useEffect(() => {
+    if (exercises.length === 0 || phase === "done") return;
+    const hasAnyCompleted = exercises.some((e) => e.sets.some((s) => s.completed));
+    if (!hasAnyCompleted) return;
+    AsyncStorage.setItem(
+      recoveryKey,
+      JSON.stringify({ exercises, exerciseIdx, setIdx, elapsed: elapsedSecondsRef.current })
+    ).catch(() => {});
+  }, [exercises, exerciseIdx, setIdx, phase]);
 
   // Elapsed timer — increments ref only, no re-render on parent
   useEffect(() => {
@@ -333,6 +383,7 @@ export default function ExecuteWorkoutScreen() {
   const saveMutation = useMutation({
     mutationFn: api.createWorkout,
     onSuccess: () => {
+      AsyncStorage.removeItem(recoveryKey).catch(() => {});
       clearActiveWorkout();
       clearSessionPRs();
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
@@ -535,7 +586,7 @@ export default function ExecuteWorkoutScreen() {
                 onPress={() => setPrModal(null)}
                 style={[styles.prBtn, { backgroundColor: theme.primary, flex: 1 }]}
               >
-                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                <Text style={{ color: theme.background, fontFamily: "Inter_700Bold", fontSize: 15 }}>
                   {t("pr.dismiss")}
                 </Text>
               </Pressable>
@@ -1000,7 +1051,7 @@ export default function ExecuteWorkoutScreen() {
                     disabled={saveTemplateMutation.isPending}
                     style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: "center", backgroundColor: theme.secondary }}
                   >
-                    <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold" }}>
+                    <Text style={{ color: theme.background, fontFamily: "Inter_700Bold" }}>
                       {saveTemplateMutation.isPending ? t("workouts.saving") : t("workouts.saveBtnLabel")}
                     </Text>
                   </Pressable>
@@ -1109,7 +1160,7 @@ export default function ExecuteWorkoutScreen() {
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }} numberOfLines={1}>
             {template.name}
           </Text>
-          <ElapsedTimer elapsedRef={elapsedSecondsRef} />
+          <ElapsedTimer elapsedRef={elapsedSecondsRef} color={theme.textMuted} />
         </View>
         <View style={{ width: 44 }} />
       </View>
@@ -1234,8 +1285,8 @@ export default function ExecuteWorkoutScreen() {
                 onPress={skipRest}
                 style={[styles.restActionBtn, { backgroundColor: theme.primary, flex: 2 }]}
               >
-                <Feather name="skip-forward" size={16} color="#0f0f1a" />
-                <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 15 }}>
+                <Feather name="skip-forward" size={16} color={theme.background} />
+                <Text style={{ color: theme.background, fontFamily: "Inter_700Bold", fontSize: 15 }}>
                   {t("workouts.skipRest")}
                 </Text>
               </Pressable>
@@ -1254,13 +1305,13 @@ export default function ExecuteWorkoutScreen() {
               if (!ex || !ex.commonMistakes.length) return null;
               const mistake = ex.commonMistakes[Math.floor(Date.now() / 1000) % ex.commonMistakes.length];
               return (
-                <View style={{ marginTop: 16, padding: 12, backgroundColor: "#1a1a2e", borderRadius: 8, borderLeftWidth: 3, borderLeftColor: "#ffab40" }}>
-                  <Text style={{ fontSize: 11, color: "#ffab40", fontFamily: "Inter_600SemiBold", marginBottom: 4, letterSpacing: 0.5 }}>
+                <View style={{ marginTop: 16, padding: 12, backgroundColor: theme.card, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: theme.warning }}>
+                  <Text style={{ fontSize: 11, color: theme.warning, fontFamily: "Inter_600SemiBold", marginBottom: 4, letterSpacing: 0.5 }}>
                     COMMON MISTAKE
                   </Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Feather name="alert-triangle" size={14} color="#ffab40" />
-                    <Text style={{ fontSize: 14, color: "#f5f5f5", fontFamily: "Inter_400Regular", flex: 1 }}>{mistake}</Text>
+                    <Feather name="alert-triangle" size={14} color={theme.warning} />
+                    <Text style={{ fontSize: 14, color: theme.text, fontFamily: "Inter_400Regular", flex: 1 }}>{mistake}</Text>
                   </View>
                 </View>
               );
@@ -1378,14 +1429,15 @@ export default function ExecuteWorkoutScreen() {
                 isActive={isActive}
                 completed={s.completed}
                 onSwipeComplete={isActive && !s.completed ? completeSet : () => {}}
+                flashColor={theme.success}
                 cardStyle={[
                   styles.setCard,
                   {
                     backgroundColor: s.failed ? theme.danger + "12" : s.completed ? theme.primary + "12" : isActive ? theme.card : theme.card + "60",
                     borderWidth: 1,
                     borderColor: s.failed ? theme.danger + "50" : s.completed ? theme.primary + "50" : isActive ? theme.primary + "40" : theme.border + "60",
-                    borderLeftWidth: isActive && !s.completed ? 4 : 1,
-                    borderLeftColor: isActive && !s.completed ? theme.primary : undefined,
+                    borderStartWidth: isActive && !s.completed ? 4 : 1,
+                    borderStartColor: isActive && !s.completed ? theme.primary : undefined,
                     opacity: s.completed ? 0.8 : !isActive && !s.completed ? 0.65 : 1,
                   },
                 ]}
@@ -1426,7 +1478,7 @@ export default function ExecuteWorkoutScreen() {
                     {s.failed
                       ? <Feather name="x" size={16} color="#fff" />
                       : s.completed
-                      ? <Feather name="check" size={16} color="#0f0f1a" />
+                      ? <Feather name="check" size={16} color={theme.background} />
                       : <Text style={{ color: isActive ? theme.primary : theme.textMuted, fontFamily: "Inter_700Bold", fontSize: 14 }}>{si + 1}</Text>
                     }
                   </Pressable>
@@ -1570,8 +1622,8 @@ export default function ExecuteWorkoutScreen() {
               onPress={completeSet}
               style={[styles.completeBtn, { backgroundColor: theme.primary }]}
             >
-              <Feather name="check" size={20} color="#0f0f1a" />
-              <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 17 }}>{t("workouts.doneBtn")}</Text>
+              <Feather name="check" size={20} color={theme.background} />
+              <Text style={{ color: theme.background, fontFamily: "Inter_700Bold", fontSize: 17 }}>{t("workouts.doneBtn")}</Text>
             </Pressable>
             {/* Couldn't do it — failed attempt, feeds deload logic */}
             <Pressable
@@ -1605,7 +1657,7 @@ export default function ExecuteWorkoutScreen() {
           <Animated.View entering={FadeInDown.duration(250)}>
             <View style={[styles.nextPreview, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <Feather name="arrow-right" size={12} color={theme.textMuted} />
+                <Feather name={rtlIcon("arrow-right")} size={12} color={theme.textMuted} />
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, letterSpacing: 0.5 }}>
                   {t("workouts.nextLabel")}
                 </Text>
@@ -1639,10 +1691,10 @@ export default function ExecuteWorkoutScreen() {
           pointerEvents="none"
         >
           <View style={[styles.prBadge, { backgroundColor: theme.primary }]}>
-            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_700Bold", fontSize: 20, textAlign: "center" }}>
+            <Text style={{ color: theme.background, fontFamily: "Inter_700Bold", fontSize: 20, textAlign: "center" }}>
               {prBadgeText}
             </Text>
-            <Text style={{ color: "#0f0f1a", fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center", marginTop: 2, opacity: 0.75 }}>
+            <Text style={{ color: theme.background, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center", marginTop: 2, opacity: 0.75 }}>
               {t("pr.newPersonalRecord")}
             </Text>
           </View>

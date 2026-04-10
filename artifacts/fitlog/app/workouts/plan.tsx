@@ -10,7 +10,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
-import { dateLocale } from "@/lib/rtl";
+import { dateLocale, rtlIcon } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import {
@@ -135,7 +135,7 @@ function SwapModal({
                     </Text>
                   </View>
                 </View>
-                <Feather name="chevron-right" size={16} color={theme.textMuted} />
+                <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
               </View>
               <Text style={[swap.recWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
                 {rec.whyGoodForYou}
@@ -293,7 +293,7 @@ export default function WeeklyPlanScreen() {
       {/* Nav */}
       <View style={[styles.navBar, { paddingTop: topPad + 8, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={24} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
           {t("workouts.plan.weeklyPlan")}
@@ -458,7 +458,7 @@ export default function WeeklyPlanScreen() {
                         {day.note}
                       </Text>
                     </View>
-                    <Feather name="chevron-right" size={16} color={theme.textMuted} />
+                    <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
                   </Pressable>
                 )}
               </View>

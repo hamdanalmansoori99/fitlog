@@ -192,6 +192,12 @@ router.post("/log", requireAuth, async (req, res) => {
     const user = getUser(req);
     const { items, category = "Lunch", name, photoUrl } = req.body;
 
+    const allowedCategories = ["Breakfast", "Lunch", "Dinner", "Snacks"];
+    if (category && !allowedCategories.includes(category)) {
+      res.status(400).json({ error: `Invalid category. Must be one of: ${allowedCategories.join(", ")}` });
+      return;
+    }
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: "items array is required" });
       return;

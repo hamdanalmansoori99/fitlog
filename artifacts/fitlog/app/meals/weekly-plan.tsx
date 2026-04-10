@@ -14,7 +14,7 @@ import { useWeeklyPlanStore, PlannedDay, PlannedMeal } from "@/store/weeklyPlanS
 import { useToast } from "@/components/ui/Toast";
 import { Card } from "@/components/ui/Card";
 import { useTranslation } from "react-i18next";
-import { dateLocale } from "@/lib/rtl";
+import { dateLocale, rtlIcon } from "@/lib/rtl";
 
 const CATEGORY_COLORS: Record<string, string> = {
   Breakfast: "#ffab40",
@@ -396,7 +396,7 @@ export default function WeeklyPlanScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 16, borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("meals.weeklyPlan")}</Text>
@@ -554,7 +554,7 @@ export default function WeeklyPlanScreen() {
                       {t("meals.aiCompiledShopping")}
                     </Text>
                   </View>
-                  <Feather name="chevron-right" size={18} color={theme.textMuted} />
+                  <Feather name={rtlIcon("chevron-right")} size={18} color={theme.textMuted} />
                 </>
               )}
             </Pressable>

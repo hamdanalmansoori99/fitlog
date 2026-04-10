@@ -26,7 +26,8 @@ router.get("/today", requireAuth, async (req, res) => {
       ))
       .limit(1);
     res.json({ log: log ?? null });
-  } catch {
+  } catch (err) {
+    console.error("Get recovery log error:", err);
     res.status(500).json({ error: "Failed to get recovery log" });
   }
 });
@@ -42,7 +43,8 @@ router.get("/recent", requireAuth, async (req, res) => {
       .orderBy(desc(recoveryLogsTable.date))
       .limit(7);
     res.json({ logs });
-  } catch {
+  } catch (err) {
+    console.error("Get recent recovery error:", err);
     res.status(500).json({ error: "Failed to get recent recovery logs" });
   }
 });
@@ -91,7 +93,8 @@ router.post("/log", requireAuth, async (req, res) => {
     });
 
     res.status(201).json({ log });
-  } catch {
+  } catch (err) {
+    console.error("Save recovery log error:", err);
     res.status(500).json({ error: "Failed to save recovery log" });
   }
 });

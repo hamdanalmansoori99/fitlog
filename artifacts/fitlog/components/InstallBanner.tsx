@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   textBlock: { flex: 1 },
   title: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   sub: { fontSize: 12, marginTop: 1 },
-  actions: { flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 8 },
+  actions: { flexDirection: "row", alignItems: "center", gap: 8, marginStart: 8 },
   installBtn: {
     paddingHorizontal: 14,
     paddingVertical: 7,

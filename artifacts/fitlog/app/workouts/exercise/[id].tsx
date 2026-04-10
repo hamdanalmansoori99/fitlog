@@ -8,6 +8,7 @@ import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "react-i18next";
+import { rtlIcon } from "@/lib/rtl";
 import { getExerciseById, EXERCISE_CATEGORIES } from "@/lib/exerciseLibrary";
 import BodyMuscleMap from "@/components/BodyMuscleMap";
 
@@ -82,7 +83,7 @@ export default function ExerciseDetailScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: topPad }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
-          <Feather name="arrow-left" size={22} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
         </Pressable>
         <View style={styles.notFound}>
           <Feather name="search" size={40} color={theme.textMuted} />
@@ -101,7 +102,7 @@ export default function ExerciseDetailScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <Feather name="arrow-left" size={20} color={theme.text} />
+          <Feather name={rtlIcon("arrow-left")} size={20} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>
           {exercise.name}
@@ -143,9 +144,9 @@ export default function ExerciseDetailScreen() {
               <View
                 key={i}
                 style={{
-                  borderLeftWidth: 3,
-                  borderLeftColor: "#00e676",
-                  paddingLeft: 10,
+                  borderStartWidth: 3,
+                  borderStartColor: "#00e676",
+                  paddingStart: 10,
                   marginBottom: 8,
                 }}
               >
@@ -165,9 +166,9 @@ export default function ExerciseDetailScreen() {
               <View
                 key={i}
                 style={{
-                  borderLeftWidth: 3,
-                  borderLeftColor: "#ff5252",
-                  paddingLeft: 10,
+                  borderStartWidth: 3,
+                  borderStartColor: "#ff5252",
+                  paddingStart: 10,
                   marginBottom: 8,
                 }}
               >

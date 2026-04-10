@@ -561,7 +561,7 @@ function styles(theme: any) {
     chipRow: {
       flexDirection: "row",
       gap: 8,
-      paddingRight: 4,
+      paddingEnd: 4,
     },
     valueChip: {
       paddingHorizontal: 14,
