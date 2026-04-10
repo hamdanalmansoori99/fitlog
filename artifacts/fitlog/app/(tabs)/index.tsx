@@ -606,10 +606,10 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
           <ShareCard
             ref={milestoneShareRef}
             type="streak"
-            headline={`${milestoneValue}-Day Streak!`}
+            headline={t("home.streakMilestone", { count: milestoneValue })}
             subline={t("streaks.shareMessage", { count: milestoneValue })}
             stats={[
-              { label: "day streak", value: `${milestoneValue}`, accent: true },
+              { label: t("home.dayStreak"), value: `${milestoneValue}`, accent: true },
             ]}
             rtl={i18n.dir() === "rtl"}
           />

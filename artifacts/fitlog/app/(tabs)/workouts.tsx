@@ -469,7 +469,6 @@ export default function WorkoutsScreen() {
     { label: t("workouts.gym"), icon: "zap" as const, type: "gym", color: theme.purple },
     { label: t("workouts.cardio"), icon: "activity" as const, type: "cardio", color: theme.primary },
     { label: t("workouts.otherActivity"), icon: "more-horizontal" as const, type: "other", color: theme.textMuted },
-    { label: t("workouts.otherActivity"), icon: "more-horizontal" as const, type: "other", color: theme.textMuted },
   ];
 
   return (

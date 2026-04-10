@@ -532,7 +532,7 @@ export default function ProfileScreen() {
                       {currentStreak}
                     </Text>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>
-                      day streak
+                      {t("home.dayStreak")}
                     </Text>
                   </Pressable>
                 )}
@@ -666,7 +666,7 @@ export default function ProfileScreen() {
               <View style={[styles.settingIcon, { backgroundColor: "#00e676" + "18" }]}>
                 <Feather name="activity" size={16} color="#00e676" />
               </View>
-              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>Health & Wearables</Text>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.healthAndWearables")}</Text>
             </View>
             <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
           </Pressable>
@@ -704,7 +704,7 @@ export default function ProfileScreen() {
             ══════════════════════════════════════════════════════════════════ */}
         <Card>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_600SemiBold", fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>
-            Account
+            {t("profile.accountSection")}
           </Text>
 
           {/* Plan info */}

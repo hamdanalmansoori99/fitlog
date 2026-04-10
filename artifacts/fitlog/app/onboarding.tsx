@@ -485,7 +485,7 @@ export default function OnboardingScreen() {
             const cat = bmi !== null ? bmiCategory(bmi) : null;
             return (
               <>
-                <StepHeader title="Your Body Stats" subtitle="Here's a quick summary of your measurements." />
+                <StepHeader title={t("onboarding.yourBodyStats")} subtitle={t("onboarding.bodyStatsSummary")} />
                 {hasBMI && bmi !== null && cat !== null ? (
                   <View style={{ gap: 16 }}>
                     {/* BMI card */}
@@ -493,7 +493,7 @@ export default function OnboardingScreen() {
                       <View style={[styles.bmiStrip, { backgroundColor: cat.color }]} />
                       <View style={{ flex: 1, padding: 16, gap: 6 }}>
                         <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                          BODY MASS INDEX
+                          {t("onboarding.bodyMassIndex")}
                         </Text>
                         <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
                           <Text style={{ color: cat.color, fontFamily: "Inter_700Bold", fontSize: 40 }}>
@@ -526,7 +526,7 @@ export default function OnboardingScreen() {
                 ) : (
                   <View style={{ padding: 16, borderRadius: 14, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border }}>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14 }}>
-                      BMI could not be calculated — height or weight was not entered.
+                      {t("onboarding.bmiNotCalculated")}
                     </Text>
                   </View>
                 )}
@@ -535,17 +535,17 @@ export default function OnboardingScreen() {
                 <View style={{ gap: 8, marginTop: 4 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: theme.text }}>
-                      Waist size
+                      {t("onboarding.waistSize")}
                     </Text>
                     <View style={{ backgroundColor: theme.border, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11 }}>OPTIONAL</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 11 }}>{t("common.optional")}</Text>
                     </View>
                   </View>
                   <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
-                    Waist circumference helps estimate body fat distribution and health risk.
+                    {t("onboarding.waistDesc")}
                   </Text>
                   <InputField
-                    label="Waist circumference (cm)"
+                    label={t("onboarding.waistLabel")}
                     value={data.waistCm}
                     onChangeText={(v) => setData({ ...data, waistCm: v })}
                     placeholder="e.g. 85"
