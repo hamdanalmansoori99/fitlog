@@ -18,7 +18,7 @@ const forgotPasswordLimiter = rateLimit({
 });
 
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
-const APP_URL = process.env.APP_URL ?? "ordeal://";
+const APP_URL = process.env.APP_URL ?? "fitlog://";
 
 // POST /auth/forgot-password
 router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {

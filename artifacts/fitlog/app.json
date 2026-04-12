@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "ordeal",
+    "scheme": "fitlog",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "buildNumber": "10",
-      "bundleIdentifier": "com.yesha.ordeal",
+      "bundleIdentifier": "com.yesha.fitlog",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Ordeal reads your steps, heart rate, and sleep to give your AI coach accurate recovery data.",
         "NSHealthUpdateUsageDescription": "Ordeal writes your workouts and water intake to Apple Health.",
@@ -24,7 +24,7 @@
       }
     },
     "android": {
-      "package": "com.yesha.ordeal",
+      "package": "com.yesha.fitlog",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0f0f1a"
