@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { SkeletonBox, SkeletonCard } from "@/components/SkeletonBox";
 import { useToast } from "@/components/ui/Toast";
+import { useSubscription } from "@/hooks/useSubscription";
 
 const PRESET_TIMES = [
   "06:00","07:00","07:30","08:00","08:30","09:00","10:00","11:00",
@@ -54,7 +55,7 @@ export default function ProfileScreen() {
   const { language, changeLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
   const { user, clearAuth } = useAuthStore();
-  const { darkMode, unitSystem, setDarkMode, setUnitSystem } = useSettingsStore();
+  const { darkMode, unitSystem, defaultRestTimeSec, setDarkMode, setUnitSystem, setDefaultRestTimeSec } = useSettingsStore();
   const { globalEnabled, prefs, setGlobalEnabled, setEnabled, setTime } = useNotificationStore();
   const [expandedNotifType, setExpandedNotifType] = useState<NotifType | null>(null);
   const [bodyStatsExpanded, setBodyStatsExpanded] = useState(false);
@@ -65,6 +66,8 @@ export default function ProfileScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : 0;
   
   const { showToast } = useToast();
+  const { tier: currentTier } = useSubscription();
+  const isDemo = user?.email === "demo@ordeal.app";
 
   const goalLabels: Record<string, string> = {
     "Lose Weight": t("profile.loseWeight"),
@@ -447,7 +450,7 @@ export default function ProfileScreen() {
           <View style={{ padding: 14, borderRadius: 12, backgroundColor: theme.danger + "18", borderWidth: 1, borderColor: theme.danger + "40", flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Feather name="alert-circle" size={18} color={theme.danger} />
             <Text style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("common.error")}</Text>
-            <Pressable onPress={() => refetchProfile()} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.danger + "25" }}>
+            <Pressable onPress={() => refetchProfile()} accessibilityRole="button" accessibilityLabel={t("common.retry")} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.danger + "25", minHeight: 44, justifyContent: "center" }}>
               <Text style={{ color: theme.danger, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("common.retry")}</Text>
             </Pressable>
           </View>
@@ -501,11 +504,11 @@ export default function ProfileScreen() {
                 </Text>
 
                 {/* XP badge + rank */}
-                <Pressable onPress={() => router.push("/rank")} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Pressable onPress={() => router.push("/rank")} accessibilityRole="button" accessibilityLabel={`${t(rank.nameKey)} - ${xp.toLocaleString()} XP`} style={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: rank.bgColor, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: rank.borderColor + "40" }}>
                     {IconComponent && <IconComponent color={rank.borderColor} size={16} />}
                     <Text style={{ color: rank.textColor, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
-                      {rank.name}
+                      {t(rank.nameKey)}
                     </Text>
                     <Text style={{ color: rank.textColor + "90", fontFamily: "Inter_400Regular", fontSize: 11 }}>
                       {xp.toLocaleString()} XP
@@ -515,7 +518,7 @@ export default function ProfileScreen() {
 
                 {/* Streak with fire icon */}
                 {currentStreak > 0 && (
-                  <Pressable onPress={() => router.push("/streaks" as any)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Pressable onPress={() => router.push("/streaks" as any)} accessibilityRole="button" accessibilityLabel={`${currentStreak} ${t("home.dayStreak")}`} style={{ flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44 }}>
                     <Feather name="zap" size={14} color="#ff6b35" />
                     <Text style={{ color: "#ff6b35", fontFamily: "Inter_700Bold", fontSize: 14 }}>
                       {currentStreak}
@@ -542,6 +545,8 @@ export default function ProfileScreen() {
             <Pressable
               key={item.title}
               onPress={item.onPress}
+              accessibilityRole="button"
+              accessibilityLabel={item.title}
               style={[styles.menuCard, { backgroundColor: theme.card, borderColor: theme.border }]}
             >
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -594,6 +599,8 @@ export default function ProfileScreen() {
                 ]
               );
             }}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.language")}
             style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
           >
             <View style={styles.settingLeft}>
@@ -613,6 +620,8 @@ export default function ProfileScreen() {
           {/* Units */}
           <Pressable
             onPress={() => setUnitSystem(unitSystem === "metric" ? "imperial" : "metric")}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.unitSystem")}
             style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
           >
             <View style={styles.settingLeft}>
@@ -624,6 +633,32 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
                 {unitSystem === "metric" ? t("profile.metric") : t("profile.imperial")}
+              </Text>
+              <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+            </View>
+          </Pressable>
+
+          {/* Rest Timer */}
+          <Pressable
+            onPress={() => {
+              const options = [30, 45, 60, 90, 120, 180];
+              const currentIdx = options.indexOf(defaultRestTimeSec);
+              const nextIdx = (currentIdx + 1) % options.length;
+              setDefaultRestTimeSec(options[nextIdx]);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.restTimer", { defaultValue: "Rest Timer" })}
+            style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: "#4fc3f7" + "18" }]}>
+                <Feather name="clock" size={16} color="#4fc3f7" />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.restTimer", { defaultValue: "Rest Timer" })}</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+                {defaultRestTimeSec >= 60 ? `${defaultRestTimeSec / 60}m` : `${defaultRestTimeSec}s`}
               </Text>
               <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
             </View>
@@ -648,6 +683,8 @@ export default function ProfileScreen() {
           {/* Health & Wearables */}
           <Pressable
             onPress={() => router.push("/settings/health" as any)}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.healthAndWearables")}
             style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
           >
             <View style={styles.settingLeft}>
@@ -665,10 +702,12 @@ export default function ProfileScreen() {
               if (subscriptionData?.plan?.key !== "premium") {
                 router.push("/subscription" as any);
               } else {
-                router.push("/(tabs)/progress" as any);
+                router.push("/settings/export" as any);
               }
             }}
-            style={styles.settingRow}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.exportData")}
+            style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
           >
             <View style={styles.settingLeft}>
               <View style={[styles.settingIcon, { backgroundColor: theme.secondary + "18" }]}>
@@ -685,6 +724,22 @@ export default function ProfileScreen() {
               <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
             </View>
           </Pressable>
+
+          {/* Invite Friends / Referral */}
+          <Pressable
+            onPress={() => router.push("/settings/referral" as any)}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.inviteFriends", { defaultValue: "Invite Friends" })}
+            style={styles.settingRow}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: theme.primary + "18" }]}>
+                <Feather name="gift" size={16} color={theme.primary} />
+              </View>
+              <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.inviteFriends", { defaultValue: "Invite Friends" })}</Text>
+            </View>
+            <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+          </Pressable>
         </Card>
 
         {/* ══════════════════════════════════════════════════════════════════
@@ -698,6 +753,8 @@ export default function ProfileScreen() {
           {/* Plan info */}
           <Pressable
             onPress={() => router.push("/subscription" as any)}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.currentPlan")}
             style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
           >
             <View style={styles.settingLeft}>
@@ -729,6 +786,8 @@ export default function ProfileScreen() {
           {/* Edit Profile — save current profile data */}
           <Pressable
             onPress={handleSave}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.saveProfile")}
             style={[styles.settingRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
           >
             <View style={styles.settingLeft}>
@@ -744,9 +803,49 @@ export default function ProfileScreen() {
             )}
           </Pressable>
 
+          {/* Demo plan toggle — only for demo@ordeal.app */}
+          {isDemo && (
+            <View style={[styles.settingRow, { gap: 10 }]}>
+              <View style={styles.settingLeft}>
+                <View style={[styles.settingIcon, { backgroundColor: theme.secondary + "18" }]}>
+                  <Feather name="toggle-left" size={16} color={theme.secondary} />
+                </View>
+                <Text style={{ color: theme.text, fontFamily: "Inter_500Medium", fontSize: 15 }}>{t("profile.plan")}</Text>
+              </View>
+              <View style={{ flexDirection: "row", gap: 6 }}>
+                {(["free", "premium"] as const).map(plan => (
+                  <Pressable
+                    key={plan}
+                    onPress={async () => {
+                      try {
+                        await api.simulateSubscription(plan);
+                        queryClient.invalidateQueries({ queryKey: ["subscription"] });
+                        showToast(t("profile.switchedToPlan", { plan }), "success");
+                      } catch {}
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("profile.switchToPlan", { plan })}
+                    style={{
+                      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, minHeight: 44, justifyContent: "center" as const,
+                      backgroundColor: currentTier === plan ? theme.primary + "20" : theme.background,
+                      borderColor: currentTier === plan ? theme.primary : theme.border,
+                    }}
+                  >
+                    <Text style={{
+                      color: currentTier === plan ? theme.primary : theme.textMuted,
+                      fontFamily: "Inter_600SemiBold", fontSize: 12, textTransform: "capitalize",
+                    }}>{plan}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* Logout */}
           <Pressable
             onPress={handleLogout}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.signOut")}
             style={styles.settingRow}
           >
             <View style={styles.settingLeft}>

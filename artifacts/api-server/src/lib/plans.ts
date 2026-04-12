@@ -61,7 +61,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       maxFavoriteMeals: 10,
       aiRequestsPerDay: 5,
       dataRetentionDays: 30,
-      scansPerDay: 1,
+      scansPerDay: 3,
     },
     priceMonthly: 0,
     priceYearly: 0,

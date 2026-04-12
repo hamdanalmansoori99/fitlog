@@ -689,17 +689,17 @@ export default function ProgressScreen() {
                 <Feather name="activity" size={24} color={theme.primary} />
               </View>
               <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 16, textAlign: "center" }}>
-                Log your first workout
+                {t("progress.logFirstWorkoutTitle")}
               </Text>
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", lineHeight: 19, maxWidth: 260 }}>
-                Your consistency score, streaks, and progress charts will appear here after your first session.
+                {t("progress.logFirstWorkoutDesc")}
               </Text>
               <Pressable
                 onPress={() => router.push("/(tabs)/workouts" as any)}
                 style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.primaryDim, borderWidth: 1, borderColor: theme.primary + "50" }}
               >
                 <Feather name="plus" size={14} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Log Workout</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("progress.logWorkoutBtn")}</Text>
               </Pressable>
             </View>
           </Animated.View>
@@ -974,7 +974,7 @@ export default function ProgressScreen() {
             <WeeklyBarChart
               data={workoutSummary.weeklyFrequency.map((w: any, idx: number, arr: any[]) => {
                 const weeksAgo = arr.length - 1 - idx;
-                const dayLabel = weeksAgo === 0 ? "This wk" : `${weeksAgo}w`;
+                const dayLabel = weeksAgo === 0 ? t("progress.thisWk") : `${weeksAgo}w`;
                 return {
                   dayLabel,
                   activeMinutes: w.count,
@@ -992,17 +992,17 @@ export default function ProgressScreen() {
                 <Feather name="bar-chart-2" size={22} color={theme.primary} />
               </View>
               <Text style={[styles.emptyTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                No workout history yet
+                {t("progress.noWorkoutHistoryYet")}
               </Text>
               <Text style={[styles.emptyDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                Your weekly frequency chart will fill in as you log workouts.
+                {t("progress.weeklyFrequencyEmpty")}
               </Text>
               <Pressable
                 onPress={() => router.push("/(tabs)/workouts" as any)}
                 style={[styles.emptyBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "50" }]}
               >
                 <Feather name="plus" size={14} color={theme.primary} />
-                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Log Workout</Text>
+                <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("progress.logWorkoutBtn")}</Text>
               </Pressable>
             </View>
           </Card>

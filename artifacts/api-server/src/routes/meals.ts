@@ -73,7 +73,7 @@ router.post("/barcode-lookup", requireAuth, async (req, res) => {
     const response = await fetch(
       `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode.trim())}.json`,
       {
-        headers: { "User-Agent": "FitLog/1.0 (fitness-tracker-app)" },
+        headers: { "User-Agent": "Ordeal/1.0 (fitness-tracker-app)" },
         signal: AbortSignal.timeout(10000),
       }
     );
@@ -283,7 +283,7 @@ router.get("/stats/nutrition", requireAuth, async (req, res) => {
       .where(and(eq(mealsTable.userId, user.id), gte(mealsTable.date, thirtyDaysAgo)));
     
     // Batch-fetch all food items in one query instead of one per meal
-    let mealWithItems: (typeof recentMeals[number] & { foodItems: (typeof allFoodItems)[number][] })[];
+    let mealWithItems: (typeof recentMeals[number] & { foodItems: any[] })[];
     if (recentMeals.length === 0) {
       mealWithItems = [];
     } else {
@@ -426,11 +426,19 @@ router.get("/", requireAuth, async (req, res) => {
       fatG: acc.fatG + m.totalFatG,
     }), { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 });
 
+    // Compute locked flag for free-tier data retention
+    const { getActiveSubscription } = await import("../services/subscriptionService");
+    const sub = await getActiveSubscription(user.id, user.role ?? "user");
+    const retentionDays = sub.plan.limits.dataRetentionDays;
+    const cutoffDate = retentionDays < Infinity ? new Date(Date.now() - retentionDays * 86400000) : null;
+    const locked = cutoffDate ? startDate < cutoffDate : false;
+
     res.json({
       date: dateStr || new Date().toISOString().split("T")[0],
-      meals: mealsWithItems,
+      meals: mealsWithItems.map(m => ({ ...m, locked })),
       dailyTotals,
       calorieGoal: profiles[0]?.dailyCalorieGoal || null,
+      locked,
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to get meals" });
@@ -516,13 +524,18 @@ router.get("/food-search", requireAuth, async (req, res) => {
       return;
     }
 
+    // Accept locale/country from client for GCC-aware results
+    const locale = (req.query.locale as string || "en").toLowerCase();
+    const country = (req.query.country as string || (locale === "ar" ? "ae" : "us")).toLowerCase();
+    const lc = locale === "ar" ? "ar" : "en";
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     let response: Response;
     try {
       response = await fetch(
-        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=en&fields=product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,completeness`,
-        { headers: { "User-Agent": "FitLog/1.0 (fitness-tracker-app)" }, signal: controller.signal }
+        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=50&lc=${lc}&cc=${country}&fields=product_name,product_name_en,product_name_ar,brands,nutriments,serving_size,serving_quantity,completeness`,
+        { headers: { "User-Agent": "Ordeal/1.0 (fitness-tracker-app)" }, signal: controller.signal }
       );
     } catch (e: any) {
       clearTimeout(timeout);
@@ -539,27 +552,36 @@ router.get("/food-search", requireAuth, async (req, res) => {
     const data: any = await response.json();
     const products: any[] = data.products || [];
 
+    // Pick the best product name based on locale
+    const pickName = (p: any) => {
+      if (lc === "ar") return p.product_name_ar || p.product_name || p.product_name_en || "Unknown";
+      return p.product_name_en || p.product_name || "Unknown";
+    };
+
     const results = products
       .filter((p: any) => {
-        const name = p.product_name_en || p.product_name;
+        const name = p.product_name_en || p.product_name || p.product_name_ar;
         if (!name || name.trim().length < 2) return false;
         const n = p.nutriments || {};
         const cal = Number(n["energy-kcal_100g"]) || 0;
-        // Require at least some calorie data to be useful
         return cal > 0;
       })
       .sort((a: any, b: any) => {
-        // Prefer English-named products
-        const aEn = !!(a.product_name_en);
-        const bEn = !!(b.product_name_en);
-        if (aEn !== bEn) return aEn ? -1 : 1;
-        // Then prefer more complete entries
+        const qLower = q.toLowerCase();
+        const aName = pickName(a).toLowerCase();
+        const bName = pickName(b).toLowerCase();
+        const aStarts = aName.startsWith(qLower) ? 1 : 0;
+        const bStarts = bName.startsWith(qLower) ? 1 : 0;
+        if (aStarts !== bStarts) return bStarts - aStarts;
+        // Prefer products with locale-specific names
+        const aLocale = lc === "ar" ? !!(a.product_name_ar) : !!(a.product_name_en);
+        const bLocale = lc === "ar" ? !!(b.product_name_ar) : !!(b.product_name_en);
+        if (aLocale !== bLocale) return aLocale ? -1 : 1;
         return (b.completeness || 0) - (a.completeness || 0);
       })
       .map((p: any) => {
         const n = p.nutriments || {};
-        const name = p.product_name_en || p.product_name || "Unknown";
-        // Trim brand from name if it appears there
+        const name = pickName(p);
         const brand = p.brands ? p.brands.split(",")[0].trim() : null;
         return {
           name,
@@ -1152,6 +1174,31 @@ Be practical — combine similar items, use standard grocery quantities in ${isM
   } catch (err) {
     logError("generate-grocery-list error:", err);
     res.status(500).json({ error: "Failed to generate grocery list" });
+  }
+});
+
+// ─── Ramadan prayer times ────────────────────────────────────
+import { isRamadan, getRamadanInfo, getPrayerTimes } from "../lib/ramadan";
+
+router.get("/ramadan", requireAuth, async (_req, res) => {
+  const info = getRamadanInfo();
+  if (!info.isRamadan) {
+    res.json({ isRamadan: false });
+    return;
+  }
+  res.json(info);
+});
+
+router.get("/ramadan/prayer-times", requireAuth, async (req, res) => {
+  const lat = parseFloat(req.query.lat as string) || 24.4539; // Abu Dhabi default
+  const lng = parseFloat(req.query.lng as string) || 54.3773;
+  try {
+    const times = await getPrayerTimes(lat, lng);
+    const info = getRamadanInfo();
+    res.json({ ...info, prayerTimes: times });
+  } catch (err) {
+    logError("prayer-times error:", err);
+    res.status(500).json({ error: "Failed to fetch prayer times" });
   }
 });
 

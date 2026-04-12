@@ -709,7 +709,7 @@ export function getFilteredExercises(
       name: bestAlt.alt.name,
       substituteFor: ex.name,
       isSubstitution: true,
-      note: `Replaces: ${ex.name}`,
+      note: `coach.substitution.replaces`,
     };
   });
 }
@@ -778,19 +778,19 @@ export function getRecommendations(
         score += 30;
         if (equipment.length === 0 || equipment.includes("none")) {
           score += 20;
-          reasons.push("Uses no equipment — perfect for your setup");
+          reasons.push("coach.reasons.noEquipmentPerfect");
         } else {
-          reasons.push("No equipment required");
+          reasons.push("coach.reasons.noEquipmentRequired");
         }
       } else {
         score += 50;
-        reasons.push("Matches your available equipment perfectly");
+        reasons.push("coach.reasons.equipmentMatchPerfect");
       }
     } else {
       // partial — user can do it with substitutions
       score += 20;
       const missingNames = missing.map((m) => m.replace(/_/g, " ")).join(", ");
-      reasons.push(`Doable with substitutions for missing ${missingNames}`);
+      reasons.push("coach.reasons.doableWithSubstitutions");
     }
 
     // ── 2. Goal alignment ─────────────────────────────────────────────────
@@ -798,7 +798,7 @@ export function getRecommendations(
     if (goalMatch) {
       score += 25;
       const matchedGoal = findMatchedUserGoal(goals, template.goals);
-      reasons.push(`Aligned with your goal: ${matchedGoal}`);
+      reasons.push("coach.reasons.alignedWithGoal");
     }
 
     // ── 3. Training preferences ───────────────────────────────────────────
@@ -818,10 +818,10 @@ export function getRecommendations(
 
     if (activityMatch) {
       score += 50;
-      reasons.push("Matches your preferred training style");
+      reasons.push("coach.reasons.matchesTrainingStyle");
     } else if (tagMatch) {
       score += 25;
-      reasons.push("Related to your training preferences");
+      reasons.push("coach.reasons.relatedToPreferences");
     }
 
     // Deprioritize gym-only templates when user didn't select Strength training
@@ -838,7 +838,7 @@ export function getRecommendations(
     const levelDiff = Math.abs(templateLevel - userLevel);
     if (levelDiff === 0) {
       score += 15;
-      reasons.push(`Right difficulty for your ${experience} level`);
+      reasons.push("coach.reasons.rightDifficulty");
     } else if (levelDiff === 1) {
       score += 5;
     } else {
@@ -879,7 +879,7 @@ export function getRecommendations(
     // ── 7. Recovery boost ─────────────────────────────────────────────────
     if (daysSinceLast > 4 && template.difficulty === "Beginner") {
       score += 10;
-      reasons.push("Good restart after some time off");
+      reasons.push("coach.reasons.goodRestart");
     }
 
     // ── 8. Location match ─────────────────────────────────────────────────
@@ -908,13 +908,12 @@ export function getRecommendations(
 
 function buildDefaultReason(template: WorkoutTemplate, goals: string[]): string {
   if (goalsOverlap(goals, template.goals)) {
-    const matched = findMatchedUserGoal(goals, template.goals);
-    return `Supports your goal: ${matched ?? template.goals[0]}.`;
+    return "coach.reasons.supportsGoal";
   }
   if (template.requiredEquipment.length === 0) {
-    return "No equipment required — do this anywhere.";
+    return "coach.reasons.noEquipmentAnywhere";
   }
-  return `A solid ${template.difficulty.toLowerCase()} workout for overall fitness.`;
+  return "coach.reasons.solidWorkout";
 }
 
 // ─── Muscle group helpers ─────────────────────────────────────────────────────
@@ -980,6 +979,7 @@ export interface TodayRecommendation {
   progressionLevel: "returning" | "normal" | "progressing";
   daysSinceLast: number;
   recoveryWarning?: boolean;
+  shouldDeload?: boolean;
 }
 
 // ─── Coach Insights ───────────────────────────────────────────────────────────
@@ -1016,13 +1016,13 @@ export function getCoachInsights(
   if (currentStreak >= 3) {
     insights.push({
       type: "streak",
-      headline: `${currentStreak}-day workout streak`,
+      headline: "coach.insights.streakHeadline",
       detail:
         currentStreak >= 7
-          ? "A full week of training — elite commitment. Schedule a rest day soon to let your body rebuild stronger."
+          ? "coach.insights.streakDetail7"
           : currentStreak >= 5
-          ? "Impressive run! Make sure you plan a recovery day so your muscles can consolidate those gains."
-          : "You're on a roll. Consistency compounds — every session adds up more than you think.",
+          ? "coach.insights.streakDetail5"
+          : "coach.insights.streakDetail3",
       icon: "zap",
       positive: true,
     });
@@ -1032,15 +1032,15 @@ export function getCoachInsights(
   if (insights.length < 2 && [10, 25, 50, 100, 150, 200].includes(totalWorkouts)) {
     insights.push({
       type: "milestone",
-      headline: `${totalWorkouts} workouts logged!`,
+      headline: "coach.insights.milestoneHeadline",
       detail:
         totalWorkouts === 10
-          ? "10 sessions in — the hardest part is starting. Now prove you can keep going."
+          ? "coach.insights.milestoneDetail10"
           : totalWorkouts === 25
-          ? "25 workouts! The habit is forming. Your body is already adapting in ways you can't see yet."
+          ? "coach.insights.milestoneDetail25"
           : totalWorkouts === 50
-          ? "50 sessions. You're building a lifestyle, not just a streak. Incredible dedication."
-          : "100 workouts. Very few people ever reach this milestone. You're genuinely committed.",
+          ? "coach.insights.milestoneDetail50"
+          : "coach.insights.milestoneDetail100",
       icon: "award",
       positive: true,
     });
@@ -1052,16 +1052,16 @@ export function getCoachInsights(
     if (thisWeekCount >= targetDays) {
       insights.push({
         type: "goal",
-        headline: "Weekly goal hit!",
-        detail: `${thisWeekCount} of ${targetDays} sessions done. Any extra workout this week is pure bonus.`,
+        headline: "coach.insights.weeklyGoalHitHeadline",
+        detail: "coach.insights.weeklyGoalHitDetail",
         icon: "check-circle",
         positive: true,
       });
     } else if (workoutsNeeded === 1 && daysLeftInWeek >= 2) {
       insights.push({
         type: "goal",
-        headline: "One session away from your weekly goal",
-        detail: `You're at ${thisWeekCount}/${targetDays} this week — one more workout seals it.`,
+        headline: "coach.insights.oneSessionAwayHeadline",
+        detail: "coach.insights.oneSessionAwayDetail",
         icon: "target",
         positive: true,
       });
@@ -1073,16 +1073,16 @@ export function getCoachInsights(
     if (thisWeekCount > prevWeek.length) {
       insights.push({
         type: "volume",
-        headline: "More active than last week",
-        detail: `${thisWeekCount} session${thisWeekCount !== 1 ? "s" : ""} this week vs ${prevWeek.length} last week. Great upward momentum.`,
+        headline: "coach.insights.moreActiveHeadline",
+        detail: "coach.insights.moreActiveDetail",
         icon: "trending-up",
         positive: true,
       });
     } else if (thisWeekCount === 0 && prevWeek.length >= 3) {
       insights.push({
         type: "volume",
-        headline: "No sessions logged yet this week",
-        detail: `You had ${prevWeek.length} last week. Today is the perfect day to restart the momentum.`,
+        headline: "coach.insights.noSessionsHeadline",
+        detail: "coach.insights.noSessionsDetail",
         icon: "trending-down",
         positive: false,
       });
@@ -1095,17 +1095,16 @@ export function getCoachInsights(
     if (last7.length >= 3 && typesThisWeek.size >= 3) {
       insights.push({
         type: "variety",
-        headline: "Great variety in your training",
-        detail: `${typesThisWeek.size} different activity types this week — cross-training builds balanced fitness and lowers injury risk.`,
+        headline: "coach.insights.greatVarietyHeadline",
+        detail: "coach.insights.greatVarietyDetail",
         icon: "shuffle",
         positive: true,
       });
     } else if (last7.length >= 4 && typesThisWeek.size === 1) {
-      const typeName = [...typesThisWeek][0];
       insights.push({
         type: "rut",
-        headline: `All ${typeName} this week — mix it up?`,
-        detail: "Cross-training different workout types builds fuller fitness and keeps you mentally fresh.",
+        headline: "coach.insights.rutHeadline",
+        detail: "coach.insights.rutDetail",
         icon: "refresh-cw",
         positive: false,
       });
@@ -1121,17 +1120,17 @@ export function getCoachInsights(
       );
       const groupCounts: Record<string, number> = {};
       for (const g of allGroups) groupCounts[g] = (groupCounts[g] || 0) + 1;
-      const groupLabels: Record<string, string> = {
-        upper: "upper body",
-        lower: "legs & glutes",
-        core: "core",
+      const neglectedKey: Record<string, string> = {
+        upper: "coach.insights.neglectedUpper",
+        lower: "coach.insights.neglectedLower",
+        core: "coach.insights.neglectedCore",
       };
       const neglected = ["upper", "lower", "core"].find((g) => !groupCounts[g]);
       if (neglected) {
         insights.push({
           type: "neglected",
-          headline: `${groupLabels[neglected]} not hit this week`,
-          detail: "Balanced training across all muscle groups leads to better results and helps prevent injury.",
+          headline: neglectedKey[neglected],
+          detail: "coach.insights.neglectedDetail",
           icon: "alert-circle",
           positive: false,
         });
@@ -1161,12 +1160,9 @@ function buildTodayCoachingReason(
       (g) => yesterdayGroups.includes(g) && g !== "full" && g !== "cardio"
     );
     if (overlap.length === 0 && tGroups.length > 0 && !tGroups.includes("recovery")) {
-      const yName = yesterdayWorkout.name || yesterdayWorkout.activityType;
-      parts.push(
-        `After ${yName} yesterday, this hits fresh muscle groups so you can train hard without overtraining`
-      );
+      parts.push("coach.todayReason.freshMuscleGroups");
     } else if (tGroups.includes("recovery") || tGroups.includes("cardio")) {
-      parts.push("Light on the muscles you worked yesterday — perfectly safe to train today");
+      parts.push("coach.todayReason.lightOnMuscles");
     }
   }
 
@@ -1174,41 +1170,35 @@ function buildTodayCoachingReason(
   if (progressionLevel === "progressing" && last7Count >= 4) {
     const lvl = DIFFICULTY_MAP[t.difficulty] || 1;
     if (lvl > 1 && parts.length < 2) {
-      parts.push(
-        `Your ${last7Count}-session week shows you're ready to push harder — this intermediate challenge will drive real progress`
-      );
+      parts.push("coach.todayReason.readyToPush");
     }
   } else if (progressionLevel === "returning" && parts.length < 2) {
     if ((DIFFICULTY_MAP[t.difficulty] || 1) === 1) {
-      parts.push("This beginner-friendly session eases your body back into training without overwhelming it");
+      parts.push("coach.todayReason.beginnerFriendly");
     }
   }
 
   // 3. Recovery timing
   if (daysSinceLast >= 5 && parts.length < 2) {
-    parts.push(
-      `${Math.round(daysSinceLast)} days of rest means your muscles are fully recovered — this lighter session is the perfect way back`
-    );
+    parts.push("coach.todayReason.fullyRecovered");
   } else if (daysSinceLast >= 2 && parts.length < 2) {
-    parts.push(
-      `${Math.round(daysSinceLast)}-day recovery window means your muscles are at peak readiness right now`
-    );
+    parts.push("coach.todayReason.peakReadiness");
   }
 
   // 4. Goal alignment
   if (parts.length < 2) {
     const matchedGoal = findMatchedUserGoal(goals, t.goals);
     if (matchedGoal) {
-      parts.push(`Directly supports your goal: ${matchedGoal.toLowerCase()}`);
+      parts.push("coach.todayReason.supportsGoal");
     }
   }
 
   // 5. Equipment context
   if (parts.length < 2) {
     if (rec.equipmentMatch === "full" && t.requiredEquipment.length > 0) {
-      parts.push("Uses all your available equipment for maximum training effectiveness");
+      parts.push("coach.todayReason.usesAllEquipment");
     } else if (rec.equipmentMatch === "partial") {
-      parts.push("Adapted with smart substitutions to work with your available equipment");
+      parts.push("coach.todayReason.adaptedWithSubstitutions");
     }
   }
 
@@ -1399,26 +1389,26 @@ export function getTodayRecommendation(
       (g) => yesterdayGroups.includes(g) && g !== "full"
     ).length === 0;
     if (noOverlap && best.templateGroups.length > 0) {
-      pills.push("Fresh muscle groups");
+      pills.push("coach.pills.freshMuscleGroups");
     }
   }
 
   if (progressionLevel === "progressing") {
-    pills.push("Progression unlocked");
+    pills.push("coach.pills.progressionUnlocked");
   } else if (progressionLevel === "returning") {
-    pills.push("Easing back in");
+    pills.push("coach.pills.easingBackIn");
   }
 
   if (daysSinceLast >= 5) {
-    pills.push("Gentle restart");
+    pills.push("coach.pills.gentleRestart");
   } else if (daysSinceLast >= 2) {
-    pills.push("Recovered & ready");
+    pills.push("coach.pills.recoveredAndReady");
   }
 
   if (best.rec.equipmentMatch === "full") {
-    pills.push("Perfect equipment match");
+    pills.push("coach.pills.perfectEquipmentMatch");
   } else {
-    pills.push("Substitutions available");
+    pills.push("coach.pills.substitutionsAvailable");
   }
 
   // Recovery-aware pills
@@ -1429,35 +1419,27 @@ export function getTodayRecommendation(
       soreness["chest"] ?? 0, soreness["back"] ?? 0,
       soreness["shoulders"] ?? 0, soreness["arms"] ?? 0
     );
-    if (legSore >= 2) pills.unshift("Legs recovering");
-    if (upperSore >= 2) pills.unshift("Upper body recovering");
-    if (recovery.energyLevel !== undefined && recovery.energyLevel >= 4) pills.unshift("High energy");
-    if (recovery.sleepQuality !== undefined && recovery.sleepQuality >= 4) pills.unshift("Well rested");
-    if (recovery.sleepQuality !== undefined && recovery.sleepQuality <= 2) pills.unshift("Light session");
-    if (recovery.energyLevel !== undefined && recovery.energyLevel <= 2) pills.unshift("Low energy");
+    if (legSore >= 2) pills.unshift("coach.pills.legsRecovering");
+    if (upperSore >= 2) pills.unshift("coach.pills.upperBodyRecovering");
+    if (recovery.energyLevel !== undefined && recovery.energyLevel >= 4) pills.unshift("coach.pills.highEnergy");
+    if (recovery.sleepQuality !== undefined && recovery.sleepQuality >= 4) pills.unshift("coach.pills.wellRested");
+    if (recovery.sleepQuality !== undefined && recovery.sleepQuality <= 2) pills.unshift("coach.pills.lightSession");
+    if (recovery.energyLevel !== undefined && recovery.energyLevel <= 2) pills.unshift("coach.pills.lowEnergy");
   }
 
   // Build context summary
   let contextSummary: string;
   if (daysSinceLast > 5) {
-    const d = Math.round(daysSinceLast);
-    contextSummary = `${d} days since your last workout — your body is fully rested. This lighter session is the ideal on-ramp back.`;
+    contextSummary = "coach.context.fullyRested";
   } else if (daysSinceLast >= 2) {
     const dDays = Math.round(daysSinceLast);
-    contextSummary = `${dDays} rest day${dDays !== 1 ? "s" : ""} completed — muscles are repaired and stronger than before. Prime time to train.`;
+    contextSummary = "coach.context.restCompleted";
   } else if (progressionLevel === "progressing") {
-    contextSummary = `${last7.length} sessions this week with solid consistency — your body is adapting. Push it a bit harder today.`;
+    contextSummary = "coach.context.solidConsistency";
   } else if (yesterdayWorkout) {
-    const yName = yesterdayWorkout.name || yesterdayWorkout.activityType;
-    const tGroups = getMuscleGroups(best.rec.template);
-    const groupLabel = tGroups.includes("full")
-      ? "full body"
-      : tGroups.filter((g) => ["upper", "lower", "core", "cardio"].includes(g))
-          .map((g) => ({ upper: "upper body", lower: "legs", core: "core", cardio: "cardio" }[g]))
-          .join(" & ");
-    contextSummary = `Yesterday: ${yName}. Today's pick focuses on ${groupLabel || "different muscles"} to keep you training without overtraining.`;
+    contextSummary = "coach.context.freshMusclesFocus";
   } else {
-    contextSummary = "Picked for your goals, available equipment, and preferred training duration. Let's go.";
+    contextSummary = "coach.context.pickedForYou";
   }
 
   const personalReason = buildTodayCoachingReason(
@@ -1493,14 +1475,22 @@ export function getTodayRecommendation(
     }
   }
 
+  // Deload detection: if user has been training hard (10+ workouts in 14 days)
+  // or recovery warning is active, suggest lower intensity
+  const recentForDeload = recentWorkouts.filter(
+    (w) => (now - new Date(w.date).getTime()) / (1000 * 60 * 60 * 24) <= 14
+  );
+  const shouldDeload = recoveryWarning || recentForDeload.length >= 10;
+
   return {
     recommendation: { ...best.rec, whyGoodForYou: personalReason },
-    reasonPills: pills.slice(0, 3),
-    contextSummary,
+    reasonPills: shouldDeload ? ["coach.pill.deloadWeek", ...pills.slice(0, 2)] : pills.slice(0, 3),
+    contextSummary: shouldDeload ? "coach.context.deloadSuggested" : contextSummary,
     isRestDayRecommended,
     progressionLevel,
     daysSinceLast,
     recoveryWarning,
+    shouldDeload,
   };
 }
 
@@ -1523,7 +1513,7 @@ export function getTodaySuggestion(
   if (daysSinceLast > 5) {
     const easy = recs.find((r) => r.template.difficulty === "Beginner" && r.equipmentMatch === "full");
     if (easy) {
-      return { ...easy, whyGoodForYou: "You've had some rest — this gentle session is a great way back in." };
+      return { ...easy, whyGoodForYou: "coach.reasons.gentleWayBack" };
     }
   }
 
@@ -1564,10 +1554,10 @@ export function generateWeeklyPlan(
   let prevPrevSlotGroups: string[] = [];
 
   const REST_NOTES = [
-    "Recovery day — muscles rebuild and grow stronger during rest. A 20-min walk keeps blood flowing.",
-    "Rest day — your nervous system needs recovery too. Sleep well and stay hydrated.",
-    "Active recovery — light stretching or a gentle walk supports repair without adding fatigue.",
-    "Rest day — consistency means knowing when not to train, too. Your body thanks you.",
+    "coach.restNotes.note1",
+    "coach.restNotes.note2",
+    "coach.restNotes.note3",
+    "coach.restNotes.note4",
   ];
   let restIdx = 0;
 
@@ -1583,7 +1573,7 @@ export function generateWeeklyPlan(
     const available = recs.filter((r) => !usedTemplates.has(r.template.id));
 
     if (available.length === 0) {
-      return { day, template: null, rest: true, note: "Active rest — a brisk walk or easy cycling keeps you moving." };
+      return { day, template: null, rest: true, note: "coach.restNotes.activeRest" };
     }
 
     // Score each candidate by muscle-group overlap with the previous two workout
@@ -1648,7 +1638,7 @@ export function generateWeeklyPlan(
       note = `${capitalised} focus. ${chosen.rec.whyGoodForYou}`;
     }
     if (isReturning && DIFFICULTY_MAP[chosen.rec.template.difficulty] === 1) {
-      note += " Easing back in — a gentler week is smart after time off.";
+      note += " coach.weeklyPlan.easingBackIn";
     }
 
     return { day, template: chosen.rec.template, rest: false, note };
@@ -1668,13 +1658,13 @@ function distributeWorkoutDays(count: number): number[] {
 
 export function getActivityBenefits(activityType: string): string[] {
   const map: Record<string, string[]> = {
-    walking: ["Improves cardiovascular health", "Supports sustainable fat loss", "Low impact — easy on joints", "Great for active recovery"],
-    running: ["Builds cardiovascular endurance", "Burns significant calories", "Strengthens the heart and lungs", "Improves mental health and mood"],
-    gym: ["Builds strength and muscle", "Improves bone density", "Boosts resting metabolism", "Supports long-term body composition"],
-    cycling: ["Effective cardiovascular workout", "Lower joint impact than running", "Improves leg endurance and power", "Great calorie burner"],
-    swimming: ["Full-body conditioning", "Zero joint impact", "Builds lung capacity", "Excellent for recovery"],
-    cardio: ["Builds cardiovascular endurance", "Burns significant calories", "Strengthens the heart and lungs", "Improves mental health and mood"],
-    other: ["Keeps you active and moving", "Burns calories", "Variety is key to long-term consistency"],
+    walking: ["coach.benefits.walking1", "coach.benefits.walking2", "coach.benefits.walking3", "coach.benefits.walking4"],
+    running: ["coach.benefits.running1", "coach.benefits.running2", "coach.benefits.running3", "coach.benefits.running4"],
+    gym: ["coach.benefits.gym1", "coach.benefits.gym2", "coach.benefits.gym3", "coach.benefits.gym4"],
+    cycling: ["coach.benefits.cycling1", "coach.benefits.cycling2", "coach.benefits.cycling3", "coach.benefits.cycling4"],
+    swimming: ["coach.benefits.swimming1", "coach.benefits.swimming2", "coach.benefits.swimming3", "coach.benefits.swimming4"],
+    cardio: ["coach.benefits.cardio1", "coach.benefits.cardio2", "coach.benefits.cardio3", "coach.benefits.cardio4"],
+    other: ["coach.benefits.other1", "coach.benefits.other2", "coach.benefits.other3"],
   };
   return map[activityType] || map.other;
 }

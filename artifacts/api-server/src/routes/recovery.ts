@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, recoveryLogsTable } from "@workspace/db";
 import { eq, and, gte, lt, desc } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
+import { logError } from "../lib/logger";
 
 const router = Router();
 
@@ -27,7 +28,7 @@ router.get("/today", requireAuth, async (req, res) => {
       .limit(1);
     res.json({ log: log ?? null });
   } catch (err) {
-    console.error("Get recovery log error:", err);
+    logError("Get recovery log error:", err);
     res.status(500).json({ error: "Failed to get recovery log" });
   }
 });
@@ -44,7 +45,7 @@ router.get("/recent", requireAuth, async (req, res) => {
       .limit(7);
     res.json({ logs });
   } catch (err) {
-    console.error("Get recent recovery error:", err);
+    logError("Get recent recovery error:", err);
     res.status(500).json({ error: "Failed to get recent recovery logs" });
   }
 });
@@ -62,7 +63,7 @@ router.post("/log", requireAuth, async (req, res) => {
     }
     const scaleFields: Record<string, unknown> = { sleepQuality, energyLevel, stressLevel, overallFeeling };
     for (const [field, val] of Object.entries(scaleFields)) {
-      if (val !== undefined && (typeof val !== "number" || !Number.isInteger(val) || val < 1 || val > 10)) {
+      if (val !== undefined && (typeof val !== "number" || !Number.isInteger(val) || val < 1 || val > 5)) {
         res.status(400).json({ error: `${field} must be an integer between 1 and 10` });
         return;
       }
@@ -94,7 +95,7 @@ router.post("/log", requireAuth, async (req, res) => {
 
     res.status(201).json({ log });
   } catch (err) {
-    console.error("Save recovery log error:", err);
+    logError("Save recovery log error:", err);
     res.status(500).json({ error: "Failed to save recovery log" });
   }
 });

@@ -135,7 +135,9 @@ function NutritionHero({ mealsData, profile, theme }: { mealsData: any; profile?
         </View>
         <Pressable
           onPress={() => router.push("/meals" as any)}
-          style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+          accessibilityRole="button"
+          accessibilityLabel={t("home.viewAll")}
+          style={{ flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, justifyContent: "center" }}
         >
           <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
             {t("home.viewAll")}
@@ -194,7 +196,9 @@ function CoachCard({
     <Card style={{ borderColor: theme.secondary + "30", gap: 0 }}>
       <Pressable
         onPress={() => router.push({ pathname: "/coach/chat" as any, params: { prompt: ctaPrompt } })}
-        style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+        accessibilityRole="button"
+        accessibilityLabel={t("home.aiCoach")}
+        style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 44 }}
       >
         <View style={[styles.todayIcon, { backgroundColor: theme.secondaryDim }]}>
           <Feather name="message-circle" size={18} color={theme.secondary} />
@@ -221,7 +225,7 @@ function diffColor(d: string | undefined, theme: AppTheme) {
 
 function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; theme: AppTheme }) {
   const { t } = useTranslation();
-  const { recommendation: rec, reasonPills, contextSummary, isRestDayRecommended } = todayRec;
+  const { recommendation: rec, reasonPills, contextSummary, isRestDayRecommended, shouldDeload } = todayRec;
 
   if (isRestDayRecommended) {
     return (
@@ -244,6 +248,8 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
         </Text>
         <Pressable
           onPress={() => router.push("/(tabs)/workouts" as any)}
+          accessibilityRole="button"
+          accessibilityLabel={t("home.browseWorkoutsAnyway")}
           style={[styles.secondaryBtn, { borderColor: theme.border }]}
         >
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>
@@ -266,7 +272,7 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
             {t("home.todaysRecommendedWorkout")}
           </Text>
           <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 16 }} numberOfLines={1}>
-            {rec.template.name}
+            {t(rec.template.nameKey, { defaultValue: rec.template.name })}
           </Text>
         </View>
         <View style={{ flexDirection: "row", gap: 6 }}>
@@ -284,9 +290,18 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
         </View>
       </View>
 
+      {shouldDeload && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: (theme.warning || "#ffab40") + "15", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
+          <Feather name="alert-triangle" size={14} color={theme.warning || "#ffab40"} />
+          <Text style={{ color: theme.warning || "#ffab40", fontFamily: "Inter_600SemiBold", fontSize: 12, flex: 1 }}>
+            {t("home.deloadSuggested", { defaultValue: "Deload suggested — reduce intensity this week" })}
+          </Text>
+        </View>
+      )}
+
       {contextSummary ? (
         <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 }}>
-          {contextSummary}
+          {t(contextSummary)}
         </Text>
       ) : null}
 
@@ -294,7 +309,7 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
           {reasonPills.slice(0, 3).map((pill) => (
             <View key={pill} style={[styles.pill, { backgroundColor: theme.primaryDim }]}>
-              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 11 }}>{pill}</Text>
+              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 11 }}>{t(pill)}</Text>
             </View>
           ))}
         </View>
@@ -305,6 +320,8 @@ function TodayWorkoutCard({ todayRec, theme }: { todayRec: TodayRecommendation; 
           pathname: "/workouts/execute" as any,
           params: { id: rec.template.id },
         })}
+        accessibilityRole="button"
+        accessibilityLabel={t("home.startWorkout")}
         style={[styles.ctaBtn, { backgroundColor: theme.primary }]}
       >
         <Feather name="play" size={15} color="#0f0f1a" />
@@ -338,6 +355,8 @@ function RestDayCard({ theme }: { theme: AppTheme }) {
       </Text>
       <Pressable
         onPress={() => router.push("/(tabs)/workouts" as any)}
+        accessibilityRole="button"
+        accessibilityLabel={t("home.logWorkoutAnyway")}
         style={[styles.ctaBtn, { backgroundColor: theme.primaryDim }]}
       >
         <Feather name="activity" size={15} color={theme.primary} />
@@ -371,6 +390,8 @@ function CoachCtaCard({ theme }: { theme: AppTheme }) {
       </Text>
       <Pressable
         onPress={() => router.push("/workouts/onboarding" as any)}
+        accessibilityRole="button"
+        accessibilityLabel={t("home.setUpAICoach")}
         style={[styles.ctaBtn, { backgroundColor: theme.primary }]}
       >
         <Feather name="cpu" size={15} color="#0f0f1a" />
@@ -405,6 +426,8 @@ function WorkoutDoneCard({ workout, theme }: { workout: any; theme: AppTheme }) 
       </Text>
       <Pressable
         onPress={() => router.push("/(tabs)/workouts" as any)}
+        accessibilityRole="button"
+        accessibilityLabel={t("home.viewWorkout")}
         style={[styles.ctaBtn, { backgroundColor: theme.primaryDim }]}
       >
         <Feather name="eye" size={15} color={theme.primary} />
@@ -472,7 +495,7 @@ function PRCelebrationBanner({ pr, onDismiss, theme }: {
           {t("home.prBannerExercise", { exercise: pr.exercise, value: `${pr.weightKg} kg` })}
         </Text>
       </View>
-      <Pressable onPress={onDismiss} style={{ padding: 12 }} hitSlop={8}>
+      <Pressable onPress={onDismiss} accessibilityRole="button" accessibilityLabel={t("common.dismiss")} style={{ padding: 12, minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }} hitSlop={8}>
         <Feather name="x" size={14} color={theme.textMuted} />
       </Pressable>
     </Animated.View>
@@ -576,7 +599,7 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
         const uri = await captureRef(milestoneShareRef, { format: "png", quality: 1, result: "data-uri" });
         const link = document.createElement("a");
         link.href = uri;
-        link.download = "fitlog-streak.png";
+        link.download = "ordeal-streak.png";
         link.click();
       } else {
         const uri = await captureRef(milestoneShareRef, { format: "jpg", quality: 0.95 });
@@ -642,6 +665,8 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
           <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
             <Pressable
               onPress={() => setVisible(false)}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.dismiss")}
               style={[styles.modalBtn, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border, flex: 1 }]}
             >
               <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
@@ -650,6 +675,8 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
             </Pressable>
             <Pressable
               onPress={handleShare}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.share")}
               style={[styles.modalBtn, { backgroundColor: theme.primary, flex: 1 }]}
             >
               <Feather name="share-2" size={14} color="#0f0f1a" style={{ marginEnd: 4 }} />
@@ -660,7 +687,9 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
           </View>
           <Pressable
             onPress={() => { setVisible(false); router.push("/streaks" as any); }}
-            style={{ marginTop: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={t("streaks.viewStreaks")}
+            style={{ marginTop: 10, minHeight: 44, justifyContent: "center" }}
           >
             <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center" }}>
               {t("streaks.viewStreaks")}
@@ -969,6 +998,8 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
     return (
       <Pressable
         onPress={() => router.push("/recovery" as any)}
+        accessibilityRole="button"
+        accessibilityLabel={t("home.todaysRecovery") || "Today's Recovery"}
         style={({ pressed }) => ({
           backgroundColor: theme.card,
           borderRadius: 14,
@@ -993,7 +1024,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
             <View style={{ flex: 1, backgroundColor: "#448aff" + "14", borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10, alignItems: "center", gap: 2 }}>
               <Feather name="moon" size={13} color="#448aff" />
               <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>{recoveryData.sleepHours}h</Text>
-              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>Sleep</Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>{t("home.sleep")}</Text>
             </View>
           )}
           {recoveryData.energyLevel && (
@@ -1028,7 +1059,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
   // Prompt card — not logged today
   return (
     <View>
-      <Pressable onPress={() => setRecoveryExpanded(!recoveryExpanded)} style={({ pressed }) => ({
+      <Pressable onPress={() => setRecoveryExpanded(!recoveryExpanded)} accessibilityRole="button" accessibilityLabel={t("home.howAreYouFeeling") || "How are you feeling today?"} style={({ pressed }) => ({
         backgroundColor: theme.card,
         borderRadius: 14,
         padding: 16,
@@ -1158,7 +1189,9 @@ function SmartBanner({
       </View>
       <Pressable
         onPress={onDismiss}
-        style={{ padding: 12, justifyContent: "flex-start" }}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss"
+        style={{ padding: 12, justifyContent: "flex-start", minWidth: 44, minHeight: 44, alignItems: "center" }}
         hitSlop={8}
       >
         <Feather name="x" size={14} color={theme.textMuted} />
@@ -1250,6 +1283,29 @@ export default function HomeScreen() {
     [workoutsData, weeklyGoalTarget],
   );
 
+  const todayRec = useMemo(() => {
+    if (!profile || !workoutsData?.workouts) return null;
+    const coachProfile: UserCoachProfile = {
+      availableEquipment: profile.availableEquipment ?? [],
+      workoutLocation: profile.workoutLocation ?? "Gym",
+      trainingPreferences: profile.trainingPreferences ?? [],
+      experienceLevel: profile.experienceLevel ?? "Intermediate",
+      preferredWorkoutDuration: profile.preferredWorkoutDuration ?? "45 minutes",
+      weeklyWorkoutDays: profile.weeklyWorkoutDays ?? 3,
+      fitnessGoals: profile.fitnessGoals ?? [],
+    };
+    const recentWorkouts = (workoutsData.workouts || []).map((w: any) => ({
+      name: w.name,
+      activityType: w.activityType,
+      date: w.date,
+      durationMinutes: w.durationMinutes,
+    }));
+    const recovery: RecoveryContext | undefined = recoveryData
+      ? { sleepQuality: recoveryData.sleepQuality, energyLevel: recoveryData.energyLevel, stressLevel: recoveryData.stressLevel }
+      : undefined;
+    return getTodayRecommendation(coachProfile, recentWorkouts, recovery);
+  }, [profile, workoutsData, recoveryData]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
@@ -1276,7 +1332,9 @@ export default function HomeScreen() {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.push("/streaks" as any);
                   }}
-                  style={{ marginTop: 4, marginBottom: 2 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("streaks.viewStreaks")}
+                  style={{ marginTop: 4, marginBottom: 2, minHeight: 44, justifyContent: "center" }}
                 >
                   {bestStreak > 0 ? (
                     <View style={{ gap: 4 }}>
@@ -1305,6 +1363,8 @@ export default function HomeScreen() {
           </View>
           <Pressable
             onPress={() => router.push("/(tabs)/profile")}
+            accessibilityRole="button"
+            accessibilityLabel={t("profile.title") || "Profile"}
             style={[styles.avatarBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary }]}
           >
             <Text style={[styles.avatarText, { color: theme.primary, fontFamily: "Inter_700Bold" }]}>
@@ -1342,6 +1402,8 @@ export default function HomeScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   router.push("/rank" as any);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`${t(rank.nameKey)} - ${current.toLocaleString()} / ${needed.toLocaleString()} XP`}
                 style={({ pressed }) => [
                   styles.rankCard,
                   { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
@@ -1349,7 +1411,7 @@ export default function HomeScreen() {
               >
                 <RankBadge xp={xp} size="sm" />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{rank.name}</Text>
+                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t(rank.nameKey)}</Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
                     <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: theme.border, overflow: "hidden" }}>
                       <View style={{ width: `${Math.round((current / needed) * 100)}%`, height: 4, borderRadius: 2, backgroundColor: theme.primary }} />
@@ -1409,7 +1471,9 @@ export default function HomeScreen() {
               </View>
               <Pressable
                 onPress={() => router.push("/water/add" as any)}
-                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                accessibilityRole="button"
+                accessibilityLabel={t("home.log") + " " + t("home.hydration")}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, justifyContent: "center" }}
               >
                 <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
                   {t("home.log")}
@@ -1431,6 +1495,8 @@ export default function HomeScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.push("/streaks" as any);
             }}
+            accessibilityRole="button"
+            accessibilityLabel={t("streaks.viewStreaks")}
             style={({ pressed }) => [
               styles.streakStrip,
               { backgroundColor: theme.card, borderColor: (streaksData?.currentWorkoutStreak ?? 0) > 0 || (streaksData?.currentMealStreak ?? 0) > 0 ? theme.primary + "30" : theme.border, opacity: pressed ? 0.85 : 1 },
@@ -1479,6 +1545,21 @@ export default function HomeScreen() {
           <RecoveryCheckInCard theme={theme} recoveryData={recoveryData} isLoading={recoveryLoading} />
         </Animated.View>
 
+        {/* ═══ COACH RECOMMENDATION (Premium) ═══ */}
+        {subscription.isPremium && todayRec && (
+          <Animated.View entering={FadeInDown.delay(68).duration(120)} style={styles.section}>
+            {todayRec.isRestDayRecommended ? (
+              <CoachCard theme={theme} isRestDay />
+            ) : (
+              <CoachCard
+                theme={theme}
+                recommendationName={t(todayRec.recommendation.template.nameKey, { defaultValue: todayRec.recommendation.template.name })}
+                recommendedPrompt={`I want to do ${todayRec.recommendation.template.name} today. Give me a quick plan.`}
+              />
+            )}
+          </Animated.View>
+        )}
+
         {/* ═══ ZONE 5 — STEPS ═══ */}
 
         <Animated.View entering={FadeInDown.delay(70).duration(120)} style={styles.section}>
@@ -1491,7 +1572,7 @@ export default function HomeScreen() {
               {stepsData != null
                 ? t("home.healthSynced")
                 : isHealthIntegrationAvailable()
-                  ? "Step data not available"
+                  ? t("home.stepDataNotAvailable")
                   : t("home.healthSyncDevBuild")}
             </Text>
           </Card>

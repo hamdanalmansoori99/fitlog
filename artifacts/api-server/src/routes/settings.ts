@@ -26,8 +26,9 @@ router.get("/", requireAuth, async (req, res) => {
 router.put("/", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const { darkMode, unitSystem, notificationsEnabled } = req.body;
+    const { darkMode, unitSystem, notificationsEnabled, defaultRestTimeSec } = req.body;
     const language = req.body.language && ["en", "ar"].includes(req.body.language) ? req.body.language : undefined;
+    const validRest = defaultRestTimeSec !== undefined ? Math.max(10, Math.min(300, parseInt(defaultRestTimeSec, 10) || 60)) : undefined;
     
     const existing = await db.select().from(settingsTable)
       .where(eq(settingsTable.userId, user.id)).limit(1);
@@ -50,6 +51,7 @@ router.put("/", requireAuth, async (req, res) => {
         ...(unitSystem !== undefined && { unitSystem }),
         ...(language !== undefined && { language }),
         ...(notificationsEnabled !== undefined && { notificationsEnabled }),
+        ...(validRest !== undefined && { defaultRestTimeSec: validRest }),
         updatedAt: new Date(),
       })
       .where(eq(settingsTable.userId, user.id))
@@ -91,7 +93,7 @@ router.get("/export", requireAuth, async (req, res) => {
     const workouts = rawWorkouts.map(({ userId: _uid, ...w }) => w);
     const measurements = rawMeasurements.map(({ userId: _uid, ...m }) => m);
 
-    res.setHeader("Content-Disposition", `attachment; filename="fitlog-export-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.setHeader("Content-Disposition", `attachment; filename="ordeal-export-${new Date().toISOString().slice(0, 10)}.json"`);
     res.setHeader("Content-Type", "application/json");
     res.json({
       exportedAt: new Date().toISOString(),

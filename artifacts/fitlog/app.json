@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "FitLog",
-    "slug": "fitlog",
+    "name": "Ordeal",
+    "slug": "ordeal",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "fitlog",
+    "scheme": "ordeal",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -16,15 +16,15 @@
     "ios": {
       "supportsTablet": false,
       "buildNumber": "9",
-      "bundleIdentifier": "com.yesha.fitlog",
+      "bundleIdentifier": "com.yesha.ordeal",
       "infoPlist": {
-        "NSHealthShareUsageDescription": "FitLog reads your steps, heart rate, and sleep to give your AI coach accurate recovery data.",
-        "NSHealthUpdateUsageDescription": "FitLog writes your workouts and water intake to Apple Health.",
+        "NSHealthShareUsageDescription": "Ordeal reads your steps, heart rate, and sleep to give your AI coach accurate recovery data.",
+        "NSHealthUpdateUsageDescription": "Ordeal writes your workouts and water intake to Apple Health.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.yesha.fitlog",
+      "package": "com.yesha.ordeal",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0f0f1a"
@@ -33,8 +33,8 @@
     "web": {
       "favicon": "./assets/images/icon.png",
       "bundler": "metro",
-      "name": "FitLog – AI Fitness Tracker",
-      "shortName": "FitLog",
+      "name": "Ordeal – AI Fitness Tracker",
+      "shortName": "Ordeal",
       "description": "Your personal AI-powered fitness companion — workouts, nutrition, coaching and progress tracking.",
       "themeColor": "#00e676",
       "backgroundColor": "#0f0f1a",
@@ -63,7 +63,7 @@
           "icon": "./assets/images/icon.png",
           "color": "#00e676",
           "androidMode": "default",
-          "androidCollapsedTitle": "FitLog",
+          "androidCollapsedTitle": "Ordeal",
           "iosDisplayInForeground": true
         }
       ],

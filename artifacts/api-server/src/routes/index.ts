@@ -20,6 +20,13 @@ import subscriptionRouter from "./subscription";
 import scanMealRouter from "./scan-meal";
 import notificationsRouter from "./notifications";
 import xpRouter from "./xp";
+import passwordResetRouter from "./password-reset";
+import friendsRouter from "./friends";
+import challengesRouter from "./challenges";
+import referralsRouter from "./referrals";
+import digestRouter from "./digest";
+import customExercisesRouter from "./custom-exercises";
+import exportRouter from "./export";
 
 const router: IRouter = Router();
 
@@ -46,5 +53,12 @@ router.use("/subscription", subscriptionRouter);
 router.use("/scan-meal", scanMealRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/xp", xpRouter);
+router.use("/auth", passwordResetRouter);
+router.use("/friends", friendsRouter);
+router.use("/challenges", challengesRouter);
+router.use("/referrals", referralsRouter);
+router.use("/digest", digestRouter);
+router.use("/custom-exercises", customExercisesRouter);
+router.use("/export", exportRouter);
 
 export default router;

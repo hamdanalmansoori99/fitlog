@@ -165,7 +165,7 @@ export default function LogWorkoutScreen() {
     mutationFn: (name: string) => {
       const completedExercises = exercises.filter(e => e.name && e.sets.some(s => s.reps || s.weight));
       return api.createUserTemplate({
-        name: name || workoutName || activityType || "My Template",
+        name: name || workoutName || activityType || t("workouts.myTemplate"),
         activityType,
         exercises: activityType === "gym" ? completedExercises.map((e, i) => ({
           name: e.name,

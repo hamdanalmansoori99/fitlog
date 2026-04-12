@@ -6,6 +6,7 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as Device from "expo-device";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/store/authStore";
@@ -14,6 +15,24 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { rtlIcon } from "@/lib/rtl";
 
+function getDeviceFingerprint(): string {
+  const parts = [
+    Device.deviceName || "",
+    Device.modelName || "",
+    Device.osVersion || "",
+    Device.manufacturer || "",
+  ];
+  // Simple hash: join parts and create a consistent fingerprint
+  const raw = parts.join("|");
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
 type FormState = { firstName: string; lastName: string; email: string; password: string };
 type FormAction = { field: keyof FormState; value: string };
 function formReducer(state: FormState, action: FormAction): FormState {
@@ -21,6 +40,17 @@ function formReducer(state: FormState, action: FormAction): FormState {
 }
 
 const MAX_W = 480;
+
+function PwRule({ ok, label, theme }: { ok: boolean; label: string; theme: any }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <Feather name={ok ? "check-circle" : "circle"} size={14} color={ok ? theme.success : theme.textMuted} />
+      <Text style={{ fontSize: 12, color: ok ? theme.success : theme.textMuted, fontFamily: "Inter_400Regular" }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
 
 export default function RegisterScreen() {
   const { theme } = useTheme();
@@ -46,14 +76,15 @@ export default function RegisterScreen() {
       setError(t("auth.validEmail"));
       return;
     }
-    if (password.length < 6) {
-      setError(t("auth.passwordMin6"));
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError(t("auth.passwordRequirements"));
       return;
     }
     setError("");
     setLoading(true);
     try {
-      const res = await api.register({ firstName, lastName, email: email.trim(), password });
+      const deviceFingerprint = getDeviceFingerprint();
+      const res = await api.register({ firstName, lastName, email: email.trim(), password, deviceFingerprint });
       setAuth(res.token, res.user);
       router.replace("/onboarding");
     } catch (err: any) {
@@ -63,7 +94,7 @@ export default function RegisterScreen() {
       } else if (msg.includes("valid email")) {
         setError(t("auth.validEmail"));
       } else if (msg.includes("Password must")) {
-        setError(t("auth.passwordMin6"));
+        setError(t("auth.passwordRequirements"));
       } else if (msg.includes("All fields")) {
         setError(t("auth.fillAllFields"));
       } else if (msg.includes("Network") || msg.includes("fetch")) {
@@ -170,6 +201,14 @@ export default function RegisterScreen() {
               leftIcon={<Feather name="lock" size={18} color={theme.textMuted} />}
             />
 
+            {password.length > 0 && (
+              <View style={styles.pwRules}>
+                <PwRule ok={password.length >= 8} label={t("auth.pwRule8Chars")} theme={theme} />
+                <PwRule ok={/[A-Z]/.test(password)} label={t("auth.pwRuleUppercase")} theme={theme} />
+                <PwRule ok={/[0-9]/.test(password)} label={t("auth.pwRuleNumber")} theme={theme} />
+              </View>
+            )}
+
             <Button title={t("auth.createAccount")} onPress={handleRegister} loading={loading} style={styles.btn} />
 
             <Pressable onPress={() => router.back()} style={styles.loginLink}>
@@ -203,4 +242,5 @@ const styles = StyleSheet.create({
   btn: { marginTop: 8 },
   loginLink: { alignItems: "center", padding: 4 },
   loginText: { fontSize: 14, textAlign: "center" },
+  pwRules: { gap: 4, paddingHorizontal: 4 },
 });

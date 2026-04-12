@@ -76,9 +76,10 @@ function BenefitRow({ benefit, index }: { benefit: string; index: number }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
-  const key = BENEFIT_KEYS[benefit];
-  const label = key ? t(`workouts.template.benefits.${key}`, { defaultValue: benefit }) : benefit;
-  const tip = key ? t(`workouts.template.tips.${key}`, { defaultValue: "" }) : "";
+  const isI18nKey = benefit.startsWith("coach.benefits.");
+  const legacyKey = BENEFIT_KEYS[benefit];
+  const label = isI18nKey ? t(benefit) : legacyKey ? t(`workouts.template.benefits.${legacyKey}`, { defaultValue: benefit }) : benefit;
+  const tip = isI18nKey ? "" : legacyKey ? t(`workouts.template.tips.${legacyKey}`, { defaultValue: "" }) : "";
 
   return (
     <Animated.View entering={FadeInDown.duration(250)}>
@@ -211,7 +212,7 @@ export default function WorkoutTemplateScreen() {
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <SuccessView
           title={t("workouts.workoutLogged")}
-          subtitle={t("workouts.greatJobCompleting", { name: template.name })}
+          subtitle={t("workouts.greatJobCompleting", { name: t(template.nameKey, { defaultValue: template.name }) })}
         />
       </View>
     );
@@ -250,8 +251,8 @@ export default function WorkoutTemplateScreen() {
           <Animated.View entering={ZoomIn.delay(100).duration(400)} style={[styles.heroIcon, { backgroundColor: theme.primaryDim }]}>
             <Feather name="activity" size={32} color={theme.primary} />
           </Animated.View>
-          <Text style={[styles.heroTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{template.name}</Text>
-          <Text style={[styles.heroDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{template.description}</Text>
+          <Text style={[styles.heroTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t(template.nameKey, { defaultValue: template.name })}</Text>
+          <Text style={[styles.heroDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t(template.descriptionKey, { defaultValue: template.description })}</Text>
 
           <View style={styles.statsRow}>
             <Animated.View entering={SlideInRight.delay(150).duration(300)} style={[styles.statChip, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -291,7 +292,7 @@ export default function WorkoutTemplateScreen() {
                   {t("workouts.whyGoodForYou")}
                 </Text>
               </View>
-              <Text style={[styles.whyText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>{whyGoodForYou}</Text>
+              <Text style={[styles.whyText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>{t(whyGoodForYou as string)}</Text>
             </Card>
           </Animated.View>
         )}

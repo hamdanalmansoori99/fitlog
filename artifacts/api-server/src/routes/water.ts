@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, waterLogsTable, profilesTable } from "@workspace/db";
 import { eq, and, gte, lt, desc } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
+import { logError } from "../lib/logger";
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.get("/today", requireAuth, async (req, res) => {
 
     res.json({ logs, totalMl, goalMl, percentage });
   } catch (err) {
-    console.error("Get water logs error:", err);
+    logError("Get water logs error:", err);
     res.status(500).json({ error: "Failed to get water logs" });
   }
 });
@@ -61,7 +62,7 @@ router.post("/log", requireAuth, async (req, res) => {
 
     res.status(201).json({ log });
   } catch (err) {
-    console.error("Log water error:", err);
+    logError("Log water error:", err);
     res.status(500).json({ error: "Failed to log water" });
   }
 });
@@ -78,7 +79,7 @@ router.delete("/log/:id", requireAuth, async (req, res) => {
 
     res.status(204).send();
   } catch (err) {
-    console.error("Delete water log error:", err);
+    logError("Delete water log error:", err);
     res.status(500).json({ error: "Failed to delete water log" });
   }
 });

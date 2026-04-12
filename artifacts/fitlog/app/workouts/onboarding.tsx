@@ -62,15 +62,15 @@ const EXPERIENCE_OPTIONS = [
   { id: "Advanced", icon: "target" as const },
 ];
 const TRAINING_PREF_OPTIONS = [
-  { id: "Strength training", label: "Strength training", icon: "zap" as const },
-  { id: "Cardio", label: "Cardio", icon: "heart" as const },
-  { id: "Running", label: "Running", icon: "navigation" as const },
-  { id: "Walking", label: "Walking", icon: "map-pin" as const },
-  { id: "Cycling", label: "Cycling", icon: "wind" as const },
-  { id: "Swimming", label: "Swimming", icon: "droplet" as const },
-  { id: "Stretching / mobility", label: "Stretching / mobility", icon: "minimize" as const },
-  { id: "Calisthenics", label: "Calisthenics", icon: "user" as const },
-  { id: "Other", label: "Other", icon: "activity" as const },
+  { id: "Strength training", labelKey: "strengthTraining", icon: "zap" as const },
+  { id: "Cardio", labelKey: "cardio", icon: "heart" as const },
+  { id: "Running", labelKey: "running", icon: "navigation" as const },
+  { id: "Walking", labelKey: "walking", icon: "map-pin" as const },
+  { id: "Cycling", labelKey: "cycling", icon: "wind" as const },
+  { id: "Swimming", labelKey: "swimming", icon: "droplet" as const },
+  { id: "Stretching / mobility", labelKey: "stretchingMobility", icon: "minimize" as const },
+  { id: "Calisthenics", labelKey: "calisthenics", icon: "user" as const },
+  { id: "Other", labelKey: "otherActivity", icon: "activity" as const },
 ];
 
 interface OnboardingData {
@@ -176,7 +176,7 @@ export default function WorkoutOnboardingScreen() {
       subtitle: t("workouts.prioritise"),
       key: "trainingPreferences",
       type: "multiselect",
-      options: TRAINING_PREF_OPTIONS.map(tp => ({ id: tp.id, label: tp.label, icon: tp.icon })),
+      options: TRAINING_PREF_OPTIONS.map(tp => ({ id: tp.id, label: t(`workouts.${tp.labelKey}`), icon: tp.icon })),
     },
   ];
 
@@ -231,7 +231,7 @@ export default function WorkoutOnboardingScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
         {step > 0 && (
-          <Pressable onPress={() => setStep(s => s - 1)} style={styles.backBtn}>
+          <Pressable onPress={() => setStep(s => s - 1)} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t("common.back") || "Go back"}>
             <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
           </Pressable>
         )}
@@ -258,7 +258,7 @@ export default function WorkoutOnboardingScreen() {
             </Text>
           </View>
 
-          <View style={styles.optionsGrid}>
+          <View style={[styles.optionsGrid, currentStep.type === "number" && { flexDirection: "row" as const, flexWrap: "wrap" as const }]}>
             {currentStep.options.map((opt: any) => {
               const val = getValue();
               const isSelected = currentStep.type === "multiselect"
@@ -283,6 +283,9 @@ export default function WorkoutOnboardingScreen() {
                     },
                     currentStep.type === "number" ? styles.numberChip : {},
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={opt.label}
+                  accessibilityState={{ selected: isSelected }}
                 >
                   <View style={styles.chipContent}>
                     {opt.icon && (
@@ -315,7 +318,7 @@ export default function WorkoutOnboardingScreen() {
           disabled={!canContinue()}
           loading={mutation.isPending}
         />
-        <Pressable onPress={handleNext} style={{ paddingVertical: 8, alignItems: "center" }}>
+        <Pressable onPress={handleNext} style={{ paddingVertical: 8, alignItems: "center", minHeight: 44 }} accessibilityRole="button" accessibilityLabel={step === STEPS.length - 1 ? t("workouts.getMyPlan") : t("workouts.skipForNow")}>
           <Text style={[styles.skipText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
             {step === STEPS.length - 1 ? "" : t("workouts.skipForNow")}
           </Text>
@@ -331,7 +334,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 12,
     paddingHorizontal: 20, paddingBottom: 16,
   },
-  backBtn: { width: 36, height: 36, justifyContent: "center" },
+  backBtn: { width: 44, height: 44, justifyContent: "center" },
   progressBar: { flex: 1, height: 4, borderRadius: 2, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 2 },
   stepCount: { fontSize: 12, minWidth: 36, textAlign: "right" as const },
@@ -339,14 +342,14 @@ const styles = StyleSheet.create({
   questionHeader: { marginBottom: 28 },
   questionTitle: { fontSize: 28, lineHeight: 36, marginBottom: 8 },
   questionSub: { fontSize: 15 },
-  optionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  optionsGrid: { gap: 10 },
   optionChip: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    paddingHorizontal: 14, paddingVertical: 11,
-    borderRadius: 12, borderWidth: 1.5,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderRadius: 12, borderWidth: 1.5, minHeight: 44,
   },
-  numberChip: { width: "30%", justifyContent: "center" },
-  optionLabel: { fontSize: 14 },
+  numberChip: { width: 60, justifyContent: "center", minWidth: 44 },
+  optionLabel: { fontSize: 15 },
   chipContent: {
     flexDirection: "row", alignItems: "center", gap: 8, flex: 1,
   },

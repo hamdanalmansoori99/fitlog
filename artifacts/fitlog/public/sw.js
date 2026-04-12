@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitlog-v1';
+const CACHE_NAME = 'ordeal-v1';
 const PRECACHE_URLS = [
   '/',
 ];

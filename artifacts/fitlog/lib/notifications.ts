@@ -77,7 +77,7 @@ export async function scheduleNativeNotifications(
     const { hour, minute } = parseTime(pref.time);
     const content = getStaticContent(type);
     await Notifications.scheduleNotificationAsync({
-      identifier: `fitlog-${type}`,
+      identifier: `ordeal-${type}`,
       content: { title: content.title, body: content.body, data: { type } },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.CALENDAR, hour, minute, repeats: true } as any,
     });

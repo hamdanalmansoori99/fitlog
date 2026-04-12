@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import router from "./routes";
 import { seedDemoAccount } from "./routes/dev";
 import { AppError } from "./lib/errors";
+import { logError } from "./lib/logger";
 
 const app: Express = express();
 
@@ -80,7 +81,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     res.status(err.statusCode).json({ error: err.message, code: err.code });
     return;
   }
-  console.error("Unhandled error:", err);
+  logError("Unhandled error:", err);
   res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR" });
 });
 

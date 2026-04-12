@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput,
-  Platform, Alert, Vibration, Modal, Share, InteractionManager,
+  Platform, Alert, Vibration, Modal, Share,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -18,6 +18,7 @@ import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { rtlIcon } from "@/lib/rtl";
 import { useTheme } from "@/hooks/useTheme";
+import { useSettingsStore } from "@/store/settingsStore";
 import { useWorkoutStore } from "@/store/workoutStore";
 import { usePendingWorkoutsStore } from "@/store/pendingWorkoutsStore";
 import { isNetworkError } from "@/hooks/usePendingWorkoutSync";
@@ -69,12 +70,12 @@ interface ExerciseData {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function parseRestSec(rest?: string): number {
-  if (!rest) return 60;
+function parseRestSec(rest?: string, defaultSec: number = 60): number {
+  if (!rest) return defaultSec;
   const m = rest.match(/(\d+)/);
-  const n = m ? parseInt(m[1]) : 60;
+  const n = m ? parseInt(m[1]) : defaultSec;
   if (rest.includes("min")) return n * 60;
-  return Math.min(n, 180);
+  return Math.min(n, 300);
 }
 
 function parseRepsFirst(reps?: string): string {
@@ -179,6 +180,7 @@ export default function ExecuteWorkoutScreen() {
   );
 
   const isGym = template?.activityType === "gym";
+  const customRestSec = useSettingsStore((s) => s.defaultRestTimeSec);
 
   // Build session state from filtered exercises
   const [exercises, setExercises] = useState<ExerciseData[]>([]);
@@ -194,6 +196,8 @@ export default function ExecuteWorkoutScreen() {
   const [prBadgeVisible, setPrBadgeVisible] = useState(false);
   const [prBadgeText, setPrBadgeText] = useState("");
   const prCelebratedRef = useRef<Set<string>>(new Set());
+  const phaseRef = useRef(phase);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   const prShareRef = useRef<View>(null);
   const completionShareRef = useRef<View>(null);
@@ -225,7 +229,7 @@ export default function ExecuteWorkoutScreen() {
           targetReps: ex.reps || "",
           targetDuration: ex.duration,
           targetSets: ex.sets || 3,
-          restSec: parseRestSec(ex.rest),
+          restSec: parseRestSec(ex.rest, customRestSec),
           alternatives: ex.alternatives || [],
           skipped: false,
           sets: Array.from({ length: ex.sets || 3 }, () => ({
@@ -397,7 +401,7 @@ export default function ExecuteWorkoutScreen() {
 
   const saveTemplateMutation = useMutation({
     mutationFn: (name: string) => api.createUserTemplate({
-      name: name || template?.name || "My Template",
+      name: name || template?.name || t("workouts.myTemplate"),
       activityType: template?.activityType || "gym",
       estimatedMinutes: Math.round(elapsedSecondsRef.current / 60) || undefined,
       exercises: exercises
@@ -485,7 +489,7 @@ export default function ExecuteWorkoutScreen() {
         const uri = await captureRef(prShareRef, { format: "png", quality: 1, result: "data-uri" });
         const link = document.createElement("a");
         link.href = uri;
-        link.download = "fitlog-pr.png";
+        link.download = "ordeal-pr.png";
         link.click();
       } else {
         const uri = await captureRef(prShareRef, { format: "jpg", quality: 0.95 });
@@ -509,7 +513,7 @@ export default function ExecuteWorkoutScreen() {
         const uri = await captureRef(completionShareRef, { format: "png", quality: 1, result: "data-uri" });
         const link = document.createElement("a");
         link.href = uri;
-        link.download = "fitlog-workout.png";
+        link.download = "ordeal-workout.png";
         link.click();
       } else {
         const uri = await captureRef(completionShareRef, { format: "jpg", quality: 0.95 });
@@ -519,13 +523,13 @@ export default function ExecuteWorkoutScreen() {
         } else {
           const durationMin = Math.round(elapsedSecondsRef.current / 60);
           const completedSets = exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length;
-          await Share.share({ message: `${template?.name ?? ""} — ${durationMin} min, ${completedSets} sets done via FitLog` });
+          await Share.share({ message: `${template?.name ?? ""} — ${durationMin} min, ${completedSets} sets done via Ordeal` });
         }
       }
     } catch {
       const durationMin = Math.round(elapsedSecondsRef.current / 60);
       const completedSets = exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length;
-      await Share.share({ message: `${template?.name ?? ""} — ${durationMin} min, ${completedSets} sets done via FitLog` }).catch(() => {});
+      await Share.share({ message: `${template?.name ?? ""} — ${durationMin} min, ${completedSets} sets done via Ordeal` }).catch(() => {});
     }
   }
 
@@ -553,6 +557,8 @@ export default function ExecuteWorkoutScreen() {
               <Pressable
                 onPress={() => { sharePR(); setPrModal(null); }}
                 style={[styles.prBtn, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.primary, flex: 1 }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("pr.share")}
               >
                 <Feather name="share-2" size={14} color={theme.primary} style={{ marginEnd: 4 }} />
                 <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 15 }}>
@@ -562,6 +568,8 @@ export default function ExecuteWorkoutScreen() {
               <Pressable
                 onPress={() => setPrModal(null)}
                 style={[styles.prBtn, { backgroundColor: theme.primary, flex: 1 }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("pr.dismiss")}
               >
                 <Text style={{ color: theme.background, fontFamily: "Inter_700Bold", fontSize: 15 }}>
                   {t("pr.dismiss")}
@@ -628,7 +636,9 @@ export default function ExecuteWorkoutScreen() {
         setTimeout(() => setPrBadgeVisible(false), 2600);
         // Delay modal so badge is seen first
         setTimeout(() => {
-          setPrModal({ exercise: ex.name, weight, reps, previousBest: previousBestWeight, previousBestReps });
+          if (phaseRef.current === "active") {
+            setPrModal({ exercise: ex.name, weight, reps, previousBest: previousBestWeight, previousBestReps });
+          }
         }, 900);
       }
     }
@@ -660,7 +670,7 @@ export default function ExecuteWorkoutScreen() {
         };
       });
     });
-    if (isGym) InteractionManager.runAfterInteractions(() => checkForPR(capturedExIdx, capturedSetIdx));
+    if (isGym) checkForPR(capturedExIdx, capturedSetIdx);
     advance(exerciseIdx, setIdx);
   }
 
@@ -846,7 +856,7 @@ export default function ExecuteWorkoutScreen() {
               {t("workouts.workoutComplete")}
             </Text>
             <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 14 }}>
-              {template.name}
+              {t(template.nameKey, { defaultValue: template.name })}
             </Text>
           </Animated.View>
 
@@ -968,7 +978,9 @@ export default function ExecuteWorkoutScreen() {
             ) : !saveAsTemplate ? (
               <Pressable
                 onPress={() => { setSaveAsTemplate(true); setTemplateName(template?.name || ""); }}
-                style={[{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 10, borderRadius: 12, borderWidth: 1 }, { borderColor: theme.secondary + "50", backgroundColor: theme.secondaryDim }]}
+                style={[{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 10, borderRadius: 12, borderWidth: 1, minHeight: 44 }, { borderColor: theme.secondary + "50", backgroundColor: theme.secondaryDim }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("workouts.saveAsTemplate")}
               >
                 <Feather name="bookmark" size={17} color={theme.secondary} />
                 <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("workouts.saveAsTemplate")}</Text>
@@ -979,7 +991,7 @@ export default function ExecuteWorkoutScreen() {
                 <TextInput
                   value={templateName}
                   onChangeText={setTemplateName}
-                  placeholder={template?.name || "My Template"}
+                  placeholder={template?.name || t("workouts.myTemplate")}
                   placeholderTextColor={theme.textMuted}
                   style={{
                     borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
@@ -990,14 +1002,18 @@ export default function ExecuteWorkoutScreen() {
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   <Pressable
                     onPress={() => setSaveAsTemplate(false)}
-                    style={{ flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: "center", borderColor: theme.border }}
+                    style={{ flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: "center", borderColor: theme.border, minHeight: 44 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("common.cancel")}
                   >
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium" }}>{t("common.cancel")}</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => saveTemplateMutation.mutate(templateName)}
                     disabled={saveTemplateMutation.isPending}
-                    style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: "center", backgroundColor: theme.secondary }}
+                    style={{ flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: "center", backgroundColor: theme.secondary, minHeight: 44 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("workouts.saveBtnLabel")}
                   >
                     <Text style={{ color: theme.background, fontFamily: "Inter_700Bold" }}>
                       {saveTemplateMutation.isPending ? t("workouts.saving") : t("workouts.saveBtnLabel")}
@@ -1013,7 +1029,9 @@ export default function ExecuteWorkoutScreen() {
             <Button title={t("workouts.saveWorkout")} onPress={handleSave} loading={saveMutation.isPending} />
             <Pressable
               onPress={shareCompletion}
-              style={[{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 12, borderWidth: 1 }, { borderColor: theme.primary + "50", backgroundColor: theme.primaryDim }]}
+              style={[{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 12, borderWidth: 1, minHeight: 44 }, { borderColor: theme.primary + "50", backgroundColor: theme.primaryDim }]}
+              accessibilityRole="button"
+              accessibilityLabel={t("workouts.shareWorkoutBtn")}
             >
               <Feather name="share-2" size={16} color={theme.primary} />
               <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("workouts.shareWorkoutBtn")}</Text>
@@ -1033,7 +1051,9 @@ export default function ExecuteWorkoutScreen() {
                   },
                 ]);
               }}
-              style={{ alignItems: "center", paddingVertical: 8 }}
+              style={{ alignItems: "center", paddingVertical: 8, minHeight: 44 }}
+              accessibilityRole="button"
+              accessibilityLabel={t("workouts.discardSession")}
             >
               <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("workouts.discardSession")}</Text>
             </Pressable>
@@ -1044,7 +1064,7 @@ export default function ExecuteWorkoutScreen() {
             <ShareCard
               ref={completionShareRef}
               type="workout"
-              headline={template.name || t("workouts.workoutComplete")}
+              headline={t(template.nameKey, { defaultValue: template.name }) || t("workouts.workoutComplete")}
               stats={[
                 { label: "min", value: String(Math.round(elapsedSecondsRef.current / 60)), accent: false },
                 { label: t("workouts.setsDone"), value: String(exercises.flatMap((e) => e.sets.filter((s) => s.completed)).length), accent: true },
@@ -1101,12 +1121,14 @@ export default function ExecuteWorkoutScreen() {
             ])
           }
           style={styles.stopBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t("workouts.endWorkoutTitle")}
         >
           <Feather name="x" size={20} color={theme.text} />
         </Pressable>
         <View style={{ alignItems: "center", flex: 1 }}>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }} numberOfLines={1}>
-            {template.name}
+            {t(template.nameKey, { defaultValue: template.name })}
           </Text>
           <ElapsedTimer elapsedRef={elapsedSecondsRef} color={theme.textMuted} />
         </View>
@@ -1127,6 +1149,8 @@ export default function ExecuteWorkoutScreen() {
           <Pressable
             onPress={replaceExercise}
             style={[styles.swapChip, { backgroundColor: theme.secondaryDim, borderColor: theme.secondary + "50" }]}
+            accessibilityRole="button"
+            accessibilityLabel={t("workouts.replaceExercise")}
           >
             <Feather name="refresh-cw" size={13} color={theme.secondary} />
             <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
@@ -1225,6 +1249,8 @@ export default function ExecuteWorkoutScreen() {
               <Pressable
                 onPress={() => setRestSecondsLeft((s) => Math.max(5, s - 30))}
                 style={[styles.restActionBtn, { borderColor: theme.border, backgroundColor: theme.background }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("workouts.reduceRest") || "Reduce rest by 30 seconds"}
               >
                 <Feather name="minus" size={16} color={theme.text} />
                 <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>-30s</Text>
@@ -1232,6 +1258,8 @@ export default function ExecuteWorkoutScreen() {
               <Pressable
                 onPress={skipRest}
                 style={[styles.restActionBtn, { backgroundColor: theme.primary, flex: 2 }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("workouts.skipRest")}
               >
                 <Feather name="skip-forward" size={16} color={theme.background} />
                 <Text style={{ color: theme.background, fontFamily: "Inter_700Bold", fontSize: 15 }}>
@@ -1241,6 +1269,8 @@ export default function ExecuteWorkoutScreen() {
               <Pressable
                 onPress={() => setRestSecondsLeft((s) => s + 30)}
                 style={[styles.restActionBtn, { borderColor: theme.border, backgroundColor: theme.background }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("workouts.addRest") || "Add 30 seconds rest"}
               >
                 <Feather name="plus" size={16} color={theme.text} />
                 <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>+30s</Text>
@@ -1253,7 +1283,7 @@ export default function ExecuteWorkoutScreen() {
               if (!ex || !ex.commonMistakes.length) return null;
               const mistake = ex.commonMistakes[Math.floor(Date.now() / 1000) % ex.commonMistakes.length];
               return (
-                <View style={{ marginTop: 16, padding: 12, backgroundColor: theme.card, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: theme.warning }}>
+                <View style={{ marginTop: 16, padding: 12, backgroundColor: theme.card, borderRadius: 8, borderStartWidth: 3, borderStartColor: theme.warning, width: "100%", alignSelf: "stretch" }}>
                   <Text style={{ fontSize: 11, color: theme.warning, fontFamily: "Inter_600SemiBold", marginBottom: 4, letterSpacing: 0.5 }}>
                     COMMON MISTAKE
                   </Text>
@@ -1332,7 +1362,7 @@ export default function ExecuteWorkoutScreen() {
                     {t("workouts.coachNoteLabel")}
                   </Text>
                   <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, flex: 1 }}>
-                    {progression.rationale}
+                    {t(progression.rationale)}
                   </Text>
                 </View>
               </View>
@@ -1418,6 +1448,8 @@ export default function ExecuteWorkoutScreen() {
                         borderColor: s.failed ? theme.danger : s.completed ? theme.primary : isActive ? theme.primary : theme.border,
                       },
                     ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={s.completed ? `${t("workouts.setLabel")} ${si + 1} ${t("workouts.completed") || "completed"}` : `${t("workouts.completeSet") || "Complete"} ${t("workouts.setLabel")} ${si + 1}`}
                   >
                     {s.failed
                       ? <Feather name="x" size={16} color="#fff" />
@@ -1507,6 +1539,8 @@ export default function ExecuteWorkoutScreen() {
                   );
                 }}
                 style={[styles.setMgmtBtn, { borderColor: theme.border }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("workouts.removeSet")}
               >
                 <Feather name="minus" size={12} color={theme.textMuted} />
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
@@ -1531,6 +1565,8 @@ export default function ExecuteWorkoutScreen() {
                 );
               }}
               style={[styles.setMgmtBtn, { borderColor: theme.primary + "60", backgroundColor: theme.primaryDim }]}
+              accessibilityRole="button"
+              accessibilityLabel={t("workouts.addSet")}
             >
               <Feather name="plus" size={12} color={theme.primary} />
               <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>
@@ -1547,6 +1583,8 @@ export default function ExecuteWorkoutScreen() {
             <Pressable
               onPress={completeSet}
               style={[styles.completeBtn, { backgroundColor: theme.primary }]}
+              accessibilityRole="button"
+              accessibilityLabel={t("workouts.doneBtn")}
             >
               <Feather name="check" size={20} color={theme.background} />
               <Text style={{ color: theme.background, fontFamily: "Inter_700Bold", fontSize: 17 }}>{t("workouts.doneBtn")}</Text>
@@ -1555,6 +1593,8 @@ export default function ExecuteWorkoutScreen() {
             <Pressable
               onPress={failSet}
               style={[styles.completeBtn, { backgroundColor: "transparent", borderWidth: 1, borderColor: theme.danger + "80" }]}
+              accessibilityRole="button"
+              accessibilityLabel={t("workouts.failedSetBtn")}
             >
               <Feather name="x" size={18} color={theme.danger} />
               <Text style={{ color: theme.danger, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>{t("workouts.failedSetBtn")}</Text>
@@ -1564,12 +1604,16 @@ export default function ExecuteWorkoutScreen() {
               <Pressable
                 onPress={skipSet}
                 style={[styles.secondaryBtn, { borderColor: theme.border }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("workouts.skipSet")}
               >
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.skipSet")}</Text>
               </Pressable>
               <Pressable
                 onPress={skipExercise}
                 style={[styles.secondaryBtn, { borderColor: theme.border }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("workouts.skipBtn")}
               >
                 <Feather name="skip-forward" size={13} color={theme.textMuted} />
                 <Text style={{ color: theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.skipBtn")}</Text>
@@ -1660,6 +1704,7 @@ const styles = StyleSheet.create({
   swapChip: {
     flexDirection: "row", alignItems: "center", gap: 5,
     paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, borderWidth: 1,
+    minHeight: 44,
   },
 
   // Card-style set rows
@@ -1679,6 +1724,7 @@ const styles = StyleSheet.create({
   setMgmtBtn: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1,
+    minHeight: 44,
   },
 
   // Actions
@@ -1686,7 +1732,7 @@ const styles = StyleSheet.create({
   secondaryBtn: {
     flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 11,
     alignItems: "center", justifyContent: "center", gap: 3,
-    flexDirection: "row",
+    flexDirection: "row", minHeight: 44,
   },
   completeBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",

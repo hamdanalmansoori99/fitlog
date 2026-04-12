@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { RANKS, getRankByXp, getXpProgress } from "@/lib/ranks";
@@ -26,6 +27,7 @@ export default function RankScreen() {
     staleTime: 300_000,
   });
 
+  const { t } = useTranslation();
   const xp: number = (profile as any)?.xp ?? 0;
   const currentRank = getRankByXp(xp);
   const progress = getXpProgress(xp);
@@ -39,7 +41,7 @@ export default function RankScreen() {
           <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
-          Your Rank
+          {t("ranks.yourRank")}
         </Text>
         <View style={{ width: 36 }} />
       </View>
@@ -57,7 +59,7 @@ export default function RankScreen() {
               { color: currentRank.textColor, fontFamily: "Inter_700Bold" },
             ]}
           >
-            {currentRank.name}
+            {t(currentRank.nameKey)}
           </Text>
           <Text
             style={[
@@ -65,7 +67,7 @@ export default function RankScreen() {
               { color: theme.textMuted, fontFamily: "Inter_400Regular" },
             ]}
           >
-            {currentRank.flavorText}
+            {t(currentRank.flavorKey)}
           </Text>
         </View>
 
@@ -94,8 +96,8 @@ export default function RankScreen() {
             ]}
           >
             {currentRank.maxXp === null
-              ? "MAX RANK"
-              : `${progress.current.toLocaleString()} / ${progress.needed.toLocaleString()} XP to ${nextRank?.name ?? "next rank"}`}
+              ? t("ranks.maxRank")
+              : `${progress.current.toLocaleString()} / ${progress.needed.toLocaleString()} XP ${t("ranks.to")} ${nextRank ? t(nextRank.nameKey) : t("ranks.nextRank")}`}
           </Text>
           <Text
             style={[
@@ -103,7 +105,7 @@ export default function RankScreen() {
               { color: theme.text, fontFamily: "Inter_600SemiBold" },
             ]}
           >
-            {xp.toLocaleString()} total XP
+            {xp.toLocaleString()} {t("ranks.totalXp")}
           </Text>
         </View>
 
@@ -117,7 +119,7 @@ export default function RankScreen() {
             { color: theme.text, fontFamily: "Inter_700Bold" },
           ]}
         >
-          All Ranks
+          {t("ranks.allRanks")}
         </Text>
 
         <View style={{ gap: 8 }}>
@@ -155,8 +157,8 @@ export default function RankScreen() {
                       fontSize: 14,
                     }}
                   >
-                    {rank.name}
-                    {isCurrent ? "  ◀ current" : ""}
+                    {t(rank.nameKey)}
+                    {isCurrent ? `  ◀ ${t("ranks.current")}` : ""}
                   </Text>
                   <Text
                     style={{

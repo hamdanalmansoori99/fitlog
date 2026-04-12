@@ -30,6 +30,8 @@ export const profilesTable = pgTable("profiles", {
   coachOnboardingComplete: boolean("coach_onboarding_complete").notNull().default(false),
   xp: integer("xp").notNull().default(0),
   savedWeeklyPlan: jsonb("saved_weekly_plan").$type<any>(),
+  inviteCode: text("invite_code").unique(),
+  emailDigestEnabled: boolean("email_digest_enabled").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

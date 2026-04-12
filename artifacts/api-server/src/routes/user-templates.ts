@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, userWorkoutTemplatesTable, workoutsTable, workoutExercisesTable, workoutSetsTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
+import { logError } from "../lib/logger";
 
 const router = Router();
 
@@ -18,7 +19,7 @@ router.get("/", requireAuth, async (req, res) => {
       );
     res.json({ templates });
   } catch (err) {
-    console.error("Get templates error:", err);
+    logError("Get templates error:", err);
     res.status(500).json({ error: "Failed to get templates" });
   }
 });
@@ -90,7 +91,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     res.status(201).json({ template });
   } catch (err) {
-    console.error("Create template error:", err);
+    logError("Create template error:", err);
     res.status(500).json({ error: "Failed to create template" });
   }
 });
@@ -118,7 +119,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     if (!template) { res.status(404).json({ error: "Template not found" }); return; }
     res.json({ template });
   } catch (err) {
-    console.error("Update template error:", err);
+    logError("Update template error:", err);
     res.status(500).json({ error: "Failed to update template" });
   }
 });
@@ -132,7 +133,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
       .where(and(eq(userWorkoutTemplatesTable.id, id), eq(userWorkoutTemplatesTable.userId, user.id)));
     res.json({ ok: true });
   } catch (err) {
-    console.error("Delete template error:", err);
+    logError("Delete template error:", err);
     res.status(500).json({ error: "Failed to delete template" });
   }
 });
@@ -152,7 +153,7 @@ router.post("/:id/favorite", requireAuth, async (req, res) => {
       .returning();
     res.json({ template });
   } catch (err) {
-    console.error("Toggle favorite error:", err);
+    logError("Toggle favorite error:", err);
     res.status(500).json({ error: "Failed to toggle favorite" });
   }
 });
@@ -173,7 +174,7 @@ router.post("/:id/use", requireAuth, async (req, res) => {
 
     res.json({ template });
   } catch (err) {
-    console.error("Record usage error:", err);
+    logError("Record usage error:", err);
     res.status(500).json({ error: "Failed to record usage" });
   }
 });

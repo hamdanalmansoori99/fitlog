@@ -12,10 +12,11 @@ import {
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { hashPassword, generateSessionId } from "../lib/auth";
+import { logError } from "../lib/logger";
 import { ensureFreeSubscription } from "../services/subscriptionService";
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
-const DEMO_EMAIL = "demo@fitlog.app";
+const DEMO_EMAIL = "demo@ordeal.app";
 const DEMO_PASSWORD = "Demo1234!";
 
 const router = Router();
@@ -196,7 +197,7 @@ router.post("/", async (_req, res) => {
       token: sessionId,
     });
   } catch (err: any) {
-    console.error("[demo] failed:", err?.message ?? err);
+    logError("[demo] failed:", err);
     res.status(500).json({ error: "Demo login failed: " + (err?.message ?? "unknown error") });
   }
 });

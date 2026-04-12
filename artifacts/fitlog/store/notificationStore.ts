@@ -41,7 +41,7 @@ export const useNotificationStore = create<NotificationState>()(
       resetStore: () => set({ globalEnabled: false, prefs: DEFAULTS }),
     }),
     {
-      name: "fitlog-notifications",
+      name: "ordeal-notifications",
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

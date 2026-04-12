@@ -133,6 +133,12 @@ export default function LoginScreen() {
 
             <Button title={t("auth.signIn")} onPress={handleLogin} loading={loading} style={styles.btn} />
 
+            <Pressable onPress={() => router.push("/auth/forgot-password" as any)} style={styles.forgotLink}>
+              <Text style={[styles.forgotText, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>
+                {t("auth.forgotPassword")}
+              </Text>
+            </Pressable>
+
             <View style={styles.divider}>
               <View style={[styles.line, { backgroundColor: theme.border }]} />
               <Text style={[styles.or, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>{t("common.or")}</Text>
@@ -193,6 +199,8 @@ const styles = StyleSheet.create({
   },
   errorText: { fontSize: 13, flex: 1 },
   btn: { marginTop: 8 },
+  forgotLink: { alignSelf: "flex-end", padding: 4 },
+  forgotText: { fontSize: 13 },
   divider: { flexDirection: "row", alignItems: "center", gap: 12 },
   line: { flex: 1, height: 1 },
   or: { fontSize: 13 },

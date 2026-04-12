@@ -129,7 +129,7 @@ export default function WaterAddScreen() {
 
           {/* Custom input */}
           <View style={styles.customRow}>
-            <Text style={[styles.customLabel, { color: theme.textMuted }]}>Custom (ml)</Text>
+            <Text style={[styles.customLabel, { color: theme.textMuted }]}>{t("water.customMl")}</Text>
             <TextInput
               style={[
                 styles.customInput,

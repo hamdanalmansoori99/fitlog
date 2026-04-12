@@ -84,11 +84,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   // Auth
-  register: (body: { email: string; password: string; firstName: string; lastName: string }) =>
+  register: (body: { email: string; password: string; firstName: string; lastName: string; inviteCode?: string; deviceFingerprint?: string }) =>
     request<{ user: any; token: string }>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
   login: (body: { email: string; password: string }) =>
     request<{ user: any; token: string }>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
   demoLogin: () => request<{ user: any; token: string }>("/auth/demo", { method: "POST" }),
+  forgotPassword: (email: string) =>
+    request<{ message: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
+  resetPassword: (token: string, password: string) =>
+    request<{ message: string }>("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }),
   logout: () => request("/auth/logout", { method: "POST" }),
   getMe: () => request<any>("/auth/me"),
   
@@ -144,7 +148,7 @@ export const api = {
   getNutritionStats: () => request<any>("/meals/stats/nutrition"),
   getAchievements: () => request<any>("/achievements"),
   getRecentFoods: (limit = 25) => request<any>(`/meals/recent-foods?limit=${limit}`),
-  foodSearch: (q: string) => request<any>(`/meals/food-search?q=${encodeURIComponent(q)}`),
+  foodSearch: (q: string, locale?: string) => request<any>(`/meals/food-search?q=${encodeURIComponent(q)}${locale ? `&locale=${locale}` : ""}`),
   getFrequentMeals: (limit = 6) => request<any>(`/meals/frequent?limit=${limit}`),
   duplicateMeal: (id: number, targetDate?: string) =>
     request<any>(`/meals/${id}/duplicate`, { method: "POST", body: JSON.stringify({ targetDate }) }),
@@ -285,6 +289,37 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  // Friends
+  getFriends: () => request<any>("/friends"),
+  addFriend: (inviteCode: string) => request<any>("/friends/add", { method: "POST", body: JSON.stringify({ inviteCode }) }),
+  acceptFriend: (id: number) => request<any>(`/friends/${id}/accept`, { method: "POST" }),
+  removeFriend: (id: number) => request<any>(`/friends/${id}`, { method: "DELETE" }),
+
+  // Challenges
+  getChallenges: () => request<any>("/challenges"),
+  getChallenge: (id: number) => request<any>(`/challenges/${id}`),
+  createChallenge: (body: any) => request<any>("/challenges", { method: "POST", body: JSON.stringify(body) }),
+  inviteToChallenge: (id: number, friendUserId: number) => request<any>(`/challenges/${id}/invite`, { method: "POST", body: JSON.stringify({ friendUserId }) }),
+  joinChallenge: (id: number) => request<any>(`/challenges/${id}/join`, { method: "POST" }),
+  updateChallengeProgress: (id: number, progress: any) => request<any>(`/challenges/${id}/progress`, { method: "PUT", body: JSON.stringify({ progress }) }),
+
+  // Referrals
+  getReferralStats: () => request<any>("/referrals/stats"),
+
+  // Ramadan
+  getRamadanInfo: () => request<any>("/meals/ramadan"),
+  getRamadanPrayerTimes: (lat?: number, lng?: number) =>
+    request<any>(`/meals/ramadan/prayer-times${lat ? `?lat=${lat}&lng=${lng}` : ""}`),
+
+  // Export
+  exportData: () => request<any>("/export"),
+
+  // Custom Exercises
+  getCustomExercises: () => request<any>("/custom-exercises"),
+  createCustomExercise: (body: any) => request<any>("/custom-exercises", { method: "POST", body: JSON.stringify(body) }),
+  updateCustomExercise: (id: number, body: any) => request<any>(`/custom-exercises/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteCustomExercise: (id: number) => request<any>(`/custom-exercises/${id}`, { method: "DELETE" }),
 };
 
 export interface ScanMealItem {

@@ -343,21 +343,45 @@ export default function CoachChatScreen() {
         if (data.limit != null) setDailyLimit(data.limit);
         const fullContent: string = data.content || "";
 
+        // Set content immediately as fallback, then animate
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: fullContent } : m
+          )
+        );
+
         // Animate the response word by word for a natural feel
-        const words = fullContent.split(" ");
-        let current = "";
-        for (let i = 0; i < words.length; i++) {
-          if (controller.signal.aborted) break;
-          current += (i === 0 ? "" : " ") + words[i];
+        try {
+          const words = fullContent.split(" ");
+          if (words.length > 1) {
+            // Reset to empty for animation
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, content: "" } : m
+              )
+            );
+            let current = "";
+            for (let i = 0; i < words.length; i++) {
+              if (controller.signal.aborted) break;
+              current += (i === 0 ? "" : " ") + words[i];
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId ? { ...m, content: current } : m
+                )
+              );
+              if (i % 5 === 4) {
+                flatListRef.current?.scrollToEnd({ animated: false });
+              }
+              await new Promise<void>((r) => setTimeout(r, 20));
+            }
+          }
+        } catch {
+          // Animation error — content already set above, just continue
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, content: current } : m
+              m.id === assistantId ? { ...m, content: fullContent } : m
             )
           );
-          if (i % 5 === 4) {
-            flatListRef.current?.scrollToEnd({ animated: false });
-          }
-          await new Promise<void>((r) => setTimeout(r, 20));
         }
       } catch (err: any) {
         if (err?.name === "AbortError") {
@@ -465,6 +489,8 @@ export default function CoachChatScreen() {
                 sendMessage(item.retryText!);
               }}
               style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8, alignSelf: "flex-start" }}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.retry")}
             >
               <Feather name="refresh-cw" size={12} color={theme.primary} />
               <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("common.retry")}</Text>
@@ -482,14 +508,14 @@ export default function CoachChatScreen() {
       {isWeb && <View style={{ height: WEB_TOP }} />}
 
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.headerBtn} hitSlop={8}>
+        <Pressable onPress={() => router.back()} style={styles.headerBtn} hitSlop={8} accessibilityRole="button" accessibilityLabel={t("common.back")}>
           <Feather name={rtlIcon("arrow-left")} size={22} color={theme.text} />
         </Pressable>
         <View style={styles.headerCenter}>
           <View style={styles.headerDot} />
           <Text style={[styles.headerTitle, { color: theme.text }]}>{t("coach.aiCoach")}</Text>
         </View>
-        <Pressable onPress={handleClear} style={styles.headerBtn} hitSlop={8}>
+        <Pressable onPress={handleClear} style={styles.headerBtn} hitSlop={8} accessibilityRole="button" accessibilityLabel={t("coach.clearChat")}>
           <Feather name="trash-2" size={18} color={theme.textMuted} />
         </Pressable>
       </View>
@@ -516,7 +542,9 @@ export default function CoachChatScreen() {
           </Text>
           <Pressable
             onPress={loadConversation}
-            style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, backgroundColor: theme.primary, marginTop: 4 }}
+            style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, backgroundColor: theme.primary, marginTop: 4, minHeight: 44 }}
+            accessibilityRole="button"
+            accessibilityLabel={t("common.retry")}
           >
             <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
               {t("common.retry")}
@@ -557,6 +585,8 @@ export default function CoachChatScreen() {
                       pressed && { opacity: 0.7 },
                     ]}
                     onPress={() => sendMessage(s)}
+                    accessibilityRole="button"
+                    accessibilityLabel={s}
                   >
                     <Text style={[styles.suggestionText, { color: theme.text }]}>
                       {s}
@@ -623,6 +653,7 @@ export default function CoachChatScreen() {
               returnKeyType="send"
               onSubmitEditing={() => sendMessage(input)}
               editable={remaining !== 0}
+              accessibilityLabel={t("coach.askPlaceholder")}
             />
             <Pressable
               style={({ pressed }) => [
@@ -631,7 +662,9 @@ export default function CoachChatScreen() {
                 pressed && { opacity: 0.8 },
               ]}
               onPress={() => sendMessage(input)}
-              disabled={!input.trim() || remaining === 0}
+              disabled={!input.trim() || remaining === 0 || sending}
+              accessibilityRole="button"
+              accessibilityLabel={t("coach.send") || "Send message"}
             >
               {sending ? (
                 <ActivityIndicator size="small" color="#000" />
@@ -666,8 +699,8 @@ function makeStyles(theme: any, isWeb: boolean, webTop: number, webBottom: numbe
       borderBottomColor: theme.border,
     },
     headerBtn: {
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       alignItems: "center",
       justifyContent: "center",
     },

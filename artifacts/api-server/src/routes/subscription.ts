@@ -98,15 +98,15 @@ router.post("/cancel", requireAuth, async (req, res) => {
 /**
  * POST /api/subscription/simulate
  * Dev/testing only — force a plan for the current user.
- * Disabled in NODE_ENV=production.
+ * In production, only allowed for the demo account (demo@ordeal.app).
  */
 router.post("/simulate", requireAuth, async (req, res) => {
-  if (process.env.NODE_ENV === "production") {
-    res.status(404).json({ error: "Not found" });
-    return;
-  }
   try {
     const user = getUser(req) as any;
+    if (process.env.NODE_ENV === "production") {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
     const { planKey = "free" } = req.body as { planKey?: "free" | "premium" };
     await setSubscriptionPlan(user.id, planKey, { status: "active" });
     const sub = await getActiveSubscription(user.id, user.role ?? "user");

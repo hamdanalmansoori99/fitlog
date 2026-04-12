@@ -41,9 +41,12 @@ const SAFETY_PATTERNS = [
   /buying\s+(steroids|hgh|sarms)/i,
 ];
 
-function detectSafetyIssue(content: string): string | null {
+function detectSafetyIssue(content: string, locale?: string): string | null {
   for (const pattern of SAFETY_PATTERNS) {
     if (pattern.test(content)) {
+      if (locale === "ar") {
+        return "ما تصفه يبدو أنه يحتاج عناية طبية، وليس خطة تمرين. يرجى التحدث مع طبيب أو متخصص طبي مؤهل قبل المتابعة. إذا كنت في حالة طارئة، اتصل بخدمات الطوارئ. أنا هنا لمساعدتك في اللياقة بعد أن يتم تصريحك طبيًا.";
+      }
       return "What you're describing sounds like something that needs medical attention, not a workout plan. Please speak with a doctor or qualified medical professional before continuing. If you're in immediate distress, contact emergency services. I'm here to help with fitness once you've been cleared.";
     }
   }
@@ -452,7 +455,7 @@ function buildSystemPrompt(
           .join("\n");
 
   const availableTemplates = `
-Available workout templates in FitLog:
+Available workout templates in Ordeal:
 • Beginner Full Body Bodyweight (30 min, bodyweight only)
 • Calisthenics Fundamentals (35 min, bodyweight only)
 • Walking Fat-Loss Plan (45 min, no equipment)
@@ -520,7 +523,7 @@ Available workout templates in FitLog:
     ? `\nWORKOUT STREAK: ${workoutStreak} day${workoutStreak !== 1 ? "s" : ""} in a row\n`
     : "";
 
-  return `You are the AI Coach inside FitLog — think of yourself as the user's gym bro who actually knows their stuff. You're the friend who spots them on bench, hypes them up before a heavy set, and tells them straight when they need to rest. You keep it real, you keep it casual, and you always have their back. You talk like a workout buddy, not a textbook — short, punchy, and genuinely fired up about their progress.
+  return `You are the AI Coach inside Ordeal — think of yourself as the user's gym bro who actually knows their stuff. You're the friend who spots them on bench, hypes them up before a heavy set, and tells them straight when they need to rest. You keep it real, you keep it casual, and you always have their back. You talk like a workout buddy, not a textbook — short, punchy, and genuinely fired up about their progress.
 
 Today is ${dayName}, ${dateStr}.
 
@@ -583,7 +586,7 @@ COACHING STYLE:
 - Reference recent workout history to avoid repeating the same muscle groups back to back.
 - When the user asks about their gym performance, reference exact numbers from RECENT GYM PERFORMANCE above.
 - When recommending progression, compare to the actual last session numbers (e.g. "last time you did 3×8@80kg, try 3×8@82.5kg today").
-- Name FitLog templates exactly as listed above when recommending one.
+- Name Ordeal templates exactly as listed above when recommending one.
 - Be calm, confident, and practical — like a trainer who already knows the plan.
 - No long motivational speeches. No filler sentences. Get to the point.
 
@@ -751,7 +754,8 @@ router.post("/message", requireAuth, async (req, res) => {
     const dailyLimit = sub.plan.limits.aiRequestsPerDay;
 
     // Safety check — bypass AI entirely if triggered
-    const safetyResponse = detectSafetyIssue(content.trim());
+    const [safetySettings] = await db.select({ language: settingsTable.language }).from(settingsTable).where(eq(settingsTable.userId, user.id)).limit(1);
+    const safetyResponse = detectSafetyIssue(content.trim(), safetySettings?.language);
 
     // Atomic: get/create conversation, check rate limit, insert message in one transaction
     let conversation: any;
@@ -913,9 +917,41 @@ router.post("/message", requireAuth, async (req, res) => {
       workoutStreak
     );
 
-    if (userSettings?.language === "ar") {
+    const userLocale = userSettings?.language ?? "en";
+    if (userLocale === "ar") {
       systemPrompt +=
         "\n\nLANGUAGE: You MUST respond entirely in Arabic (العربية). All text, recommendations, template names, and coaching advice must be in Arabic. Use Arabic numerals for numbers.";
+
+      // Arabic cultural food context for nutrition advice
+      systemPrompt += `
+
+CULTURAL FOOD CONTEXT (Arabic/GCC region):
+When giving nutrition advice, reference culturally familiar foods:
+- High protein: chicken shawarma, grilled kebab, labneh, eggs, lentil soup (shorbat adas), grilled fish (hammour, safi)
+- Healthy carbs: brown rice, whole wheat bread (khubz), oats, sweet potato, freekeh
+- Traditional healthy: harees (wheat & chicken), thareed, margoogah, jareesh
+- Snacks: dates (tamr) with peanut butter, mixed nuts, hummus with vegetables, fruit salad
+- Hydration: water, laban (buttermilk), fresh juices (avoid excess sugar)
+- Common items: machboos/kabsa (rice dishes — note high calorie), fattoush salad, tabbouleh
+- Avoid assuming Western-only diet. If the user mentions local foods, give accurate macro estimates.`;
+
+      // Ramadan awareness — approximate check (Islamic calendar shifts ~11 days/year)
+      const month = new Date().getMonth(); // 0-indexed
+      const day = new Date().getDate();
+      // Ramadan 2026 is approximately Feb 17 - Mar 19
+      const isApproxRamadan = (month === 1 && day >= 10) || (month === 2 && day <= 25);
+      if (isApproxRamadan) {
+        systemPrompt += `
+
+RAMADAN AWARENESS:
+It is currently Ramadan (approximate). When coaching:
+- Respect that the user is likely fasting from dawn (Fajr) to sunset (Maghrib)
+- Recommend workouts either before Suhoor (pre-dawn meal) or 1-2 hours after Iftar (sunset meal)
+- Avoid recommending intense training during fasting hours — suggest light walks or stretching instead
+- For nutrition: emphasize hydration between Iftar and Suhoor, balanced Suhoor with slow-digesting foods (oats, eggs, whole grains), moderate Iftar portions
+- Do NOT suggest eating or drinking during fasting hours
+- Be encouraging about maintaining fitness during the holy month`;
+      }
     }
 
     const chatMessages = trimmedHistory.map((m) => ({
@@ -936,7 +972,7 @@ router.post("/message", requireAuth, async (req, res) => {
       content: fullResponse,
     });
 
-    const remaining = dailyLimit > 0 ? Math.max(0, dailyLimit - todayCount - 1) : -1;
+    const remaining = dailyLimit > 0 ? Math.max(0, dailyLimit - rateLimitResult.todayCount - 1) : -1;
     res.json({ content: fullResponse, remaining, limit: dailyLimit });
   } catch (err) {
     logError("sendCoachMessage error:", err);
@@ -1057,13 +1093,37 @@ router.post("/proactive", requireAuth, async (req, res) => {
       workoutStreak
     );
 
-    if (userSettings?.language === "ar") {
+    const proactiveLocale = userSettings?.language ?? "en";
+    if (proactiveLocale === "ar") {
       systemPrompt +=
         "\n\nLANGUAGE: You MUST respond entirely in Arabic (العربية). All text, recommendations, template names, and coaching advice must be in Arabic. Use Arabic numerals for numbers.";
+
+      systemPrompt += `
+
+CULTURAL FOOD CONTEXT (Arabic/GCC region):
+When giving nutrition advice, reference culturally familiar foods:
+- High protein: chicken shawarma, grilled kebab, labneh, eggs, lentil soup (shorbat adas), grilled fish (hammour, safi)
+- Healthy carbs: brown rice, whole wheat bread (khubz), oats, sweet potato, freekeh
+- Traditional healthy: harees (wheat & chicken), thareed, margoogah, jareesh
+- Snacks: dates (tamr) with peanut butter, mixed nuts, hummus with vegetables, fruit salad
+- Hydration: water, laban (buttermilk), fresh juices (avoid excess sugar)
+- Common items: machboos/kabsa (rice dishes — note high calorie), fattoush salad, tabbouleh`;
+
+      const month = new Date().getMonth();
+      const day = new Date().getDate();
+      const isApproxRamadan = (month === 1 && day >= 10) || (month === 2 && day <= 25);
+      if (isApproxRamadan) {
+        systemPrompt += `
+
+RAMADAN AWARENESS:
+It is currently Ramadan. Respect fasting hours. Recommend workouts before Suhoor or after Iftar. Emphasize hydration and balanced nutrition during non-fasting hours.`;
+      }
     }
 
     const today = new Date();
-    const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
+    const dayName = proactiveLocale === "ar"
+      ? today.toLocaleDateString("ar-AE", { weekday: "long" })
+      : today.toLocaleDateString("en-US", { weekday: "long" });
 
     // Build enriched proactive context for the opening brief
     const strainContext = strain.score >= 7
@@ -1077,7 +1137,9 @@ router.post("/proactive", requireAuth, async (req, res) => {
       ? `Recent gym performance available — reference a specific weight/exercise if relevant.`
       : "";
 
-    const proactivePrompt = `Today is ${dayName}. Give me my opening brief — exactly 2 to 3 sentences. Lead with the single most important number from my data (workouts this week vs. goal, today's protein vs. target, days since last session, bodyweight trend, or weekly adherence %). Include one of these if relevant: ${strainContext} ${streakContext} ${rankContext} ${gymContext} End with one concrete action I should take right now. No greeting, no preamble, no sign-off. If there is no data to reference, say: "Log your first workout today — it's the only data point that matters right now."`;
+    const proactivePrompt = proactiveLocale === "ar"
+      ? `اليوم ${dayName}. أعطني ملخصي الافتتاحي — جملتان إلى ثلاث جمل بالضبط. ابدأ بأهم رقم من بياناتي (التمارين هذا الأسبوع مقابل الهدف، بروتين اليوم مقابل الهدف، أيام منذ آخر جلسة، اتجاه الوزن، أو نسبة الالتزام الأسبوعية). ${strainContext} ${streakContext} ${rankContext} ${gymContext} اختم بإجراء واحد محدد يجب أن أتخذه الآن. بدون تحية، بدون مقدمة، بدون توقيع. إذا لم تكن هناك بيانات، قل: "سجّل أول تمرين لك اليوم — هذه نقطة البيانات الوحيدة المهمة الآن."`
+      : `Today is ${dayName}. Give me my opening brief — exactly 2 to 3 sentences. Lead with the single most important number from my data (workouts this week vs. goal, today's protein vs. target, days since last session, bodyweight trend, or weekly adherence %). Include one of these if relevant: ${strainContext} ${streakContext} ${rankContext} ${gymContext} End with one concrete action I should take right now. No greeting, no preamble, no sign-off. If there is no data to reference, say: "Log your first workout today — it's the only data point that matters right now."`;
 
     const aiResponse = await Promise.race([
       chatCompletion({

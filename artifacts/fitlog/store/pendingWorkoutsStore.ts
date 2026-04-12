@@ -43,7 +43,7 @@ export const usePendingWorkoutsStore = create<PendingWorkoutsState>()(
       resetStore: () => set({ queue: [], lastSyncError: null }),
     }),
     {
-      name: "fitlog-pending-workouts",
+      name: "ordeal-pending-workouts",
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

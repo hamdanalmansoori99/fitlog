@@ -18,22 +18,30 @@ import "@/i18n";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { InstallBanner } from "@/components/InstallBanner";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useAuthStore } from "@/store/authStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useNotificationSetup } from "@/hooks/useNotificationSetup";
 import { usePendingWorkoutSync } from "@/hooks/usePendingWorkoutSync";
+import { usePendingMealSync } from "@/hooks/usePendingMealSync";
+import { usePendingWaterSync } from "@/hooks/usePendingWaterSync";
+import { usePendingMeasurementSync } from "@/hooks/usePendingMeasurementSync";
+import { usePendingRecoverySync } from "@/hooks/usePendingRecoverySync";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { api } from "@/lib/api";
+import { migrateStorageKeys } from "@/store/migrateStorageKeys";
 
 SplashScreen.preventAutoHideAsync();
+migrateStorageKeys(); // one-time fitlog→ordeal key migration
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60_000,          // 1 min before considered stale
       gcTime: 10 * 60_000,        // 10 min in cache after unmount
-      retry: 1,
+      retry: 2,
       refetchOnWindowFocus: false, // prevents noisy refetches on tab switch
       refetchOnReconnect: true,
     },
@@ -91,6 +99,10 @@ function RootLayoutNav() {
 
   useNotificationSetup(!!token && !!_hydrated);
   usePendingWorkoutSync();
+  usePendingMealSync();
+  usePendingWaterSync();
+  usePendingMeasurementSync();
+  usePendingRecoverySync();
 
   useEffect(() => {
     if (!_hydrated) return;
@@ -130,6 +142,12 @@ function RootLayoutNav() {
       <Stack.Screen name="workouts/exercises" options={{ headerShown: false }} />
       <Stack.Screen name="workouts/edit" options={{ headerShown: false }} />
       <Stack.Screen name="settings/health" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/referral" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/export" options={{ headerShown: false }} />
+      <Stack.Screen name="friends/index" options={{ headerShown: false }} />
+      <Stack.Screen name="challenges/index" options={{ headerShown: false }} />
+      <Stack.Screen name="challenges/create" options={{ headerShown: false }} />
+      <Stack.Screen name="challenges/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="coach/chat" options={{ headerShown: false }} />
       <Stack.Screen name="recovery" options={{ headerShown: false }} />
       <Stack.Screen name="rank" options={{ headerShown: false }} />
@@ -183,6 +201,8 @@ export default function RootLayout() {
             <KeyboardProvider>
               <ToastProvider>
                 <RootLayoutNav />
+                <OfflineIndicator />
+                <OfflineBanner />
                 <InstallBanner />
               </ToastProvider>
             </KeyboardProvider>

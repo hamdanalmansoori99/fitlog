@@ -2,6 +2,7 @@ import React, { forwardRef } from "react";
 import { View, Text, StyleSheet, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTranslation } from "react-i18next";
 
 export type ShareCardType = "workout" | "pr" | "weekly" | "streak";
 
@@ -26,17 +27,18 @@ const BLUE = "#448aff";
 const MUTED = "#7a7a8c";
 const CARD_BG = "#1a1a2e";
 
-const TYPE_META: Record<ShareCardType, { icon: string; accent: string; label: string }> = {
-  workout: { icon: "activity", accent: GREEN, label: "Workout Complete" },
-  pr: { icon: "award", accent: GREEN, label: "New Personal Record" },
-  weekly: { icon: "bar-chart-2", accent: BLUE, label: "Weekly Report" },
-  streak: { icon: "zap", accent: "#ffab40", label: "Streak Milestone" },
+const TYPE_META: Record<ShareCardType, { icon: string; accent: string; labelKey: string }> = {
+  workout: { icon: "activity", accent: GREEN, labelKey: "components.shareCard.workoutComplete" },
+  pr: { icon: "award", accent: GREEN, labelKey: "components.shareCard.newPersonalRecord" },
+  weekly: { icon: "bar-chart-2", accent: BLUE, labelKey: "components.shareCard.weeklyReport" },
+  streak: { icon: "zap", accent: "#ffab40", labelKey: "components.shareCard.streakMilestone" },
 };
 
 export const ShareCard = forwardRef<View, ShareCardProps>(function ShareCard(
   { type, headline, subline, stats, date, exercises, rtl = false },
   ref
 ) {
+  const { t } = useTranslation();
   const meta = TYPE_META[type];
   const dir = rtl ? "rtl" : "ltr";
   const rowReverse = rtl ? "row-reverse" : "row";
@@ -62,11 +64,11 @@ export const ShareCard = forwardRef<View, ShareCardProps>(function ShareCard(
           <Feather name={meta.icon as any} size={20} color={meta.accent} />
         </View>
         <View style={{ flex: 1, alignItems: rtl ? "flex-end" : "flex-start" }}>
-          <Text style={[styles.typeLabelText, { color: meta.accent, writingDirection: dir }]}>{meta.label}</Text>
+          <Text style={[styles.typeLabelText, { color: meta.accent, writingDirection: dir }]}>{t(meta.labelKey)}</Text>
           {date && <Text style={[styles.dateText, { writingDirection: dir }]}>{date}</Text>}
         </View>
         <View style={styles.brandWrap}>
-          <Text style={styles.brandText}>FitLog</Text>
+          <Text style={styles.brandText}>Ordeal</Text>
         </View>
       </View>
 

@@ -90,6 +90,8 @@ const RecommendationCard = React.memo(function RecommendationCard({ rec, onPress
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t(template.nameKey, { defaultValue: template.name })}
       style={({ pressed }) => [
         styles.recCard,
         { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
@@ -101,7 +103,7 @@ const RecommendationCard = React.memo(function RecommendationCard({ rec, onPress
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.recName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-            {t(`workouts.templates.${template.id}.name`, { defaultValue: template.name })}
+            {t(template.nameKey, { defaultValue: template.name })}
           </Text>
           <View style={styles.recMeta}>
             <DifficultyDot difficulty={template.difficulty} />
@@ -119,7 +121,7 @@ const RecommendationCard = React.memo(function RecommendationCard({ rec, onPress
       </View>
 
       <Text style={[styles.recWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
-        {whyGoodForYou}
+        {t(whyGoodForYou)}
       </Text>
 
       <View style={styles.recEquipRow}>
@@ -159,7 +161,7 @@ const TodaySuggestionCard = React.memo(function TodaySuggestionCard({ suggestion
   const color = getActivityColor(template.activityType, theme);
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.todayCard, { opacity: pressed ? 0.9 : 1 }]}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={t(`workouts.templates.${template.id}.name`, { defaultValue: template.name }) + " - " + t("workouts.todaysSuggestion")} style={({ pressed }) => [styles.todayCard, { opacity: pressed ? 0.9 : 1 }]}>
       <View style={[styles.todayInner, { backgroundColor: theme.card, borderColor: theme.primary }]}>
         <View style={styles.todayTop}>
           <View style={[styles.todayIcon, { backgroundColor: color + "20" }]}>
@@ -167,7 +169,7 @@ const TodaySuggestionCard = React.memo(function TodaySuggestionCard({ suggestion
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.todayLabel, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>{t("workouts.todaysSuggestion")}</Text>
-            <Text style={[styles.todayName, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t(`workouts.templates.${template.id}.name`, { defaultValue: template.name })}</Text>
+            <Text style={[styles.todayName, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t(template.nameKey, { defaultValue: template.name })}</Text>
           </View>
           <View style={[styles.startBtn, { backgroundColor: theme.primary }]}>
             <Feather name="play" size={14} color="#0f0f1a" />
@@ -175,7 +177,7 @@ const TodaySuggestionCard = React.memo(function TodaySuggestionCard({ suggestion
           </View>
         </View>
         <Text style={[styles.todayWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
-          {whyGoodForYou}
+          {t(whyGoodForYou)}
         </Text>
         <View style={styles.todayStats}>
           <View style={styles.todayStat}>
@@ -217,6 +219,8 @@ const WorkoutHistoryCard = React.memo(function WorkoutHistoryCard({ workout, onD
   return (
     <Pressable
       onPress={() => router.push({ pathname: "/workouts/[id]" as any, params: { id: workout.id } })}
+      accessibilityRole="button"
+      accessibilityLabel={workout.name || workout.activityType}
       style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
     >
     <Card style={styles.historyCard}>
@@ -237,7 +241,7 @@ const WorkoutHistoryCard = React.memo(function WorkoutHistoryCard({ workout, onD
             </Text>
           </View>
         </View>
-        <Pressable onPress={(e) => { e.stopPropagation(); onDelete(); }} style={styles.deleteBtn} hitSlop={8}>
+        <Pressable onPress={(e) => { e.stopPropagation(); onDelete(); }} accessibilityRole="button" accessibilityLabel={t("common.delete")} style={[styles.deleteBtn, { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }]} hitSlop={8}>
           <Feather name="trash-2" size={15} color={theme.danger} />
         </Pressable>
       </View>
@@ -395,13 +399,15 @@ export default function WorkoutsScreen() {
         </View>
         <View style={styles.headerActions}>
           {hasCompletedOnboarding && (
-            <Pressable onPress={() => router.push("/workouts/plan" as any)} style={[styles.planBtn, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Pressable onPress={() => router.push("/workouts/plan" as any)} accessibilityRole="button" accessibilityLabel={t("workouts.week")} style={[styles.planBtn, { backgroundColor: theme.card, borderColor: theme.border, minHeight: 44 }]}>
               <Feather name="calendar" size={16} color={theme.primary} />
               <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("workouts.week")}</Text>
             </Pressable>
           )}
           <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/workouts/log"); }}
+            accessibilityRole="button"
+            accessibilityLabel={t("workouts.quickLog")}
             style={[styles.addBtn, { backgroundColor: theme.primary }]}
           >
             <Feather name="plus" size={22} color="#0f0f1a" />
@@ -419,7 +425,7 @@ export default function WorkoutsScreen() {
           <View style={{ marginHorizontal: 20, marginVertical: 8, padding: 14, borderRadius: 12, backgroundColor: theme.danger + "18", borderWidth: 1, borderColor: theme.danger + "40", flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Feather name="alert-circle" size={18} color={theme.danger} />
             <Text style={{ flex: 1, color: theme.text, fontFamily: "Inter_400Regular", fontSize: 13 }}>{t("common.error")}</Text>
-            <Pressable onPress={() => { refetchWorkouts(); refetchProfile(); refetchTemplates(); }} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.danger + "25" }}>
+            <Pressable onPress={() => { refetchWorkouts(); refetchProfile(); refetchTemplates(); }} accessibilityRole="button" accessibilityLabel={t("common.retry")} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.danger + "25", minHeight: 44, justifyContent: "center" }}>
               <Text style={{ color: theme.danger, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>{t("common.retry")}</Text>
             </Pressable>
           </View>
@@ -430,6 +436,8 @@ export default function WorkoutsScreen() {
           <Animated.View entering={FadeInDown.duration(400)} style={{ paddingHorizontal: 20, marginBottom: 8 }}>
             <Pressable
               onPress={() => router.push("/workouts/onboarding" as any)}
+              accessibilityRole="button"
+              accessibilityLabel={t("workouts.setUpCoach")}
               style={[styles.coachBanner, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "40" }]}
             >
               <Feather name="zap" size={16} color={theme.primary} />
@@ -461,7 +469,7 @@ export default function WorkoutsScreen() {
               <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                 {t("workouts.recommendedForYou")}
               </Text>
-              <Pressable onPress={() => router.push("/workouts/onboarding" as any)}>
+              <Pressable onPress={() => router.push("/workouts/onboarding" as any)} accessibilityRole="button" accessibilityLabel={t("workouts.editPrefs")} style={{ minHeight: 44, justifyContent: "center" }}>
                 <Text style={[styles.editPrefs, { color: theme.primary, fontFamily: "Inter_500Medium" }]}>{t("workouts.editPrefs")}</Text>
               </Pressable>
             </View>
@@ -496,6 +504,8 @@ export default function WorkoutsScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   router.push({ pathname: "/workouts/log" as any, params: { prefillType: act.type } });
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={act.label}
                 style={({ pressed }) => [
                   styles.quickLogCard,
                   { backgroundColor: act.color + "14", borderColor: act.color + "30", opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] },
@@ -515,7 +525,7 @@ export default function WorkoutsScreen() {
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>{t("workouts.myTemplates")}</Text>
             {userTemplates.length > 0 && (
-              <Pressable onPress={() => router.push("/workouts/my-templates" as any)}>
+              <Pressable onPress={() => router.push("/workouts/my-templates" as any)} accessibilityRole="button" accessibilityLabel={t("workouts.manage")} style={{ minHeight: 44, justifyContent: "center" }}>
                 <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("workouts.manage")}</Text>
               </Pressable>
             )}
@@ -523,6 +533,8 @@ export default function WorkoutsScreen() {
           {userTemplates.length === 0 ? (
             <Pressable
               onPress={() => router.push("/workouts/my-templates" as any)}
+              accessibilityRole="button"
+              accessibilityLabel={t("workouts.saveFirstTemplate")}
               style={[styles.createTemplateCard, { backgroundColor: theme.card, borderColor: theme.border }]}
             >
               <View style={[styles.createTemplateIcon, { backgroundColor: theme.secondaryDim }]}>
@@ -550,6 +562,8 @@ export default function WorkoutsScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         router.push({ pathname: "/workouts/user-template" as any, params: { id: tmpl.id } });
                       }}
+                      accessibilityRole="button"
+                      accessibilityLabel={tmpl.name}
                       style={[styles.myTmplCard, { backgroundColor: theme.card, borderColor: tmpl.isFavorite ? tColor + "60" : theme.border }]}
                     >
                       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -558,6 +572,9 @@ export default function WorkoutsScreen() {
                         </View>
                         <Pressable
                           onPress={(e) => { e.stopPropagation(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleFavMutation.mutate(tmpl.id); }}
+                          accessibilityRole="button"
+                          accessibilityLabel={tmpl.isFavorite ? t("workouts.unfavorite") || "Remove from favorites" : t("workouts.favorite") || "Add to favorites"}
+                          style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
                           hitSlop={8}
                         >
                           <Feather name="star" size={14} color={tmpl.isFavorite ? theme.warning : theme.textMuted} />
@@ -600,6 +617,8 @@ export default function WorkoutsScreen() {
                   <Pressable
                     key={tmpl.id}
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: "/workouts/template" as any, params: { id: tmpl.id } }); }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(`workouts.templates.${tmpl.id}.name`, { defaultValue: tmpl.name })}
                     style={[styles.templateCard, { backgroundColor: theme.card, borderColor: showNeedsGear ? theme.warning + "60" : theme.border }]}
                   >
                     <View style={[styles.templateIcon, { backgroundColor: getActivityColor(tmpl.activityType, theme) + "20" }]}>
@@ -644,7 +663,7 @@ export default function WorkoutsScreen() {
               clearButtonMode="while-editing"
             />
             {exerciseSearch.length > 0 && (
-              <Pressable onPress={() => setExerciseSearch("")} hitSlop={8}>
+              <Pressable onPress={() => setExerciseSearch("")} accessibilityRole="button" accessibilityLabel={t("common.clear") || "Clear search"} style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }} hitSlop={8}>
                 <Feather name="x" size={14} color={theme.textMuted} />
               </Pressable>
             )}
@@ -654,8 +673,11 @@ export default function WorkoutsScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 8, paddingEnd: 8, alignItems: "center" }} style={{ marginBottom: 12 }}>
                 <Pressable
                   onPress={() => setSelectedCategory(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("exercises.allCategories")}
                   style={[
                     styles.catChip,
+                    { minHeight: 44 },
                     selectedCategory === null
                       ? { backgroundColor: theme.primary, borderColor: theme.primary }
                       : { backgroundColor: theme.card, borderColor: theme.border },
@@ -672,8 +694,11 @@ export default function WorkoutsScreen() {
                     <Pressable
                       key={cat.id}
                       onPress={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t(catLabelKey)}
                       style={[
                         styles.catChip,
+                        { minHeight: 44 },
                         selectedCategory === cat.id
                           ? { backgroundColor: theme.primary, borderColor: theme.primary }
                           : { backgroundColor: theme.card, borderColor: theme.border },
@@ -718,6 +743,8 @@ export default function WorkoutsScreen() {
                     <Pressable
                       key={ex.id}
                       onPress={() => router.push({ pathname: "/workouts/exercise/[id]" as any, params: { id: ex.id } })}
+                      accessibilityRole="button"
+                      accessibilityLabel={t(exerciseNameKey(ex.id), { defaultValue: ex.name })}
                       style={({ pressed }) => [
                         styles.exerciseRow,
                         { backgroundColor: theme.card, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
@@ -758,7 +785,9 @@ export default function WorkoutsScreen() {
                 {!q && (
                   <Pressable
                     onPress={() => router.push("/workouts/exercises" as any)}
-                    style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingTop: 4 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("workouts.viewAllExercises", { count: EXERCISES.length })}
+                    style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingTop: 4, minHeight: 44 }}
                   >
                     <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
                       {t("workouts.viewAllExercises", { count: EXERCISES.length })}
@@ -789,8 +818,11 @@ export default function WorkoutsScreen() {
                     <Pressable
                       key={type}
                       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setHistoryFilter(type); }}
+                      accessibilityRole="button"
+                      accessibilityLabel={label}
                       style={[
                         styles.historyFilterChip,
+                        { minHeight: 44 },
                         {
                           backgroundColor: active ? color + "22" : theme.card,
                           borderColor: active ? color : theme.border,
@@ -842,7 +874,9 @@ export default function WorkoutsScreen() {
                   </Text>
                   <Pressable
                     onPress={() => router.push("/workouts/log" as any)}
-                    style={[styles.emptyBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "50" }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("workouts.logFirstWorkoutBtn")}
+                    style={[styles.emptyBtn, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "50", minHeight: 44 }]}
                   >
                     <Feather name="plus" size={14} color={theme.primary} />
                     <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
@@ -880,7 +914,9 @@ export default function WorkoutsScreen() {
               {filteredWorkouts.length > 5 && (
                 <Pressable
                   onPress={() => setShowAllHistory((v) => !v)}
-                  style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showAllHistory ? t("common.showLess") : t("workouts.viewAllHistory", { count: filteredWorkouts.length })}
+                  style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 8, minHeight: 44 }}
                 >
                   <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
                     {showAllHistory ? t("common.showLess") : t("workouts.viewAllHistory", { count: filteredWorkouts.length })}

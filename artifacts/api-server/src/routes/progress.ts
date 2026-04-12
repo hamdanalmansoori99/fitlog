@@ -4,6 +4,7 @@ import { eq, and, gte, lte, lt, desc, inArray } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
 import { logError } from "../lib/logger";
 import { computeCurrentStreak, computeLongestStreak } from "../lib/streaks";
+import { uploadToR2, deleteFromR2, getR2PublicUrl } from "../lib/r2";
 
 const router = Router();
 
@@ -164,7 +165,7 @@ router.get("/records", requireAuth, async (req, res) => {
     }
     
     // Fastest pace
-    const runsWithPace = allWorkouts.filter(w => w.activityType === "running" && w.distanceKm && w.durationMinutes);
+    const runsWithPace = allWorkouts.filter(w => w.activityType === "running" && w.distanceKm && w.distanceKm > 0 && w.durationMinutes && w.durationMinutes > 0);
     if (runsWithPace.length > 0) {
       const fastest = runsWithPace.reduce((min, w) => {
         const pace = w.durationMinutes! / w.distanceKm!;
@@ -538,17 +539,22 @@ router.get("/weekly-report", requireAuth, async (req, res) => {
 router.get("/photos", requireAuth, async (req, res) => {
   try {
     const user = getUser(req);
-    const photos = await db
+    const rawPhotos = await db
       .select({
         id: progressPhotosTable.id,
         date: progressPhotosTable.date,
         note: progressPhotosTable.note,
         mimeType: progressPhotosTable.mimeType,
+        r2Key: progressPhotosTable.r2Key,
         createdAt: progressPhotosTable.createdAt,
       })
       .from(progressPhotosTable)
       .where(eq(progressPhotosTable.userId, user.id))
       .orderBy(desc(progressPhotosTable.createdAt));
+    const photos = rawPhotos.map((p) => ({
+      ...p,
+      r2Url: p.r2Key ? getR2PublicUrl(p.r2Key) : undefined,
+    }));
     res.json({ photos });
   } catch (err) {
     logError("photos list error:", err);
@@ -556,14 +562,11 @@ router.get("/photos", requireAuth, async (req, res) => {
   }
 });
 
-// Serves the raw image bytes. Accepts token from Authorization header OR query param
-// so React Native <Image> can load it as a plain URL.
+// Serves the raw image bytes. Authenticated via Authorization header only.
 router.get("/photos/:id/image", async (req, res) => {
   try {
-    const queryToken = Array.isArray(req.query.token) ? req.query.token[0] : (req.query.token as string | undefined);
     const rawToken =
       (req.headers.authorization?.replace("Bearer ", "") ||
-        queryToken ||
         req.cookies?.session || "").trim();
     if (!rawToken) { res.status(401).json({ error: "Not authenticated" }); return; }
 
@@ -590,6 +593,13 @@ router.get("/photos/:id/image", async (req, res) => {
 
     if (!photo) { res.status(404).json({ error: "Not found" }); return; }
 
+    // Serve from R2 if available, else fall back to base64
+    if (photo.r2Key) {
+      res.redirect(302, getR2PublicUrl(photo.r2Key));
+      return;
+    }
+
+    if (!photo.imageData) { res.status(404).json({ error: "Image data not available" }); return; }
     const buffer = Buffer.from(photo.imageData, "base64");
     res.setHeader("Content-Type", photo.mimeType);
     res.setHeader("Cache-Control", "private, max-age=86400");
@@ -608,23 +618,40 @@ router.post("/photos", requireAuth, async (req, res) => {
       res.status(400).json({ error: "imageBase64 and date are required" });
       return;
     }
+    const mime = mimeType || "image/jpeg";
+    const ext = mime === "image/png" ? "png" : "jpg";
+    const buffer = Buffer.from(imageBase64, "base64");
+
+    // Try R2 upload; fall back to base64 in DB if R2 is not configured
+    let r2Key: string | null = null;
+    let storedBase64: string | null = null;
+    if (process.env.R2_ACCOUNT_ID) {
+      const tempKey = `progress/${user.id}/${Date.now()}.${ext}`;
+      await uploadToR2(tempKey, buffer, mime);
+      r2Key = tempKey;
+    } else {
+      storedBase64 = imageBase64;
+    }
+
     const [photo] = await db
       .insert(progressPhotosTable)
       .values({
         userId: user.id,
         date,
         note: note || "",
-        imageData: imageBase64,
-        mimeType: mimeType || "image/jpeg",
+        imageData: storedBase64,
+        r2Key,
+        mimeType: mime,
       })
       .returning({
         id: progressPhotosTable.id,
         date: progressPhotosTable.date,
         note: progressPhotosTable.note,
         mimeType: progressPhotosTable.mimeType,
+        r2Key: progressPhotosTable.r2Key,
         createdAt: progressPhotosTable.createdAt,
       });
-    res.json({ photo });
+    res.json({ photo: { ...photo, r2Url: photo.r2Key ? getR2PublicUrl(photo.r2Key) : undefined } });
   } catch (err) {
     logError("photos create error:", err);
     res.status(500).json({ error: "Failed to save photo" });
@@ -636,6 +663,17 @@ router.delete("/photos/:id", requireAuth, async (req, res) => {
     const user = getUser(req);
     const photoId = parseInt(req.params.id as string, 10);
     if (isNaN(photoId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+    // Fetch to get r2Key before deleting
+    const [photo] = await db.select({ r2Key: progressPhotosTable.r2Key })
+      .from(progressPhotosTable)
+      .where(and(eq(progressPhotosTable.id, photoId), eq(progressPhotosTable.userId, user.id)))
+      .limit(1);
+
+    if (photo?.r2Key) {
+      deleteFromR2(photo.r2Key).catch(() => {});
+    }
+
     await db
       .delete(progressPhotosTable)
       .where(and(eq(progressPhotosTable.id, photoId), eq(progressPhotosTable.userId, user.id)));

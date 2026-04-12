@@ -1,9 +1,16 @@
 import { Router } from "express";
-import { db, usersTable, sessionsTable, profilesTable, settingsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, sessionsTable, profilesTable, settingsTable, referralsTable, subscriptionsTable } from "@workspace/db";
+import { eq, and, sql } from "drizzle-orm";
+import crypto from "crypto";
 import { hashPassword, verifyPassword, generateSessionId, requireAuth, getUser } from "../lib/auth";
 import { ensureFreeSubscription } from "../services/subscriptionService";
+import { logError } from "../lib/logger";
 import rateLimit from "express-rate-limit";
+
+/** Generate a unique 8-character alphanumeric invite code. */
+function generateInviteCode(): string {
+  return crypto.randomBytes(4).toString("hex").toUpperCase();
+}
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -20,7 +27,7 @@ const router = Router();
 
 router.post("/register", authLimiter, async (req, res) => {
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, firstName, lastName, inviteCode: referralCode, deviceFingerprint } = req.body;
 
     if (!email || !password || !firstName || !lastName) {
       res.status(400).json({ error: "All fields required" });
@@ -42,8 +49,8 @@ router.post("/register", authLimiter, async (req, res) => {
       return;
     }
 
-    if (typeof password !== "string" || password.length < 8) {
-      res.status(400).json({ error: "Password must be at least 8 characters" });
+    if (typeof password !== "string" || password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      res.status(400).json({ error: "Password must be at least 8 characters with an uppercase letter and a number" });
       return;
     }
 
@@ -61,12 +68,15 @@ router.post("/register", authLimiter, async (req, res) => {
       passwordHash,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
+      deviceFingerprint: typeof deviceFingerprint === "string" ? deviceFingerprint : null,
     }).returning();
 
-    // Create default profile
+    // Create default profile with unique invite code
+    const userInviteCode = generateInviteCode();
     await db.insert(profilesTable).values({
       userId: user.id,
       fitnessGoals: [],
+      inviteCode: userInviteCode,
     });
 
     // Create default settings
@@ -76,6 +86,56 @@ router.post("/register", authLimiter, async (req, res) => {
 
     // Create free subscription
     await ensureFreeSubscription(user.id);
+
+    // Process referral if invite code provided
+    if (typeof referralCode === "string" && referralCode.trim()) {
+      try {
+        const [referrerProfile] = await db.select().from(profilesTable).where(eq(profilesTable.inviteCode, referralCode.trim().toUpperCase())).limit(1);
+        if (referrerProfile && referrerProfile.userId !== user.id) {
+          // Grant referee 7-day premium
+          const now = new Date();
+          const refereePeriodEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          await db.update(subscriptionsTable).set({ planKey: "premium", periodEnd: refereePeriodEnd }).where(eq(subscriptionsTable.userId, user.id));
+
+          // Check referrer abuse (max 5 rewarded referrals)
+          const referrerRewardCount = await db.select({ count: sql<number>`count(*)::int` }).from(referralsTable).where(and(eq(referralsTable.referrerId, referrerProfile.userId), eq(referralsTable.rewardGrantedToReferrer, true)));
+          const referrerAtCap = (referrerRewardCount[0]?.count ?? 0) >= 5;
+
+          // Check device fingerprint abuse
+          let deviceMatch = false;
+          if (deviceFingerprint) {
+            const existingDeviceReferrals = await db.execute(sql`
+              SELECT 1 FROM referrals r
+              JOIN users u ON u.id = r.referee_id
+              WHERE r.referrer_id = ${referrerProfile.userId}
+                AND u.device_fingerprint = ${deviceFingerprint}
+              LIMIT 1
+            `);
+            const rows = (existingDeviceReferrals as any).rows ?? Array.from(existingDeviceReferrals as any);
+            deviceMatch = rows.length > 0;
+          }
+
+          const grantToReferrer = !referrerAtCap && !deviceMatch;
+          if (grantToReferrer) {
+            // Extend referrer's premium by 7 days
+            const [referrerSub] = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.userId, referrerProfile.userId)).limit(1);
+            const baseDate = referrerSub?.periodEnd && referrerSub.periodEnd > now ? referrerSub.periodEnd : now;
+            const referrerPeriodEnd = new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+            await db.update(subscriptionsTable).set({ planKey: "premium", periodEnd: referrerPeriodEnd }).where(eq(subscriptionsTable.userId, referrerProfile.userId));
+          }
+
+          await db.insert(referralsTable).values({
+            referrerId: referrerProfile.userId,
+            refereeId: user.id,
+            rewardGrantedToReferrer: grantToReferrer,
+            rewardGrantedToReferee: true,
+            deviceFingerprintMatch: deviceMatch,
+          });
+        }
+      } catch (refErr) {
+        logError("Referral processing error (non-fatal):", refErr);
+      }
+    }
 
     const sessionId = generateSessionId();
     const expiresAt = new Date(Date.now() + SESSION_DURATION_MS); // 30 days
@@ -102,7 +162,7 @@ router.post("/register", authLimiter, async (req, res) => {
       res.status(409).json({ error: "Email already registered" });
       return;
     }
-    console.error("Register error:", err instanceof Error ? err.message : err);
+    logError("Register error:", err);
     res.status(500).json({ error: "Registration failed" });
   }
 });
@@ -116,7 +176,15 @@ router.post("/login", authLimiter, async (req, res) => {
       return;
     }
 
-    const users = await db.select().from(usersTable).where(eq(usersTable.email, email.trim().toLowerCase())).limit(1);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Block demo account login in production
+    if (process.env.NODE_ENV === "production" && normalizedEmail === "demo@ordeal.app") {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
+
+    const users = await db.select().from(usersTable).where(eq(usersTable.email, normalizedEmail)).limit(1);
     if (users.length === 0) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
@@ -155,7 +223,7 @@ router.post("/login", authLimiter, async (req, res) => {
       token: sessionId,
     });
   } catch (err) {
-    console.error("Login error:", err instanceof Error ? err.message : err);
+    logError("Login error:", err);
     res.status(500).json({ error: "Login failed" });
   }
 });

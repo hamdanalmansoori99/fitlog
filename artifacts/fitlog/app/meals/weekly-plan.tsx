@@ -46,6 +46,7 @@ interface MealRowProps {
 }
 
 function MealRow({ meal, date, onLog, loggingId, theme }: MealRowProps) {
+  const { t } = useTranslation();
   const id = `${date}-${meal.category}-${meal.name}`;
   const accent = CATEGORY_COLORS[meal.category] ?? theme.primary;
   const isLogging = loggingId === id;
@@ -62,9 +63,9 @@ function MealRow({ meal, date, onLog, loggingId, theme }: MealRowProps) {
         </Text>
         <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
           <Text style={{ color: accent, fontFamily: "Inter_500Medium", fontSize: 11 }}>{meal.calories} kcal</Text>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>P {meal.proteinG}g</Text>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>C {meal.carbsG}g</Text>
-          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>F {meal.fatG}g</Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("meals.proteinShort")} {meal.proteinG}g</Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("meals.carbsShort")} {meal.carbsG}g</Text>
+          <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("meals.fatShort")} {meal.fatG}g</Text>
         </View>
       </View>
       <Pressable
@@ -174,9 +175,9 @@ function DayCard({
                     </Text>
                     <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
                       <Text style={{ color: accent, fontFamily: "Inter_500Medium", fontSize: 11 }}>{loggedMeal.totalCalories} kcal</Text>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>P {loggedMeal.totalProteinG}g</Text>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>C {loggedMeal.totalCarbsG}g</Text>
-                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>F {loggedMeal.totalFatG}g</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("meals.proteinShort")} {loggedMeal.totalProteinG}g</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("meals.carbsShort")} {loggedMeal.totalCarbsG}g</Text>
+                      <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 }}>{t("meals.fatShort")} {loggedMeal.totalFatG}g</Text>
                     </View>
                   </View>
                   <Feather name="check-circle" size={16} color={theme.primary} />

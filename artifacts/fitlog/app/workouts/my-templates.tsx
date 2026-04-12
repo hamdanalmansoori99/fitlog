@@ -24,14 +24,14 @@ const ACTIVITY_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   gym: "zap", swimming: "droplet", tennis: "circle", yoga: "heart", other: "activity",
 };
 const ACTIVITY_TYPES = [
-  { id: "gym", label: "Gym / Weights", icon: "zap" as const },
-  { id: "running", label: "Running", icon: "activity" as const },
-  { id: "cycling", label: "Cycling", icon: "wind" as const },
-  { id: "walking", label: "Walking", icon: "navigation" as const },
-  { id: "swimming", label: "Swimming", icon: "droplet" as const },
-  { id: "yoga", label: "Yoga", icon: "heart" as const },
-  { id: "tennis", label: "Tennis", icon: "circle" as const },
-  { id: "other", label: "Other", icon: "more-horizontal" as const },
+  { id: "gym", labelKey: "workouts.activityLabelGym", icon: "zap" as const },
+  { id: "running", labelKey: "workouts.activityLabelRunning", icon: "activity" as const },
+  { id: "cycling", labelKey: "workouts.activityLabelCycling", icon: "wind" as const },
+  { id: "walking", labelKey: "workouts.activityLabelWalking", icon: "navigation" as const },
+  { id: "swimming", labelKey: "workouts.activityLabelSwimming", icon: "droplet" as const },
+  { id: "yoga", labelKey: "workouts.activityLabelYoga", icon: "heart" as const },
+  { id: "tennis", labelKey: "workouts.activityLabelTennis", icon: "circle" as const },
+  { id: "other", labelKey: "workouts.activityLabelOther", icon: "more-horizontal" as const },
 ];
 
 export default function MyTemplatesScreen() {
@@ -59,7 +59,7 @@ export default function MyTemplatesScreen() {
   const rest = templates.filter((t) => !t.isFavorite);
 
   const createMutation = useMutation({
-    mutationFn: () => api.createUserTemplate({ name: newName.trim() || "My Template", activityType: newActivity }),
+    mutationFn: () => api.createUserTemplate({ name: newName.trim() || t("workouts.myTemplate"), activityType: newActivity }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userTemplates"] });
       setShowCreate(false);
@@ -210,7 +210,7 @@ export default function MyTemplatesScreen() {
                       >
                         <Feather name={act.icon} size={14} color={isSelected ? actColor : theme.textMuted} />
                         <Text style={{ color: isSelected ? actColor : theme.textMuted, fontFamily: "Inter_500Medium", fontSize: 12 }}>
-                          {act.label}
+                          {t(act.labelKey)}
                         </Text>
                       </Pressable>
                     );

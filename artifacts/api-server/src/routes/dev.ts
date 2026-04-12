@@ -9,7 +9,7 @@ import { db, usersTable, profilesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "../lib/auth";
 
-const DEMO_EMAIL = "demo@fitlog.app";
+const DEMO_EMAIL = "demo@ordeal.app";
 const DEMO_PASSWORD = "Demo1234!";
 const DEMO_XP = 99999; // The Infinite (76,800+ XP)
 

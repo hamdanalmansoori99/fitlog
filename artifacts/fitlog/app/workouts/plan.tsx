@@ -125,7 +125,7 @@ function SwapModal({
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[swap.recName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-                    {rec.template.name}
+                    {t(rec.template.nameKey, { defaultValue: rec.template.name })}
                   </Text>
                   <View style={swap.recMeta}>
                     <Feather name="clock" size={10} color={theme.textMuted} />
@@ -140,7 +140,7 @@ function SwapModal({
                 <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
               </View>
               <Text style={[swap.recWhy, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                {rec.whyGoodForYou}
+                {t(rec.whyGoodForYou)}
               </Text>
             </Pressable>
           )}
@@ -456,7 +456,7 @@ export default function WeeklyPlanScreen() {
                   <View style={styles.restContent}>
                     <Feather name="moon" size={15} color={theme.textMuted} />
                     <Text style={[styles.restText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                      {day.note}
+                      {t(day.note)}
                     </Text>
                   </View>
                 ) : (
@@ -497,7 +497,7 @@ export default function WeeklyPlanScreen() {
                         </View>
                       </View>
                       <Text style={[styles.dayNote, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
-                        {day.note}
+                        {t(day.note)}
                       </Text>
                     </View>
                     <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />

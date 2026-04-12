@@ -7,7 +7,8 @@ export const progressPhotosTable = pgTable("progress_photos", {
   userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
   date: varchar("date", { length: 10 }).notNull(),
   note: text("note").notNull().default(""),
-  imageData: text("image_data").notNull(),
+  imageData: text("image_data"),
+  r2Key: text("r2_key"),
   mimeType: varchar("mime_type", { length: 50 }).notNull().default("image/jpeg"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [

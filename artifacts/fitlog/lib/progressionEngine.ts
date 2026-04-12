@@ -85,7 +85,7 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
     return {
       type: "strength",
       trend: "first",
-      rationale: "Log your first session to start tracking progression.",
+      rationale: "progression.strength.firstSession",
     };
   }
 
@@ -131,7 +131,7 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
       trend: "deload",
       previousDisplay: previousDisplay ?? undefined,
       ...prevFields,
-      rationale: `It's been ${lastDateDaysAgo} days since your last session — start at 90% of previous weight to ease back in safely.`,
+      rationale: "progression.strength.longBreakDeload",
     };
   }
 
@@ -150,8 +150,8 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
       ...prevFields,
       rationale:
         rpe !== null && rpe >= 9.5
-          ? "Last session was very hard (RPE 9–10). Drop weight by ~10% and focus on clean form."
-          : "You didn't complete all sets last time. Reduce weight slightly and nail the reps.",
+          ? "progression.strength.highRpeDeload"
+          : "progression.strength.incompleteSetsDeload",
     };
   }
 
@@ -167,7 +167,7 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
         trend: "progress",
         previousDisplay: previousDisplay ?? undefined,
         ...prevFields,
-        rationale: `Strong session last time — you nailed all sets at ${maxW}kg. Add ${increment}kg today.`,
+        rationale: "progression.strength.progressWeighted",
       };
     } else {
       return {
@@ -177,7 +177,7 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
         trend: "progress",
         previousDisplay: previousDisplay ?? undefined,
         ...prevFields,
-        rationale: `Bodyweight session completed well. Add 2 more reps this time to keep progressing.`,
+        rationale: "progression.strength.progressBodyweight",
       };
     }
   }
@@ -190,7 +190,7 @@ export function calculateStrengthTarget(history: ExerciseSession[]): StrengthTar
     trend: "maintain",
     previousDisplay: previousDisplay ?? undefined,
     ...prevFields,
-    rationale: `Good effort last time. Keep the same weight and aim for clean, controlled reps.`,
+    rationale: "progression.strength.maintain",
   };
 }
 
@@ -202,7 +202,7 @@ export function calculateCardioTarget(
     return {
       type: "cardio",
       trend: "first",
-      rationale: "Log your first session to start tracking progression.",
+      rationale: "progression.cardio.firstSession",
     };
   }
 
@@ -234,7 +234,7 @@ export function calculateCardioTarget(
       suggestedPaceMinPerKm: last.paceMinPerKm ? last.paceMinPerKm + 0.5 : undefined,
       trend: "deload",
       previousDisplay: previousDisplay ?? undefined,
-      rationale: `${lastDaysAgo} days between sessions — start with an easier ${label} at 80% of your last effort.`,
+      rationale: "progression.cardio.longBreakDeload",
     };
   }
 
@@ -248,7 +248,7 @@ export function calculateCardioTarget(
       suggestedPaceMinPerKm: last.paceMinPerKm,
       trend: "progress",
       previousDisplay: previousDisplay ?? undefined,
-      rationale: `Great first ${label}! Try adding a bit more distance or time today.`,
+      rationale: "progression.cardio.greatFirst",
     };
   }
 
@@ -279,7 +279,7 @@ export function calculateCardioTarget(
       suggestedPaceMinPerKm: +fasterPace.toFixed(2),
       trend: "progress",
       previousDisplay: previousDisplay ?? undefined,
-      rationale: `Your pace has been improving across recent sessions — push for ${formatPace(fasterPace)}/km today.`,
+      rationale: "progression.cardio.paceImproving",
     };
   }
 
@@ -291,7 +291,7 @@ export function calculateCardioTarget(
       suggestedPaceMinPerKm: last.paceMinPerKm ?? undefined,
       trend: "progress",
       previousDisplay: previousDisplay ?? undefined,
-      rationale: `You've held ${last.distanceKm}km for 3 sessions in a row — time to add another 0.5km.`,
+      rationale: "progression.cardio.distanceSteady",
     };
   }
 
@@ -302,7 +302,7 @@ export function calculateCardioTarget(
     suggestedPaceMinPerKm: last.paceMinPerKm ?? undefined,
     trend: "maintain",
     previousDisplay: previousDisplay ?? undefined,
-    rationale: `Keep your recent ${label} consistent. Focus on steady effort and breathing.`,
+    rationale: "progression.cardio.maintain",
   };
 }
 
@@ -331,8 +331,8 @@ export function getConsistencyAssessment(
       weeklyGoal,
       recommendation:
         thisWeek > weeklyGoal
-          ? "Outstanding week — you exceeded your goal. Consider adding more challenge or a deload day."
-          : "You hit your weekly goal. Keep building this habit — consistency compounds.",
+          ? "progression.consistency.exceededGoal"
+          : "progression.consistency.hitGoal",
       shouldDeload: thisWeek >= weeklyGoal + 2,
     };
   }
@@ -343,7 +343,7 @@ export function getConsistencyAssessment(
       workoutsThisWeek: thisWeek,
       workoutsLastWeek: lastWeek,
       weeklyGoal,
-      recommendation: `You're at ${thisWeek}/${weeklyGoal} sessions this week. ${weeklyGoal - thisWeek} more to hit your goal — keep going.`,
+      recommendation: "progression.consistency.mediumProgress",
       shouldDeload: false,
     };
   }
@@ -355,8 +355,8 @@ export function getConsistencyAssessment(
     weeklyGoal,
     recommendation:
       lastWeek >= weeklyGoal
-        ? "You had a great last week but this week has been lighter. Try a shorter session to get back on track."
-        : "Consistency is the foundation of progress. Even a 15-minute session counts — start small.",
+        ? "progression.consistency.lighterWeek"
+        : "progression.consistency.startSmall",
     shouldDeload: false,
   };
 }

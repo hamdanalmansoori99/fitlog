@@ -101,7 +101,7 @@ export default function WeeklyReportScreen() {
       if (Platform.OS === "web") {
         const uri = await captureRef(shareCardRef, { format: "png", quality: 1, result: "data-uri" });
         const link = document.createElement("a");
-        link.download = "fitlog-weekly-report.png";
+        link.download = "ordeal-weekly-report.png";
         link.href = uri;
         link.click();
         setShareModalVisible(false);
@@ -111,7 +111,7 @@ export default function WeeklyReportScreen() {
         if (canShare) {
           await ExpoSharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: t("weeklyReport.title") });
         } else {
-          await Share.share({ url: uri, title: "FitLog Weekly Report" });
+          await Share.share({ url: uri, title: t("weeklyReport.shareTitle") });
         }
         setShareModalVisible(false);
       }

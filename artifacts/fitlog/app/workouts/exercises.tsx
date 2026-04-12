@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from "react";
 import {
   FlatList,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  Alert,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,8 +16,11 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslation } from "react-i18next";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { rtlIcon } from "@/lib/rtl";
 import { EXERCISES, EXERCISE_CATEGORIES, exerciseNameKey } from "@/lib/exerciseLibrary";
+import { api } from "@/lib/api";
+import { Button } from "@/components/ui/Button";
 
 function muscleKey(name: string): string {
   return "exercises.muscle_" + name.toLowerCase().replace(/[()]/g, "").replace(/\s+/g, "_");
@@ -45,8 +50,38 @@ export default function ExercisesScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customCategory, setCustomCategory] = useState("chest");
+  const [customMuscle, setCustomMuscle] = useState("");
+  const [customEquipment, setCustomEquipment] = useState("");
+
+  const { data: customData } = useQuery({
+    queryKey: ["customExercises"],
+    queryFn: api.getCustomExercises,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => api.createCustomExercise({
+      name: customName.trim(),
+      category: customCategory,
+      primaryMuscle: customMuscle.trim() || customCategory,
+      equipment: customEquipment.trim() || "bodyweight",
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customExercises"] });
+      setShowCreateModal(false);
+      setCustomName("");
+      setCustomMuscle("");
+      setCustomEquipment("");
+    },
+    onError: (err: any) => Alert.alert(t("common.error"), err.message),
+  });
+
+  const customExercises: any[] = customData?.exercises ?? [];
 
   const showCategoryGrid = !search && !selectedCategory;
 
@@ -58,10 +93,26 @@ export default function ExercisesScreen() {
     return counts;
   }, []);
 
+  const allExercises = useMemo(() => {
+    const custom = customExercises.map((ce: any) => ({
+      id: `custom-${ce.id}`,
+      name: ce.name,
+      category: ce.category,
+      primaryMuscle: ce.primaryMuscle || ce.category,
+      secondaryMuscles: ce.secondaryMuscles || [],
+      difficulty: "Beginner",
+      equipment: ce.equipment || "bodyweight",
+      instructions: ce.instructions || [],
+      commonMistakes: [],
+      isCustom: true,
+    }));
+    return [...custom, ...EXERCISES];
+  }, [customExercises]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (q) {
-      return EXERCISES.filter(
+      return allExercises.filter(
         (e) =>
           e.name.toLowerCase().includes(q) ||
           e.primaryMuscle.toLowerCase().includes(q) ||
@@ -69,10 +120,10 @@ export default function ExercisesScreen() {
       );
     }
     if (selectedCategory) {
-      return EXERCISES.filter((e) => e.category === selectedCategory);
+      return allExercises.filter((e) => e.category === selectedCategory);
     }
-    return EXERCISES;
-  }, [search, selectedCategory]);
+    return allExercises;
+  }, [search, selectedCategory, allExercises]);
 
   const diffColors: Record<string, string> = {
     Beginner: theme.primary,
@@ -90,9 +141,9 @@ export default function ExercisesScreen() {
         <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>
           {t("exercises.exercisesTitle")}
         </Text>
-        <Text style={[styles.count, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-          {showCategoryGrid ? EXERCISES.length : filtered.length}
-        </Text>
+        <Pressable onPress={() => setShowCreateModal(true)} hitSlop={10}>
+          <Feather name="plus" size={22} color={theme.primary} />
+        </Pressable>
       </View>
 
       {/* Search bar */}
@@ -236,9 +287,18 @@ export default function ExercisesScreen() {
                   <Feather name={catIcon as any} size={15} color={dColor} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }} numberOfLines={1}>
-                    {t(exerciseNameKey(ex.id), { defaultValue: ex.name })}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 13, flex: 1 }} numberOfLines={1}>
+                      {(ex as any).isCustom ? ex.name : t(exerciseNameKey(ex.id), { defaultValue: ex.name })}
+                    </Text>
+                    {(ex as any).isCustom && (
+                      <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, backgroundColor: theme.secondary + "20" }}>
+                        <Text style={{ color: theme.secondary, fontFamily: "Inter_600SemiBold", fontSize: 9 }}>
+                          {t("exercises.custom", { defaultValue: "CUSTOM" })}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, flex: 1 }} numberOfLines={1}>
                       {translateMuscle(ex.primaryMuscle, t)}
@@ -263,6 +323,82 @@ export default function ExercisesScreen() {
         />
         </View>
       )}
+
+      {/* Create Custom Exercise Modal */}
+      <Modal visible={showCreateModal} animationType="slide" transparent>
+        <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 18 }}>
+                {t("exercises.createCustom", { defaultValue: "Create Exercise" })}
+              </Text>
+              <Pressable onPress={() => setShowCreateModal(false)} hitSlop={10}>
+                <Feather name="x" size={22} color={theme.textMuted} />
+              </Pressable>
+            </View>
+
+            <ScrollView style={{ maxHeight: 400 }}>
+              <Text style={[styles.modalLabel, { color: theme.text }]}>{t("exercises.exerciseName", { defaultValue: "Exercise Name" })}</Text>
+              <TextInput
+                style={[styles.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card }]}
+                placeholder={t("exercises.nameExample", { defaultValue: "e.g. Cable Fly" })}
+                placeholderTextColor={theme.textMuted}
+                value={customName}
+                onChangeText={setCustomName}
+                maxLength={60}
+              />
+
+              <Text style={[styles.modalLabel, { color: theme.text }]}>{t("exercises.categoryLabel", { defaultValue: "Category" })}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  {EXERCISE_CATEGORIES.map((cat) => (
+                    <Pressable
+                      key={cat.id}
+                      onPress={() => setCustomCategory(cat.id)}
+                      style={[styles.catChip, {
+                        backgroundColor: customCategory === cat.id ? theme.primary : theme.card,
+                        borderColor: customCategory === cat.id ? theme.primary : theme.border,
+                      }]}
+                    >
+                      <Text style={{ color: customCategory === cat.id ? "#0f0f1a" : theme.text, fontFamily: "Inter_500Medium", fontSize: 12 }}>
+                        {t(`exercises.category${cat.id.charAt(0).toUpperCase()}${cat.id.slice(1)}`)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
+
+              <Text style={[styles.modalLabel, { color: theme.text }]}>{t("exercises.primaryMuscleLabel", { defaultValue: "Primary Muscle" })}</Text>
+              <TextInput
+                style={[styles.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card }]}
+                placeholder={t("exercises.muscleExample", { defaultValue: "e.g. Chest" })}
+                placeholderTextColor={theme.textMuted}
+                value={customMuscle}
+                onChangeText={setCustomMuscle}
+                maxLength={40}
+              />
+
+              <Text style={[styles.modalLabel, { color: theme.text }]}>{t("exercises.equipmentLabel", { defaultValue: "Equipment" })}</Text>
+              <TextInput
+                style={[styles.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card }]}
+                placeholder={t("exercises.equipmentExample", { defaultValue: "e.g. Cable Machine" })}
+                placeholderTextColor={theme.textMuted}
+                value={customEquipment}
+                onChangeText={setCustomEquipment}
+                maxLength={40}
+              />
+            </ScrollView>
+
+            <Button
+              title={t("exercises.createBtn", { defaultValue: "Create Exercise" })}
+              onPress={() => customName.trim().length >= 2 && createMutation.mutate()}
+              loading={createMutation.isPending}
+              disabled={customName.trim().length < 2}
+              style={{ marginTop: 16 }}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -348,4 +484,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 80,
   },
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
+  modalContent: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  modalLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 6, marginTop: 12 },
+  modalInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, fontFamily: "Inter_500Medium" },
+  catChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
 });

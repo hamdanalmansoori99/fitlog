@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { getRankByXp } from "@/lib/ranks";
 import { RANK_ICON_MAP } from "@/components/RankIcons";
 
@@ -16,6 +17,7 @@ const SIZE_CONFIG = {
 };
 
 export function RankBadge({ xp, size = "md", showName = false }: RankBadgeProps) {
+  const { t } = useTranslation();
   const rank = getRankByXp(xp);
   const cfg = SIZE_CONFIG[size];
 
@@ -52,7 +54,7 @@ export function RankBadge({ xp, size = "md", showName = false }: RankBadgeProps)
             },
           ]}
         >
-          {rank.name}
+          {t(rank.nameKey)}
         </Text>
       )}
     </View>

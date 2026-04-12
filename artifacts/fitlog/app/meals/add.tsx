@@ -20,20 +20,37 @@ import { useToast } from "@/components/ui/Toast";
 import { useTranslation } from "react-i18next";
 import { rtlIcon } from "@/lib/rtl";
 
-const CATEGORY_OPTIONS = [
+const BASE_CATEGORY_OPTIONS = [
   { value: "Breakfast", labelKey: "meals.breakfast" },
   { value: "Lunch",     labelKey: "meals.lunch" },
   { value: "Dinner",    labelKey: "meals.dinner" },
   { value: "Snacks",    labelKey: "meals.snacks" },
 ] as const;
 
+const RAMADAN_CATEGORY_OPTIONS = [
+  { value: "Suhoor",    labelKey: "ramadan.suhoor" },
+  { value: "Iftar",     labelKey: "ramadan.iftar" },
+  { value: "Snacks",    labelKey: "meals.snacks" },
+] as const;
+
+// Approximate Ramadan dates for category switching
+const RAMADAN_RANGES = [
+  { start: "2025-02-28", end: "2025-03-30" },
+  { start: "2026-02-17", end: "2026-03-19" },
+  { start: "2027-02-07", end: "2027-03-08" },
+  { start: "2028-01-27", end: "2028-02-25" },
+];
+
+function isRamadanNow(): boolean {
+  const iso = new Date().toISOString().slice(0, 10);
+  return RAMADAN_RANGES.some((r) => iso >= r.start && iso <= r.end);
+}
+
+const CATEGORY_OPTIONS = isRamadanNow() ? RAMADAN_CATEGORY_OPTIONS : BASE_CATEGORY_OPTIONS;
+
 const UNIT_OPTIONS = [
   { value: "grams",    labelKey: "meals.units.grams" },
-  { value: "oz",       labelKey: "meals.units.oz" },
-  { value: "cups",     labelKey: "meals.units.cups" },
-  { value: "pieces",   labelKey: "meals.units.pieces" },
   { value: "servings", labelKey: "meals.units.servings" },
-  { value: "ml",       labelKey: "meals.units.ml" },
 ] as const;
 
 interface FoodItem {
@@ -84,6 +101,11 @@ function getServingSuggestions(name: string) {
 
 function getCategoryByTime(): string {
   const hour = new Date().getHours();
+  if (isRamadanNow()) {
+    if (hour < 6) return "Suhoor";
+    if (hour < 17) return "Snacks";
+    return "Iftar";
+  }
   if (hour < 10) return "Breakfast";
   if (hour < 14) return "Lunch";
   if (hour < 17) return "Snacks";
@@ -92,7 +114,7 @@ function getCategoryByTime(): string {
 
 export default function AddMealScreen() {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams();
@@ -349,7 +371,7 @@ export default function AddMealScreen() {
     const seq = ++searchSeq.current;
     searchTimeout.current = setTimeout(async () => {
       try {
-        const data = await api.foodSearch(text.trim());
+        const data = await api.foodSearch(text.trim(), i18n.language);
         if (seq !== searchSeq.current) return;
         setSearchResults(data.results || []);
         setSearchError(false);
@@ -526,7 +548,7 @@ export default function AddMealScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.navBar, { paddingTop: topPad + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t("common.back") || "Go back"}>
           <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.navTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
@@ -550,6 +572,8 @@ export default function AddMealScreen() {
             <Pressable
               onPress={openBarcodeScanner}
               style={[styles.scanBanner, { backgroundColor: theme.primary + "12", borderColor: theme.primary + "40" }]}
+              accessibilityRole="button"
+              accessibilityLabel={t("meals.scanBarcode")}
             >
               <View style={[styles.scanIconCircle, { backgroundColor: theme.primary + "20" }]}>
                 <Feather name="maximize" size={22} color={theme.primary} />
@@ -567,6 +591,8 @@ export default function AddMealScreen() {
               <Pressable
                 onPress={showPhotoPicker}
                 style={[styles.scanBanner, { backgroundColor: theme.secondary + "12", borderColor: theme.secondary + "40" }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("meals.scanWithAI")}
               >
                 <View style={[styles.scanIconCircle, { backgroundColor: theme.secondary + "20" }]}>
                   <Feather name="camera" size={22} color={theme.secondary} />
@@ -609,7 +635,7 @@ export default function AddMealScreen() {
               <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
                 {t("meals.itemsDetected", { count: foodItems.length })}
               </Text>
-              <Pressable onPress={showPhotoPicker} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Pressable onPress={showPhotoPicker} style={{ flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44 }} accessibilityRole="button" accessibilityLabel={t("meals.reScan")}>
                 <Feather name="refresh-cw" size={12} color={theme.secondary} />
                 <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("meals.reScan")}</Text>
               </Pressable>
@@ -631,7 +657,7 @@ export default function AddMealScreen() {
                 returnKeyType="search"
               />
               {searchQuery.length > 0 && (
-                <Pressable onPress={() => { setSearchQuery(""); setSearchResults([]); setSearchError(false); setShowSearchResults(false); }} hitSlop={8}>
+                <Pressable onPress={() => { setSearchQuery(""); setSearchResults([]); setSearchError(false); setShowSearchResults(false); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={t("common.clear") || "Clear search"} style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}>
                   <Feather name="x" size={16} color={theme.textMuted} />
                 </Pressable>
               )}
@@ -662,7 +688,9 @@ export default function AddMealScreen() {
                   <Pressable
                     key={idx}
                     onPress={() => selectSearchResult(result)}
-                    style={[styles.searchResultItem, { borderBottomColor: idx < searchResults.length - 1 ? theme.border : "transparent" }]}
+                    style={[styles.searchResultItem, { borderBottomColor: idx < searchResults.length - 1 ? theme.border : "transparent", minHeight: 44 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${result.name}${result.brand ? ` (${result.brand})` : ""}, ${result.calories} ${t("common.kcal")}`}
                   >
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }} numberOfLines={1}>
@@ -719,7 +747,7 @@ export default function AddMealScreen() {
 
         {/* ── Meal Details ── */}
         <Input label={t("meals.mealName")} value={mealName} onChangeText={setMealName} placeholder={t("meals.mealNamePlaceholder")} />
-        <Input label={t("workouts.date")} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+        <Input label={t("workouts.date")} value={date} onChangeText={setDate} placeholder={t("workouts.datePlaceholder")} />
 
         <Pressable
           onPress={() => {
@@ -728,6 +756,8 @@ export default function AddMealScreen() {
             setCategory(opts[(curIdx + 1) % opts.length]);
           }}
           style={[styles.autoCategoryRow, { backgroundColor: theme.card, borderColor: theme.border }]}
+          accessibilityRole="button"
+          accessibilityLabel={`${t("meals.category")}: ${t(CATEGORY_OPTIONS.find(o => o.value === category)?.labelKey || "meals.breakfast")}. ${t("common.change") || "Tap to change"}`}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Feather name="clock" size={14} color={theme.primary} />
@@ -764,7 +794,10 @@ export default function AddMealScreen() {
                       style={[styles.recentChip, {
                         backgroundColor: isFrequent ? theme.primaryDim : theme.card,
                         borderColor: isFrequent ? theme.primary + "60" : theme.border,
+                        minHeight: 44,
                       }]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t("meals.tapToAdd")}: ${food.name}, ${Math.round(food.avgCalories)} kcal`}
                     >
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 2 }}>
                         {isFrequent && <Feather name="star" size={9} color={theme.warning} />}
@@ -793,7 +826,9 @@ export default function AddMealScreen() {
             {photoUri && !scanning && (
               <Pressable
                 onPress={showPhotoPicker}
-                style={[styles.rescanBtn, { backgroundColor: theme.secondary + "12", borderColor: theme.secondary + "30" }]}
+                style={[styles.rescanBtn, { backgroundColor: theme.secondary + "12", borderColor: theme.secondary + "30", minHeight: 44 }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("meals.reScan")}
               >
                 <Feather name="camera" size={12} color={theme.secondary} />
                 <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 11 }}>{t("meals.reScan")}</Text>
@@ -822,7 +857,7 @@ export default function AddMealScreen() {
                         baseScanItems.current = baseScanItems.current.filter((_, i) => i !== idx);
                         setScanMultipliers(prev => prev.filter((_, i) => i !== idx));
                       }
-                    }} hitSlop={8}>
+                    }} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${t("common.delete") || "Delete"} ${item.name || t("meals.foodItems")}`} style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}>
                       <Feather name="x" size={18} color={theme.danger} />
                     </Pressable>
                   )}
@@ -841,6 +876,8 @@ export default function AddMealScreen() {
                     onPress={openBarcodeScanner}
                     style={[styles.barcodeBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
                     hitSlop={4}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("meals.scanBarcode")}
                   >
                     <Feather name="maximize" size={16} color={theme.primary} />
                   </Pressable>
@@ -862,7 +899,11 @@ export default function AddMealScreen() {
                               ? theme.primaryDim : theme.background,
                             borderColor: item.portionSize === String(s.size) && item.unit === s.unit
                               ? theme.primary : theme.border,
+                            minHeight: 44,
                           }]}
+                          accessibilityRole="button"
+                          accessibilityLabel={s.label}
+                          accessibilityState={{ selected: item.portionSize === String(s.size) && item.unit === s.unit }}
                         >
                           <Text style={{
                             color: item.portionSize === String(s.size) && item.unit === s.unit
@@ -891,8 +932,12 @@ export default function AddMealScreen() {
                             {
                               backgroundColor: scanMultipliers[idx] === m ? theme.primary : theme.card,
                               borderColor: scanMultipliers[idx] === m ? theme.primary : theme.border,
+                              minHeight: 44,
                             },
                           ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${t("meals.portionScale")} ${m === 0.5 ? "0.5" : m === 1.5 ? "1.5" : m}x`}
+                          accessibilityState={{ selected: scanMultipliers[idx] === m }}
                         >
                           <Text style={{
                             color: scanMultipliers[idx] === m ? "#0f0f1a" : theme.textMuted,
@@ -920,21 +965,22 @@ export default function AddMealScreen() {
                       style={[styles.smallInput, { color: theme.text, borderColor: theme.border, fontFamily: "Inter_400Regular" }]}
                     />
                   </View>
-                  <View style={{ flex: 3 }}>
+                  <View style={{ flex: 2 }}>
                     <Text style={[styles.miniLabel, { color: theme.textMuted }]}>{t("meals.unit")}</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <View style={{ flexDirection: "row", gap: 4 }}>
-                        {UNIT_OPTIONS.map(opt => (
-                          <Pressable
-                            key={opt.value}
-                            onPress={() => setFoodItems(fi => fi.map((f, i) => i === idx ? { ...f, unit: opt.value } : f))}
-                            style={[styles.unitChip, { backgroundColor: item.unit === opt.value ? theme.primaryDim : theme.background, borderColor: item.unit === opt.value ? theme.primary : theme.border }]}
-                          >
-                            <Text style={{ color: item.unit === opt.value ? theme.primary : theme.textMuted, fontSize: 11, fontFamily: "Inter_400Regular" }}>{t(opt.labelKey)}</Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </ScrollView>
+                    <View style={{ flexDirection: "row", gap: 6 }}>
+                      {UNIT_OPTIONS.map(opt => (
+                        <Pressable
+                          key={opt.value}
+                          onPress={() => setFoodItems(fi => fi.map((f, i) => i === idx ? { ...f, unit: opt.value } : f))}
+                          style={[styles.unitChip, { flex: 1, backgroundColor: item.unit === opt.value ? theme.primaryDim : theme.background, borderColor: item.unit === opt.value ? theme.primary : theme.border }]}
+                          accessibilityRole="button"
+                          accessibilityLabel={t(opt.labelKey)}
+                          accessibilityState={{ selected: item.unit === opt.value }}
+                        >
+                          <Text style={{ color: item.unit === opt.value ? theme.primary : theme.textMuted, fontSize: 12, fontFamily: "Inter_500Medium", textAlign: "center" }}>{t(opt.labelKey)}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
                   </View>
                 </View>
 
@@ -964,7 +1010,9 @@ export default function AddMealScreen() {
                 <View style={[styles.foodFooter, { borderTopColor: theme.border }]}>
                   <Pressable
                     onPress={() => duplicateFoodItem(idx)}
-                    style={styles.footerBtn}
+                    style={[styles.footerBtn, { minHeight: 44 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("meals.duplicateItem")}
                   >
                     <Feather name="copy" size={13} color={theme.secondary} />
                     <Text style={{ color: theme.secondary, fontFamily: "Inter_500Medium", fontSize: 12 }}>{t("meals.duplicateItem")}</Text>
@@ -977,26 +1025,15 @@ export default function AddMealScreen() {
           <Pressable
             onPress={() => setFoodItems([...foodItems, emptyFood()])}
             style={[styles.addFoodBtn, { borderColor: theme.border }]}
+            accessibilityRole="button"
+            accessibilityLabel={t("meals.addFoodItem")}
           >
             <Feather name="plus" size={16} color={theme.primary} />
             <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("meals.addFoodItem")}</Text>
           </Pressable>
         </View>
 
-        {/* Notes */}
-        <View>
-          <Text style={[styles.fieldLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>{t("meals.notesOptional")}</Text>
-          <TextInput
-            value={notes}
-            onChangeText={setNotes}
-            placeholder={t("meals.notesPlaceholder")}
-            placeholderTextColor={theme.textMuted}
-            multiline
-            style={[styles.notesInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card, fontFamily: "Inter_400Regular" }]}
-          />
-        </View>
-
-        {error ? <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13 }}>{error}</Text> : null}
+{error ? <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13 }}>{error}</Text> : null}
 
         <Button title={isEditing ? t("meals.saveChanges") : t("meals.saveMeal")} onPress={handleSubmit} loading={mutation.isPending} />
       </ScrollView>
@@ -1006,7 +1043,7 @@ export default function AddMealScreen() {
       <Modal visible={barcodeOpen} animationType="slide" presentationStyle="fullScreen">
         <View style={[styles.barcodeModal, { backgroundColor: "#000" }]}>
           <View style={[styles.barcodeHeader, { paddingTop: topPad + 8 }]}>
-            <Pressable onPress={() => setBarcodeOpen(false)} style={styles.barcodeCloseBtn}>
+            <Pressable onPress={() => setBarcodeOpen(false)} style={styles.barcodeCloseBtn} accessibilityRole="button" accessibilityLabel={t("common.close") || "Close scanner"}>
               <Feather name="x" size={24} color="#fff" />
             </Pressable>
             <Text style={styles.barcodeTitle}>{t("meals.scanBarcode")}</Text>
@@ -1079,21 +1116,20 @@ const styles = StyleSheet.create({
   foodHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   foodNum: { fontSize: 13 },
   foodInput: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15, minHeight: 46 },
-  barcodeBtn: { width: 40, height: 40, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  barcodeBtn: { width: 44, height: 44, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   servingChip: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
   multiplierRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   multiplierChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1 },
   portionRow: { flexDirection: "row", gap: 10, alignItems: "flex-end" },
   miniLabel: { fontSize: 11, marginBottom: 4, fontFamily: "Inter_500Medium" },
   smallInput: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 14, textAlign: "center", minHeight: 44 },
-  unitChip: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 6, borderWidth: 1 },
+  unitChip: { paddingHorizontal: 10, paddingVertical: 10, borderRadius: 8, borderWidth: 1, alignItems: "center" as const, justifyContent: "center" as const, minHeight: 44 },
   nutritionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   nutritionField: { width: "46%" },
   foodFooter: { flexDirection: "row", justifyContent: "flex-end", paddingTop: 8, borderTopWidth: 1, marginTop: 2 },
   footerBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 4, paddingHorizontal: 8 },
 
   addFoodBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderStyle: "dashed", minHeight: 52 },
-  notesInput: { borderWidth: 1.5, borderRadius: 12, padding: 12, minHeight: 70, textAlignVertical: "top", fontSize: 15 },
 
   successScreen: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
   successCircle: { width: 100, height: 100, borderRadius: 50, alignItems: "center", justifyContent: "center" },

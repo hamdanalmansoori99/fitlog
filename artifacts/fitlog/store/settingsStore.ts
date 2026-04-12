@@ -7,10 +7,12 @@ interface SettingsState {
   darkMode: boolean | null;
   unitSystem: "metric" | "imperial";
   language: "en" | "ar";
+  defaultRestTimeSec: number;
   lastSynced: number | null;
   setDarkMode: (val: boolean) => void;
   setUnitSystem: (val: "metric" | "imperial") => void;
   setLanguage: (val: "en" | "ar") => void;
+  setDefaultRestTimeSec: (val: number) => void;
   syncToServer: () => Promise<void>;
   fetchFromServer: () => Promise<void>;
   resetStore: () => void;
@@ -22,6 +24,7 @@ export const useSettingsStore = create<SettingsState>()(
       darkMode: true,
       unitSystem: "metric",
       language: "en",
+      defaultRestTimeSec: 60,
       lastSynced: null,
 
       setDarkMode: (darkMode) => {
@@ -39,17 +42,22 @@ export const useSettingsStore = create<SettingsState>()(
         get().syncToServer().catch(() => {});
       },
 
+      setDefaultRestTimeSec: (defaultRestTimeSec) => {
+        set({ defaultRestTimeSec });
+        get().syncToServer().catch(() => {});
+      },
+
       syncToServer: async () => {
         try {
-          const { darkMode, unitSystem, language } = get();
-          await api.updateSettings({ darkMode, unitSystem, language });
+          const { darkMode, unitSystem, language, defaultRestTimeSec } = get();
+          await api.updateSettings({ darkMode, unitSystem, language, defaultRestTimeSec });
           set({ lastSynced: Date.now() });
         } catch (err) {
           console.warn("[SettingsStore] sync to server failed:", err);
         }
       },
 
-      resetStore: () => set({ darkMode: true, unitSystem: "metric", language: "en", lastSynced: null }),
+      resetStore: () => set({ darkMode: true, unitSystem: "metric", language: "en", defaultRestTimeSec: 60, lastSynced: null }),
 
       fetchFromServer: async () => {
         try {
@@ -58,6 +66,7 @@ export const useSettingsStore = create<SettingsState>()(
             ...(remote.darkMode !== undefined && { darkMode: remote.darkMode }),
             ...(remote.unitSystem !== undefined && { unitSystem: remote.unitSystem }),
             ...(remote.language !== undefined && { language: remote.language }),
+            ...(remote.defaultRestTimeSec !== undefined && { defaultRestTimeSec: remote.defaultRestTimeSec }),
             lastSynced: Date.now(),
           });
         } catch (err) {
@@ -66,7 +75,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
     }),
     {
-      name: "fitlog-settings",
+      name: "ordeal-settings",
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

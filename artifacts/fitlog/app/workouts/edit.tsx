@@ -174,12 +174,12 @@ export default function EditWorkoutScreen() {
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 36, maxWidth: 600, width: "100%", alignSelf: "center" as const }]}
           keyboardShouldPersistTaps="handled"
         >
-          <Input label={t("workouts.workoutName")} value={name} onChangeText={setName} placeholder="Morning Run" />
+          <Input label={t("workouts.workoutName")} value={name} onChangeText={setName} placeholder={t("workouts.workoutNamePlaceholder")} />
           <Input
             label={t("workouts.date")}
             value={date}
             onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
+            placeholder={t("workouts.datePlaceholder")}
             keyboardType="numbers-and-punctuation"
           />
 

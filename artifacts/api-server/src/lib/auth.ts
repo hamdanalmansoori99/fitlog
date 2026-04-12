@@ -65,6 +65,17 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
     (req as AuthenticatedRequest).user = user;
     (req as AuthenticatedRequest).sessionId = token;
+
+    // Throttled last_active_at update (fire-and-forget, once per 5 min)
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+    if (!user.lastActiveAt || user.lastActiveAt < fiveMinAgo) {
+      db.update(usersTable)
+        .set({ lastActiveAt: new Date() })
+        .where(eq(usersTable.id, user.id))
+        .then(() => {})
+        .catch(() => {});
+    }
+
     next();
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });

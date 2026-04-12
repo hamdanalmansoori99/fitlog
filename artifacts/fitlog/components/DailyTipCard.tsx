@@ -2,14 +2,16 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import { useTranslation } from "react-i18next";
 import { getTodaysTip, CATEGORY_COLORS, CATEGORY_ICONS, TipCategory } from "@/lib/dailyTips";
 
 export function DailyTipCard() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const tip = getTodaysTip();
   const color = CATEGORY_COLORS[tip.category];
   const icon = CATEGORY_ICONS[tip.category] as keyof typeof Feather.glyphMap;
-  const label = tip.category.charAt(0).toUpperCase() + tip.category.slice(1);
+  const label = t(`dailyTips.categories.${tip.category}`);
 
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: color + "40" }]}>
@@ -26,7 +28,7 @@ export function DailyTipCard() {
           </View>
         </View>
         <Text style={[styles.tip, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-          {tip.text}
+          {t(tip.key)}
         </Text>
       </View>
     </View>

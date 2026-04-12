@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, favoriteMealsTable, mealsTable, mealFoodItemsTable } from "@workspace/db";
 import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
 import { requireAuth, getUser } from "../lib/auth";
+import { logError } from "../lib/logger";
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.get("/", requireAuth, async (req, res) => {
       .orderBy(desc(favoriteMealsTable.usageCount), desc(favoriteMealsTable.createdAt));
     res.json({ favorites });
   } catch (err) {
-    console.error("Get favorites error:", err);
+    logError("Get favorites error:", err);
     res.status(500).json({ error: "Failed to get favorite meals" });
   }
 });
@@ -65,7 +66,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     res.status(201).json({ favorite });
   } catch (err) {
-    console.error("Save favourite error:", err);
+    logError("Save favourite error:", err);
     res.status(500).json({ error: "Failed to save favourite meal" });
   }
 });
@@ -80,7 +81,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
       .where(and(eq(favoriteMealsTable.id, id), eq(favoriteMealsTable.userId, user.id)));
     res.json({ ok: true });
   } catch (err) {
-    console.error("Delete favourite error:", err);
+    logError("Delete favourite error:", err);
     res.status(500).json({ error: "Failed to delete favourite meal" });
   }
 });
@@ -129,7 +130,7 @@ router.post("/:id/log", requireAuth, async (req, res) => {
 
     res.status(201).json({ meal: { ...meal, foodItems: fav.foodItems } });
   } catch (err) {
-    console.error("Log favourite error:", err);
+    logError("Log favourite error:", err);
     res.status(500).json({ error: "Failed to log favourite meal" });
   }
 });
@@ -198,7 +199,7 @@ router.post("/duplicate-day", requireAuth, async (req, res) => {
 
     res.status(201).json({ count: created.length, meals: created });
   } catch (err) {
-    console.error("Duplicate meals error:", err);
+    logError("Duplicate meals error:", err);
     res.status(500).json({ error: "Failed to duplicate meals" });
   }
 });

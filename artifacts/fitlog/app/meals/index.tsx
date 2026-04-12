@@ -20,13 +20,30 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useTranslation } from "react-i18next";
 import { dateLocale, rtlIcon } from "@/lib/rtl";
 
-const CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
+// Approximate Ramadan dates for category switching
+const RAMADAN_RANGES = [
+  { start: "2025-02-28", end: "2025-03-30" },
+  { start: "2026-02-17", end: "2026-03-19" },
+  { start: "2027-02-07", end: "2027-03-08" },
+  { start: "2028-01-27", end: "2028-02-25" },
+];
+
+function isRamadanNow(): boolean {
+  const iso = new Date().toISOString().slice(0, 10);
+  return RAMADAN_RANGES.some((r) => iso >= r.start && iso <= r.end);
+}
+
+const CATEGORIES = isRamadanNow()
+  ? ["Suhoor", "Iftar", "Snacks"]
+  : ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
 const CAT_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   Breakfast: "sun",
   Lunch: "cloud",
   Dinner: "moon",
   Snacks: "coffee",
+  Suhoor: "sunrise",
+  Iftar: "sunset",
 };
 
 function MacroBadge({ label, value, color }: { label: string; value: number; color: string }) {
@@ -375,6 +392,8 @@ export default function MealsScreen() {
     Lunch: t("meals.lunch"),
     Dinner: t("meals.dinner"),
     Snacks: t("meals.snacks"),
+    Suhoor: t("ramadan.suhoor"),
+    Iftar: t("ramadan.iftar"),
   };
 
   return (

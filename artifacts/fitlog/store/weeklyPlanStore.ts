@@ -41,7 +41,7 @@ export const useWeeklyPlanStore = create<WeeklyPlanState>()(
       clearPlan: () => set({ plan: null, generatedAt: null }),
     }),
     {
-      name: "fitlog-weekly-meal-plan",
+      name: "ordeal-weekly-meal-plan",
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

@@ -5,6 +5,7 @@ import { requireAuth, getUser } from "../lib/auth";
 import { trackEvent } from "../services/analyticsService";
 import { logError } from "../lib/logger";
 import { computeStreaks } from "../lib/streaks";
+import { getActiveSubscription } from "../services/subscriptionService";
 
 const router = Router();
 
@@ -406,9 +407,15 @@ router.get("/", requireAuth, async (req, res) => {
       exercisesByWorkoutId.set(ex.workoutId, arr);
     }
 
+    // Compute locked flag for free-tier data retention
+    const sub = await getActiveSubscription(user.id, user.role ?? "user");
+    const retentionDays = sub.plan.limits.dataRetentionDays;
+    const cutoffDate = retentionDays < Infinity ? new Date(Date.now() - retentionDays * 86400000) : null;
+
     const workoutsWithExercises = allWorkouts.map(w => ({
       ...w,
       exercises: exercisesByWorkoutId.get(w.id) ?? [],
+      locked: cutoffDate ? new Date(w.date) < cutoffDate : false,
     }));
 
     res.json({ workouts: workoutsWithExercises, total: workoutsWithExercises.length });

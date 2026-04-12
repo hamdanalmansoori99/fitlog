@@ -33,7 +33,7 @@ export const usePhotoStore = create<PhotoState>()(
       resetStore: () => set({ photos: [] }),
     }),
     {
-      name: "fitlog-progress-photos",
+      name: "ordeal-progress-photos",
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

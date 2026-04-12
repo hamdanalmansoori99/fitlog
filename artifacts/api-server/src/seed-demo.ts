@@ -1,6 +1,6 @@
 /**
  * Demo account seed script.
- * Creates demo@fitlog.app at The Infinite rank (99999 XP).
+ * Creates demo@ordeal.app at The Infinite rank (99999 XP).
  *
  * Usage (from artifacts/api-server/):
  *   PORT=3001 npx tsx src/seed-demo.ts
@@ -13,7 +13,7 @@ import { profilesTable, usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "./lib/auth.js";
 
-const DEMO_EMAIL = "demo@fitlog.app";
+const DEMO_EMAIL = "demo@ordeal.app";
 const DEMO_PASSWORD = "Demo1234!";
 const DEMO_XP = 99999; // The Infinite (requires 76,800+)
 

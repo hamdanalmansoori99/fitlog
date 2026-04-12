@@ -37,7 +37,9 @@ export interface Exercise {
 export interface WorkoutTemplate {
   id: string;
   name: string;
+  nameKey: string;
   description: string;
+  descriptionKey: string;
   durationMinutes: number;
   difficulty: Difficulty;
   requiredEquipment: Equipment[];
@@ -54,7 +56,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "bw-fullbody-beginner",
     name: "Beginner Full Body Bodyweight",
+    nameKey: "templates.bw_fullbody_beginner.name",
     description: "A complete full-body workout using only your bodyweight — perfect to start building strength and fitness.",
+    descriptionKey: "templates.bw_fullbody_beginner.description",
     durationMinutes: 25,
     difficulty: "Beginner",
     requiredEquipment: [],
@@ -79,7 +83,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "calisthenics-fundamentals",
     name: "Calisthenics Fundamentals",
+    nameKey: "templates.calisthenics_fundamentals.name",
     description: "Build real functional strength through bodyweight movement mastery.",
+    descriptionKey: "templates.calisthenics_fundamentals.description",
     durationMinutes: 35,
     difficulty: "Intermediate",
     requiredEquipment: [],
@@ -105,7 +111,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "walking-fat-loss",
     name: "Walking Fat-Loss Plan",
+    nameKey: "templates.walking_fat_loss.name",
     description: "A structured walking routine to maximise fat burning and daily activity.",
+    descriptionKey: "templates.walking_fat_loss.description",
     durationMinutes: 45,
     difficulty: "Beginner",
     requiredEquipment: [],
@@ -128,7 +136,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "jog-walk-intervals",
     name: "Jog/Walk Intervals",
+    nameKey: "templates.jog_walk_intervals.name",
     description: "Alternate between jogging and walking to build running fitness without burning out.",
+    descriptionKey: "templates.jog_walk_intervals.description",
     durationMinutes: 30,
     difficulty: "Beginner",
     requiredEquipment: [],
@@ -150,7 +160,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "jump-rope-cardio",
     name: "Jump Rope Cardio Blast",
+    nameKey: "templates.jump_rope_cardio.name",
     description: "High-intensity jump rope intervals to torch calories fast.",
+    descriptionKey: "templates.jump_rope_cardio.description",
     durationMinutes: 20,
     difficulty: "Intermediate",
     requiredEquipment: ["jump_rope"],
@@ -174,7 +186,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "db-fullbody-beginner",
     name: "Dumbbell Full Body (Beginner)",
+    nameKey: "templates.db_fullbody_beginner.name",
     description: "A simple but effective full-body dumbbell workout for those starting out.",
+    descriptionKey: "templates.db_fullbody_beginner.description",
     durationMinutes: 35,
     difficulty: "Beginner",
     requiredEquipment: ["dumbbells"],
@@ -200,7 +214,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "db-upper-body",
     name: "Dumbbell Upper Body Strength",
+    nameKey: "templates.db_upper_body.name",
     description: "Target chest, back, shoulders, and arms with a focused dumbbell session.",
+    descriptionKey: "templates.db_upper_body.description",
     durationMinutes: 45,
     difficulty: "Intermediate",
     requiredEquipment: ["dumbbells", "bench"],
@@ -226,7 +242,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "db-lower-body",
     name: "Dumbbell Lower Body Strength",
+    nameKey: "templates.db_lower_body.name",
     description: "Build strong legs and glutes with dumbbells.",
+    descriptionKey: "templates.db_lower_body.description",
     durationMinutes: 40,
     difficulty: "Intermediate",
     requiredEquipment: ["dumbbells"],
@@ -251,7 +269,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "db-hypertrophy",
     name: "Dumbbell Hypertrophy Split",
+    nameKey: "templates.db_hypertrophy.name",
     description: "A higher-volume dumbbell session focused on building muscle size.",
+    descriptionKey: "templates.db_hypertrophy.description",
     durationMinutes: 55,
     difficulty: "Intermediate",
     requiredEquipment: ["dumbbells", "bench"],
@@ -280,7 +300,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "barbell-fullbody-strength",
     name: "Beginner Barbell Full Body",
+    nameKey: "templates.barbell_fullbody_strength.name",
     description: "The classic beginner strength programme — squat, press, deadlift, row.",
+    descriptionKey: "templates.barbell_fullbody_strength.description",
     durationMinutes: 50,
     difficulty: "Beginner",
     requiredEquipment: ["barbell", "bench"],
@@ -302,7 +324,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "upper-lower-split",
     name: "Upper / Lower Split",
+    nameKey: "templates.upper_lower_split.name",
     description: "Train upper body and lower body on alternating days for balanced development.",
+    descriptionKey: "templates.upper_lower_split.description",
     durationMinutes: 60,
     difficulty: "Intermediate",
     requiredEquipment: ["barbell", "bench", "dumbbells"],
@@ -325,7 +349,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "push-pull-legs",
     name: "Push / Pull / Legs",
+    nameKey: "templates.push_pull_legs.name",
     description: "Classic 3-way split for maximising muscle growth and recovery.",
+    descriptionKey: "templates.push_pull_legs.description",
     durationMinutes: 65,
     difficulty: "Intermediate",
     requiredEquipment: ["barbell", "bench", "dumbbells"],
@@ -350,7 +376,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "strength-3day",
     name: "Strength-Focused 3-Day Plan",
+    nameKey: "templates.strength_3day.name",
     description: "Build raw strength on 3 days per week with progressive overload.",
+    descriptionKey: "templates.strength_3day.description",
     durationMinutes: 60,
     difficulty: "Intermediate",
     requiredEquipment: ["barbell", "bench"],
@@ -376,7 +404,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "gym-muscle-building",
     name: "Muscle-Building Gym Split",
+    nameKey: "templates.gym_muscle_building.name",
     description: "A full gym programme designed to maximise hypertrophy across all muscle groups.",
+    descriptionKey: "templates.gym_muscle_building.description",
     durationMinutes: 65,
     difficulty: "Intermediate",
     requiredEquipment: ["barbell", "bench", "dumbbells", "cable_machine"],
@@ -403,7 +433,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "fat-loss-hybrid",
     name: "Fat-Loss Hybrid Plan",
+    nameKey: "templates.fat_loss_hybrid.name",
     description: "Combine resistance training and cardio circuits to maximise calorie burn.",
+    descriptionKey: "templates.fat_loss_hybrid.description",
     durationMinutes: 50,
     difficulty: "Intermediate",
     requiredEquipment: ["dumbbells"],
@@ -428,7 +460,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "endurance-strength",
     name: "Endurance + Strength Plan",
+    nameKey: "templates.endurance_strength.name",
     description: "Build cardiovascular fitness alongside functional strength.",
+    descriptionKey: "templates.endurance_strength.description",
     durationMinutes: 55,
     difficulty: "Intermediate",
     requiredEquipment: ["dumbbells"],
@@ -452,7 +486,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "athletic-conditioning",
     name: "Athletic Conditioning Week",
+    nameKey: "templates.athletic_conditioning.name",
     description: "Sport-inspired conditioning for agility, power, and endurance.",
+    descriptionKey: "templates.athletic_conditioning.description",
     durationMinutes: 50,
     difficulty: "Advanced",
     requiredEquipment: ["dumbbells"],
@@ -478,7 +514,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "pullup-bar-upper",
     name: "Pull-Up Bar Upper Body",
+    nameKey: "templates.pullup_bar_upper.name",
     description: "Build a strong back and arms using just a pull-up bar.",
+    descriptionKey: "templates.pullup_bar_upper.description",
     durationMinutes: 30,
     difficulty: "Intermediate",
     requiredEquipment: ["pullup_bar"],
@@ -504,7 +542,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "resistance-bands-fullbody",
     name: "Resistance Band Full Body",
+    nameKey: "templates.resistance_bands_fullbody.name",
     description: "Effective full-body strength training using resistance bands.",
+    descriptionKey: "templates.resistance_bands_fullbody.description",
     durationMinutes: 35,
     difficulty: "Beginner",
     requiredEquipment: ["resistance_bands"],
@@ -531,7 +571,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "swim-endurance",
     name: "Swimming Endurance Session",
+    nameKey: "templates.swim_endurance.name",
     description: "A structured swim set for building aerobic capacity.",
+    descriptionKey: "templates.swim_endurance.description",
     durationMinutes: 45,
     difficulty: "Intermediate",
     requiredEquipment: ["swimming_pool"],
@@ -555,7 +597,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "cycling-endurance",
     name: "Cycling Endurance Ride",
+    nameKey: "templates.cycling_endurance.name",
     description: "Build cycling fitness with a structured steady-state ride.",
+    descriptionKey: "templates.cycling_endurance.description",
     durationMinutes: 60,
     difficulty: "Intermediate",
     requiredEquipment: ["stationary_bike"],
@@ -579,7 +623,9 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
     id: "kettlebell-hiit",
     name: "Kettlebell HIIT",
+    nameKey: "templates.kettlebell_hiit.name",
     description: "High-intensity kettlebell circuits to build strength and burn fat.",
+    descriptionKey: "templates.kettlebell_hiit.description",
     durationMinutes: 35,
     difficulty: "Intermediate",
     requiredEquipment: ["kettlebells"],

@@ -10,6 +10,7 @@ export const settingsTable = pgTable("settings", {
   unitSystem: text("unit_system").notNull().default("metric"),
   language: text("language").notNull().default("en"),
   notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
+  defaultRestTimeSec: integer("default_rest_time_sec").notNull().default(60),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

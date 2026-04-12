@@ -1,6 +1,6 @@
 {
-  "name": "FitLog – AI Fitness Tracker",
-  "short_name": "FitLog",
+  "name": "Ordeal – AI Fitness Tracker",
+  "short_name": "Ordeal",
   "description": "Your personal AI-powered fitness companion — workouts, nutrition, coaching and progress tracking.",
   "start_url": "/",
   "display": "standalone",

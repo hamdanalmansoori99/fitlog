@@ -12,7 +12,7 @@ export default function Root({ children }: PropsWithChildren) {
           content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
         />
 
-        <title>FitLog – AI Fitness Tracker</title>
+        <title>Ordeal – AI Fitness Tracker</title>
         <meta name="description" content="Your personal AI-powered fitness companion — workouts, nutrition, coaching and progress tracking." />
 
         {/* PWA manifest */}
@@ -26,7 +26,7 @@ export default function Root({ children }: PropsWithChildren) {
         {/* iOS PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="FitLog" />
+        <meta name="apple-mobile-web-app-title" content="Ordeal" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
         <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
@@ -36,14 +36,14 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
 
         {/* Open Graph */}
-        <meta property="og:title" content="FitLog – AI Fitness Tracker" />
+        <meta property="og:title" content="Ordeal – AI Fitness Tracker" />
         <meta property="og:description" content="AI-powered workouts, nutrition tracking, coaching and progress analytics." />
         <meta property="og:type" content="website" />
         <meta property="og:image" content="/icons/icon-512x512.png" />
 
         {/* Twitter card */}
         <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content="FitLog – AI Fitness Tracker" />
+        <meta name="twitter:title" content="Ordeal – AI Fitness Tracker" />
         <meta name="twitter:description" content="AI-powered workouts, nutrition tracking, coaching and progress analytics." />
         <meta name="twitter:image" content="/icons/icon-512x512.png" />
 
