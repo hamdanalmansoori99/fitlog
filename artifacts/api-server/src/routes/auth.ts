@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, sessionsTable, profilesTable, settingsTable, referralsTable, subscriptionsTable } from "@workspace/db";
+import { db, usersTable, sessionsTable, profilesTable, settingsTable, referralsTable, userSubscriptionsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { hashPassword, verifyPassword, generateSessionId, requireAuth, getUser } from "../lib/auth";
@@ -95,7 +95,7 @@ router.post("/register", authLimiter, async (req, res) => {
           // Grant referee 7-day premium
           const now = new Date();
           const refereePeriodEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-          await db.update(subscriptionsTable).set({ planKey: "premium", periodEnd: refereePeriodEnd }).where(eq(subscriptionsTable.userId, user.id));
+          await db.update(userSubscriptionsTable).set({ planKey: "premium", periodEnd: refereePeriodEnd }).where(eq(userSubscriptionsTable.userId, user.id));
 
           // Check referrer abuse (max 5 rewarded referrals)
           const referrerRewardCount = await db.select({ count: sql<number>`count(*)::int` }).from(referralsTable).where(and(eq(referralsTable.referrerId, referrerProfile.userId), eq(referralsTable.rewardGrantedToReferrer, true)));
@@ -118,10 +118,10 @@ router.post("/register", authLimiter, async (req, res) => {
           const grantToReferrer = !referrerAtCap && !deviceMatch;
           if (grantToReferrer) {
             // Extend referrer's premium by 7 days
-            const [referrerSub] = await db.select().from(subscriptionsTable).where(eq(subscriptionsTable.userId, referrerProfile.userId)).limit(1);
+            const [referrerSub] = await db.select().from(userSubscriptionsTable).where(eq(userSubscriptionsTable.userId, referrerProfile.userId)).limit(1);
             const baseDate = referrerSub?.periodEnd && referrerSub.periodEnd > now ? referrerSub.periodEnd : now;
             const referrerPeriodEnd = new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-            await db.update(subscriptionsTable).set({ planKey: "premium", periodEnd: referrerPeriodEnd }).where(eq(subscriptionsTable.userId, referrerProfile.userId));
+            await db.update(userSubscriptionsTable).set({ planKey: "premium", periodEnd: referrerPeriodEnd }).where(eq(userSubscriptionsTable.userId, referrerProfile.userId));
           }
 
           await db.insert(referralsTable).values({
