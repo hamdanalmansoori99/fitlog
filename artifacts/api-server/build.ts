@@ -1,7 +1,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import { build as esbuild } from "esbuild";
-import { rm, readFile } from "fs/promises";
+import { rm, readFile, copyFile } from "fs/promises";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +67,13 @@ async function buildAll() {
     external: externals,
     logLevel: "info",
   });
+
+  // Copy schema.sql so the production bundle can auto-apply it on startup
+  await copyFile(
+    path.resolve(__dirname, "../../lib/db/src/schema.sql"),
+    path.resolve(distDir, "schema.sql"),
+  );
+  console.log("copied schema.sql → dist/");
 }
 
 buildAll().catch((err) => {

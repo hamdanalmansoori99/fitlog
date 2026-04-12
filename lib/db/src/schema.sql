@@ -288,3 +288,99 @@ CREATE INDEX IF NOT EXISTS "analytics_events_user_id_idx" ON "analytics_events" 
 CREATE INDEX IF NOT EXISTS "analytics_events_event_type_idx" ON "analytics_events" ("event_type");
 CREATE INDEX IF NOT EXISTS "analytics_events_created_at_idx" ON "analytics_events" ("created_at");
 CREATE INDEX IF NOT EXISTS "analytics_events_user_event_idx" ON "analytics_events" ("user_id", "event_type");
+
+-- ── Columns added after initial schema ──────────────────────────────────────
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "device_fingerprint" text;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "last_active_at" timestamp;
+
+ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "invite_code" text UNIQUE;
+ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "email_digest_enabled" boolean NOT NULL DEFAULT true;
+
+ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "default_rest_time_sec" integer NOT NULL DEFAULT 60;
+
+ALTER TABLE "progress_photos" ADD COLUMN IF NOT EXISTS "r2_key" text;
+-- Make image_data nullable (was NOT NULL in the original schema but now optional with R2)
+ALTER TABLE "progress_photos" ALTER COLUMN "image_data" DROP NOT NULL;
+
+-- ── Tables added after initial schema ───────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS "password_reset_tokens" (
+  "id" serial PRIMARY KEY,
+  "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+  "token" text NOT NULL UNIQUE,
+  "expires_at" timestamp NOT NULL,
+  "used_at" timestamp,
+  "created_at" timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "password_reset_tokens_token_idx" ON "password_reset_tokens" ("token");
+CREATE INDEX IF NOT EXISTS "password_reset_tokens_user_id_idx" ON "password_reset_tokens" ("user_id");
+
+CREATE TABLE IF NOT EXISTS "friends" (
+  "id" serial PRIMARY KEY,
+  "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+  "friend_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+  "status" text NOT NULL DEFAULT 'pending',
+  "created_at" timestamp NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "friends_user_friend_idx" ON "friends" ("user_id", "friend_id");
+CREATE INDEX IF NOT EXISTS "friends_friend_status_idx" ON "friends" ("friend_id", "status");
+
+CREATE TABLE IF NOT EXISTS "challenges" (
+  "id" serial PRIMARY KEY,
+  "creator_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+  "title" text NOT NULL,
+  "type" text NOT NULL,
+  "target_value" integer NOT NULL,
+  "start_date" timestamp NOT NULL,
+  "end_date" timestamp NOT NULL,
+  "status" text NOT NULL DEFAULT 'active',
+  "created_at" timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "challenges_creator_idx" ON "challenges" ("creator_id");
+CREATE INDEX IF NOT EXISTS "challenges_status_idx" ON "challenges" ("status");
+
+CREATE TABLE IF NOT EXISTS "challenge_participants" (
+  "id" serial PRIMARY KEY,
+  "challenge_id" integer NOT NULL REFERENCES "challenges"("id") ON DELETE CASCADE,
+  "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+  "progress" jsonb NOT NULL DEFAULT '{}',
+  "joined_at" timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "challenge_participants_challenge_idx" ON "challenge_participants" ("challenge_id");
+CREATE INDEX IF NOT EXISTS "challenge_participants_user_idx" ON "challenge_participants" ("user_id");
+
+CREATE TABLE IF NOT EXISTS "referrals" (
+  "id" serial PRIMARY KEY,
+  "referrer_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+  "referee_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+  "reward_granted_to_referrer" boolean NOT NULL DEFAULT false,
+  "reward_granted_to_referee" boolean NOT NULL DEFAULT false,
+  "device_fingerprint_match" boolean NOT NULL DEFAULT false,
+  "created_at" timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "referrals_referrer_idx" ON "referrals" ("referrer_id");
+CREATE INDEX IF NOT EXISTS "referrals_referee_idx" ON "referrals" ("referee_id");
+
+CREATE TABLE IF NOT EXISTS "custom_exercises" (
+  "id" serial PRIMARY KEY,
+  "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+  "name" text NOT NULL,
+  "category" text NOT NULL,
+  "primary_muscle" text NOT NULL,
+  "secondary_muscles" jsonb NOT NULL DEFAULT '[]',
+  "instructions" jsonb NOT NULL DEFAULT '[]',
+  "equipment" text,
+  "created_at" timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "custom_exercises_user_idx" ON "custom_exercises" ("user_id");
+
+CREATE TABLE IF NOT EXISTS "notification_preferences" (
+  "id" serial PRIMARY KEY,
+  "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE UNIQUE,
+  "preferred_workout_time" text,
+  "enabled" boolean NOT NULL DEFAULT true,
+  "quiet_hours_start" text,
+  "quiet_hours_end" text,
+  "last_reengagement_sent" timestamp,
+  "updated_at" timestamp NOT NULL DEFAULT now()
+);

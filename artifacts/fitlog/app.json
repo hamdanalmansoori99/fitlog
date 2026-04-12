@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "12",
+      "buildNumber": "13",
       "bundleIdentifier": "com.yesha.fitlog",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Ordeal reads your steps, heart rate, and sleep to give your AI coach accurate recovery data.",
