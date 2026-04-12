@@ -15,7 +15,7 @@ import { hashPassword } from "./lib/auth.js";
 
 const DEMO_EMAIL = "demo@ordeal.app";
 const DEMO_PASSWORD = "Demo1234!";
-const DEMO_XP = 99999; // The Infinite (requires 76,800+)
+const DEMO_XP = 500; // Cinder Acolyte rank
 
 async function seed() {
   console.log("🌱 Seeding demo account…");

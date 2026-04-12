@@ -268,6 +268,8 @@ export default {
     workout: "Workout",
     mealsLabel: "Meals",
     hydration: "Hydration",
+    planYourWeek: "Plan your week",
+    planYourWeekDesc: "Set up a weekly meal schedule",
     thisWeek: "This week",
     weeklyActivity: "Weekly Activity",
     workoutsLabel: "Workouts",
@@ -1271,6 +1273,7 @@ export default {
     suggestion8: "Help me build a weekly plan",
     messagesRemaining: "{{remaining}}/{{limit}} messages remaining today",
     limitReached: "Daily message limit reached. Resets at midnight.",
+    todaysBrief: "TODAY'S BRIEF",
     limitReachedShort: "Daily limit reached",
     pills: {
       freshMuscleGroups: "Fresh muscle groups",

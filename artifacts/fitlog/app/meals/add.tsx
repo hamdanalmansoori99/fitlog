@@ -466,6 +466,24 @@ export default function AddMealScreen() {
     }));
   }
 
+  function handlePortionChange(idx: number, newPortionText: string) {
+    setFoodItems(prev => prev.map((f, i) => {
+      if (i !== idx) return f;
+      const oldPortion = parseFloat(f.portionSize) || 0;
+      const newPortion = parseFloat(newPortionText) || 0;
+      if (oldPortion <= 0 || newPortion <= 0) return { ...f, portionSize: newPortionText };
+      const ratio = newPortion / oldPortion;
+      return {
+        ...f,
+        portionSize: newPortionText,
+        calories: String(Math.round(parseFloat(f.calories) * ratio)),
+        proteinG: String(Math.round(parseFloat(f.proteinG) * ratio * 10) / 10),
+        carbsG: String(Math.round(parseFloat(f.carbsG) * ratio * 10) / 10),
+        fatG: String(Math.round(parseFloat(f.fatG) * ratio * 10) / 10),
+      };
+    }));
+  }
+
   const handleSubmit = () => {
     if (!mealName.trim()) { setError(t("meals.mealNameRequired")); return; }
     const valid = foodItems.filter(f => f.name.trim());
@@ -958,7 +976,7 @@ export default function AddMealScreen() {
                     <Text style={[styles.miniLabel, { color: theme.textMuted }]}>{t("meals.portion")}</Text>
                     <TextInput
                       value={item.portionSize}
-                      onChangeText={t => setFoodItems(fi => fi.map((f, i) => i === idx ? { ...f, portionSize: t } : f))}
+                      onChangeText={t => handlePortionChange(idx, t)}
                       placeholder="100"
                       keyboardType="decimal-pad"
                       placeholderTextColor={theme.textMuted}
@@ -1032,11 +1050,11 @@ export default function AddMealScreen() {
             <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>{t("meals.addFoodItem")}</Text>
           </Pressable>
         </View>
-
-{error ? <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13 }}>{error}</Text> : null}
-
-        <Button title={isEditing ? t("meals.saveChanges") : t("meals.saveMeal")} onPress={handleSubmit} loading={mutation.isPending} />
       </ScrollView>
+      <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: insets.bottom + 16, borderTopWidth: 1, borderTopColor: theme.border, backgroundColor: theme.background }}>
+        {error ? <Text style={{ color: theme.danger, fontFamily: "Inter_400Regular", fontSize: 13, marginBottom: 6 }}>{error}</Text> : null}
+        <Button title={isEditing ? t("meals.saveChanges") : t("meals.saveMeal")} onPress={handleSubmit} loading={mutation.isPending} />
+      </View>
       </KeyboardAvoidingView>
 
       {/* ── Barcode Scanner Modal ── */}
@@ -1084,7 +1102,7 @@ const styles = StyleSheet.create({
   navBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12 },
   backBtn: { width: 44, height: 44, justifyContent: "center" },
   navTitle: { fontSize: 17 },
-  content: { padding: 20, gap: 16 },
+  content: { padding: 20, gap: 12 },
   fieldLabel: { fontSize: 13, marginBottom: 8 },
 
   searchBar: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, minHeight: 48 },
@@ -1112,21 +1130,21 @@ const styles = StyleSheet.create({
 
   recentChip: { borderRadius: 12, borderWidth: 1, padding: 10, minWidth: 90, maxWidth: 130 },
 
-  foodCard: { borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 8, gap: 10 },
+  foodCard: { borderRadius: 16, borderWidth: 1, padding: 10, marginBottom: 6, gap: 6 },
   foodHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   foodNum: { fontSize: 13 },
   foodInput: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15, minHeight: 46 },
   barcodeBtn: { width: 44, height: 44, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  servingChip: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+  servingChip: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
   multiplierRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   multiplierChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1 },
   portionRow: { flexDirection: "row", gap: 10, alignItems: "flex-end" },
   miniLabel: { fontSize: 11, marginBottom: 4, fontFamily: "Inter_500Medium" },
   smallInput: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 14, textAlign: "center", minHeight: 44 },
   unitChip: { paddingHorizontal: 10, paddingVertical: 10, borderRadius: 8, borderWidth: 1, alignItems: "center" as const, justifyContent: "center" as const, minHeight: 44 },
-  nutritionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  nutritionField: { width: "46%" },
-  foodFooter: { flexDirection: "row", justifyContent: "flex-end", paddingTop: 8, borderTopWidth: 1, marginTop: 2 },
+  nutritionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  nutritionField: { width: "47%" },
+  foodFooter: { flexDirection: "row", justifyContent: "flex-end", paddingTop: 6, borderTopWidth: 1, marginTop: 0 },
   footerBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 4, paddingHorizontal: 8 },
 
   addFoodBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderStyle: "dashed", minHeight: 52 },

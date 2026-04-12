@@ -11,7 +11,7 @@ import { hashPassword } from "../lib/auth";
 
 const DEMO_EMAIL = "demo@ordeal.app";
 const DEMO_PASSWORD = "Demo1234!";
-const DEMO_XP = 99999; // The Infinite (76,800+ XP)
+const DEMO_XP = 500; // Cinder Acolyte rank
 
 const router = Router();
 
@@ -66,7 +66,7 @@ router.post("/seed-demo", async (_req, res) => {
       message: "Demo account ready.",
       credentials: { email: DEMO_EMAIL, password: DEMO_PASSWORD },
       xp: DEMO_XP,
-      rank: "The Infinite",
+      rank: "Cinder Acolyte",
     });
   } catch (err: any) {
     console.error("[dev] seed-demo failed:", err);

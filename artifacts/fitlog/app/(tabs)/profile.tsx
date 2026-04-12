@@ -519,8 +519,8 @@ export default function ProfileScreen() {
                 {/* Streak with fire icon */}
                 {currentStreak > 0 && (
                   <Pressable onPress={() => router.push("/streaks" as any)} accessibilityRole="button" accessibilityLabel={`${currentStreak} ${t("home.dayStreak")}`} style={{ flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44 }}>
-                    <Feather name="zap" size={14} color="#ff6b35" />
-                    <Text style={{ color: "#ff6b35", fontFamily: "Inter_700Bold", fontSize: 14 }}>
+                    <Feather name="zap" size={14} color="#00e676" />
+                    <Text style={{ color: "#00e676", fontFamily: "Inter_700Bold", fontSize: 14 }}>
                       {currentStreak}
                     </Text>
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12 }}>

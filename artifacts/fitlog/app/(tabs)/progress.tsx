@@ -743,7 +743,7 @@ export default function ProgressScreen() {
                     <Text style={{ color: barColor, fontFamily: "Inter_700Bold", fontSize: 32, lineHeight: 36 }}>{score}%</Text>
                     {streak > 0 && (
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                        <MaterialCommunityIcons name="fire" size={11} color="#ff6b35" />
+                        <MaterialCommunityIcons name="fire" size={11} color="#00e676" />
                         <Text style={{ color: theme.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{streak}</Text>
                       </View>
                     )}

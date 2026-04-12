@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS "profiles" (
 CREATE TABLE IF NOT EXISTS "settings" (
   "id" serial PRIMARY KEY,
   "user_id" integer NOT NULL UNIQUE REFERENCES "users"("id") ON DELETE CASCADE,
-  "dark_mode" boolean NOT NULL DEFAULT true,
+  "dark_mode" boolean NOT NULL DEFAULT false,
   "unit_system" text NOT NULL DEFAULT 'metric',
   "language" text NOT NULL DEFAULT 'en',
   "notifications_enabled" boolean NOT NULL DEFAULT true,

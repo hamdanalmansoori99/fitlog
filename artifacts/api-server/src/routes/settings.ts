@@ -36,7 +36,7 @@ router.put("/", requireAuth, async (req, res) => {
     if (existing.length === 0) {
       const [newSettings] = await db.insert(settingsTable).values({
         userId: user.id,
-        darkMode: darkMode ?? true,
+        darkMode: darkMode ?? false,
         unitSystem: unitSystem ?? "metric",
         language: language ?? "en",
         notificationsEnabled: notificationsEnabled ?? true,

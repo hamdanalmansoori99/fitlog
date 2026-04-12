@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView,
-  Platform, TextInput,
+  Platform, TextInput, Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,6 +12,8 @@ import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useSettingsStore } from "@/store/settingsStore";
+import i18n from "@/i18n";
 
 const MAX_W = 480;
 
@@ -20,6 +22,13 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { setAuth } = useAuthStore();
   const { t } = useTranslation();
+  const language = useSettingsStore((s) => s.language);
+  const setLanguage = useSettingsStore((s) => s.setLanguage);
+  const toggleLang = () => {
+    const newLang = language === "en" ? "ar" : "en";
+    setLanguage(newLang);
+    i18n.changeLanguage(newLang);
+  };
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -83,11 +92,14 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={[styles.inner, Platform.OS === "web" ? { maxWidth: MAX_W, alignSelf: "center", width: "100%" } : {}]}>
+          <Pressable onPress={toggleLang} style={{ alignSelf: "flex-end", paddingVertical: 8, paddingHorizontal: 4 }}>
+            <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+              {language === "en" ? "العربية" : "English"}
+            </Text>
+          </Pressable>
           {/* Logo */}
           <View style={styles.logoSection}>
-            <View style={[styles.logoCircle, { backgroundColor: theme.primaryDim, borderColor: theme.primary + "60" }]}>
-              <Feather name="activity" size={38} color={theme.primary} />
-            </View>
+            <Image source={require("@/assets/images/icon.png")} style={styles.logoCircle} />
             <Text style={[styles.appName, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("auth.fitlog")}</Text>
             <Text style={[styles.tagline, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
               {t("auth.tagline")}
@@ -187,7 +199,6 @@ const styles = StyleSheet.create({
   logoSection: { alignItems: "center", marginBottom: 44, gap: 12 },
   logoCircle: {
     width: 84, height: 84, borderRadius: 26,
-    borderWidth: 1.5, alignItems: "center", justifyContent: "center",
   },
   appName: { fontSize: 32 },
   tagline: { fontSize: 15, textAlign: "center" },

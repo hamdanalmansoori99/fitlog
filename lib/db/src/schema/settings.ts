@@ -6,7 +6,7 @@ import { usersTable } from "./users";
 export const settingsTable = pgTable("settings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull().unique(),
-  darkMode: boolean("dark_mode").notNull().default(true),
+  darkMode: boolean("dark_mode").notNull().default(false),
   unitSystem: text("unit_system").notNull().default("metric"),
   language: text("language").notNull().default("en"),
   notificationsEnabled: boolean("notifications_enabled").notNull().default(true),

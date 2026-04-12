@@ -76,7 +76,7 @@ function CalorieRingHero({
         </Svg>
         <View style={{ alignItems: "center" }}>
           <Text style={{ color: over ? ringColor : theme.text, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 26 }}>
-            {remaining}
+            {Math.round(remaining)}
           </Text>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 10 }}>
             {t("home.kcalLeft")}
@@ -84,7 +84,7 @@ function CalorieRingHero({
         </View>
       </View>
       <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 6 }}>
-        {consumed} / {goal} {t("common.kcal")}
+        {Math.round(consumed)} / {Math.round(goal)} {t("common.kcal")}
       </Text>
     </View>
   );
@@ -108,10 +108,10 @@ function NutritionHero({ mealsData, profile, theme }: { mealsData: any; profile?
     { label: t("home.fat"), value: fat, goal: fatGoal, color: theme.warning || "#ffab40" },
   ];
 
-  const caloriesLeft = Math.max(0, calorieGoal - consumed);
+  const caloriesLeft = Math.round(Math.max(0, calorieGoal - consumed));
   const calorieGoalMet = consumed >= calorieGoal;
   const proteinGoalMet = protein >= proteinGoal;
-  const proteinLeft = Math.max(0, proteinGoal - protein);
+  const proteinLeft = Math.round(Math.max(0, proteinGoal - protein));
 
   let fuelLine: string;
   if (calorieGoalMet && proteinGoalMet) {
@@ -158,7 +158,7 @@ function NutritionHero({ mealsData, profile, theme }: { mealsData: any; profile?
                   {m.label}
                 </Text>
                 <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>
-                  {m.value}g
+                  {Math.round(m.value * 10) / 10}g
                 </Text>
               </View>
               <View style={{ height: 6, backgroundColor: theme.border, borderRadius: 3, overflow: "hidden" }}>
@@ -515,7 +515,7 @@ function NextStepCard({ todayWorkout, mealsData, streaksData, profile, theme }: 
   const protein = mealsData?.dailyTotals?.proteinG ?? 0;
   const calorieGoal = mealsData?.calorieGoal ?? 2000;
   const proteinGoal = profile?.dailyProteinGoal ?? Math.round(calorieGoal * 0.3 / 4);
-  const proteinRemaining = Math.max(proteinGoal - protein, 0);
+  const proteinRemaining = Math.round(Math.max(proteinGoal - protein, 0));
   const mealsLoggedToday = (mealsData?.meals?.length ?? 0) > 0;
   const mealStreak = streaksData?.currentMealStreak ?? 0;
 
@@ -654,7 +654,7 @@ function MilestoneCelebrationModal({ streaksData, theme }: { streaksData: any; t
                 transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
               />
             </Svg>
-            <MaterialCommunityIcons name="fire" size={32} color="#ff6b35" style={{ position: "absolute", top: ringSize / 2 - 16 }} />
+            <MaterialCommunityIcons name="fire" size={32} color="#00e676" style={{ position: "absolute", top: ringSize / 2 - 16 }} />
           </View>
           <Text style={{ color: theme.text, fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", marginTop: 8 }}>
             {t("streaks.milestoneTitle")}
@@ -999,7 +999,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
       <Pressable
         onPress={() => router.push("/recovery" as any)}
         accessibilityRole="button"
-        accessibilityLabel={t("home.todaysRecovery") || "Today's Recovery"}
+        accessibilityLabel={t("home.todaysRecovery")}
         style={({ pressed }) => ({
           backgroundColor: theme.card,
           borderRadius: 14,
@@ -1015,7 +1015,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
             <Feather name="heart" size={18} color="#00bcd4" />
           </View>
           <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14, flex: 1 }}>
-            {t("home.todaysRecovery") || "Today's Recovery"}
+            {t("home.todaysRecovery")}
           </Text>
           <Feather name={rtlIcon("chevron-right")} size={14} color={theme.textMuted} />
         </View>
@@ -1059,7 +1059,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
   // Prompt card — not logged today
   return (
     <View>
-      <Pressable onPress={() => setRecoveryExpanded(!recoveryExpanded)} accessibilityRole="button" accessibilityLabel={t("home.howAreYouFeeling") || "How are you feeling today?"} style={({ pressed }) => ({
+      <Pressable onPress={() => setRecoveryExpanded(!recoveryExpanded)} accessibilityRole="button" accessibilityLabel={t("home.howAreYouFeeling")} style={({ pressed }) => ({
         backgroundColor: theme.card,
         borderRadius: 14,
         padding: 16,
@@ -1076,10 +1076,10 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-            {t("home.howAreYouFeeling") || "How are you feeling today?"}
+            {t("home.howAreYouFeeling")}
           </Text>
           <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
-            {t("home.recoveryCheckInSubtitle") || "Log your sleep, energy & stress"}
+            {t("home.recoveryCheckInSubtitle")}
           </Text>
         </View>
         <View
@@ -1093,7 +1093,7 @@ function RecoveryCheckInCard({ theme, recoveryData, isLoading }: {
           }}
         >
           <Text style={{ color: "#0f0f1a", fontFamily: "Inter_600SemiBold", fontSize: 12 }}>
-            {t("home.checkIn") || "Check in"}
+            {t("home.checkIn")}
           </Text>
         </View>
       </Pressable>
@@ -1339,7 +1339,7 @@ export default function HomeScreen() {
                   {bestStreak > 0 ? (
                     <View style={{ gap: 4 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <MaterialCommunityIcons name="fire" size={18} color="#ff6b35" />
+                        <MaterialCommunityIcons name="fire" size={18} color="#00e676" />
                         <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 20, lineHeight: 26 }}>
                           {bestStreak}
                         </Text>
@@ -1448,6 +1448,37 @@ export default function HomeScreen() {
           )}
         </Animated.View>
 
+        {/* ═══ PLAN YOUR WEEK ═══ */}
+        <Animated.View entering={FadeInDown.delay(45).duration(160)} style={styles.section}>
+          <Pressable
+            onPress={() => router.push("/meals/weekly-plan" as any)}
+            accessibilityRole="button"
+            accessibilityLabel={t("home.planYourWeek")}
+            style={({ pressed }) => ({
+              backgroundColor: theme.card,
+              borderRadius: 14,
+              padding: 16,
+              flexDirection: "row" as const,
+              alignItems: "center" as const,
+              gap: 12,
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: theme.secondary + "18", alignItems: "center", justifyContent: "center" }}>
+              <Feather name="calendar" size={20} color={theme.secondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                {t("home.planYourWeek")}
+              </Text>
+              <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                {t("home.planYourWeekDesc")}
+              </Text>
+            </View>
+            <Feather name={rtlIcon("chevron-right")} size={16} color={theme.textMuted} />
+          </Pressable>
+        </Animated.View>
+
         {/* ═══ ZONE 3 — HYDRATION ═══ */}
 
         <Animated.View entering={FadeInDown.delay(50).duration(160)} style={styles.section}>
@@ -1505,7 +1536,7 @@ export default function HomeScreen() {
             {/* Workout streak */}
             <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                {(streaksData?.currentWorkoutStreak ?? 0) > 0 && <MaterialCommunityIcons name="fire" size={10} color="#ff6b35" />}
+                {(streaksData?.currentWorkoutStreak ?? 0) > 0 && <MaterialCommunityIcons name="fire" size={10} color="#00e676" />}
                 <Feather name="activity" size={11} color={theme.primary} />
                 <Text style={{ color: theme.primary, fontFamily: "Inter_700Bold", fontSize: 16 }}>{streaksData?.currentWorkoutStreak ?? 0}</Text>
               </View>
@@ -1515,7 +1546,7 @@ export default function HomeScreen() {
             {/* Meal streak */}
             <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                {(streaksData?.currentMealStreak ?? 0) > 0 && <MaterialCommunityIcons name="fire" size={10} color="#ff6b35" />}
+                {(streaksData?.currentMealStreak ?? 0) > 0 && <MaterialCommunityIcons name="fire" size={10} color="#00e676" />}
                 <Feather name="coffee" size={11} color={theme.warning || "#ffab40"} />
                 <Text style={{ color: theme.warning || "#ffab40", fontFamily: "Inter_700Bold", fontSize: 16 }}>{streaksData?.currentMealStreak ?? 0}</Text>
               </View>

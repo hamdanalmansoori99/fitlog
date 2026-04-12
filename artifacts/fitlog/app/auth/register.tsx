@@ -14,6 +14,8 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { rtlIcon } from "@/lib/rtl";
+import { useSettingsStore } from "@/store/settingsStore";
+import i18n from "@/i18n";
 
 function getDeviceFingerprint(): string {
   const parts = [
@@ -57,6 +59,13 @@ export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const { setAuth } = useAuthStore();
   const { t } = useTranslation();
+  const language = useSettingsStore((s) => s.language);
+  const setLanguage = useSettingsStore((s) => s.setLanguage);
+  const toggleLang = () => {
+    const newLang = language === "en" ? "ar" : "en";
+    setLanguage(newLang);
+    i18n.changeLanguage(newLang);
+  };
 
   const [form, dispatch] = useReducer(formReducer, { firstName: "", lastName: "", email: "", password: "" });
   const { firstName, lastName, email, password } = form;
@@ -121,9 +130,16 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={[styles.inner, Platform.OS === "web" ? { maxWidth: MAX_W, alignSelf: "center", width: "100%" } : {}]}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
-          </Pressable>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Pressable onPress={() => router.back()} style={styles.backBtn}>
+              <Feather name={rtlIcon("arrow-left")} size={24} color={theme.text} />
+            </Pressable>
+            <Pressable onPress={toggleLang} style={{ paddingVertical: 8, paddingHorizontal: 4 }}>
+              <Text style={{ color: theme.primary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+                {language === "en" ? "العربية" : "English"}
+              </Text>
+            </Pressable>
+          </View>
 
           <View style={styles.header}>
             <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{t("auth.createAccount")}</Text>

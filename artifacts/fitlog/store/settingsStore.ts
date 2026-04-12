@@ -21,7 +21,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
-      darkMode: true,
+      darkMode: false,
       unitSystem: "metric",
       language: "en",
       defaultRestTimeSec: 60,
@@ -57,7 +57,7 @@ export const useSettingsStore = create<SettingsState>()(
         }
       },
 
-      resetStore: () => set({ darkMode: true, unitSystem: "metric", language: "en", defaultRestTimeSec: 60, lastSynced: null }),
+      resetStore: () => set({ darkMode: false, unitSystem: "metric", language: "en", defaultRestTimeSec: 60, lastSynced: null }),
 
       fetchFromServer: async () => {
         try {
